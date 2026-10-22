@@ -17,8 +17,8 @@ import com.android.inputmethod.latin.R
 
 /**
  * Skin tones for an emoji in a popup above it, like Gboard's. One person: yellow and the five
- * tones in a row. Two people: yellow, or a tone for each person (two rows of swatches) shown
- * combined in a preview; tap the preview to type it.
+ * tones in a row. Two people: yellow and a preview side by side, then a row of swatches for
+ * the left and the right person; tap the preview to type it.
  */
 class TonePicker(private val ctx: Context) {
     private var window: PopupWindow? = null
@@ -81,7 +81,7 @@ class TonePicker(private val ctx: Context) {
                     setTextColor(c.onSurfaceVariant)
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                     typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-                }, LinearLayout.LayoutParams(dp(64), LinearLayout.LayoutParams.WRAP_CONTENT))
+                }, LinearLayout.LayoutParams(dp(48), LinearLayout.LayoutParams.WRAP_CONTENT))
                 for (t in 0 until 5) {
                     row.addView(View(ctx).apply {
                         contentDescription = ctx.getString(TONE_NAMES[t])
@@ -92,18 +92,13 @@ class TonePicker(private val ctx: Context) {
                     }, LinearLayout.LayoutParams(dp(36), dp(36)).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
                 }
             }
+            // the two outputs, centred: yellow, and the chosen tones (tap either to type it)
             content.addView(LinearLayout(ctx).apply {
-                gravity = Gravity.CENTER_VERTICAL
+                gravity = Gravity.CENTER
                 addView(cell(emoji.base, 64))
-                addView(View(ctx), LinearLayout.LayoutParams(dp(12), 1))
+                addView(View(ctx), LinearLayout.LayoutParams(dp(16), 1))
                 addView(preview)
-                addView(TextView(ctx).apply {
-                    setText(R.string.bum_tone_tap_preview)
-                    setTextColor(c.onSurfaceVariant)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                    setPadding(dp(12), 0, dp(4), 0)
-                }, LinearLayout.LayoutParams(dp(150), LinearLayout.LayoutParams.WRAP_CONTENT))
-            })
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             rows.forEach { content.addView(it) }
             refresh()
         } else {

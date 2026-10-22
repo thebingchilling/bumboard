@@ -30,6 +30,8 @@ class CandidateBarView @JvmOverloads constructor(
 
     var onPick: (Int) -> Unit = {}
     var onLongPick: (Int, View) -> Unit = { _, _ -> }
+    /** The finger left a candidate (after a long-press, for hold-to-peek). */
+    var onRelease: () -> Unit = {}
 
     private val row = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
@@ -57,17 +59,11 @@ class CandidateBarView @JvmOverloads constructor(
     /** Lines under each candidate's characters: readings, and whether a meaning follows. */
     data class Lines(val readings: Int, val meaning: Boolean)
 
-    /** Text scale so the characters and their [Lines] fit the strip's fixed height. */
+    /** Text scale: the candidate size setting. */
     private var scale = 1f
 
-    fun setLines(lines: Lines) {
-        val height = layoutParams?.height?.takeIf { it > 0 }
-            ?: resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
-        val sp = resources.displayMetrics.scaledDensity
-        // natural height: the characters, each reading line, the meaning, line spacing, padding
-        val natural = (CHAR_SP + lines.readings * READING_SP + (if (lines.meaning) MEANING_SP else 0f)) * sp * 1.18f +
-            dp(4)
-        scale = (height / natural).coerceAtMost(1f)
+    fun setScale(scale: Float) {
+        this.scale = scale
     }
 
     /**
@@ -118,6 +114,11 @@ class CandidateBarView @JvmOverloads constructor(
         background = selectableBackground()
         setOnClickListener { onPick(index) }
         setOnLongClickListener { view -> onLongPick(index, view); true }
+        setOnTouchListener { _, event ->
+            if (event.actionMasked == android.view.MotionEvent.ACTION_UP ||
+                event.actionMasked == android.view.MotionEvent.ACTION_CANCEL) onRelease()
+            false
+        }
         addView(text(candidate.text, CHAR_SP * scale, colorFor(index)).apply { includeFontPadding = false }, wrap())
     }
 
@@ -132,7 +133,8 @@ class CandidateBarView @JvmOverloads constructor(
         }
         annotation.meaning?.let { meaning ->
             cell.addView(text(meaning, MEANING_SP * scale, ColorUtils.setAlphaComponent(color, 0xA0)).apply {
-                maxWidth = dp(132)
+                // the definition in full, up to a generous width
+                maxWidth = dp(240)
                 includeFontPadding = false
             }, wrap())
         }
@@ -162,8 +164,16 @@ class CandidateBarView @JvmOverloads constructor(
 
     companion object {
         private val annotator = Executors.newSingleThreadExecutor()
-        private const val CHAR_SP = 20f
-        private const val READING_SP = 11.5f
-        private const val MEANING_SP = 10.5f
+        const val CHAR_SP = 20f
+        const val READING_SP = 11.5f
+        const val MEANING_SP = 10.5f
+
+        /** The bar's height for [lines] at [scale], in pixels. */
+        fun heightFor(context: Context, lines: Lines, scale: Float): Int {
+            val sp = context.resources.displayMetrics.scaledDensity
+            val density = context.resources.displayMetrics.density
+            val text = CHAR_SP + lines.readings * READING_SP + (if (lines.meaning) MEANING_SP else 0f)
+            return (text * scale * sp * 1.22f + density * 8).toInt()
+        }
     }
 }

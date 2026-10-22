@@ -1,7 +1,6 @@
 package app.bumboard.emoji
 
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.preference.PreferenceManager
 import android.text.TextUtils
@@ -9,7 +8,6 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
 import android.widget.HorizontalScrollView
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import app.bumboard.ui.M3Colors
@@ -18,9 +16,10 @@ import com.android.inputmethod.latin.R
 import com.android.inputmethod.latin.common.Constants
 
 /**
- * Emoji search above the letter keys. While it is open, LatinIME hands key events here first:
- * letters build the query (in English, or Chinese through the keywords) and matching emoji
- * appear in a row; tapping one types it into the app.
+ * Emoji search above the letter keys. It keeps the emoji panel's search pill (magnifier and
+ * query), with the matching emoji in a row above it and Back in the corner. While it is open,
+ * LatinIME hands key events here first: letters build the query (in English, or Chinese
+ * through the keywords); tapping an emoji types it into the app.
  */
 class EmojiSearchBar @JvmOverloads constructor(
     context: Context,
@@ -49,33 +48,39 @@ class EmojiSearchBar @JvmOverloads constructor(
     private var shown: List<String> = emptyList()
 
     init {
-        orientation = HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
+        orientation = VERTICAL
         visibility = GONE
         setBackgroundColor(palette.surface)
-        setPadding(dp(4), dp(4), dp(8), dp(4))
-        addView(ImageView(context).apply {
-            setImageResource(R.drawable.ic_sym_arrow_back)
-            imageTintList = ColorStateList.valueOf(palette.onSurface)
-            scaleType = ImageView.ScaleType.CENTER
-            contentDescription = context.getString(R.string.bum_back)
-            setOnClickListener { close() }
-        }, LayoutParams(dp(44), LayoutParams.MATCH_PARENT))
+        // the matching emoji (recent ones before anything is typed)
+        scroller.isHorizontalScrollBarEnabled = false
+        scroller.addView(results)
+        addView(scroller, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply {
+            setMargins(dp(4), dp(2), dp(4), 0)
+        })
+        // Back, then the same pill as in the emoji panel
+        val pillRow = LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(4), dp(2), dp(8), dp(4))
+        }
+        pillRow.addView(app.bumboard.layout.BumPanels.backButton(context) { close() }, LayoutParams(dp(48), LayoutParams.MATCH_PARENT))
         queryView = TextView(context).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             isSingleLine = true
             ellipsize = TextUtils.TruncateAt.START
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(14), 0, dp(14), 0)
+            compoundDrawablePadding = dp(12)
+            setCompoundDrawablesRelativeWithIntrinsicBounds(context.getDrawable(R.drawable.ic_sym_search)?.mutate()?.apply {
+                setTint(palette.onSurfaceVariant)
+            }, null, null, null)
+            setPadding(dp(16), 0, dp(16), 0)
             background = GradientDrawable().apply {
                 setColor(palette.surfaceContainerHigh)
-                cornerRadius = dp(20).toFloat()
+                cornerRadius = dp(24).toFloat()
             }
         }
-        addView(queryView, LayoutParams(dp(132), LayoutParams.MATCH_PARENT))
-        scroller.isHorizontalScrollBarEnabled = false
-        scroller.addView(results)
-        addView(scroller, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(6) })
+        pillRow.addView(queryView, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(4) })
+        addView(pillRow, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
     }
 
     fun start() {
@@ -128,11 +133,12 @@ class EmojiSearchBar @JvmOverloads constructor(
             results.addView(TextView(context).apply {
                 text = emoji
                 typeface = EmojiData.typeface
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 30f)
                 gravity = Gravity.CENTER
                 includeFontPadding = false
+                background = context.getDrawable(R.drawable.bum_m3_suggestion)
                 setOnClickListener { type(emoji) }
-            }, LayoutParams(dp(46), LayoutParams.MATCH_PARENT))
+            }, LayoutParams(dp(50), LayoutParams.MATCH_PARENT))
         }
         if (found.isEmpty() && query.isNotBlank()) {
             results.addView(TextView(context).apply {

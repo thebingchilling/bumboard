@@ -241,7 +241,14 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
         final TypedArray keyAttr = mResources.obtainAttributes(attr, R.styleable.Keyboard_Key);
         try {
             final KeyboardParams params = mParams;
-            final int height = params.mId.mHeight;
+            // BUMBOARD: with the number row on, the keyboard is given one row's worth of extra
+            // height (BumLayout). Every keyboard is laid out at its usual four-row height, so
+            // keys, gaps and text keep their size; the alphabet keyboards then add the number
+            // row on top and the others stay at their usual height.
+            final int givenHeight = params.mId.mHeight;
+            final int height = params.mId.mBumNumberRow
+                    ? Math.round(givenHeight / app.bumboard.layout.BumLayout.NUMBER_ROW_GROWTH)
+                    : givenHeight;
             final int width = params.mId.mWidth;
             params.mOccupiedHeight = height;
             params.mOccupiedWidth = width;
@@ -271,10 +278,8 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
             params.mBaseHeight = baseHeight;
             params.mDefaultRowHeight = (int)ResourceUtils.getDimensionOrFraction(keyboardAttr,
                     R.styleable.Keyboard_rowHeight, baseHeight, baseHeight / DEFAULT_KEYBOARD_ROWS);
-            // BUMBOARD: the keyboard is a row taller with the number row (BumLayout); keep the
-            // letter rows the same height by sharing it among five rows instead of four.
             if (params.mId.mBumNumberRow && params.mId.isAlphabetKeyboard()) {
-                params.mDefaultRowHeight = params.mDefaultRowHeight * 4 / 5;
+                params.mOccupiedHeight = height + params.mDefaultRowHeight;
             }
 
             params.mKeyVisualAttributes = KeyVisualAttributes.newInstance(keyAttr);

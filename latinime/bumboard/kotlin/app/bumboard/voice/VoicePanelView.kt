@@ -91,13 +91,8 @@ class VoicePanelView @JvmOverloads constructor(
         column.addView(micBox, LinearLayout.LayoutParams(dp(96), dp(96)))
         column.addView(status)
         addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
-        addView(ImageView(context).apply {
-            setImageResource(R.drawable.ic_sym_close)
-            imageTintList = ColorStateList.valueOf(palette.onSurfaceVariant)
-            scaleType = ImageView.ScaleType.CENTER
-            contentDescription = context.getString(R.string.bum_voice_cancel)
-            setOnClickListener { cancel() }
-        }, LayoutParams(dp(48), dp(48), Gravity.TOP or Gravity.END))
+        addView(app.bumboard.layout.BumPanels.backButton(context) { cancel() },
+            LayoutParams(dp(56), dp(56), Gravity.TOP or Gravity.START))
         visibility = GONE
     }
 

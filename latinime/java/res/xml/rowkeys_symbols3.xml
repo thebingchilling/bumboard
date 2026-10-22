@@ -45,7 +45,8 @@
         </default>
     </switch>
     <Key
-        latin:keySpec=":" />
+        latin:keySpec=":"
+                latin:moreKeys="∶,：" />
     <Key
         latin:keySpec="!text/keyspec_symbols_semicolon"
         latin:moreKeys="!text/morekeys_symbols_semicolon" />

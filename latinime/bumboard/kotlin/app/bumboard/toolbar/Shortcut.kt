@@ -44,6 +44,9 @@ class ShortcutStore(private val prefs: SharedPreferences) {
     fun setOrder(order: List<Shortcut>) =
         prefs.edit().putString(PREF_ORDER, order.joinToString(",") { it.id }).apply()
 
+    fun setPinned(pinned: Set<Shortcut>) =
+        prefs.edit().putString(PREF_PINNED, pinned.joinToString(",") { it.id }).apply()
+
     fun setPinned(shortcut: Shortcut, pinned: Boolean) {
         val set = pinned().toMutableSet()
         if (pinned) set += shortcut else set -= shortcut

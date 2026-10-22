@@ -36,16 +36,29 @@ class FloatHandleView @JvmOverloads constructor(
 
     init {
         setWillNotDraw(false)
+        // left: resize; right: leave floating mode, filled so it stands out
         addView(ImageView(context).apply {
-            setImageResource(R.drawable.ic_sym_keyboard_arrow_down)
+            setImageResource(R.drawable.ic_sym_open_in_full)
             imageTintList = ColorStateList.valueOf(palette.onSurfaceVariant)
             scaleType = ImageView.ScaleType.CENTER
+            contentDescription = context.getString(R.string.bum_sc_resize)
+            background = context.getDrawable(R.drawable.bum_m3_suggestion)
+            setOnClickListener { bumHost()?.bumRunShortcut(app.bumboard.toolbar.Shortcut.RESIZE) }
+        }, LayoutParams(dp(40), dp(32), Gravity.START or Gravity.CENTER_VERTICAL).apply { leftMargin = dp(6) })
+        addView(ImageView(context).apply {
+            setImageResource(R.drawable.ic_sym_close_fullscreen)
+            imageTintList = ColorStateList.valueOf(palette.onPrimaryContainer)
+            scaleType = ImageView.ScaleType.CENTER
             contentDescription = context.getString(R.string.bum_float_dock)
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = dp(16).toFloat()
+                setColor(palette.primaryContainer)
+            }
             setOnClickListener {
                 BumLayout.get(context).setMode(BumLayout.Mode.NORMAL)
                 bumHost()?.bumReloadLayout()
             }
-        }, LayoutParams(dp(40), LayoutParams.MATCH_PARENT, Gravity.END))
+        }, LayoutParams(dp(48), dp(32), Gravity.END or Gravity.CENTER_VERTICAL).apply { rightMargin = dp(6) })
     }
 
     override fun onDraw(canvas: Canvas) {

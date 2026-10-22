@@ -18,13 +18,16 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.RecyclerView
 import app.bumboard.bumHost
+import app.bumboard.layout.BumPanels
 import app.bumboard.ui.M3Colors
 import com.android.inputmethod.latin.R
 
 /**
- * Every shortcut as a grid over the keys, like Gboard's. Tap one to use it. In edit mode, tap
- * a shortcut to show or hide it on the toolbar and drag shortcuts to change the order (which
- * is also the toolbar's order).
+ * Every shortcut as a grid over the keys, like Gboard's. Tap one to use it.
+ *
+ * In edit mode the grid has two parts, "On the bar" and "More shortcuts". Touch and hold a
+ * shortcut and drag it across to put it on the bar or take it off, or within the bar to
+ * change the bar's order; tapping one moves it to the other part.
  */
 class ShortcutGalleryView @JvmOverloads constructor(
     context: Context,
@@ -36,118 +39,159 @@ class ShortcutGalleryView @JvmOverloads constructor(
     private val palette = M3Colors.of(context)
     private val grid = RecyclerView(context)
     private val adapter = Adapter()
+    private val layoutManager = GridLayoutManager(context, COLUMNS)
     private val title = TextView(context)
-    private val hint = TextView(context)
-    private val editButton = TextView(context)
+    private val editButton = ImageView(context)
     private var editing = false
+    private lateinit var dragger: ItemTouchHelper
+
+    /** A grid entry: a section title (edit mode only) or a shortcut. */
+    private sealed class Item {
+        class Title(val text: Int) : Item()
+        class Tile(val shortcut: Shortcut) : Item()
+    }
 
     init {
         orientation = VERTICAL
         isClickable = true
         setBackgroundColor(palette.surface)
         addView(header(), LayoutParams(LayoutParams.MATCH_PARENT, dp(48)))
-        hint.apply {
-            setText(R.string.bum_gallery_edit_hint)
-            setTextColor(palette.onSurfaceVariant)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-            setPadding(dp(16), 0, dp(16), dp(4))
-            visibility = GONE
+        layoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+            override fun getSpanSize(position: Int) = if (adapter.items.getOrNull(position) is Item.Title) COLUMNS else 1
         }
-        addView(hint)
-        grid.layoutManager = GridLayoutManager(context, 4)
+        grid.layoutManager = layoutManager
         grid.adapter = adapter
         grid.setPadding(dp(8), 0, dp(8), dp(8))
         grid.clipToPadding = false
-        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
-            ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.START or ItemTouchHelper.END, 0,
-        ) {
-            override fun isLongPressDragEnabled() = editing
+        dragger = ItemTouchHelper(object : ItemTouchHelper.Callback() {
+            override fun isLongPressDragEnabled() = false // started from the tile's long-press
+
+            override fun getMovementFlags(rv: RecyclerView, holder: RecyclerView.ViewHolder): Int {
+                if (adapter.items.getOrNull(holder.bindingAdapterPosition) !is Item.Tile) return 0
+                return makeMovementFlags(
+                    ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.START or ItemTouchHelper.END, 0,
+                )
+            }
+
             override fun onMove(rv: RecyclerView, from: RecyclerView.ViewHolder, to: RecyclerView.ViewHolder): Boolean {
                 val a = from.bindingAdapterPosition
                 val b = to.bindingAdapterPosition
+                // the "On the bar" title always stays first
+                if (b <= 0) return false
                 val list = adapter.items.toMutableList()
                 list.add(b, list.removeAt(a))
                 adapter.items = list
                 adapter.notifyItemMoved(a, b)
                 return true
             }
+
             override fun clearView(rv: RecyclerView, holder: RecyclerView.ViewHolder) {
                 super.clearView(rv, holder)
-                store.setOrder(adapter.items)
+                save()
+                // the tile may have crossed into the other part: redraw its pinned look
+                grid.post { adapter.notifyDataSetChanged() }
             }
+
             override fun onSwiped(holder: RecyclerView.ViewHolder, direction: Int) {}
-        }).attachToRecyclerView(grid)
+        })
+        dragger.attachToRecyclerView(grid)
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         visibility = GONE
     }
 
     fun show() {
         setEditing(false)
-        adapter.items = store.order()
-        adapter.notifyDataSetChanged()
         visibility = VISIBLE
     }
 
     private fun setEditing(on: Boolean) {
         editing = on
         title.setText(if (on) R.string.bum_gallery_edit_title else R.string.bum_gallery_title)
-        editButton.setText(if (on) R.string.bum_resize_done else R.string.bum_gallery_edit)
-        hint.visibility = if (on) VISIBLE else GONE
+        editButton.setImageResource(if (on) R.drawable.ic_sym_check else R.drawable.ic_sym_edit)
+        editButton.contentDescription = context.getString(if (on) R.string.bum_resize_done else R.string.bum_gallery_edit)
+        load()
+    }
+
+    /** Bar shortcuts first (in bar order), then the rest; titles between them while editing. */
+    private fun load() {
+        val pinned = store.toolbar()
+        val rest = store.order().filter { it !in pinned }
+        adapter.items = if (editing) {
+            listOf(Item.Title(R.string.bum_gallery_on_bar)) + pinned.map { Item.Tile(it) } +
+                Item.Title(R.string.bum_gallery_more) + rest.map { Item.Tile(it) }
+        } else {
+            (pinned + rest).map { Item.Tile(it) }
+        }
+        adapter.notifyDataSetChanged()
+    }
+
+    /** Saves the edit-mode grid: what is under "On the bar" is pinned, in that order. */
+    private fun save() {
+        val moreAt = adapter.items.indexOfLast { it is Item.Title }
+        val shortcuts = adapter.items.mapIndexedNotNull { i, item -> (item as? Item.Tile)?.let { i to it.shortcut } }
+        val pinned = shortcuts.filter { it.first < moreAt }.map { it.second }
+        store.setOrder(shortcuts.map { it.second })
+        store.setPinned(pinned.toSet())
+    }
+
+    /** Edit mode, tap: the shortcut moves to the end of the bar, or off it to the top of "More". */
+    private fun toggle(position: Int) {
+        val list = adapter.items.toMutableList()
+        val item = list.removeAt(position)
+        val moreAt = list.indexOfLast { it is Item.Title }
+        val onBar = position < moreAt + 1
+        list.add(if (onBar) moreAt + 1 else moreAt, item)
+        adapter.items = list
+        save()
         adapter.notifyDataSetChanged()
     }
 
     private fun header() = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(16), 0, dp(4), 0)
+        setPadding(dp(4), 0, dp(4), 0)
+        addView(BumPanels.backButton(context) { visibility = GONE }, LayoutParams(dp(48), dp(48)))
         title.apply {
             setTextColor(palette.onSurface)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            setPadding(dp(8), 0, 0, 0)
         }
         addView(title, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
         editButton.apply {
-            setTextColor(palette.primary)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-            gravity = Gravity.CENTER
-            setPadding(dp(16), dp(8), dp(16), dp(8))
+            imageTintList = ColorStateList.valueOf(palette.onSurfaceVariant)
+            scaleType = ImageView.ScaleType.CENTER
             background = context.getDrawable(R.drawable.bum_m3_suggestion)
             setOnClickListener { setEditing(!editing) }
         }
-        addView(editButton)
-        addView(ImageView(context).apply {
-            setImageResource(R.drawable.ic_sym_close)
-            imageTintList = ColorStateList.valueOf(palette.onSurfaceVariant)
-            scaleType = ImageView.ScaleType.CENTER
-            contentDescription = context.getString(R.string.bum_gallery_close)
-            background = context.getDrawable(R.drawable.bum_m3_suggestion)
-            setOnClickListener { visibility = GONE }
-        }, LayoutParams(dp(48), dp(48)))
+        addView(editButton, LayoutParams(dp(48), dp(48)))
     }
 
     private inner class Adapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-        var items: List<Shortcut> = emptyList()
+        var items: List<Item> = emptyList()
 
         override fun getItemCount() = items.size
+        override fun getItemViewType(position: Int) = if (items[position] is Item.Title) TYPE_TITLE else TYPE_TILE
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            val tile = LinearLayout(context).apply {
+            val view = if (viewType == TYPE_TITLE) TextView(context).apply {
+                setTextColor(palette.onSurfaceVariant)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                setPadding(dp(8), dp(12), dp(8), dp(4))
+                layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            } else LinearLayout(context).apply {
                 orientation = VERTICAL
                 gravity = Gravity.CENTER_HORIZONTAL
                 setPadding(dp(4), dp(8), dp(4), dp(8))
                 layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 background = context.getDrawable(R.drawable.bum_m3_suggestion)
-                val iconBox = FrameLayout(context)
-                iconBox.addView(ImageView(context).apply {
-                    id = ICON
-                    scaleType = ImageView.ScaleType.CENTER
-                }, FrameLayout.LayoutParams(dp(56), dp(44), Gravity.CENTER))
-                iconBox.addView(ImageView(context).apply {
-                    id = BADGE
-                    scaleType = ImageView.ScaleType.CENTER
-                }, FrameLayout.LayoutParams(dp(20), dp(20), Gravity.TOP or Gravity.END))
-                addView(iconBox, LayoutParams(dp(60), dp(48)))
+                addView(FrameLayout(context).apply {
+                    addView(ImageView(context).apply {
+                        id = ICON
+                        scaleType = ImageView.ScaleType.CENTER
+                    }, FrameLayout.LayoutParams(dp(56), dp(44), Gravity.CENTER))
+                }, LayoutParams(dp(60), dp(48)))
                 addView(TextView(context).apply {
                     id = LABEL
                     setTextColor(palette.onSurface)
@@ -158,37 +202,40 @@ class ShortcutGalleryView @JvmOverloads constructor(
                     setPadding(0, dp(4), 0, 0)
                 })
             }
-            return object : RecyclerView.ViewHolder(tile) {}
+            return object : RecyclerView.ViewHolder(view) {}
         }
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            val sc = items[position]
+            when (val item = items[position]) {
+                is Item.Title -> (holder.itemView as TextView).setText(item.text)
+                is Item.Tile -> bindTile(holder, item.shortcut, position)
+            }
+        }
+
+        private fun bindTile(holder: RecyclerView.ViewHolder, sc: Shortcut, position: Int) {
             val tile = holder.itemView
-            val pinned = sc in store.pinned()
+            val onBar = editing && position < items.indexOfLast { it is Item.Title }
             val icon = tile.findViewById<ImageView>(ICON)
             icon.setImageResource(sc.icon)
-            val highlighted = editing && pinned
-            icon.imageTintList = ColorStateList.valueOf(
-                if (highlighted) palette.onPrimaryContainer else palette.onSecondaryContainer)
+            icon.imageTintList = ColorStateList.valueOf(if (onBar) palette.onPrimaryContainer else palette.onSecondaryContainer)
             icon.background = GradientDrawable().apply {
                 cornerRadius = dp(16).toFloat()
-                setColor(if (highlighted) palette.primaryContainer else palette.secondaryContainer)
+                setColor(if (onBar) palette.primaryContainer else palette.secondaryContainer)
             }
-            val badge = tile.findViewById<ImageView>(BADGE)
-            badge.visibility = if (editing) VISIBLE else GONE
-            badge.setImageResource(if (pinned) R.drawable.ic_sym_visibility else R.drawable.ic_sym_visibility_off)
-            badge.imageTintList = ColorStateList.valueOf(if (pinned) palette.primary else palette.onSurfaceVariant)
-            badge.background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(palette.surface) }
             tile.findViewById<TextView>(LABEL).setText(sc.label)
             tile.contentDescription = context.getString(sc.label)
             tile.setOnClickListener {
-                if (editing) {
-                    store.setPinned(sc, !pinned)
-                    notifyItemChanged(holder.bindingAdapterPosition)
-                } else {
+                val at = holder.bindingAdapterPosition
+                if (at < 0) return@setOnClickListener
+                if (editing) toggle(at) else {
                     visibility = GONE
                     bumHost()?.bumRunShortcut(sc)
                 }
+            }
+            tile.setOnLongClickListener {
+                if (!editing) return@setOnLongClickListener false
+                dragger.startDrag(holder)
+                true
             }
         }
     }
@@ -196,8 +243,10 @@ class ShortcutGalleryView @JvmOverloads constructor(
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 
     private companion object {
+        const val COLUMNS = 4
+        const val TYPE_TITLE = 0
+        const val TYPE_TILE = 1
         val ICON = android.R.id.icon
-        val BADGE = android.R.id.icon1
         val LABEL = android.R.id.text1
     }
 }

@@ -147,7 +147,14 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mVoiceKey = (ImageButton)findViewById(R.id.suggestions_strip_voice_key);
         mBumToolbar = (app.bumboard.toolbar.ToolbarView)findViewById(R.id.bum_toolbar);
         mBumScriptKey = (TextView)findViewById(R.id.bum_script_key);
-        mBumScriptKey.setTextColor(context.getColor(R.color.bum_m3_on_key_variant));
+        final float density = getResources().getDisplayMetrics().density;
+        final android.graphics.drawable.GradientDrawable chip =
+                new android.graphics.drawable.GradientDrawable();
+        chip.setColor(context.getColor(R.color.bum_m3_primary_container));
+        chip.setCornerRadius(10 * density);
+        mBumScriptKey.setBackground(new android.graphics.drawable.InsetDrawable(chip,
+                (int) (4 * density), (int) (8 * density), (int) (4 * density), (int) (8 * density)));
+        mBumScriptKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
         mImportantNoticeStrip = findViewById(R.id.important_notice_strip);
         mStripVisibilityGroup = new StripVisibilityGroup(this, mSuggestionsStrip,
                 mImportantNoticeStrip);
@@ -205,16 +212,32 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
     }
 
     /**
-     * Shows the locked Traditional/Simplified key with [label] (null hides it, on keyboards
-     * that are not Chinese, and the shortcuts and suggestions then start at the left edge).
+     * Shows the locked Traditional/Simplified toggle (null hides it, on keyboards that are not
+     * Chinese, and the shortcuts and suggestions then start at the left edge). It is a filled
+     * chip reading 繁/简 with the script in use emphasised, so it never looks like a character
+     * to type.
      */
-    public void setBumScriptKey(final String label, final OnClickListener onClick) {
-        final boolean shown = label != null;
+    public void setBumScriptKey(final Boolean simplified, final OnClickListener onClick) {
+        final boolean shown = simplified != null;
         mBumScriptKey.setVisibility(shown ? VISIBLE : GONE);
-        mBumScriptKey.setText(label);
         mBumScriptKey.setOnClickListener(onClick);
-        final int edge = getResources().getDimensionPixelSize(
-                R.dimen.config_suggestions_strip_edge_key_width);
+        if (shown) {
+            final int strong = getContext().getColor(R.color.bum_m3_on_primary_container);
+            final int faded = (strong & 0x00FFFFFF) | 0x66000000;
+            final android.text.SpannableStringBuilder label =
+                    new android.text.SpannableStringBuilder("\u7E41/\u7B80");
+            final int on = simplified ? 2 : 0;
+            final int off = simplified ? 0 : 2;
+            label.setSpan(new android.text.style.ForegroundColorSpan(strong), on, on + 1, 0);
+            label.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+                    on, on + 1, 0);
+            label.setSpan(new android.text.style.ForegroundColorSpan(faded), off, off + 1, 0);
+            label.setSpan(new android.text.style.ForegroundColorSpan(faded), 1, 2, 0);
+            mBumScriptKey.setText(label);
+            mBumScriptKey.setContentDescription(getContext().getString(simplified
+                    ? R.string.bum_script_key_simplified : R.string.bum_script_key_traditional));
+        }
+        final int edge = getResources().getDimensionPixelSize(R.dimen.bum_script_key_width);
         for (final View v : new View[] { mBumToolbar, mSuggestionsStrip }) {
             final MarginLayoutParams lp = (MarginLayoutParams) v.getLayoutParams();
             lp.leftMargin = shown ? edge : 0;

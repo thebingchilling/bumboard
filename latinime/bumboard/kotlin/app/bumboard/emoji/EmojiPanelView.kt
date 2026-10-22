@@ -15,7 +15,6 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.ViewGroup
-import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -217,7 +216,8 @@ class EmojiPanelView @JvmOverloads constructor(
                 setOnClickListener { jumpTo(s) }
             }
             tabViews += tab
-            tabs.addView(tab, LayoutParams(dp(44), dp(36)).apply { gravity = Gravity.CENTER_VERTICAL })
+            // the tabs share the bar between ABC and delete, so every category fits
+            tabs.addView(tab, LayoutParams(0, dp(36), 1f).apply { gravity = Gravity.CENTER_VERTICAL })
         }
     }
 
@@ -285,16 +285,14 @@ class EmojiPanelView @JvmOverloads constructor(
         addView(TextView(context).apply {
             text = context.getString(R.string.bum_emoji_abc)
             setTextColor(palette.onSecondaryContainer)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
             gravity = Gravity.CENTER
             background = functionalKey()
             setOnClickListener { sendCode(Constants.CODE_ALPHA_FROM_EMOJI) }
-        }, LayoutParams(dp(64), dp(40)))
-        addView(HorizontalScrollView(context).apply {
-            isHorizontalScrollBarEnabled = false
-            addView(tabs)
-        }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(4); marginEnd = dp(4) })
+        }, LayoutParams(dp(50), dp(40)))
+        tabs.gravity = Gravity.CENTER_VERTICAL
+        addView(tabs, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(2); marginEnd = dp(2) })
         addView(ImageView(context).apply {
             setImageResource(R.drawable.ic_sym_backspace)
             imageTintList = ColorStateList.valueOf(palette.onSecondaryContainer)
@@ -307,7 +305,7 @@ class EmojiPanelView @JvmOverloads constructor(
                 onDeleteTouch(event)
                 true
             }
-        }, LayoutParams(dp(64), dp(40)))
+        }, LayoutParams(dp(50), dp(40)))
     }
 
     private fun onDeleteTouch(event: MotionEvent) {
@@ -357,7 +355,7 @@ class EmojiPanelView @JvmOverloads constructor(
         override fun getItemViewType(position: Int) = if (rows[position] is Row.Header) 0 else 1
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            val view = TextView(context).apply {
+            val view = EmojiCell(context).apply {
                 gravity = if (viewType == 0) Gravity.CENTER_VERTICAL else Gravity.CENTER
                 if (viewType == 0) {
                     setTextColor(palette.onSurfaceVariant)
@@ -378,7 +376,10 @@ class EmojiPanelView @JvmOverloads constructor(
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             val view = holder.itemView as TextView
             when (val row = rows[position]) {
-                is Row.Header -> view.text = context.getString(row.title)
+                is Row.Header -> {
+                    view.text = context.getString(row.title)
+                    (view as EmojiCell).hasTones = false
+                }
                 is Row.Cell -> {
                     // the emoji fills its cell
                     val size = if (cellSize > 0) cellSize else dp(46)
@@ -391,6 +392,7 @@ class EmojiPanelView @JvmOverloads constructor(
                     val shown = row.form ?: store.shown(row.emoji)
                     view.text = shown
                     view.contentDescription = row.emoji.name
+                    (view as EmojiCell).hasTones = row.emoji.tones != null
                     view.setOnClickListener { type(shown) }
                     view.setOnLongClickListener {
                         if (row.emoji.tones == null) return@setOnLongClickListener false
@@ -408,6 +410,34 @@ class EmojiPanelView @JvmOverloads constructor(
         private fun selectable() = TypedValue().let { value ->
             context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, value, true)
             context.getDrawable(value.resourceId)
+        }
+    }
+
+    /** An emoji in the grid; one with skin tones has a small marker in its corner, like Gboard. */
+    private inner class EmojiCell(context: Context) : TextView(context) {
+        var hasTones = false
+            set(value) {
+                if (field != value) { field = value; invalidate() }
+            }
+        private val marker = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = palette.onSurfaceVariant
+            alpha = 0x90
+        }
+        private val path = android.graphics.Path()
+
+        override fun onDraw(canvas: android.graphics.Canvas) {
+            super.onDraw(canvas)
+            if (!hasTones) return
+            val s = dp(6).toFloat()
+            val inset = dp(4).toFloat()
+            val r = width - inset
+            val b = height - inset
+            path.reset()
+            path.moveTo(r, b - s)
+            path.lineTo(r, b)
+            path.lineTo(r - s, b)
+            path.close()
+            canvas.drawPath(path, marker)
         }
     }
 

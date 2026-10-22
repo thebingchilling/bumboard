@@ -568,6 +568,28 @@ private fun ChinesePage() {
             }
         }
     }
+    val candidateSize = prefs.floatPref(ChineseInput.PREF_CANDIDATE_SIZE) { prefs.getFloat(ChineseInput.PREF_CANDIDATE_SIZE, 1f) }
+    val dictionaryHold = prefs.stringPref(ChineseInput.PREF_DICTIONARY_HOLD) {
+        prefs.getString(ChineseInput.PREF_DICTIONARY_HOLD, null) ?: "pin"
+    }
+    Group {
+        row {
+            SliderRow(
+                it, stringResource(R.string.bum_pref_candidate_size), (candidateSize.value * 100).roundToInt(),
+                70..160, 10, format = { v -> "$v%" },
+            ) { v -> candidateSize.set(v / 100f) }
+        }
+        row {
+            ChoiceRow(
+                it, stringResource(R.string.bum_pref_dictionary_hold), stringResource(R.string.bum_pref_dictionary_hold_summary),
+                listOf(
+                    "peek" to stringResource(R.string.bum_pref_dictionary_peek),
+                    "pin" to stringResource(R.string.bum_pref_dictionary_pin),
+                ),
+                dictionaryHold.value, dictionaryHold::set,
+            )
+        }
+    }
 }
 
 // ---------------------------------------------------------------- preferences

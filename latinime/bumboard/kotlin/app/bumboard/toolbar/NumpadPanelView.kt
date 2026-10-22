@@ -22,7 +22,7 @@ import com.android.inputmethod.latin.common.Constants
 
 /**
  * A number pad over the keys: digits in a phone-style 3 x 3 grid with 0 below, operators on
- * the left, and backspace, space, Enter and ABC on the right.
+ * the left, and backspace, space and Enter on the right; Back in the top-left corner.
  */
 class NumpadPanelView @JvmOverloads constructor(
     context: Context,
@@ -37,10 +37,12 @@ class NumpadPanelView @JvmOverloads constructor(
         isClickable = true
         setBackgroundColor(palette.surface)
         setPadding(dp(3), dp(4), dp(3), dp(4))
-        addRow(text("+"), digit("1"), digit("2"), digit("3"), icon(R.drawable.ic_sym_backspace, R.string.bum_emoji_delete, repeats = true) { send(Constants.CODE_DELETE) })
-        addRow(text("-"), digit("4"), digit("5"), digit("6"), spaceKey())
-        addRow(text("*"), digit("7"), digit("8"), digit("9"), enterKey())
-        addRow(text("/"), text(","), digit("0"), text("."), word(R.string.bum_emoji_abc) { visibility = GONE })
+        // Back in the top-left corner, operators down the left, digits like a phone keypad
+        addRow(BumPanels.backButton(context) { visibility = GONE }, digit("1"), digit("2"), digit("3"),
+            icon(R.drawable.ic_sym_backspace, R.string.bum_emoji_delete, repeats = true) { send(Constants.CODE_DELETE) })
+        addRow(text("+"), digit("4"), digit("5"), digit("6"), spaceKey())
+        addRow(text("-"), digit("7"), digit("8"), digit("9"), enterKey())
+        addRow(text("*"), text(","), digit("0"), text("."), text("/"))
         visibility = GONE
     }
 
@@ -64,7 +66,6 @@ class NumpadPanelView @JvmOverloads constructor(
 
     private fun text(t: String) = key(t, letter = false) { bumHost()?.bumSendCode(t[0].code) }
 
-    private fun word(label: Int, action: () -> Unit) = key(context.getString(label), letter = false, size = 15f, action = action)
 
     private fun spaceKey() = icon(R.drawable.ic_sym_space_bar, R.string.bum_numpad_space) { send(Constants.CODE_SPACE) }
 

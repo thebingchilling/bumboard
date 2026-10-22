@@ -20,7 +20,8 @@
     <string name="bum_gallery_edit_title">Edit shortcuts</string>
     <string name="bum_gallery_edit">Edit</string>
     <string name="bum_gallery_close">Close</string>
-    <string name="bum_gallery_edit_hint">Tap to show or hide on the bar. Touch and hold to drag into order.</string>
+    <string name="bum_gallery_on_bar">On the bar · touch and hold to drag in, out or into order</string>
+    <string name="bum_gallery_more">More shortcuts</string>
 
     <!-- Text editing -->
     <string name="bum_edit_select">Select</string>
@@ -47,9 +48,8 @@
     <string name="bum_numpad_enter">Enter</string>
 
     <!-- Emoji skin tones -->
-    <string name="bum_tone_person1">Person 1</string>
-    <string name="bum_tone_person2">Person 2</string>
-    <string name="bum_tone_tap_preview">Pick a tone for each person, then tap the emoji</string>
+    <string name="bum_tone_person1">Left</string>
+    <string name="bum_tone_person2">Right</string>
     <string name="bum_tone_type">Type this emoji</string>
     <string name="bum_tone_1">Light skin tone</string>
     <string name="bum_tone_2">Medium-light skin tone</string>
@@ -71,4 +71,13 @@
     <string name="bum_pref_layout_normal">Full width</string>
     <string name="bum_pref_layout_one_handed">One-handed</string>
     <string name="bum_pref_layout_floating">Floating</string>
+
+    <!-- Chinese -->
+    <string name="bum_script_key_traditional">Traditional Chinese. Tap for Simplified.</string>
+    <string name="bum_script_key_simplified">Simplified Chinese. Tap for Traditional.</string>
+    <string name="bum_pref_candidate_size">Candidate size</string>
+    <string name="bum_pref_dictionary_hold">Dictionary on long-press</string>
+    <string name="bum_pref_dictionary_hold_summary">Peek shows the entry while you hold a candidate; pin keeps it open until you close it</string>
+    <string name="bum_pref_dictionary_peek">Hold to peek</string>
+    <string name="bum_pref_dictionary_pin">Hold to pin</string>
 </resources>

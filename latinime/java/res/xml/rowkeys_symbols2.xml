@@ -38,9 +38,11 @@
         </case>
         <default>
             <Key
-                latin:keySpec="\@" />
+                latin:keySpec="\@"
+                latin:moreKeys="＠,ⓐ" />
             <Key
-                latin:keySpec="\#" />
+                latin:keySpec="\#"
+                latin:moreKeys="№,＃" />
         </default>
     </switch>
     <Key
@@ -50,7 +52,8 @@
         latin:keySpec="!text/keyspec_symbols_percent"
         latin:moreKeys="!text/morekeys_symbols_percent" />
     <Key
-        latin:keySpec="&amp;" />
+        latin:keySpec="&amp;"
+                latin:moreKeys="§,¶,＆" />
     <!-- U+2013: "–" EN DASH
          U+2014: "—" EM DASH
          U+00B7: "·" MIDDLE DOT -->

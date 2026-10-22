@@ -882,7 +882,13 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         setUpBumEmoji(view);
         if (mSuggestionStripView != null) {
             mSuggestionStripView.getBumToolbar().setOnGallery(() -> {
-                showBumPanel(R.id.bum_gallery_panel);
+                // the gallery button opens the shortcuts, and closes them again
+                final View gallery = mInputView.findViewById(R.id.bum_gallery_panel);
+                if (gallery != null && gallery.getVisibility() == View.VISIBLE) {
+                    gallery.setVisibility(View.GONE);
+                } else {
+                    showBumPanel(R.id.bum_gallery_panel);
+                }
                 return kotlin.Unit.INSTANCE;
             });
         }
@@ -1497,6 +1503,17 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             ViewLayoutUtils.updateLayoutHeightOf(inputArea, layoutHeight);
             ViewLayoutUtils.updateLayoutGravityOf(inputArea, Gravity.BOTTOM);
             ViewLayoutUtils.updateLayoutHeightOf(mInputView, layoutHeight);
+            // BUMBOARD: newer Android versions wrap the input view in other containers (and
+            // may have no inputArea), which would leave the window only as tall as the keys and
+            // cut off long-press popups above them. Stretch every container up to the window.
+            if (!isFullscreenMode()) {
+                android.view.ViewParent parent = mInputView.getParent();
+                while (parent instanceof View && parent != window.getDecorView()) {
+                    ViewLayoutUtils.updateLayoutHeightOf((View) parent, LayoutParams.MATCH_PARENT);
+                    ViewLayoutUtils.updateLayoutGravityOf((View) parent, Gravity.BOTTOM);
+                    parent = parent.getParent();
+                }
+            }
         }
     }
 

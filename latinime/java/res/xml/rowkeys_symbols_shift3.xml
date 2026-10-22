@@ -25,16 +25,20 @@
         latin:keySpec="\\" />
     <!-- U+00A9: "©" COPYRIGHT SIGN -->
     <Key
-        latin:keySpec="&#x00A9;" />
+        latin:keySpec="&#x00A9;"
+                latin:moreKeys="℗" />
     <!-- U+00AE: "®" REGISTERED SIGN -->
     <Key
-        latin:keySpec="&#x00AE;" />
+        latin:keySpec="&#x00AE;"
+                latin:moreKeys="Ⓡ" />
     <!-- U+2122: "™" TRADE MARK SIGN -->
     <Key
-        latin:keySpec="&#x2122;" />
+        latin:keySpec="&#x2122;"
+                latin:moreKeys="℠" />
     <!-- U+2105: "℅" CARE OF -->
     <Key
-        latin:keySpec="&#x2105;" />
+        latin:keySpec="&#x2105;"
+                latin:moreKeys="℀,℁" />
     <include
         latin:keyboardLayout="@xml/keys_square_brackets" />
 </merge>

@@ -46,6 +46,31 @@ object BumPanels {
         R.id.bum_resize_panel, R.id.bum_numpad_panel,
     )
 
+    /**
+     * The Back button every panel has in its top-left corner: a filled circle in the accent
+     * colour, so it never looks like one of the keys.
+     */
+    @JvmStatic
+    fun backButton(context: Context, onClick: () -> Unit): View {
+        val palette = app.bumboard.ui.M3Colors.of(context)
+        val size = (context.resources.displayMetrics.density * 40).toInt()
+        val button = android.widget.ImageView(context).apply {
+            setImageResource(R.drawable.ic_sym_arrow_back)
+            imageTintList = android.content.res.ColorStateList.valueOf(palette.onPrimaryContainer)
+            scaleType = android.widget.ImageView.ScaleType.CENTER
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(palette.primaryContainer)
+            }
+            contentDescription = context.getString(R.string.bum_back)
+            setOnClickListener { onClick() }
+        }
+        // centred in whatever cell it is given, at a fixed size
+        return FrameLayout(context).apply {
+            addView(button, FrameLayout.LayoutParams(size, size, Gravity.CENTER))
+        }
+    }
+
     /** The background of a functional key in the selected key style (flat or raised). */
     fun functionalKey(context: Context): Drawable? = context.getDrawable(
         if (raised(context)) R.drawable.bum_m3_key_functional_raised else R.drawable.bum_m3_key_functional_flat

@@ -25,9 +25,9 @@ import com.android.inputmethod.latin.R
 import com.android.inputmethod.latin.common.Constants
 
 /**
- * Text editing over the keys, like Gboard's: arrows around a Select toggle (with Select on,
- * the arrows extend the selection), start/end of line, select all, cut, copy, paste and
- * backspace. Arrows and backspace repeat while held.
+ * Text editing over the keys, laid out like Gboard's: arrows around a Select toggle (with
+ * Select on, the arrows extend the selection), start/end of line, then select all, copy,
+ * paste and delete. Arrows and delete repeat while held.
  */
 class TextEditPanelView @JvmOverloads constructor(
     context: Context,
@@ -44,33 +44,58 @@ class TextEditPanelView @JvmOverloads constructor(
         isClickable = true
         setBackgroundColor(palette.surface)
         setPadding(dp(4), dp(4), dp(4), dp(4))
-        // left: a 3 x 4 grid of movement keys
+        // left, as Gboard lays it out: up on top, left / Select / right across the middle,
+        // down below, then start and end of line; Back in the top-left corner
         val left = LinearLayout(context).apply { orientation = VERTICAL }
-        left.addView(row(
-            icon(R.drawable.ic_sym_first_page, R.string.bum_edit_line_start) { move(KeyEvent.KEYCODE_MOVE_HOME) },
-            icon(R.drawable.ic_sym_keyboard_arrow_up, R.string.bum_edit_up, repeats = true) { move(KeyEvent.KEYCODE_DPAD_UP) },
-            icon(R.drawable.ic_sym_last_page, R.string.bum_edit_line_end) { move(KeyEvent.KEYCODE_MOVE_END) },
-        ), rowParams())
         selectKey = label(R.string.bum_edit_select) { toggleSelect() }
+        left.addView(row(
+            BumPanels.backButton(context) { visibility = GONE },
+            icon(R.drawable.ic_sym_keyboard_arrow_up, R.string.bum_edit_up, repeats = true) { move(KeyEvent.KEYCODE_DPAD_UP) },
+            View(context),
+        ), rowParams())
         left.addView(row(
             icon(R.drawable.ic_sym_keyboard_arrow_left, R.string.bum_edit_left, repeats = true) { move(KeyEvent.KEYCODE_DPAD_LEFT) },
             selectKey,
             icon(R.drawable.ic_sym_keyboard_arrow_right, R.string.bum_edit_right, repeats = true) { move(KeyEvent.KEYCODE_DPAD_RIGHT) },
         ), rowParams())
         left.addView(row(
-            icon(R.drawable.ic_sym_backspace, R.string.bum_emoji_delete, repeats = true) { bumHost()?.bumSendCode(Constants.CODE_DELETE) },
+            View(context),
             icon(R.drawable.ic_sym_keyboard_arrow_down, R.string.bum_edit_down, repeats = true) { move(KeyEvent.KEYCODE_DPAD_DOWN) },
-            label(R.string.bum_emoji_abc) { visibility = GONE },
+            View(context),
+        ), rowParams())
+        left.addView(row(
+            icon(R.drawable.ic_sym_first_page, R.string.bum_edit_line_start) { move(KeyEvent.KEYCODE_MOVE_HOME) },
+            icon(R.drawable.ic_sym_last_page, R.string.bum_edit_line_end) { move(KeyEvent.KEYCODE_MOVE_END) },
         ), rowParams())
         addView(left, LayoutParams(0, LayoutParams.MATCH_PARENT, 3f))
-        // right: clipboard actions
+        // right: select all, copy, paste and delete
         val right = LinearLayout(context).apply { orientation = VERTICAL }
-        right.addView(icon(R.drawable.ic_sym_select_all, R.string.bum_edit_select_all) { menu(android.R.id.selectAll) }, keyParams())
-        right.addView(icon(R.drawable.ic_sym_content_cut, R.string.bum_edit_cut) { menu(android.R.id.cut); setSelecting(false) }, keyParams())
-        right.addView(icon(R.drawable.ic_sym_content_copy, R.string.bum_edit_copy) { menu(android.R.id.copy); setSelecting(false) }, keyParams())
-        right.addView(icon(R.drawable.ic_sym_content_paste, R.string.bum_edit_paste) { menu(android.R.id.paste); setSelecting(false) }, keyParams())
-        addView(right, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
+        right.addView(labelled(R.drawable.ic_sym_select_all, R.string.bum_edit_select_all) { menu(android.R.id.selectAll) }, keyParams())
+        right.addView(labelled(R.drawable.ic_sym_content_copy, R.string.bum_edit_copy) { menu(android.R.id.copy); setSelecting(false) }, keyParams())
+        right.addView(labelled(R.drawable.ic_sym_content_paste, R.string.bum_edit_paste) { menu(android.R.id.paste); setSelecting(false) }, keyParams())
+        right.addView(icon(R.drawable.ic_sym_backspace, R.string.bum_emoji_delete, repeats = true) {
+            bumHost()?.bumSendCode(Constants.CODE_DELETE)
+        }, keyParams())
+        addView(right, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.4f))
         visibility = GONE
+    }
+
+    /** A key with an icon and its name beside it, like Gboard's Select all / Copy / Paste. */
+    private fun labelled(res: Int, label: Int, action: () -> Unit) = LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER
+        addView(ImageView(context).apply {
+            setImageResource(res)
+            imageTintList = ColorStateList.valueOf(palette.onSecondaryContainer)
+        })
+        addView(TextView(context).apply {
+            setText(label)
+            setTextColor(palette.onSecondaryContainer)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setPadding(dp(8), 0, 0, 0)
+        })
+        background = BumPanels.functionalKey(context)
+        setOnClickListener { action() }
     }
 
     fun show() {

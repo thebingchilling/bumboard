@@ -30,35 +30,36 @@
     <app.bumboard.layout.FloatHandleView
         android:id="@+id/bum_float_handle"
         android:layout_width="match_parent"
-        android:layout_height="22dp"
+        android:layout_height="40dp"
         android:visibility="gone" />
 
+    <!-- wraps the strip; taller only while emoji search shows its results row -->
     <FrameLayout
         android:id="@+id/bum_top_bar"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/config_suggestions_strip_height">
+        android:layout_height="wrap_content">
         <!-- To ensure that key preview popup is correctly placed when the current system locale is
              one of RTL locales, layoutDirection="ltr" is needed in the SDK version 17+. -->
         <com.android.inputmethod.latin.suggestions.SuggestionStripView
             android:id="@+id/suggestion_strip_view"
             android:layoutDirection="ltr"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="@dimen/config_suggestions_strip_height"
             android:gravity="center_vertical"
             style="?attr/suggestionStripViewStyle" />
         <!-- Emoji search; shown over the strip while searching for an emoji. -->
         <app.bumboard.emoji.EmojiSearchBar
             android:id="@+id/bum_emoji_search"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="@dimen/bum_emoji_search_height"
             android:visibility="gone" />
         <!-- Chinese candidates, between the strip's locked edge keys while Rime is composing. -->
         <app.bumboard.chinese.CandidateBarView
             android:id="@+id/bum_candidate_bar"
             android:layoutDirection="ltr"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginStart="@dimen/config_suggestions_strip_edge_key_width"
+            android:layout_height="@dimen/config_suggestions_strip_height"
+            android:layout_marginStart="@dimen/bum_script_key_width"
             android:layout_marginEnd="@dimen/config_suggestions_strip_edge_key_width"
             android:visibility="gone" />
     </FrameLayout>

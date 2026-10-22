@@ -46,6 +46,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         keyboardFrame = inputView.findViewById(R.id.main_keyboard_frame)
         bar?.onPick = { index -> pick(index) }
         bar?.onLongPick = { index, anchor -> showDictionary(index, anchor) }
+        // hold to peek: the card goes when the finger lifts
+        bar?.onRelease = { if (prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek") popup?.dismiss() }
         show(null)
     }
 
@@ -56,8 +58,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val mode = if (engine == "yue") InputMode.Cantonese else InputMode.Mandarin
         val resolved = annotator.resolve(candidate.text, candidate.comment, mode) ?: return
         if (resolved.headwords.isEmpty() && resolved.reading == null) return
-        val height = keyboardFrame?.height?.takeIf { it > 0 } ?: return
-        popup?.show(anchor, candidate.text, resolved, Readings.displayPrefs(prefs), height - anchor.height) {
+        val frame = keyboardFrame?.takeIf { it.height > 0 } ?: return
+        val peek = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
+        popup?.show(frame, candidate.text, resolved, Readings.displayPrefs(prefs), peek) {
             pick(index)
         }
     }
@@ -134,7 +137,20 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                 if (isComposing) commitFirst()
                 false
             }
-            code in '0'.code..'9'.code || code == '\''.code -> isComposing && key(code)
+            code in '0'.code..'9'.code || code == '\''.code && isComposing -> isComposing && key(code)
+            // Chinese punctuation: ends a composition with its first candidate, then the
+            // full-width mark, as Chinese input methods do
+            code in PUNCTUATION || code == '"'.code || code == '\''.code -> {
+                if (isComposing) commitFirst()
+                ime.currentInputConnection?.commitText(fullWidth(code), 1)
+                true
+            }
+            // keys already labelled with a full-width mark (the Chinese comma and period)
+            code in FULL_WIDTH -> {
+                if (isComposing) commitFirst()
+                ime.currentInputConnection?.commitText(String(Character.toChars(code)), 1)
+                true
+            }
             code > 0 -> key(code)
             else -> false
         }
@@ -150,6 +166,17 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         if (session == 0L) return
         Rime.selectCandidate(session, index)
         sync()
+    }
+
+    /** Whether the next " and ' open a quotation (they alternate, like Chinese IMEs). */
+    private var doubleOpen = true
+    private var singleOpen = true
+
+    /** The full-width Chinese form of an ASCII punctuation mark. */
+    private fun fullWidth(code: Int): String = when (code) {
+        '"'.code -> (if (doubleOpen) "“" else "”").also { doubleOpen = !doubleOpen }
+        '\''.code -> (if (singleOpen) "‘" else "’").also { singleOpen = !singleOpen }
+        else -> PUNCTUATION.getValue(code)
     }
 
     /** Drops any composition, e.g. when the text field changes. */
@@ -197,6 +224,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         popup?.dismiss()
         val stripView = strip as? SuggestionStripView
         updateScriptKey(stripView)
+        updateBarHeight(stripView)
         val bar = bar ?: return
         val candidates = composition?.candidates.orEmpty()
         if (!isActive || candidates.isEmpty()) {
@@ -205,10 +233,31 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             stripView?.setBumCandidatesShowing(false)
             return
         }
-        bar.setLines(annotationLines())
+        bar.setScale(candidateScale())
         bar.setCandidates(candidates, annotation())
         bar.visibility = View.VISIBLE
         stripView?.setBumCandidatesShowing(true)
+    }
+
+    private fun candidateScale() = prefs.getFloat(PREF_CANDIDATE_SIZE, 1f).coerceIn(0.7f, 1.6f)
+
+    /**
+     * On the Chinese keyboards the whole top bar is as tall as a candidate with its readings
+     * and meaning (at the candidate size setting), all the time, so nothing is cut off and the
+     * keyboard never jumps; elsewhere it is the usual strip height.
+     */
+    private fun updateBarHeight(stripView: SuggestionStripView?) {
+        val res = ime.resources
+        val standard = res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+        val height = if (!isActive) standard
+        else maxOf(standard, CandidateBarView.heightFor(ime, annotationLines(), candidateScale()))
+        for (view in listOfNotNull(stripView, bar)) {
+            val lp = view.layoutParams ?: continue
+            if (lp.height != height) {
+                lp.height = height
+                view.layoutParams = lp
+            }
+        }
     }
 
     /** 繁 or 简 on the strip's left edge on the Chinese keyboards; a tap switches. */
@@ -219,7 +268,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             return
         }
         val simplified = prefs.getString(PREF_SCRIPT, "traditional") == "simplified"
-        stripView.setBumScriptKey(if (simplified) "简" else "繁") {
+        stripView.setBumScriptKey(simplified) {
             prefs.edit().putString(PREF_SCRIPT, if (simplified) "traditional" else "simplified").apply()
             if (RimeService.ready && session != 0L) selectSchema()
             if (isComposing) sync() else show(shown)
@@ -237,8 +286,22 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     }
 
     companion object {
+        /** ASCII punctuation and its Chinese full-width form. */
+        private val PUNCTUATION = mapOf(
+            ','.code to "，", '.'.code to "。", '?'.code to "？", '!'.code to "！",
+            ':'.code to "：", ';'.code to "；", '('.code to "（", ')'.code to "）",
+            '['.code to "「", ']'.code to "」", '{'.code to "『", '}'.code to "』",
+            '<'.code to "《", '>'.code to "》", '\\'.code to "、", '~'.code to "～",
+            '^'.code to "……", '_'.code to "——",
+        )
+        private val FULL_WIDTH: Set<Int> =
+            (PUNCTUATION.values.flatMap { it.codePoints().toArray().toList() } + "“”‘’".map { it.code }).toSet()
         const val EXTRA_ENGINE = "BumEngine"
         const val PREF_SCRIPT = "bum_chinese_script"
+        /** Candidate text size, 0.7 .. 1.6. */
+        const val PREF_CANDIDATE_SIZE = "bum_candidate_size"
+        /** Long-press on a candidate: "peek" (while held) or "pin" (until closed). */
+        const val PREF_DICTIONARY_HOLD = "bum_dictionary_hold"
         const val PREF_CANTONESE_INPUT = "bum_cantonese_input"
         private const val KEY_BACKSPACE = 0xff08
         /** Candidates fetched per keystroke; the bar scrolls through these. */

@@ -41,9 +41,16 @@ class DictionaryPopup(private val ctx: Context) {
         window = null
     }
 
-    /** Shows [resolved] for [text] just below [anchor], at most [maxHeight] tall. */
-    fun show(anchor: View, text: String, resolved: Resolved, prefs: DisplayPrefs, maxHeight: Int, onType: () -> Unit) {
+    /**
+     * Shows [resolved] for [text] above [keyboard] (the keyboard frame), never over the keys.
+     * [peek]: no buttons, for a card that only shows while the candidate is held.
+     */
+    fun show(keyboard: View, text: String, resolved: Resolved, prefs: DisplayPrefs, peek: Boolean, onType: () -> Unit) {
         dismiss()
+        val location = IntArray(2).also { keyboard.getLocationInWindow(it) }
+        // the room above the keyboard, below the status bar
+        val maxHeight = location[1] - dp(48)
+        if (maxHeight < dp(96)) return
         val c = M3Colors.of(ctx)
         val body = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -75,13 +82,24 @@ class DictionaryPopup(private val ctx: Context) {
             elevation = dp(8).toFloat()
             setOnDismissListener { if (window === this) window = null }
         }
-        actions.addView(button(ctx.getString(R.string.bum_close), c, filled = false) { popup.dismiss() })
-        actions.addView(button(ctx.getString(R.string.bum_type_it), c, filled = true) {
-            popup.dismiss()
-            onType()
-        })
+        if (peek) {
+            actions.visibility = View.GONE
+        } else {
+            actions.addView(button(ctx.getString(R.string.bum_close), c, filled = false) { popup.dismiss() })
+            actions.addView(button(ctx.getString(R.string.bum_type_it), c, filled = true) {
+                popup.dismiss()
+                onType()
+            })
+        }
         window = popup
-        popup.showAsDropDown(anchor, 0, dp(4))
+        // just above the keyboard, centred
+        val width = minOf(dp(340), screen - dp(16))
+        card.measure(
+            View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(maxHeight, View.MeasureSpec.AT_MOST),
+        )
+        popup.showAtLocation(keyboard, Gravity.TOP or Gravity.START,
+            (screen - width) / 2, location[1] - card.measuredHeight - dp(8))
     }
 
     /** A column that never grows taller than [maxHeight]. */

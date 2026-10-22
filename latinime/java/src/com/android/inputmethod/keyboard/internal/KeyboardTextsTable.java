@@ -4194,5 +4194,41 @@ public final class KeyboardTextsTable {
             sLocaleToTextsTableMap.put(locale, textsTable);
             sTextsTableToLocaleMap.put(textsTable, locale);
         }
+        putBumChinese();
+    }
+
+    // BUMBOARD: the Chinese keyboards (zh_HK, zh_CN) label their punctuation keys with the
+    // full-width Chinese marks that app.bumboard.chinese.ChineseInput types.
+    private static void putBumChinese() {
+        final String[] zh = new String[NAMES.length];
+        final String[][] texts = {
+            { "keyspec_comma", "，" },                      // ，
+            { "keyspec_period", "。" },                     // 。
+            { "keyspec_symbols_question", "？" },           // ？
+            { "keyspec_symbols_semicolon", "；" },          // ；
+            { "keyspec_left_parenthesis", "（" },           // （
+            { "keyspec_right_parenthesis", "）" },          // ）
+            { "keyspec_left_square_bracket", "「" },        // 「
+            { "keyspec_right_square_bracket", "」" },       // 」
+            { "keyspec_left_curly_bracket", "『" },         // 『
+            { "keyspec_right_curly_bracket", "』" },        // 』
+            { "keyspec_less_than", "《" },                  // 《
+            { "keyspec_greater_than", "》" },               // 》
+            { "keyspec_left_double_angle_quote", "《" },
+            { "keyspec_right_double_angle_quote", "》" },
+            { "keyspec_left_single_angle_quote", "〈" },    // 〈
+            { "keyspec_right_single_angle_quote", "〉" },   // 〉
+            // the period's popup: Chinese punctuation
+            { "morekeys_punctuation", "!autoColumnOrder!8,？,！,、,：,；,"
+                    + "“,”,‘,’,「,」,《,》,（,）,"
+                    + "……,——" },
+            { "morekeys_period", "…,．,·" },
+        };
+        for (final String[] text : texts) {
+            final Integer index = sNameToIndexesMap.get(text[0]);
+            if (index != null) zh[index] = text[1];
+        }
+        sLocaleToTextsTableMap.put("zh", zh);
+        sTextsTableToLocaleMap.put(zh, "zh");
     }
 }

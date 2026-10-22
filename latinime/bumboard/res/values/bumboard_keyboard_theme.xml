@@ -43,9 +43,13 @@
     <!-- themeId must match KeyboardTheme.THEME_ID_BUM_* -->
     <style name="Keyboard.BumM3.Flat" parent="Keyboard">
         <item name="themeId">BumFlat</item>
+        <!-- a slim margin under the bottom row, right above the navigation bar -->
+        <item name="keyboardBottomPadding">1.2%p</item>
     </style>
     <style name="Keyboard.BumM3.Raised" parent="Keyboard">
         <item name="themeId">BumRaised</item>
+        <!-- a slim margin under the bottom row, right above the navigation bar -->
+        <item name="keyboardBottomPadding">1.2%p</item>
     </style>
 
     <style name="KeyboardView.BumM3" parent="KeyboardView.LXX">
