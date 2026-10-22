@@ -1,0 +1,43 @@
+BumBoard dictionary data — sources and licences
+================================================
+
+readings.db (readings and meanings shown under candidates and in the word card)
+is licensed under Creative Commons Attribution-ShareAlike 4.0 International
+(https://creativecommons.org/licenses/by-sa/4.0/). You may copy and adapt it,
+including commercially, as long as you credit the sources below and share
+adaptations under the same licence. It is built from:
+
+  * CC-CEDICT — https://cc-cedict.org — CC BY-SA 4.0.
+    Copyright its maintainers, with portions from CEDICT (c) 1997, 1998 Paul Andrew Denisowski.
+  * CC-Canto and the Cantonese readings for CC-CEDICT — https://cantonese.org —
+    CC BY-SA 3.0, (c) 2015-16 Pleco Software Incorporated.
+  * TypeDuck dictionary (jyut6ping3_scolar) — https://github.com/TypeDuck-HK/schema —
+    CC BY 4.0, TypeDuck.
+  * rime-cantonese — https://github.com/rime/rime-cantonese — CC BY 4.0,
+    Cantonese Computational Linguistics Infrastructure Development Workgroup (CanCLID).
+  * Unihan database — https://www.unicode.org — Unicode License v3,
+    (c) 1991-2026 Unicode, Inc.
+
+Changes: entries were merged, deduplicated, ranked and converted to SQLite;
+Simplified forms of TypeDuck and rime-cantonese entries were generated with OpenCC.
+
+Rime dictionaries (assets/rime):
+
+  * jyut6ping3.*.dict.yaml, essay-cantonese.txt, bum_yue.dict.yaml — rime-cantonese,
+    CC BY 4.0, unchanged apart from the BumBoard header file.
+  * bum_cmn.dict.yaml — words from CC-CEDICT (CC BY-SA 4.0), characters from Unihan
+    (Unicode License v3), weights from jieba's dict.txt (MIT, (c) 2013 Sun Junyi).
+    Licensed CC BY-SA 4.0.
+  * bum_en_yue.dict.yaml, bum_en_cmn.dict.yaml — English keywords taken from the
+    meanings above, licensed CC BY-SA 4.0.
+  * Schemas and default.yaml — written for BumBoard.
+
+Character conversion uses OpenCC data (Apache License 2.0).
+
+Emoji (assets/bumboard/emoji.json, NotoColorEmoji.ttf):
+
+  * Emoji list, order and names — Unicode Emoji 18.0 (emoji-test.txt), Unicode License v3.
+  * Search keywords — Unicode CLDR 48 annotations (English, Cantonese, Chinese),
+    Unicode License v3, (c) 1991-2026 Unicode, Inc.
+  * Noto Color Emoji font (Unicode 18.0 release) — SIL Open Font License 1.1,
+    (c) Google LLC. https://github.com/googlefonts/noto-emoji

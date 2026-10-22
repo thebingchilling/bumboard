@@ -1,0 +1,39 @@
+{
+  "_comment": "Pinned inputs for build_data.py. Bump a commit/url and its sha256 to update a source; licences are listed in ../LICENSES.md.",
+  "rime-cantonese": {
+    "git": "https://github.com/rime/rime-cantonese",
+    "commit": "259f0e48bba840c3a2e0d117539e96937f3d89bc",
+    "license": "CC-BY-4.0 (jyut6ping3.maps is ODbL and is not used)"
+  },
+  "typeduck": {
+    "git": "https://github.com/TypeDuck-HK/schema",
+    "commit": "7f9d90d4185eca293576de5b5dddaaf1d265f3c9",
+    "license": "CC-BY-4.0 (only jyut6ping3_scolar.dict.yaml is used)"
+  },
+  "jieba": {
+    "url": "https://raw.githubusercontent.com/fxsjy/jieba/67fa2e36e72f69d9134b8a1037b83fbb070b9775/jieba/dict.txt",
+    "sha256": "7197c3211ddd98962b036cdf40324d1ea2bfaa12bd028e68faa70111a88e12a8",
+    "license": "MIT"
+  },
+  "cccanto": {
+    "url": "https://cantonese.org/cccanto-170202.zip",
+    "sha256": "0cc9e600a19c02405064d6d227d96563c09da1a0af1c7717508c0f231028af27",
+    "license": "CC-BY-SA-3.0"
+  },
+  "canto-readings": {
+    "url": "https://cantonese.org/cccedict-canto-readings-150923.zip",
+    "sha256": "f6d99991791f49aaf96d97b2838a3ba9e057e060a5a9e24311cf851f8f71a950",
+    "license": "CC-BY-SA-3.0"
+  },
+  "unihan": {
+    "url": "https://www.unicode.org/Public/18.0.0/ucd/Unihan.zip",
+    "sha256": "4c93ea9c1f636451729a840978f1667a53886af37ba854fdcce109721c63d43e",
+    "license": "Unicode-3.0"
+  },
+  "cedict": {
+    "file": "snapshots/cedict-2026-10-13.txt.gz",
+    "sha256": "dace310e1279fb51666bb8fc743131f9f12b8e6bdb11a36f58087bdf9f1f49df",
+    "license": "CC-BY-SA-4.0",
+    "_comment": "MDBG only serves the latest release, so a dated snapshot is kept here. Refresh with update_cedict.sh."
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "_comment": "Pinned inputs for build_emoji.py. Bump a url and its sha256 to update.",
+  "emoji-test.txt": {
+    "url": "https://www.unicode.org/Public/18.0.0/emoji/emoji-test.txt",
+    "sha256": "8f3735cda1f92a779d78af67cf86066bb1f07143dc22f2ac29394d9bc57ab21a",
+    "license": "Unicode-3.0 (Emoji 18.0)"
+  },
+  "cldr-en.xml": {
+    "url": "https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/annotations/en.xml",
+    "sha256": "8511aadd046fdba2f0ffe590266ced8bbf48175ad139b2675d85d7141057b235",
+    "license": "Unicode-3.0 (CLDR 48)"
+  },
+  "cldr-derived-en.xml": {
+    "url": "https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/annotationsDerived/en.xml",
+    "sha256": "d76bd041c8c9e7b00b716aff8b7d9dbf509877010e191d5efd068be2553e066e",
+    "license": "Unicode-3.0 (CLDR 48)"
+  },
+  "cldr-yue.xml": {
+    "url": "https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/annotations/yue.xml",
+    "sha256": "61ee88df2efac3b75a16aab01d942b240471d78e27e5c8a568741f4c96f4b585",
+    "license": "Unicode-3.0 (CLDR 48)"
+  },
+  "cldr-derived-yue.xml": {
+    "url": "https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/annotationsDerived/yue.xml",
+    "sha256": "69e92a63bcedec01441bfbf2b580958e81b91740c3144673a4a3d5931b453430",
+    "license": "Unicode-3.0 (CLDR 48)"
+  },
+  "cldr-zh_Hant.xml": {
+    "url": "https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/annotations/zh_Hant.xml",
+    "sha256": "1aa9491be56437a69b1b9833dc84ec65a38fcce093810bf60ed64f179e5dfcd9",
+    "license": "Unicode-3.0 (CLDR 48)"
+  },
+  "cldr-derived-zh_Hant.xml": {
+    "url": "https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/annotationsDerived/zh_Hant.xml",
+    "sha256": "501e3ac6e138122f4a27d22bf85fdac3f6da590ee12a5c738f6651babaf502c6",
+    "license": "Unicode-3.0 (CLDR 48)"
+  },
+  "cldr-zh.xml": {
+    "url": "https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/annotations/zh.xml",
+    "sha256": "92389f71659998736530c72d4dcc86e453fe0be170cde5c5ad27094cab2a2de8",
+    "license": "Unicode-3.0 (CLDR 48)"
+  },
+  "cldr-derived-zh.xml": {
+    "url": "https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/annotationsDerived/zh.xml",
+    "sha256": "777acebb7c4ed103c34f5605881a2537656e0a17d9d1127518da7cd54f612bcc",
+    "license": "Unicode-3.0 (CLDR 48)"
+  },
+  "NotoColorEmoji.ttf": {
+    "url": "https://raw.githubusercontent.com/googlefonts/noto-emoji/e20cbc2bbec1926686be9f9bee7d1d2cfa1fea0e/2D/fonts/NotoColorEmoji.ttf",
+    "sha256": "15671215ab769fdc7162a045d56fd7d7e477c51b04e6b3c761d914d8fdd6cc44",
+    "license": "OFL-1.1 (Noto Color Emoji, Unicode 18.0 release)"
+  }
+}

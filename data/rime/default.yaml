@@ -1,0 +1,33 @@
+# BumBoard Rime configuration (shared data). Users may override it with default.custom.yaml.
+config_version: "bumboard.1"
+
+schema_list:
+  - schema: bum_yue
+  - schema: bum_yue_yale
+  - schema: bum_cmn
+  - schema: bum_en_yue
+  - schema: bum_en_cmn
+
+switcher:
+  caption: 〔方案〕
+  hotkeys: []
+  save_options:
+    - full_shape
+    - simplification
+    - traditionalization
+  fold_options: true
+  abbreviate_options: true
+  option_list_separator: " / "
+
+menu:
+  page_size: 10
+
+ascii_composer:
+  good_old_caps_lock: true
+  switch_key:
+    Shift_L: noop
+    Shift_R: noop
+    Control_L: noop
+    Control_R: noop
+    Caps_Lock: clear
+    Eisu_toggle: clear

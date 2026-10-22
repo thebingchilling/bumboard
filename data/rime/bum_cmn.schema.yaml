@@ -1,0 +1,55 @@
+# Mandarin, typed in pinyin (ü as v). Dictionary text is Simplified;
+# the traditionalization switch converts to Traditional with OpenCC.
+schema:
+  schema_id: bum_cmn
+  name: 普通话
+  version: "1"
+  description: Mandarin (pinyin input)
+
+switches:
+  - name: ascii_mode
+    reset: 0
+    states: [ 中, A ]
+  - name: full_shape
+    states: [ 半角, 全角 ]
+  - name: traditionalization
+    states: [ 简, 繁 ]
+
+engine:
+  __include: bum_common:/chinese_engine
+
+speller:
+  alphabet: zyxwvutsrqponmlkjihgfedcba
+  delimiter: " '"
+  algebra:
+    - erase/^xx$/
+    - abbrev/^([a-z]).+$/$1/
+    - abbrev/^([zcs]h).+$/$1/
+    - derive/^([nl])ve$/$1ue/
+    - derive/^([jqxy])u/$1v/
+    - derive/un$/uen/
+    - derive/ui$/uei/
+    - derive/iu$/iou/
+    - derive/([aeiou])ng$/$1gn/
+
+translator:
+  dictionary: bum_cmn
+  prism: bum_cmn
+  spelling_hints: 16
+  always_show_comments: true
+  preedit_format:
+    - xform/([nl])v/$1ü/
+    - xform/([nl])ue/$1üe/
+    - xform/([jqxy])v/$1u/
+
+simplifier:
+  option_name: traditionalization
+  opencc_config: s2t.json
+  tips: none
+
+punctuator:
+  __include: bum_common:/punctuator
+key_binder:
+  __include: bum_common:/key_binder
+recognizer:
+  __include: bum_common:/recognizer

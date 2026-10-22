@@ -1,0 +1,56 @@
+# Cantonese, typed in Jyutping. Dictionary: rime-cantonese (CC BY 4.0).
+# The candidate comment carries the Jyutping of each candidate (spelling_hints);
+# BumBoard reads it to pick the right reading and meaning, and never shows it raw.
+schema:
+  schema_id: bum_yue
+  name: 粵語
+  version: "1"
+  description: Cantonese (Jyutping input)
+
+switches:
+  - name: ascii_mode
+    reset: 0
+    states: [ 粵, A ]
+  - name: full_shape
+    states: [ 半角, 全角 ]
+  - name: simplification
+    states: [ 繁, 简 ]
+
+engine:
+  __include: bum_common:/chinese_engine
+
+speller:
+  # tone digits may follow a syllable; a composition must start with a letter
+  alphabet: zyxwvutsrqponmlkjihgfedcba123456
+  initials: zyxwvutsrqponmlkjihgfedcba
+  delimiter: " '"
+  algebra:
+    - derive/^([aeiou])/q$1/
+    - derive/^jy?([aeiou])/y$1/
+    - derive/^jyu/ju/
+    - derive/yu(?!ng|k)/y/
+    - derive/(g|k)u(?!ng|k)/$1wu/
+    - derive/eoi(?=\d)/eoy/
+    - derive/eo/oe/
+    - derive/oe/eo/
+    - derive/aa(?=\d)/a/
+    - derive/\d//
+    - abbrev/^([a-z]).+$/$1/
+
+translator:
+  dictionary: bum_yue
+  prism: bum_yue
+  spelling_hints: 16
+  always_show_comments: true
+
+simplifier:
+  option_name: simplification
+  opencc_config: t2s.json
+  tips: none
+
+punctuator:
+  __include: bum_common:/punctuator
+key_binder:
+  __include: bum_common:/key_binder
+recognizer:
+  __include: bum_common:/recognizer

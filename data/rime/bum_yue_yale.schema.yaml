@@ -1,0 +1,61 @@
+# Cantonese, typed in Yale (numbered tones optional). Same dictionary as bum_yue;
+# the speller rewrites every Jyutping syllable into its Yale spelling.
+schema:
+  schema_id: bum_yue_yale
+  name: 粵語 (Yale)
+  version: "1"
+  description: Cantonese (Yale input)
+
+switches:
+  - name: ascii_mode
+    reset: 0
+    states: [ 粵, A ]
+  - name: full_shape
+    states: [ 半角, 全角 ]
+  - name: simplification
+    states: [ 繁, 简 ]
+
+engine:
+  __include: bum_common:/chinese_engine
+
+speller:
+  # tone digits may follow a syllable; a composition must start with a letter
+  alphabet: zyxwvutsrqponmlkjihgfedcba123456
+  initials: zyxwvutsrqponmlkjihgfedcba
+  delimiter: " '"
+  algebra:
+    # Jyutping -> Yale (numbered)
+    - xform/^jyu/yu/
+    - xform/^j/y/
+    - xform/^z/j/
+    - xform/^c/ch/
+    - xform/eoi/eui/
+    - xform/eo/eu/
+    - xform/oe/eu/
+    - xform/aa(?=\d)/a/
+    # Yale writes low tones (4, 5, 6) with an h after the vowels: yuht, nàh -> nah
+    - derive/^(m|ng)([456])$/$1h$2/
+    - derive/^((?:ng|gw|kw|ch|[bpmfdtnlgkhwjsy])?[aeiou]+)([mnptk]|ng)?([456])$/$1h$2$3/
+    # typing aids
+    - derive/^ng(?=[aeiou])//
+    - derive/\d//
+    - abbrev/^([a-z]).+$/$1/
+    - abbrev/^(ch).+$/$1/
+
+translator:
+  dictionary: bum_yue
+  prism: bum_yue_yale
+  spelling_hints: 16
+  always_show_comments: true
+
+simplifier:
+  option_name: simplification
+  opencc_config: t2s.json
+  tips: none
+
+punctuator:
+  __include: bum_common:/punctuator
+key_binder:
+  __include: bum_common:/key_binder
+recognizer:
+  __include: bum_common:/recognizer
