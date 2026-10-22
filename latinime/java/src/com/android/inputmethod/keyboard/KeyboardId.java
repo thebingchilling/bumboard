@@ -82,6 +82,9 @@ public final class KeyboardId {
     public final String mCustomActionLabel;
     public final boolean mHasShortcutKey;
     public final boolean mIsSplitLayout;
+    // BUMBOARD
+    public final boolean mBumNumberRow;
+    public final boolean mBumEmojiKey;
 
     private final int mHashCode;
 
@@ -98,6 +101,8 @@ public final class KeyboardId {
                 ? mEditorInfo.actionLabel.toString() : null;
         mHasShortcutKey = params.mVoiceInputKeyEnabled;
         mIsSplitLayout = params.mIsSplitLayoutEnabled;
+        mBumNumberRow = params.mBumNumberRow;
+        mBumEmojiKey = params.mBumEmojiKey;
 
         mHashCode = computeHashCode(this);
     }
@@ -118,7 +123,9 @@ public final class KeyboardId {
                 id.navigateNext(),
                 id.navigatePrevious(),
                 id.mSubtype,
-                id.mIsSplitLayout
+                id.mIsSplitLayout,
+                id.mBumNumberRow,
+                id.mBumEmojiKey
         });
     }
 
@@ -133,6 +140,8 @@ public final class KeyboardId {
                 && other.mClobberSettingsKey == mClobberSettingsKey
                 && other.mHasShortcutKey == mHasShortcutKey
                 && other.mLanguageSwitchKeyEnabled == mLanguageSwitchKeyEnabled
+                && other.mBumNumberRow == mBumNumberRow
+                && other.mBumEmojiKey == mBumEmojiKey
                 && other.isMultiLine() == isMultiLine()
                 && other.imeAction() == imeAction()
                 && TextUtils.equals(other.mCustomActionLabel, mCustomActionLabel)

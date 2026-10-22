@@ -68,6 +68,11 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
 
     private final ViewGroup mSuggestionsStrip;
     private final ImageButton mVoiceKey;
+    // BUMBOARD: shortcuts while there are no suggestions; Traditional/Simplified on the left.
+    private final app.bumboard.toolbar.ToolbarView mBumToolbar;
+    private final TextView mBumScriptKey;
+    private boolean mBumHasSuggestions;
+    private boolean mBumCandidatesShowing;
     private final View mImportantNoticeStrip;
     MainKeyboardView mMainKeyboardView;
 
@@ -140,6 +145,9 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
 
         mSuggestionsStrip = (ViewGroup)findViewById(R.id.suggestions_strip);
         mVoiceKey = (ImageButton)findViewById(R.id.suggestions_strip_voice_key);
+        mBumToolbar = (app.bumboard.toolbar.ToolbarView)findViewById(R.id.bum_toolbar);
+        mBumScriptKey = (TextView)findViewById(R.id.bum_script_key);
+        mBumScriptKey.setTextColor(context.getColor(R.color.bum_m3_on_key_variant));
         mImportantNoticeStrip = findViewById(R.id.important_notice_strip);
         mStripVisibilityGroup = new StripVisibilityGroup(this, mSuggestionsStrip,
                 mImportantNoticeStrip);
@@ -178,6 +186,50 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         keyboardAttr.recycle();
         mVoiceKey.setImageDrawable(iconVoice);
         mVoiceKey.setOnClickListener(this);
+        // BUMBOARD: the mic icon is a white Material Symbol, tinted to suit the strip.
+        mVoiceKey.setImageTintList(android.content.res.ColorStateList.valueOf(
+                context.getColor(R.color.bum_m3_on_key_variant)));
+        setBumScriptKey(null, null);
+    }
+
+    // BUMBOARD ---------------------------------------------------------------------------
+
+    public app.bumboard.toolbar.ToolbarView getBumToolbar() {
+        return mBumToolbar;
+    }
+
+    /** While Chinese candidates show in the middle of the strip, the strip's own middle hides. */
+    public void setBumCandidatesShowing(final boolean showing) {
+        mBumCandidatesShowing = showing;
+        updateBumMiddle();
+    }
+
+    /**
+     * Shows the locked Traditional/Simplified key with [label] (null hides it, on keyboards
+     * that are not Chinese, and the shortcuts and suggestions then start at the left edge).
+     */
+    public void setBumScriptKey(final String label, final OnClickListener onClick) {
+        final boolean shown = label != null;
+        mBumScriptKey.setVisibility(shown ? VISIBLE : GONE);
+        mBumScriptKey.setText(label);
+        mBumScriptKey.setOnClickListener(onClick);
+        final int edge = getResources().getDimensionPixelSize(
+                R.dimen.config_suggestions_strip_edge_key_width);
+        for (final View v : new View[] { mBumToolbar, mSuggestionsStrip }) {
+            final MarginLayoutParams lp = (MarginLayoutParams) v.getLayoutParams();
+            lp.leftMargin = shown ? edge : 0;
+            v.setLayoutParams(lp);
+        }
+    }
+
+    private void updateBumMiddle() {
+        final boolean notice = mStripVisibilityGroup.isShowingImportantNoticeStrip();
+        mBumToolbar.setVisibility(!mBumHasSuggestions && !mBumCandidatesShowing && !notice
+                ? VISIBLE : INVISIBLE);
+        if (!notice) {
+            mSuggestionsStrip.setVisibility(mBumHasSuggestions && !mBumCandidatesShowing
+                    ? VISIBLE : INVISIBLE);
+        }
     }
 
     /**
@@ -203,6 +255,9 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mStartIndexOfMoreSuggestions = mLayoutHelper.layoutAndReturnStartIndexOfMoreSuggestions(
                 getContext(), mSuggestedWords, mSuggestionsStrip, this);
         mStripVisibilityGroup.showSuggestionsStrip();
+        // BUMBOARD: punctuation "suggestions" give way to the shortcuts.
+        mBumHasSuggestions = !suggestedWords.isEmpty() && !suggestedWords.isPunctuationSuggestions();
+        updateBumMiddle();
     }
 
     public void setMoreSuggestionsHeight(final int remainingHeight) {
@@ -239,6 +294,8 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         removeAllDebugInfoViews();
         mStripVisibilityGroup.showSuggestionsStrip();
         dismissMoreSuggestionsPanel();
+        mBumHasSuggestions = false;
+        updateBumMiddle();
     }
 
     private void removeAllDebugInfoViews() {

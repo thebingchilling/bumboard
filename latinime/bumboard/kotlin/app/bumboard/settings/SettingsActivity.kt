@@ -68,6 +68,8 @@ import app.bumboard.CrashLog
 import app.bumboard.chinese.ChineseInput
 import app.bumboard.chinese.Readings
 import com.android.inputmethod.keyboard.KeyboardTheme
+import app.bumboard.layout.BumLayout
+import app.bumboard.emoji.EmojiPanelView
 import com.android.inputmethod.latin.AudioAndHapticFeedbackManager
 import com.android.inputmethod.latin.R
 import com.android.inputmethod.latin.settings.Settings
@@ -582,6 +584,8 @@ private fun PreferencesPage() {
     val sound = prefs.boolPref(Settings.PREF_SOUND_ON) { Settings.readKeypressSoundEnabled(prefs, res) }
     val popup = prefs.boolPref(Settings.PREF_POPUP_ON) { Settings.readKeyPreviewPopupEnabled(prefs, res) }
     val voice = prefs.boolPref(Settings.PREF_VOICE_INPUT_KEY) { prefs.getBoolean(Settings.PREF_VOICE_INPUT_KEY, true) }
+    val numberRow = prefs.boolPref(BumLayout.PREF_NUMBER_ROW) { prefs.getBoolean(BumLayout.PREF_NUMBER_ROW, false) }
+    val commaKey = prefs.stringPref(BumLayout.PREF_COMMA_KEY) { prefs.getString(BumLayout.PREF_COMMA_KEY, null) ?: "emoji" }
     val hasVibrator = AudioAndHapticFeedbackManager.getInstance().hasVibrator()
 
     Group {
@@ -592,6 +596,24 @@ private fun PreferencesPage() {
             SwitchRow(
                 it, stringResource(R.string.use_double_space_period),
                 stringResource(R.string.use_double_space_period_summary), doubleSpace.value, doubleSpace::set,
+            )
+        }
+    }
+    Group {
+        row {
+            SwitchRow(
+                it, stringResource(R.string.bum_pref_number_row),
+                stringResource(R.string.bum_pref_number_row_summary), numberRow.value, numberRow::set,
+            )
+        }
+        row {
+            ChoiceRow(
+                it, stringResource(R.string.bum_pref_comma_key), stringResource(R.string.bum_pref_comma_key_summary),
+                listOf(
+                    "emoji" to stringResource(R.string.bum_pref_comma_key_emoji),
+                    "language" to stringResource(R.string.bum_pref_comma_key_language),
+                ),
+                commaKey.value, commaKey::set,
             )
         }
     }
@@ -633,6 +655,42 @@ private fun ThemePage() {
             }
         }
     }
+    val mode = prefs.stringPref(BumLayout.PREF_MODE) { prefs.getString(BumLayout.PREF_MODE, null) ?: "normal" }
+    val height = prefs.floatPref(BumLayout.PREF_HEIGHT_SCALE) { prefs.getFloat(BumLayout.PREF_HEIGHT_SCALE, 1f) }
+    val columns = prefs.intPref(EmojiPanelView.PREF_COLUMNS) { prefs.getInt(EmojiPanelView.PREF_COLUMNS, 0) }
+    Group {
+        row {
+            ChoiceRow(
+                it, stringResource(R.string.bum_pref_layout), null,
+                listOf(
+                    "normal" to stringResource(R.string.bum_pref_layout_normal),
+                    "one_handed" to stringResource(R.string.bum_pref_layout_one_handed),
+                    "floating" to stringResource(R.string.bum_pref_layout_floating),
+                ),
+                mode.value, mode::set,
+            )
+        }
+        row {
+            SliderRow(
+                it, stringResource(R.string.bum_pref_height), (height.value * 100).roundToInt(),
+                (BumLayout.MIN_HEIGHT * 100).roundToInt()..(BumLayout.MAX_HEIGHT * 100).roundToInt(), 5,
+                format = { v -> "$v%" },
+            ) { v -> height.set(v / 100f) }
+        }
+        row {
+            SliderRow(
+                it, stringResource(R.string.bum_pref_emoji_size),
+                if (columns.value > 0) columns.value else 9,
+                EmojiPanelView.MIN_COLUMNS..EmojiPanelView.MAX_COLUMNS,
+            ) { v -> columns.set(v) }
+        }
+    }
+    Text(
+        stringResource(R.string.bum_pref_emoji_size_summary),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 32.dp, vertical = 4.dp),
+    )
 }
 
 @Composable

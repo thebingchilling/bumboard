@@ -1,0 +1,222 @@
+package app.bumboard.toolbar
+
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.res.ColorStateList
+import android.graphics.Typeface
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import android.util.AttributeSet
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.KeyEvent
+import android.view.MotionEvent
+import android.view.inputmethod.ExtractedTextRequest
+import android.view.View
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
+import app.bumboard.bumHost
+import app.bumboard.layout.BumPanels
+import app.bumboard.ui.M3Colors
+import com.android.inputmethod.latin.R
+import com.android.inputmethod.latin.common.Constants
+
+/**
+ * Text editing over the keys, like Gboard's: arrows around a Select toggle (with Select on,
+ * the arrows extend the selection), start/end of line, select all, cut, copy, paste and
+ * backspace. Arrows and backspace repeat while held.
+ */
+class TextEditPanelView @JvmOverloads constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
+) : LinearLayout(context, attrs) {
+
+    private val palette = M3Colors.of(context)
+    private val repeat = Handler(Looper.getMainLooper())
+    private var selecting = false
+    private lateinit var selectKey: TextView
+
+    init {
+        orientation = HORIZONTAL
+        isClickable = true
+        setBackgroundColor(palette.surface)
+        setPadding(dp(4), dp(4), dp(4), dp(4))
+        // left: a 3 x 4 grid of movement keys
+        val left = LinearLayout(context).apply { orientation = VERTICAL }
+        left.addView(row(
+            icon(R.drawable.ic_sym_first_page, R.string.bum_edit_line_start) { move(KeyEvent.KEYCODE_MOVE_HOME) },
+            icon(R.drawable.ic_sym_keyboard_arrow_up, R.string.bum_edit_up, repeats = true) { move(KeyEvent.KEYCODE_DPAD_UP) },
+            icon(R.drawable.ic_sym_last_page, R.string.bum_edit_line_end) { move(KeyEvent.KEYCODE_MOVE_END) },
+        ), rowParams())
+        selectKey = label(R.string.bum_edit_select) { toggleSelect() }
+        left.addView(row(
+            icon(R.drawable.ic_sym_keyboard_arrow_left, R.string.bum_edit_left, repeats = true) { move(KeyEvent.KEYCODE_DPAD_LEFT) },
+            selectKey,
+            icon(R.drawable.ic_sym_keyboard_arrow_right, R.string.bum_edit_right, repeats = true) { move(KeyEvent.KEYCODE_DPAD_RIGHT) },
+        ), rowParams())
+        left.addView(row(
+            icon(R.drawable.ic_sym_backspace, R.string.bum_emoji_delete, repeats = true) { bumHost()?.bumSendCode(Constants.CODE_DELETE) },
+            icon(R.drawable.ic_sym_keyboard_arrow_down, R.string.bum_edit_down, repeats = true) { move(KeyEvent.KEYCODE_DPAD_DOWN) },
+            label(R.string.bum_emoji_abc) { visibility = GONE },
+        ), rowParams())
+        addView(left, LayoutParams(0, LayoutParams.MATCH_PARENT, 3f))
+        // right: clipboard actions
+        val right = LinearLayout(context).apply { orientation = VERTICAL }
+        right.addView(icon(R.drawable.ic_sym_select_all, R.string.bum_edit_select_all) { menu(android.R.id.selectAll) }, keyParams())
+        right.addView(icon(R.drawable.ic_sym_content_cut, R.string.bum_edit_cut) { menu(android.R.id.cut); setSelecting(false) }, keyParams())
+        right.addView(icon(R.drawable.ic_sym_content_copy, R.string.bum_edit_copy) { menu(android.R.id.copy); setSelecting(false) }, keyParams())
+        right.addView(icon(R.drawable.ic_sym_content_paste, R.string.bum_edit_paste) { menu(android.R.id.paste); setSelecting(false) }, keyParams())
+        addView(right, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
+        visibility = GONE
+    }
+
+    fun show() {
+        setSelecting(false)
+        visibility = VISIBLE
+    }
+
+    override fun setVisibility(visibility: Int) {
+        if (visibility != VISIBLE) repeat.removeCallbacksAndMessages(null)
+        super.setVisibility(visibility)
+    }
+
+    private fun toggleSelect() = setSelecting(!selecting)
+
+    private fun setSelecting(on: Boolean) {
+        selecting = on
+        anchor = -1
+        // on: the primary colour, like a key that is switched on
+        selectKey.setTextColor(if (on) palette.onPrimary else palette.onSecondaryContainer)
+        selectKey.background = if (on) context.getDrawable(R.drawable.bum_m3_key_popup_action) else BumPanels.functionalKey(context)
+    }
+
+    /** Where a selection started (absolute offset), while Select is on; -1 until the first move. */
+    private var anchor = -1
+
+    /**
+     * Moves the cursor (or, with Select on, the moving end of the selection) by setting the
+     * selection on the text field directly; many editors ignore arrow key events from a
+     * keyboard. Falls back to key events when the field does not share its text.
+     */
+    private fun move(keyCode: Int) {
+        val ic = bumHost()?.bumInputConnection() ?: return
+        ic.finishComposingText()
+        val et = ic.getExtractedText(ExtractedTextRequest(), 0)
+        val text = et?.text
+        if (et == null || text == null || et.selectionStart < 0) {
+            val meta = if (selecting) KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON else 0
+            val now = SystemClock.uptimeMillis()
+            ic.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0, meta))
+            ic.sendKeyEvent(KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0, meta))
+            return
+        }
+        val start = et.selectionStart
+        val end = et.selectionEnd
+        if (selecting && anchor < 0) anchor = start
+        // the end that moves: with Select on, the one away from the anchor
+        val focus = if (selecting) (if (start == anchor) end else start) else when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_MOVE_HOME -> minOf(start, end)
+            else -> maxOf(start, end)
+        }
+        // without Select, the first arrow just collapses a selection to its edge
+        val collapse = !selecting && start != end &&
+            (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
+        val target = if (collapse) focus else newOffset(text, focus, keyCode)
+        if (selecting) ic.setSelection(anchor, target) else ic.setSelection(target, target)
+    }
+
+    /** The offset after moving [from] by one step in [keyCode]'s direction. */
+    private fun newOffset(text: CharSequence, from: Int, keyCode: Int): Int {
+        val lineStart = { at: Int -> text.lastIndexOf('\n', at - 1).let { if (it < 0) 0 else it + 1 } }
+        val lineEnd = { at: Int -> text.indexOf('\n', at).let { if (it < 0) text.length else it } }
+        return when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> if (from <= 0) 0 else Character.offsetByCodePoints(text, from, -1)
+            KeyEvent.KEYCODE_DPAD_RIGHT -> if (from >= text.length) text.length else Character.offsetByCodePoints(text, from, 1)
+            KeyEvent.KEYCODE_MOVE_HOME -> lineStart(from)
+            KeyEvent.KEYCODE_MOVE_END -> lineEnd(from)
+            KeyEvent.KEYCODE_DPAD_UP -> {
+                val start = lineStart(from)
+                if (start == 0) 0 else {
+                    val prevStart = lineStart(start - 1)
+                    minOf(prevStart + (from - start), start - 1)
+                }
+            }
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                val end = lineEnd(from)
+                if (end >= text.length) text.length else {
+                    val column = from - lineStart(from)
+                    minOf(end + 1 + column, lineEnd(end + 1))
+                }
+            }
+            else -> from
+        }
+    }
+
+    private fun menu(id: Int) {
+        bumHost()?.bumInputConnection()?.performContextMenuAction(id)
+    }
+
+    private fun row(vararg keys: View) = LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        keys.forEach { addView(it, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) }) }
+    }
+
+    /** A row of the left grid; its keys carry their own margins. */
+    private fun rowParams() = LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f)
+
+    /** A single key in the right column. */
+    private fun keyParams() = LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) }
+
+    private fun icon(res: Int, label: Int, repeats: Boolean = false, action: () -> Unit) = FrameLayout(context).apply {
+        addView(ImageView(context).apply {
+            setImageResource(res)
+            imageTintList = ColorStateList.valueOf(palette.onSecondaryContainer)
+            scaleType = ImageView.ScaleType.CENTER
+        }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+        contentDescription = context.getString(label)
+        background = BumPanels.functionalKey(context)
+        press(this, repeats, action)
+    }
+
+    private fun label(text: Int, action: () -> Unit) = TextView(context).apply {
+        setText(text)
+        setTextColor(palette.onSecondaryContainer)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        gravity = Gravity.CENTER
+        background = BumPanels.functionalKey(context)
+        press(this, false, action)
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+    private fun press(view: View, repeats: Boolean, action: () -> Unit) {
+        if (!repeats) {
+            view.setOnClickListener { action() }
+            return
+        }
+        view.setOnTouchListener { v, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    v.isPressed = true
+                    action()
+                    repeat.postDelayed(object : Runnable {
+                        override fun run() {
+                            action()
+                            repeat.postDelayed(this, 50)
+                        }
+                    }, 400)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    v.isPressed = false
+                    repeat.removeCallbacksAndMessages(null)
+                }
+            }
+            true
+        }
+    }
+
+    private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
+}

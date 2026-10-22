@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shortcuts, panels over the keys, keyboard layout modes and the emoji tone picker. -->
+<resources>
+    <!-- Shortcuts -->
+    <string name="bum_sc_gallery">All shortcuts</string>
+    <string name="bum_sc_language">Next language</string>
+    <string name="bum_sc_text_edit">Text editing</string>
+    <string name="bum_sc_one_handed">One-handed</string>
+    <string name="bum_sc_floating">Floating</string>
+    <string name="bum_sc_resize">Resize</string>
+    <string name="bum_sc_number_row">Number row</string>
+    <string name="bum_sc_numpad">Number pad</string>
+    <string name="bum_sc_emoji">Emoji</string>
+    <string name="bum_sc_undo">Undo</string>
+    <string name="bum_sc_redo">Redo</string>
+    <string name="bum_sc_settings">Settings</string>
+
+    <!-- Shortcuts gallery -->
+    <string name="bum_gallery_title">Shortcuts</string>
+    <string name="bum_gallery_edit_title">Edit shortcuts</string>
+    <string name="bum_gallery_edit">Edit</string>
+    <string name="bum_gallery_close">Close</string>
+    <string name="bum_gallery_edit_hint">Tap to show or hide on the bar. Touch and hold to drag into order.</string>
+
+    <!-- Text editing -->
+    <string name="bum_edit_select">Select</string>
+    <string name="bum_edit_select_all">Select all</string>
+    <string name="bum_edit_cut">Cut</string>
+    <string name="bum_edit_copy">Copy</string>
+    <string name="bum_edit_paste">Paste</string>
+    <string name="bum_edit_up">Up</string>
+    <string name="bum_edit_down">Down</string>
+    <string name="bum_edit_left">Left</string>
+    <string name="bum_edit_right">Right</string>
+    <string name="bum_edit_line_start">Start of line</string>
+    <string name="bum_edit_line_end">End of line</string>
+
+    <!-- Layout modes -->
+    <string name="bum_one_handed_exit">Full-width keyboard</string>
+    <string name="bum_one_handed_swap">Move keyboard to the other side</string>
+    <string name="bum_float_dock">Dock keyboard</string>
+    <string name="bum_resize_reset">Reset</string>
+    <string name="bum_resize_done">Done</string>
+
+    <!-- Number pad -->
+    <string name="bum_numpad_space">Space</string>
+    <string name="bum_numpad_enter">Enter</string>
+
+    <!-- Emoji skin tones -->
+    <string name="bum_tone_person1">Person 1</string>
+    <string name="bum_tone_person2">Person 2</string>
+    <string name="bum_tone_tap_preview">Pick a tone for each person, then tap the emoji</string>
+    <string name="bum_tone_type">Type this emoji</string>
+    <string name="bum_tone_1">Light skin tone</string>
+    <string name="bum_tone_2">Medium-light skin tone</string>
+    <string name="bum_tone_3">Medium skin tone</string>
+    <string name="bum_tone_4">Medium-dark skin tone</string>
+    <string name="bum_tone_5">Dark skin tone</string>
+
+    <!-- Settings -->
+    <string name="bum_pref_number_row">Number row</string>
+    <string name="bum_pref_number_row_summary">Show 1–0 above the letters</string>
+    <string name="bum_pref_comma_key">Key beside the comma</string>
+    <string name="bum_pref_comma_key_summary">The other one goes in the comma\'s long-press menu, with Settings and one-handed mode</string>
+    <string name="bum_pref_comma_key_emoji">Emoji</string>
+    <string name="bum_pref_comma_key_language">Next language</string>
+    <string name="bum_pref_emoji_size">Emoji per row</string>
+    <string name="bum_pref_emoji_size_summary">Fewer means bigger emoji. You can also pinch the emoji grid.</string>
+    <string name="bum_pref_height">Keyboard height</string>
+    <string name="bum_pref_layout">Keyboard mode</string>
+    <string name="bum_pref_layout_normal">Full width</string>
+    <string name="bum_pref_layout_one_handed">One-handed</string>
+    <string name="bum_pref_layout_floating">Floating</string>
+</resources>

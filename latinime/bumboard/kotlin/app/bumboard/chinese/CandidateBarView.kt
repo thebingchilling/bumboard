@@ -54,13 +54,20 @@ class CandidateBarView @JvmOverloads constructor(
         a.recycle()
     }
 
-    /** Sets a fixed height for the bar, so the keyboard does not jump as candidates change. */
-    fun setBarHeight(px: Int) {
-        val lp = layoutParams ?: return
-        if (lp.height != px) {
-            lp.height = px
-            layoutParams = lp
-        }
+    /** Lines under each candidate's characters: readings, and whether a meaning follows. */
+    data class Lines(val readings: Int, val meaning: Boolean)
+
+    /** Text scale so the characters and their [Lines] fit the strip's fixed height. */
+    private var scale = 1f
+
+    fun setLines(lines: Lines) {
+        val height = layoutParams?.height?.takeIf { it > 0 }
+            ?: resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+        val sp = resources.displayMetrics.scaledDensity
+        // natural height: the characters, each reading line, the meaning, line spacing, padding
+        val natural = (CHAR_SP + lines.readings * READING_SP + (if (lines.meaning) MEANING_SP else 0f)) * sp * 1.18f +
+            dp(4)
+        scale = (height / natural).coerceAtMost(1f)
     }
 
     /**
@@ -106,25 +113,27 @@ class CandidateBarView @JvmOverloads constructor(
     private fun cell(index: Int, candidate: Candidate) = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
-        setPadding(dp(12), dp(4), dp(12), dp(4))
+        setPadding(dp(10), dp(1), dp(10), dp(1))
         minimumWidth = dp(44)
         background = selectableBackground()
         setOnClickListener { onPick(index) }
         setOnLongClickListener { view -> onLongPick(index, view); true }
-        addView(text(candidate.text, 20f, colorFor(index)).apply { includeFontPadding = false }, wrap())
+        addView(text(candidate.text, CHAR_SP * scale, colorFor(index)).apply { includeFontPadding = false }, wrap())
     }
 
     private fun fill(cell: LinearLayout, index: Int, annotation: Annotation) {
         val color = colorFor(index)
         while (cell.childCount > 1) cell.removeViewAt(1)
         annotation.lines.forEach { line ->
-            cell.addView(text(line, 11.5f, ColorUtils.setAlphaComponent(color, 0xD0)).apply {
+            cell.addView(text(line, READING_SP * scale, ColorUtils.setAlphaComponent(color, 0xD0)).apply {
                 typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                includeFontPadding = false
             }, wrap())
         }
         annotation.meaning?.let { meaning ->
-            cell.addView(text(meaning, 10.5f, ColorUtils.setAlphaComponent(color, 0xA0)).apply {
+            cell.addView(text(meaning, MEANING_SP * scale, ColorUtils.setAlphaComponent(color, 0xA0)).apply {
                 maxWidth = dp(132)
+                includeFontPadding = false
             }, wrap())
         }
     }
@@ -153,5 +162,8 @@ class CandidateBarView @JvmOverloads constructor(
 
     companion object {
         private val annotator = Executors.newSingleThreadExecutor()
+        private const val CHAR_SP = 20f
+        private const val READING_SP = 11.5f
+        private const val MEANING_SP = 10.5f
     }
 }

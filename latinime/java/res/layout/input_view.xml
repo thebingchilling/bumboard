@@ -33,4 +33,35 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:visibility="gone" />
+    <!-- BUMBOARD: panels drawn over the keys (voice typing, shortcuts, text editing, resizing);
+         BumPanels places them on the keyboard view. -->
+    <app.bumboard.voice.VoicePanelView
+        android:id="@+id/bum_voice_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start" />
+    <app.bumboard.toolbar.ShortcutGalleryView
+        android:id="@+id/bum_gallery_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:visibility="gone" />
+    <app.bumboard.toolbar.TextEditPanelView
+        android:id="@+id/bum_text_edit_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:visibility="gone" />
+    <app.bumboard.toolbar.NumpadPanelView
+        android:id="@+id/bum_numpad_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:visibility="gone" />
+    <app.bumboard.layout.ResizePanelView
+        android:id="@+id/bum_resize_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:visibility="gone" />
 </com.android.inputmethod.latin.InputView>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Theme attributes: the key drawables of the selected Material 3 key style. -->
+    <attr name="bumKeyBackground" format="reference" />
+    <attr name="bumFunctionalKeyBackground" format="reference" />
+
+    <!-- Icon tints for KeyboardView; when bumIconColor is unset, icons are drawn as they are. -->
+    <declare-styleable name="BumKeyboardView">
+        <!-- icons on normal keys -->
+        <attr name="bumIconColor" format="color" />
+        <!-- icons on functional keys (shift, delete, emoji, ...) -->
+        <attr name="bumFunctionalIconColor" format="color" />
+        <!-- icons and labels on the action (Enter) key -->
+        <attr name="bumActionColor" format="color" />
+        <!-- icons on a key that is switched on (shift lock) -->
+        <attr name="bumStickyOnColor" format="color" />
+    </declare-styleable>
+</resources>

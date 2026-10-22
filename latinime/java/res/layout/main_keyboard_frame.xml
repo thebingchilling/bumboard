@@ -18,6 +18,8 @@
 */
 -->
 
+<!-- BUMBOARD: a fixed-height top bar (strip, emoji search or Chinese candidates in one row),
+     then the keys with one-handed side panels; a drag handle on top in floating mode. -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
@@ -25,35 +27,63 @@
     android:layout_gravity="bottom"
     android:orientation="vertical" >
 
-    <!-- To ensure that key preview popup is correctly placed when the current system locale is
-         one of RTL locales, layoutDirection="ltr" is needed in the SDK version 17+. -->
-    <com.android.inputmethod.latin.suggestions.SuggestionStripView
-        android:id="@+id/suggestion_strip_view"
-        android:layoutDirection="ltr"
+    <app.bumboard.layout.FloatHandleView
+        android:id="@+id/bum_float_handle"
         android:layout_width="match_parent"
-        android:layout_height="@dimen/config_suggestions_strip_height"
-        android:gravity="center_vertical"
-        style="?attr/suggestionStripViewStyle" />
-    <!-- BUMBOARD: emoji search; shown instead of the strip while searching for an emoji. -->
-    <app.bumboard.emoji.EmojiSearchBar
-        android:id="@+id/bum_emoji_search"
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/config_suggestions_strip_height"
+        android:layout_height="22dp"
         android:visibility="gone" />
-    <!-- BUMBOARD: Chinese candidates; shown instead of the strip while Rime is composing. -->
-    <app.bumboard.chinese.CandidateBarView
-        android:id="@+id/bum_candidate_bar"
-        android:layoutDirection="ltr"
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/config_suggestions_strip_height"
-        android:visibility="gone"
-        style="?attr/suggestionStripViewStyle" />
 
-    <!-- To ensure that key preview popup is correctly placed when the current system locale is
-         one of RTL locales, layoutDirection="ltr" is needed in the SDK version 17+. -->
-    <com.android.inputmethod.keyboard.MainKeyboardView
-        android:id="@+id/keyboard_view"
-        android:layoutDirection="ltr"
+    <FrameLayout
+        android:id="@+id/bum_top_bar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        android:layout_height="@dimen/config_suggestions_strip_height">
+        <!-- To ensure that key preview popup is correctly placed when the current system locale is
+             one of RTL locales, layoutDirection="ltr" is needed in the SDK version 17+. -->
+        <com.android.inputmethod.latin.suggestions.SuggestionStripView
+            android:id="@+id/suggestion_strip_view"
+            android:layoutDirection="ltr"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            style="?attr/suggestionStripViewStyle" />
+        <!-- Emoji search; shown over the strip while searching for an emoji. -->
+        <app.bumboard.emoji.EmojiSearchBar
+            android:id="@+id/bum_emoji_search"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+        <!-- Chinese candidates, between the strip's locked edge keys while Rime is composing. -->
+        <app.bumboard.chinese.CandidateBarView
+            android:id="@+id/bum_candidate_bar"
+            android:layoutDirection="ltr"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginStart="@dimen/config_suggestions_strip_edge_key_width"
+            android:layout_marginEnd="@dimen/config_suggestions_strip_edge_key_width"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/bum_keyboard_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <app.bumboard.layout.OneHandedSideView
+            android:id="@+id/bum_one_hand_left"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+        <!-- To ensure that key preview popup is correctly placed when the current system locale
+             is one of RTL locales, layoutDirection="ltr" is needed in the SDK version 17+. -->
+        <com.android.inputmethod.keyboard.MainKeyboardView
+            android:id="@+id/keyboard_view"
+            android:layoutDirection="ltr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+        <app.bumboard.layout.OneHandedSideView
+            android:id="@+id/bum_one_hand_right"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:visibility="gone" />
+    </LinearLayout>
 </LinearLayout>

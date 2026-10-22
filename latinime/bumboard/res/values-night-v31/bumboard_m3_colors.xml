@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark roles from the wallpaper-based system palette (Android 12+). -->
+<resources>
+    <color name="bum_m3_kb_background">@android:color/system_neutral1_900</color>
+    <color name="bum_m3_key">@android:color/system_neutral1_800</color>
+    <color name="bum_m3_key_pressed">@android:color/system_neutral1_600</color>
+    <color name="bum_m3_key_functional">@android:color/system_accent2_700</color>
+    <color name="bum_m3_key_functional_pressed">@android:color/system_accent2_600</color>
+    <color name="bum_m3_on_key">@android:color/system_neutral1_50</color>
+    <color name="bum_m3_on_key_variant">@android:color/system_neutral2_200</color>
+    <color name="bum_m3_on_key_functional">@android:color/system_accent2_100</color>
+    <color name="bum_m3_primary">@android:color/system_accent1_200</color>
+    <color name="bum_m3_primary_pressed">@android:color/system_accent1_100</color>
+    <color name="bum_m3_on_primary">@android:color/system_accent1_800</color>
+    <color name="bum_m3_primary_container">@android:color/system_accent1_700</color>
+    <color name="bum_m3_primary_container_pressed">@android:color/system_accent1_600</color>
+    <color name="bum_m3_on_primary_container">@android:color/system_accent1_100</color>
+    <color name="bum_m3_surface_high">@android:color/system_neutral2_800</color>
+    <color name="bum_m3_outline">@android:color/system_neutral2_400</color>
+    <color name="bum_m3_outline_variant">@android:color/system_neutral2_700</color>
+</resources>

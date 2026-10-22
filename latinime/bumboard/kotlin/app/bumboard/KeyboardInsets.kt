@@ -18,9 +18,15 @@ object KeyboardInsets {
         val frame = inputView.findViewById<View>(R.id.main_keyboard_frame) ?: return
         val keyboard = inputView.findViewById<View>(R.id.keyboard_view)
         val emoji = inputView.findViewById<View>(R.id.emoji_palettes_view)
-        val emojiBottom = emoji?.paddingBottom ?: 0
+        // the emoji panel's own bottom padding, remembered before any navigation bar is added
+        // (this runs every time the keyboard opens)
+        val emojiBottom = emoji?.let { (it.getTag(R.id.emoji_palettes_view) as? Int) ?: it.paddingBottom.also { p -> it.setTag(R.id.emoji_palettes_view, p) } } ?: 0
         inputView.setOnApplyWindowInsetsListener { _, insets ->
-            val bottom = insets.getInsets(WindowInsets.Type.navigationBars()).bottom
+            val nav = insets.getInsets(WindowInsets.Type.navigationBars()).bottom
+            // a floating keyboard is placed by its own margin and needs no padding
+            val floating = app.bumboard.layout.BumLayout.get(inputView.context).mode ==
+                app.bumboard.layout.BumLayout.Mode.FLOATING
+            val bottom = if (floating) 0 else nav
             if (frame.paddingBottom != bottom) {
                 frame.setPadding(frame.paddingLeft, frame.paddingTop, frame.paddingRight, bottom)
                 if (frame.background == null) {

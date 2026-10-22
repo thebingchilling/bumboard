@@ -23,6 +23,13 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY"/>
+    <!-- BUMBOARD: voice typing through the phone's speech recogniser (Google's when present). -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
+    </queries>
 
     <!-- A signature-protected permission to ask AOSP Keyboard to close the software keyboard.
                  To use this, add the following line into calling application's AndroidManifest.xml
@@ -85,6 +92,12 @@
         </service>
 
         <!-- Activities -->
+        <!-- BUMBOARD: asks for the microphone on the voice key's first use. -->
+        <activity android:name="app.bumboard.voice.MicPermissionActivity"
+             android:theme="@android:style/Theme.Translucent.NoTitleBar"
+             android:excludeFromRecents="true"
+             android:noHistory="true"
+             android:exported="false"/>
         <!-- BUMBOARD: Material 3 settings app; the launcher entry and the IME's settings screen. -->
         <activity android:name="app.bumboard.settings.SettingsActivity"
              android:theme="@style/Theme.BumBoard"

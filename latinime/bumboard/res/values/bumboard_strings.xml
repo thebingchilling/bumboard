@@ -16,7 +16,7 @@
     <string name="bum_about">About</string>
     <string name="bum_about_summary">Version, licences</string>
     <string name="bum_version">Version %1$s</string>
-    <string name="bum_theme_note">These are the stock keyboard themes. A Material 3 keyboard design comes later.</string>
+    <string name="bum_theme_note">Material 3, following your light or dark mode and, from Android 12, your wallpaper colours. Pick how the keys look.</string>
     <string name="bum_about_base_title">Built on the Android keyboard</string>
     <string name="bum_about_base_body">BumBoard is based on LatinIME from the Android Open Source Project, used under the Apache License 2.0.</string>
     <string name="bum_back">Back</string>
@@ -85,4 +85,17 @@
     <string name="bum_emoji_objects">Objects</string>
     <string name="bum_emoji_symbols">Symbols</string>
     <string name="bum_emoji_flags">Flags</string>
+
+    <!-- Key styles (Theme page) -->
+    <string name="bum_key_style_flat">Flat keys</string>
+    <string name="bum_key_style_raised">Raised keys with shadows</string>
+
+    <!-- Voice typing -->
+    <string name="bum_voice_starting">Starting…</string>
+    <string name="bum_voice_listening">Speak now</string>
+    <string name="bum_voice_working">Working…</string>
+    <string name="bum_voice_error">Voice typing isn’t available right now</string>
+    <string name="bum_voice_stop">Stop listening</string>
+    <string name="bum_voice_cancel">Cancel voice typing</string>
+    <string name="bum_voice_permission_granted">Microphone allowed. Tap the mic again to speak.</string>
 </resources>

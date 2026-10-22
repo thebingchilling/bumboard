@@ -53,6 +53,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodSubtype;
 
 import androidx.annotation.NonNull;
@@ -117,7 +118,9 @@ import javax.annotation.Nullable;
 public class LatinIME extends InputMethodService implements KeyboardActionListener,
         SuggestionStripView.Listener, SuggestionStripViewAccessor,
         DictionaryFacilitator.DictionaryInitializationListener,
-        PermissionsManager.PermissionsResultCallback {
+        PermissionsManager.PermissionsResultCallback,
+        // BUMBOARD: shortcuts, panels over the keys and keyboard layout modes.
+        app.bumboard.BumHost {
     static final String TAG = LatinIME.class.getSimpleName();
     private static final boolean TRACE = false;
 
@@ -161,6 +164,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     private app.bumboard.chinese.ChineseInput mBumChinese;
     // BUMBOARD: emoji search above the letter keys.
     private app.bumboard.emoji.EmojiSearchBar mBumEmojiSearch;
+    // BUMBOARD: voice typing over the keys.
+    private app.bumboard.voice.VoicePanelView mBumVoice;
     private InsetsUpdater mInsetsUpdater;
     private SuggestionStripView mSuggestionStripView;
 
@@ -875,6 +880,42 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // BUMBOARD: keep the keys above the navigation bar (edge to edge from Android 15).
         app.bumboard.KeyboardInsets.apply(view);
         setUpBumEmoji(view);
+        if (mSuggestionStripView != null) {
+            mSuggestionStripView.getBumToolbar().setOnGallery(() -> {
+                showBumPanel(R.id.bum_gallery_panel);
+                return kotlin.Unit.INSTANCE;
+            });
+        }
+        app.bumboard.layout.LayoutApplier.apply(view);
+        // BUMBOARD: let the keyboard's own colour show behind the navigation buttons instead of
+        // the system's dark bar (3-button navigation).
+        final Window bumWindow = getWindow().getWindow();
+        if (bumWindow != null) {
+            bumWindow.setNavigationBarColor(Color.TRANSPARENT);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                bumWindow.setNavigationBarContrastEnforced(false);
+            }
+        }
+        mBumVoice =(app.bumboard.voice.VoicePanelView) view.findViewById(R.id.bum_voice_panel);
+        if (mBumVoice != null) {
+            mBumVoice.setOnText(text -> {
+                onTextInput(text);
+                return kotlin.Unit.INSTANCE;
+            });
+        }
+    }
+
+    // BUMBOARD: the mic key starts voice typing in the current keyboard's language.
+    private void startBumVoice() {
+        if (mBumVoice == null) return;
+        mBumChinese.reset();
+        app.bumboard.layout.BumPanels.hideOthers(mInputView, mBumVoice);
+        app.bumboard.layout.BumPanels.cover(mBumVoice, mInputView);
+        String language = mBumChinese.voiceLanguage();
+        if (language == null) {
+            language = mRichImm.getCurrentSubtypeLocale().toLanguageTag();
+        }
+        mBumVoice.start(language);
     }
 
     // BUMBOARD: the emoji panel's search box opens search over the letter keys.
@@ -1112,6 +1153,11 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
             switcher.loadKeyboard(editorInfo, currentSettingsValues, getCurrentAutoCapsState(),
                     getCurrentRecapitalizeState());
+            // BUMBOARD: layout mode or size may have changed in the settings meanwhile.
+            if (mInputView != null) {
+                app.bumboard.layout.LayoutApplier.apply(mInputView);
+                app.bumboard.KeyboardInsets.apply(mInputView);
+            }
             if (needToCallLoadKeyboardLater) {
                 // If we need to call loadKeyboard again later, we need to save its state now. The
                 // later call will be done in #retryResetCaches.
@@ -1180,6 +1226,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         if (mBumEmojiSearch != null && mBumEmojiSearch.isActive()) {
             endBumEmojiSearch();
         }
+        if (mInputView != null) app.bumboard.layout.BumPanels.hideOthers(mInputView, null);
         mBumChinese.reset();
         cleanupInternalStateForFinishInput();
     }
@@ -1328,32 +1375,35 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             mInsetsUpdater.setInsets(outInsets);
             return;
         }
+        // BUMBOARD: the keyboard is whatever of the frame (or the emoji panel, which takes its
+        // place) is on screen: full width, one-handed with its side panel, or floating. The
+        // frame holds the top bar, the keys and the navigation bar padding. A floating
+        // keyboard leaves the app its full height and takes touches only on itself.
         final boolean showingEmoji = mKeyboardSwitcher.isShowingEmojiPalettes();
-        final int suggestionsHeight = (!showingEmoji
-                && mSuggestionStripView.getVisibility() == View.VISIBLE)
-                ? mSuggestionStripView.getHeight() : 0;
-        // BUMBOARD: the Chinese candidate bar replaces the strip, and the keyboard frame has
-        // padding for the navigation bar (the emoji palette's own height already includes it).
-        final View bumCandidateBar = mInputView.findViewById(R.id.bum_candidate_bar);
-        final View bumEmojiSearch = mInputView.findViewById(R.id.bum_emoji_search);
-        final int bumBarHeight = (showingEmoji ? 0
-                : (bumCandidateBar != null && bumCandidateBar.getVisibility() == View.VISIBLE
-                        ? bumCandidateBar.getHeight() : 0)
-                + (bumEmojiSearch != null && bumEmojiSearch.getVisibility() == View.VISIBLE
-                        ? bumEmojiSearch.getHeight() : 0));
-        final int bumBottomPadding = showingEmoji
-                ? 0 : app.bumboard.KeyboardInsets.bottomPadding(mInputView);
-        final int visibleTopY = inputHeight - visibleKeyboardView.getHeight() - suggestionsHeight
-                - bumBarHeight - bumBottomPadding;
-        mSuggestionStripView.setMoreSuggestionsHeight(visibleTopY);
+        final View frame = showingEmoji
+                ? mInputView.findViewById(R.id.emoji_palettes_view)
+                : mInputView.findViewById(R.id.main_keyboard_frame);
+        if (frame == null) return;
+        final boolean floating = app.bumboard.layout.BumLayout.get(this).getMode()
+                == app.bumboard.layout.BumLayout.Mode.FLOATING;
+        final View resize = mInputView.findViewById(R.id.bum_resize_panel);
+        final boolean resizing = resize != null && resize.getVisibility() == View.VISIBLE;
+        final int frameTop = frame.getTop();
+        final int visibleTopY = floating ? inputHeight : frameTop;
+        mSuggestionStripView.setMoreSuggestionsHeight(frameTop);
         // Need to set expanded touchable region only if a keyboard view is being shown.
-        if (visibleKeyboardView.isShown()) {
-            final int touchLeft = 0;
-            final int touchTop = mKeyboardSwitcher.isShowingMoreKeysPanel() ? 0 : visibleTopY;
-            final int touchRight = visibleKeyboardView.getWidth();
-            final int touchBottom = inputHeight;
+        if (visibleKeyboardView.isShown() || showingEmoji) {
             outInsets.touchableInsets = InputMethodService.Insets.TOUCHABLE_INSETS_REGION;
-            outInsets.touchableRegion.set(touchLeft, touchTop, touchRight, touchBottom);
+            if (mKeyboardSwitcher.isShowingMoreKeysPanel()) {
+                outInsets.touchableRegion.set(0, 0, mInputView.getWidth(), inputHeight);
+            } else {
+                outInsets.touchableRegion.set(frame.getLeft(), frameTop,
+                        floating ? frame.getRight() : mInputView.getWidth(), frame.getBottom());
+                if (resizing) {
+                    outInsets.touchableRegion.union(new android.graphics.Rect(resize.getLeft(),
+                            resize.getTop(), resize.getRight(), resize.getBottom()));
+                }
+            }
         }
         outInsets.contentTopInsets = visibleTopY;
         outInsets.visibleTopInsets = visibleTopY;
@@ -1486,11 +1536,13 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         setNeutralSuggestionStrip();
     }
 
+    // BUMBOARD: the settings key opens BumBoard's settings straight away, with no dialog;
+    // languages have their own key next to it.
     public void displaySettingsDialog() {
         if (isShowingOptionDialog()) {
             return;
         }
-        showSubtypeSelectorAndSettings();
+        launchSettings(SettingsActivity.EXTRA_ENTRY_VALUE_LONG_PRESS_COMMA);
     }
 
     @Override
@@ -1536,6 +1588,10 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     // BUMBOARD: long-press on the language key lists BumBoard's keyboards, not the system picker.
     private void showBumLanguagePicker() {
         final List<InputMethodSubtype> subtypes = mRichImm.getMyEnabledInputMethodSubtypeList(true);
+        if (subtypes.size() < 2) {
+            launchBumSettingsPage("Languages");
+            return;
+        }
         final CharSequence[] names = new CharSequence[subtypes.size()];
         final InputMethodSubtype current = mRichImm.getCurrentSubtype().getRawSubtype();
         int checked = -1;
@@ -1605,8 +1661,20 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                     getCurrentRecapitalizeState());
             return;
         }
+        // BUMBOARD: the mic key types by voice here instead of switching to another IME.
         if (Constants.CODE_SHORTCUT == event.mKeyCode) {
-            mRichImm.switchToShortcutIme(this);
+            startBumVoice();
+            return;
+        }
+        // BUMBOARD: one-handed mode from the comma's popup.
+        if (Constants.CODE_BUM_ONE_HANDED == event.mKeyCode) {
+            bumRunShortcut(app.bumboard.toolbar.Shortcut.ONE_HANDED);
+            return;
+        }
+        // BUMBOARD: the language key in the comma's popup.
+        if (Constants.CODE_BUM_LANGUAGES == event.mKeyCode) {
+            showBumLanguagePicker();
+            return;
         }
         final InputTransaction completeInputTransaction =
                 mInputLogic.onCodeInput(mSettings.getCurrent(), event,
@@ -1733,8 +1801,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                 || currentSettingsValues.mShowsVoiceInputKey
                 || shouldShowSuggestionCandidates
                 || currentSettingsValues.isApplicationSpecifiedCompletionsOn();
-        final boolean shouldShowSuggestionsStrip = shouldShowSuggestionsStripUnlessPassword
-                && !currentSettingsValues.mInputAttributes.mIsPasswordField;
+        // BUMBOARD: the strip always shows, holding the shortcuts when there is nothing else.
+        final boolean shouldShowSuggestionsStrip = true;
         mSuggestionStripView.updateVisibility(shouldShowSuggestionsStrip, isFullscreenMode());
         if (!shouldShowSuggestionsStrip) {
             return;
@@ -2009,44 +2077,132 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         startActivityOnTheSameDisplay(intent);
     }
 
-    private void showSubtypeSelectorAndSettings() {
-        final CharSequence title = getString(R.string.english_ime_input_options);
-        // TODO: Should use new string "Select active input modes".
-        final CharSequence languageSelectionTitle = getString(R.string.language_selection_title);
-        final CharSequence[] items = new CharSequence[] {
-                languageSelectionTitle,
-                getString(ApplicationUtils.getActivityTitleResId(this, SettingsActivity.class))
-        };
-        final String imeId = mRichImm.getInputMethodIdOfThisIme();
-        final OnClickListener listener = new OnClickListener() {
-            @Override
-            public void onClick(DialogInterface di, int position) {
-                di.dismiss();
-                switch (position) {
-                case 0:
-                    // BUMBOARD: languages are chosen in BumBoard's own settings.
-                    final Intent intent = new Intent(LatinIME.this,
-                            app.bumboard.settings.SettingsActivity.class);
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
-                            | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
-                            | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                    intent.putExtra(app.bumboard.settings.SettingsActivity.EXTRA_PAGE,
-                            "Languages");
-                    startActivityOnTheSameDisplay(intent);
-                    break;
-                case 1:
-                    launchSettings(SettingsActivity.EXTRA_ENTRY_VALUE_LONG_PRESS_COMMA);
-                    break;
-                }
+    // BUMBOARD: BumHost ----------------------------------------------------------------------
+
+    @Override
+    public void bumRunShortcut(@Nonnull final app.bumboard.toolbar.Shortcut shortcut) {
+        final app.bumboard.layout.BumLayout layout = app.bumboard.layout.BumLayout.get(this);
+        final app.bumboard.layout.BumLayout.Mode mode = layout.getMode();
+        switch (shortcut) {
+        case LANGUAGE:
+            switchToNextSubtype();
+            break;
+        case TEXT_EDIT:
+            showBumPanel(R.id.bum_text_edit_panel);
+            break;
+        case NUMPAD:
+            showBumPanel(R.id.bum_numpad_panel);
+            break;
+        case RESIZE:
+            showBumPanel(R.id.bum_resize_panel);
+            break;
+        case ONE_HANDED:
+            layout.setMode(mode == app.bumboard.layout.BumLayout.Mode.ONE_HANDED
+                    ? app.bumboard.layout.BumLayout.Mode.NORMAL
+                    : app.bumboard.layout.BumLayout.Mode.ONE_HANDED);
+            bumReloadLayout();
+            break;
+        case FLOATING:
+            layout.setMode(mode == app.bumboard.layout.BumLayout.Mode.FLOATING
+                    ? app.bumboard.layout.BumLayout.Mode.NORMAL
+                    : app.bumboard.layout.BumLayout.Mode.FLOATING);
+            bumReloadLayout();
+            break;
+        case NUMBER_ROW:
+            layout.edit().putBoolean(app.bumboard.layout.BumLayout.PREF_NUMBER_ROW,
+                    !layout.getNumberRow()).apply();
+            bumReloadLayout();
+            break;
+        case EMOJI:
+            bumSendCode(Constants.CODE_EMOJI);
+            break;
+        case UNDO:
+        case REDO:
+            final InputConnection ic = getCurrentInputConnection();
+            if (ic != null) {
+                final int meta = KeyEvent.META_CTRL_ON | KeyEvent.META_CTRL_LEFT_ON
+                        | (shortcut == app.bumboard.toolbar.Shortcut.REDO
+                                ? KeyEvent.META_SHIFT_ON | KeyEvent.META_SHIFT_LEFT_ON : 0);
+                final long now = android.os.SystemClock.uptimeMillis();
+                ic.sendKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_Z,
+                        0, meta));
+                ic.sendKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_Z,
+                        0, meta));
             }
-        };
-        final AlertDialog.Builder builder = new AlertDialog.Builder(
-                DialogUtils.getPlatformDialogThemeContext(this));
-        builder.setItems(items, listener).setTitle(title);
-        final AlertDialog dialog = builder.create();
-        dialog.setCancelable(true /* cancelable */);
-        dialog.setCanceledOnTouchOutside(true /* cancelable */);
-        showOptionDialog(dialog);
+            break;
+        case SETTINGS:
+            launchSettings(null);
+            break;
+        }
+    }
+
+    @Override
+    public void bumReloadLayout() {
+        if (mInputView == null) return;
+        app.bumboard.layout.BumPanels.hideOthers(mInputView, null);
+        loadKeyboard();
+        app.bumboard.layout.LayoutApplier.apply(mInputView);
+        app.bumboard.KeyboardInsets.apply(mInputView);
+        mInputView.requestLayout();
+    }
+
+    @Override
+    public void bumSendCode(final int code) {
+        onCodeInput(code, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false);
+    }
+
+    @Override
+    public void bumType(@Nonnull final String text) {
+        onTextInput(text);
+    }
+
+    @Override
+    public InputConnection bumInputConnection() {
+        return getCurrentInputConnection();
+    }
+
+    /** Shows one of the panels over the keys (gallery, text editing, numpad, resizing). */
+    private void showBumPanel(final int id) {
+        if (mInputView == null) return;
+        final View panel = mInputView.findViewById(id);
+        if (panel == null) return;
+        if (mKeyboardSwitcher.isShowingEmojiPalettes()) {
+            bumSendCode(Constants.CODE_ALPHA_FROM_EMOJI);
+        }
+        mBumChinese.reset();
+        app.bumboard.layout.BumPanels.hideOthers(mInputView, panel);
+        app.bumboard.layout.BumPanels.cover(panel, mInputView);
+        if (panel instanceof app.bumboard.layout.ResizePanelView) {
+            // taller (and, floating, wider) than the keys, so the outline can grow
+            final android.widget.FrameLayout.LayoutParams lp =
+                    (android.widget.FrameLayout.LayoutParams) panel.getLayoutParams();
+            final int keysWidth = lp.width;
+            final int keysHeight = lp.height;
+            lp.height = Math.min((int) (keysHeight * app.bumboard.layout.ResizePanelView.ROOM),
+                    mInputView.getHeight() - lp.bottomMargin);
+            if (app.bumboard.layout.BumLayout.get(this).getMode()
+                    == app.bumboard.layout.BumLayout.Mode.FLOATING) {
+                lp.width = mInputView.getWidth() - lp.leftMargin;
+            }
+            panel.setLayoutParams(lp);
+            ((app.bumboard.layout.ResizePanelView) panel).show(keysWidth, keysHeight);
+        } else if (panel instanceof app.bumboard.toolbar.ShortcutGalleryView) {
+            ((app.bumboard.toolbar.ShortcutGalleryView) panel).show();
+        } else if (panel instanceof app.bumboard.toolbar.TextEditPanelView) {
+            ((app.bumboard.toolbar.TextEditPanelView) panel).show();
+        } else {
+            panel.setVisibility(View.VISIBLE);
+        }
+    }
+
+    // BUMBOARD: opens one page of BumBoard's settings.
+    private void launchBumSettingsPage(final String page) {
+        final Intent intent = new Intent(this, app.bumboard.settings.SettingsActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+                | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.putExtra(app.bumboard.settings.SettingsActivity.EXTRA_PAGE, page);
+        startActivityOnTheSameDisplay(intent);
     }
 
     // TODO: Move this method out of {@link LatinIME}.

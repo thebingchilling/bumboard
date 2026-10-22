@@ -238,6 +238,9 @@
             <enum name="KLP" value="2" />
             <enum name="LXXLight" value="3" />
             <enum name="LXXDark" value="4" />
+            <!-- BUMBOARD: Material 3 themes (KeyboardTheme.THEME_ID_BUM_*). -->
+            <enum name="BumFlat" value="5" />
+            <enum name="BumRaised" value="6" />
         </attr>
         <!-- Touch position correction -->
         <attr name="touchPositionCorrectionData" format="reference" />
@@ -279,6 +282,8 @@
         <attr name="iconImeKey" format="reference" />
         <attr name="iconEmojiActionKey" format="reference" />
         <attr name="iconEmojiNormalKey" format="reference" />
+        <!-- BUMBOARD -->
+        <attr name="iconOneHandedKey" format="reference" />
     </declare-styleable>
 
     <declare-styleable name="Keyboard_GridRows">
@@ -482,6 +487,9 @@
             <enum name="KLP" value="2" />
             <enum name="LXXLight" value="3" />
             <enum name="LXXDark" value="4" />
+            <!-- BUMBOARD: Material 3 themes (KeyboardTheme.THEME_ID_BUM_*). -->
+            <enum name="BumFlat" value="5" />
+            <enum name="BumRaised" value="6" />
         </attr>
         <!-- This should be aligned with
              {@link com.android.inputmethod.keyboard.KeyboardId#MODE_TEXT} etc. -->
@@ -499,6 +507,9 @@
         <attr name="clobberSettingsKey" format="boolean" />
         <attr name="hasShortcutKey" format="boolean" />
         <attr name="languageSwitchKeyEnabled" format="boolean" />
+        <!-- BUMBOARD: number row above the letters; emoji (true) or language key beside the comma. -->
+        <attr name="bumNumberRow" format="boolean" />
+        <attr name="bumEmojiKey" format="boolean" />
         <attr name="isMultiLine" format="boolean" />
         <attr name="imeAction" format="enum">
             <!-- This should be aligned with

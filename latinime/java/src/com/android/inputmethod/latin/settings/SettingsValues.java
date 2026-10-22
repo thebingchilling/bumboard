@@ -145,7 +145,8 @@ public class SettingsValues {
                 : false /* BUMBOARD: the language key never includes other input methods */;
         mShowsLanguageSwitchKey = Settings.ENABLE_SHOW_LANGUAGE_SWITCH_KEY_SETTINGS
                 ? Settings.readShowsLanguageSwitchKey(prefs) : true /* forcibly */;
-        mUseContactsDict = prefs.getBoolean(Settings.PREF_KEY_USE_CONTACTS_DICT, true);
+        // BUMBOARD: no contact names in suggestions, and no notice asking for contacts.
+        mUseContactsDict = false;
         mUsePersonalizedDicts = prefs.getBoolean(Settings.PREF_KEY_USE_PERSONALIZED_DICTS, true);
         mUseDoubleSpacePeriod = prefs.getBoolean(Settings.PREF_KEY_USE_DOUBLE_SPACE_PERIOD, true)
                 && inputAttributes.mIsGeneralTextInput;

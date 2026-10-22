@@ -15,6 +15,7 @@ import app.bumboard.rime.RimeService
 import com.android.inputmethod.event.Event
 import com.android.inputmethod.latin.R
 import com.android.inputmethod.latin.common.Constants
+import com.android.inputmethod.latin.suggestions.SuggestionStripView
 
 /**
  * Chinese typing for LatinIME. When the current subtype carries `BumEngine=yue` or
@@ -68,6 +69,13 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val mode = if (engine == "yue") InputMode.Cantonese else InputMode.Mandarin
         val display = Readings.displayPrefs(prefs)
         return { candidate -> annotator.annotate(candidate.text, candidate.comment, mode, display) }
+    }
+
+    /** The speech recogniser language for the current Chinese keyboard, or null when not Chinese. */
+    fun voiceLanguage(): String? = when (engine) {
+        null -> null
+        "yue" -> "yue-Hant-HK"
+        else -> if (prefs.getString(PREF_SCRIPT, "traditional") == "simplified") "cmn-Hans-CN" else "cmn-Hant-TW"
     }
 
     fun onSubtypeChanged(subtype: InputMethodSubtype?) {
@@ -179,33 +187,53 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         show(composition)
     }
 
-    /** In Chinese the bar replaces the strip all the time, at a steady height. */
+    /**
+     * Candidates show in the middle of the strip while Rime is composing, between the locked
+     * Traditional/Simplified and mic keys, at the strip's own height; otherwise the strip shows
+     * its shortcuts or suggestions as usual.
+     */
     private fun show(composition: Composition?) {
         shown = composition
         popup?.dismiss()
+        val stripView = strip as? SuggestionStripView
+        updateScriptKey(stripView)
         val bar = bar ?: return
-        if (!isActive) {
+        val candidates = composition?.candidates.orEmpty()
+        if (!isActive || candidates.isEmpty()) {
+            bar.setCandidates(emptyList(), null)
             bar.visibility = View.GONE
-            strip?.visibility = View.VISIBLE
+            stripView?.setBumCandidatesShowing(false)
             return
         }
-        bar.setBarHeight(barHeight())
-        bar.setCandidates(composition?.candidates.orEmpty(), annotation())
-        strip?.visibility = View.GONE
+        bar.setLines(annotationLines())
+        bar.setCandidates(candidates, annotation())
         bar.visibility = View.VISIBLE
+        stripView?.setBumCandidatesShowing(true)
     }
 
-    private fun barHeight(): Int {
-        val res = ime.resources
-        val base = res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
-        if (!Readings.showReadings(prefs)) return base
+    /** 繁 or 简 on the strip's left edge on the Chinese keyboards; a tap switches. */
+    private fun updateScriptKey(stripView: SuggestionStripView?) {
+        stripView ?: return
+        if (!isActive) {
+            stripView.setBumScriptKey(null, null)
+            return
+        }
+        val simplified = prefs.getString(PREF_SCRIPT, "traditional") == "simplified"
+        stripView.setBumScriptKey(if (simplified) "简" else "繁") {
+            prefs.edit().putString(PREF_SCRIPT, if (simplified) "traditional" else "simplified").apply()
+            if (RimeService.ready && session != 0L) selectSchema()
+            if (isComposing) sync() else show(shown)
+        }
+    }
+
+    /** What each candidate shows under its characters, so the bar can scale it to fit. */
+    private fun annotationLines(): CandidateBarView.Lines {
+        if (!Readings.showReadings(prefs)) return CandidateBarView.Lines(0, false)
         val display = Readings.displayPrefs(prefs)
         var lines = 1
         if (display.cantonese == CantoneseRomanization.Both && engine == "yue") lines++
         if (display.showOtherLanguage) lines++
-        fun sp(value: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, value, res.displayMetrics)
-        val extra = lines * sp(14f) + (if (display.showMeaning) sp(13f) else 0f)
-        return base + extra.toInt()
+        return CandidateBarView.Lines(lines, display.showMeaning)
     }
 
     companion object {

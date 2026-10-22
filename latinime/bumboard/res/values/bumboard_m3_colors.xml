@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    BumBoard's Material 3 colour roles, shared by the keyboard theme, the emoji panel, the
+    candidate bar and popups (M3Colors reads these too). This file is the light fallback
+    palette (teal) for Android 7-11; values-v31 maps the same roles to the wallpaper-based
+    system palette, and the -night folders hold the dark versions.
+-->
+<resources>
+    <color name="bum_m3_kb_background">#E9EFEC</color>
+    <color name="bum_m3_key">#FBFDFC</color>
+    <color name="bum_m3_key_pressed">#D5DBD8</color>
+    <color name="bum_m3_key_functional">#CCE8E0</color>
+    <color name="bum_m3_key_functional_pressed">#B0CCC4</color>
+    <color name="bum_m3_on_key">#171D1B</color>
+    <color name="bum_m3_on_key_variant">#3F4946</color>
+    <color name="bum_m3_on_key_functional">#06201B</color>
+    <color name="bum_m3_primary">#006A5D</color>
+    <color name="bum_m3_primary_pressed">#005046</color>
+    <color name="bum_m3_on_primary">#FFFFFF</color>
+    <color name="bum_m3_primary_container">#9EF2DF</color>
+    <color name="bum_m3_primary_container_pressed">#82D5C3</color>
+    <color name="bum_m3_on_primary_container">#00201B</color>
+    <color name="bum_m3_surface_high">#DEE4E1</color>
+    <color name="bum_m3_outline">#6F7976</color>
+    <color name="bum_m3_outline_variant">#BEC9C5</color>
+    <!-- Shadow under raised keys; fixed, not part of the wallpaper palette. -->
+    <color name="bum_m3_shadow">#33000000</color>
+    <color name="bum_m3_shadow_soft">#14000000</color>
+</resources>

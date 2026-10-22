@@ -2,6 +2,7 @@ package app.bumboard.emoji
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
@@ -12,10 +13,12 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextView
 import app.bumboard.ui.M3Colors
+import com.android.inputmethod.latin.R
 
 /**
- * Skin tones for an emoji, in a popup above it. One person: the plain emoji and five tones in
- * a row. Two people: the plain emoji, then a 5×5 grid (row = first person, column = second).
+ * Skin tones for an emoji in a popup above it, like Gboard's. One person: yellow and the five
+ * tones in a row. Two people: yellow, or a tone for each person (two rows of swatches) shown
+ * combined in a preview; tap the preview to type it.
  */
 class TonePicker(private val ctx: Context) {
     private var window: PopupWindow? = null
@@ -31,7 +34,7 @@ class TonePicker(private val ctx: Context) {
         val c = M3Colors.of(ctx)
         val content = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(6), dp(6), dp(6), dp(6))
+            setPadding(dp(8), dp(8), dp(8), dp(8))
             background = GradientDrawable().apply {
                 setColor(c.surfaceContainerHigh)
                 cornerRadius = dp(20).toFloat()
@@ -39,30 +42,70 @@ class TonePicker(private val ctx: Context) {
             elevation = dp(6).toFloat()
         }
         lateinit var popup: PopupWindow
-        fun cell(text: String) = TextView(ctx).apply {
+        fun pick(text: String) {
+            popup.dismiss()
+            onPick(text)
+        }
+        fun cell(text: String, size: Int = 46, onClick: () -> Unit = { pick(text) }) = TextView(ctx).apply {
             this.text = text
             typeface = EmojiData.typeface
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
+            setTextSize(TypedValue.COMPLEX_UNIT_PX, dp(size) * 0.62f)
             gravity = Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(dp(46), dp(46))
-            if (text == selected) {
-                background = GradientDrawable().apply {
-                    setColor(c.secondaryContainer)
-                    cornerRadius = dp(12).toFloat()
-                }
-            }
-            setOnClickListener {
-                popup.dismiss()
-                onPick(text)
-            }
+            includeFontPadding = false
+            layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
+            if (text == selected) background = rounded(c.primaryContainer, 12)
+            setOnClickListener { onClick() }
         }
         if (emoji.twoPeople) {
-            content.addView(LinearLayout(ctx).apply { addView(cell(emoji.base)) })
-            for (row in 0 until 5) {
-                content.addView(LinearLayout(ctx).apply {
-                    for (col in 0 until 5) addView(cell(tones[row * 5 + col]))
-                })
+            // the tones of the emoji shown now, or none chosen yet
+            val now = tones.indexOf(selected)
+            var first = if (now >= 0) now / 5 else 0
+            var second = if (now >= 0) now % 5 else 0
+            val preview = cell(tones[first * 5 + second], 64) {}
+            preview.background = rounded(c.primaryContainer, 16)
+            preview.contentDescription = ctx.getString(R.string.bum_tone_type)
+            preview.setOnClickListener { pick(tones[first * 5 + second]) }
+            val rows = Array(2) { LinearLayout(ctx).apply { gravity = Gravity.CENTER_VERTICAL } }
+            fun refresh() {
+                preview.text = tones[first * 5 + second]
+                rows.forEachIndexed { person, row ->
+                    for (t in 0 until 5) {
+                        val chosen = if (person == 0) first == t else second == t
+                        (row.getChildAt(t + 1) as View).background = swatch(t, chosen, c.primary)
+                    }
+                }
             }
+            rows.forEachIndexed { person, row ->
+                row.addView(TextView(ctx).apply {
+                    setText(if (person == 0) R.string.bum_tone_person1 else R.string.bum_tone_person2)
+                    setTextColor(c.onSurfaceVariant)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                    typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                }, LinearLayout.LayoutParams(dp(64), LinearLayout.LayoutParams.WRAP_CONTENT))
+                for (t in 0 until 5) {
+                    row.addView(View(ctx).apply {
+                        contentDescription = ctx.getString(TONE_NAMES[t])
+                        setOnClickListener {
+                            if (person == 0) first = t else second = t
+                            refresh()
+                        }
+                    }, LinearLayout.LayoutParams(dp(36), dp(36)).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
+                }
+            }
+            content.addView(LinearLayout(ctx).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                addView(cell(emoji.base, 64))
+                addView(View(ctx), LinearLayout.LayoutParams(dp(12), 1))
+                addView(preview)
+                addView(TextView(ctx).apply {
+                    setText(R.string.bum_tone_tap_preview)
+                    setTextColor(c.onSurfaceVariant)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                    setPadding(dp(12), 0, dp(4), 0)
+                }, LinearLayout.LayoutParams(dp(150), LinearLayout.LayoutParams.WRAP_CONTENT))
+            })
+            rows.forEach { content.addView(it) }
+            refresh()
         } else {
             content.addView(LinearLayout(ctx).apply {
                 addView(cell(emoji.base))
@@ -82,5 +125,27 @@ class TonePicker(private val ctx: Context) {
         popup.showAsDropDown(anchor, x, -(anchor.height + content.measuredHeight))
     }
 
+    /** A round skin-tone swatch, ringed when chosen. */
+    private fun swatch(tone: Int, chosen: Boolean, ring: Int) = GradientDrawable().apply {
+        shape = GradientDrawable.OVAL
+        setColor(SWATCHES[tone])
+        if (chosen) setStroke(dp(3), ring)
+    }
+
+    private fun rounded(color: Int, radius: Int) = GradientDrawable().apply {
+        setColor(color)
+        cornerRadius = dp(radius).toFloat()
+    }
+
     private fun dp(v: Int) = (ctx.resources.displayMetrics.density * v).toInt()
+
+    private companion object {
+        /** Fitzpatrick 1-2 .. 6, as Unicode's emoji modifiers are usually drawn. */
+        val SWATCHES = intArrayOf(
+            0xFFF7D7C4.toInt(), 0xFFE0B794.toInt(), 0xFFBF8B5E.toInt(), 0xFF9B643D.toInt(), 0xFF5E4235.toInt(),
+        )
+        val TONE_NAMES = intArrayOf(
+            R.string.bum_tone_1, R.string.bum_tone_2, R.string.bum_tone_3, R.string.bum_tone_4, R.string.bum_tone_5,
+        )
+    }
 }

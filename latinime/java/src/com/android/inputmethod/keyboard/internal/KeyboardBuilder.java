@@ -271,6 +271,11 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
             params.mBaseHeight = baseHeight;
             params.mDefaultRowHeight = (int)ResourceUtils.getDimensionOrFraction(keyboardAttr,
                     R.styleable.Keyboard_rowHeight, baseHeight, baseHeight / DEFAULT_KEYBOARD_ROWS);
+            // BUMBOARD: the keyboard is a row taller with the number row (BumLayout); keep the
+            // letter rows the same height by sharing it among five rows instead of four.
+            if (params.mId.mBumNumberRow && params.mId.isAlphabetKeyboard()) {
+                params.mDefaultRowHeight = params.mDefaultRowHeight * 4 / 5;
+            }
 
             params.mKeyVisualAttributes = KeyVisualAttributes.newInstance(keyAttr);
 
@@ -678,13 +683,18 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
             final boolean countryCodeMatched = matchCountryCodes(caseAttr, locale);
             final boolean splitLayoutMatched = matchBoolean(caseAttr,
                     R.styleable.Keyboard_Case_isSplitLayout, id.mIsSplitLayout);
+            // BUMBOARD
+            final boolean bumMatched = matchBoolean(caseAttr,
+                    R.styleable.Keyboard_Case_bumNumberRow, id.mBumNumberRow)
+                    && matchBoolean(caseAttr, R.styleable.Keyboard_Case_bumEmojiKey,
+                            id.mBumEmojiKey);
             final boolean selected = keyboardLayoutSetMatched && keyboardLayoutSetElementMatched
                     && keyboardThemeMacthed && modeMatched && navigateNextMatched
                     && navigatePreviousMatched && passwordInputMatched && clobberSettingsKeyMatched
                     && hasShortcutKeyMatched  && languageSwitchKeyEnabledMatched
                     && isMultiLineMatched && imeActionMatched && isIconDefinedMatched
                     && localeCodeMatched && languageCodeMatched && countryCodeMatched
-                    && splitLayoutMatched;
+                    && splitLayoutMatched && bumMatched;
 
             if (DEBUG) {
                 startTag("<%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s>%s", TAG_CASE,

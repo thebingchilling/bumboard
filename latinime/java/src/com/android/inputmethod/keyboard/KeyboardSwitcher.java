@@ -116,9 +116,16 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         final KeyboardLayoutSet.Builder builder = new KeyboardLayoutSet.Builder(
                 mThemeContext, editorInfo);
         final Resources res = mThemeContext.getResources();
-        final int keyboardWidth = ResourceUtils.getDefaultKeyboardWidth(mThemeContext);
-        final int keyboardHeight = ResourceUtils.getKeyboardHeight(res, settingsValues);
+        // BUMBOARD: one-handed, floating and resized keyboards, and the number row.
+        final app.bumboard.layout.BumLayout bumLayout =
+                app.bumboard.layout.BumLayout.get(mThemeContext);
+        final int keyboardWidth = bumLayout.keyboardWidth(
+                ResourceUtils.getDefaultKeyboardWidth(mThemeContext));
+        final int keyboardHeight = bumLayout.keyboardHeight(
+                ResourceUtils.getKeyboardHeight(res, settingsValues));
         builder.setKeyboardGeometry(keyboardWidth, keyboardHeight);
+        builder.setBumOptions(bumLayout.getNumberRow(),
+                bumLayout.getEmojiKey() || !mLatinIME.shouldShowLanguageSwitchKey());
         builder.setSubtype(mRichImm.getCurrentSubtype());
         builder.setVoiceInputKeyEnabled(settingsValues.mShowsVoiceInputKey);
         builder.setLanguageSwitchKeyEnabled(mLatinIME.shouldShowLanguageSwitchKey());

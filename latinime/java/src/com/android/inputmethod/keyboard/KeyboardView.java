@@ -94,6 +94,11 @@ public class KeyboardView extends View {
     private final Drawable mSpacebarBackground;
     private final float mSpacebarIconWidthRatio;
     private final Rect mKeyBackgroundPadding = new Rect();
+    // BUMBOARD: see BumKeyboardView in bumboard_attrs.xml.
+    private final int mBumIconColor;
+    private final int mBumFunctionalIconColor;
+    private final int mBumActionColor;
+    private final int mBumStickyOnColor;
     private static final float KET_TEXT_SHADOW_RADIUS_DISABLED = -1.0f;
 
     // The maximum key label width in the proportion to the key width.
@@ -155,6 +160,17 @@ public class KeyboardView extends View {
         mVerticalCorrection = keyboardViewAttr.getDimension(
                 R.styleable.KeyboardView_verticalCorrection, 0.0f);
         keyboardViewAttr.recycle();
+
+        // BUMBOARD: icon tints for the Material 3 theme (0 = draw icons untinted).
+        final TypedArray bumAttr = context.obtainStyledAttributes(attrs,
+                R.styleable.BumKeyboardView, defStyle, R.style.KeyboardView);
+        mBumIconColor = bumAttr.getColor(R.styleable.BumKeyboardView_bumIconColor, 0);
+        mBumFunctionalIconColor = bumAttr.getColor(
+                R.styleable.BumKeyboardView_bumFunctionalIconColor, mBumIconColor);
+        mBumActionColor = bumAttr.getColor(R.styleable.BumKeyboardView_bumActionColor, 0);
+        mBumStickyOnColor = bumAttr.getColor(
+                R.styleable.BumKeyboardView_bumStickyOnColor, mBumIconColor);
+        bumAttr.recycle();
 
         final TypedArray keyAttr = context.obtainStyledAttributes(attrs,
                 R.styleable.Keyboard_Key, defStyle, R.style.KeyboardView);
@@ -354,7 +370,9 @@ public class KeyboardView extends View {
         final int bgWidth, bgHeight, bgX, bgY;
         if (key.needsToKeepBackgroundAspectRatio(mDefaultKeyLabelFlags)
                 // HACK: To disable expanding normal/functional key background.
-                && !key.hasCustomActionLabel()) {
+                && !key.hasCustomActionLabel()
+                // BUMBOARD: shape drawables have no intrinsic size; they fill the key.
+                && background.getIntrinsicWidth() > 0 && background.getIntrinsicHeight() > 0) {
             final int intrinsicWidth = background.getIntrinsicWidth();
             final int intrinsicHeight = background.getIntrinsicHeight();
             final float minScale = Math.min(
@@ -425,6 +443,10 @@ public class KeyboardView extends View {
 
             if (key.isEnabled()) {
                 paint.setColor(key.selectTextColor(params));
+                // BUMBOARD: labels on the action key sit on the primary colour.
+                if (key.isActionKey() && mBumActionColor != 0) {
+                    paint.setColor(mBumActionColor);
+                }
                 // Set a drop shadow for the text if the shadow radius is positive value.
                 if (mKeyTextShadowRadius > 0.0f) {
                     paint.setShadowLayer(mKeyTextShadowRadius, 0.0f, 0.0f, params.mTextShadowColor);
@@ -500,6 +522,11 @@ public class KeyboardView extends View {
                 iconY = (keyHeight - iconHeight) / 2; // Align vertically center.
             }
             final int iconX = (keyWidth - iconWidth) / 2; // Align horizontally center.
+            // BUMBOARD: tint icons to suit the key's fill in the Material 3 theme.
+            final int tint = bumIconTint(key);
+            if (tint != 0) {
+                icon.setColorFilter(tint, PorterDuff.Mode.SRC_IN);
+            }
             drawIcon(canvas, icon, iconX, iconY, iconWidth, iconHeight);
         }
 
@@ -525,6 +552,19 @@ public class KeyboardView extends View {
                 - TypefaceUtils.getReferenceCharWidth(paint) / 2.0f;
         final float hintY = keyHeight - mKeyPopupHintLetterPadding;
         canvas.drawText(mKeyPopupHintLetter, hintX, hintY, paint);
+    }
+
+    private int bumIconTint(@Nonnull final Key key) {
+        if (mBumIconColor == 0) {
+            return 0;
+        }
+        if (key.isActionKey() && mBumActionColor != 0) {
+            return mBumActionColor;
+        }
+        if (key.isStickyOn()) {
+            return mBumStickyOnColor;
+        }
+        return key.hasFunctionalBackground() ? mBumFunctionalIconColor : mBumIconColor;
     }
 
     protected static void drawIcon(@Nonnull final Canvas canvas,@Nonnull final Drawable icon,

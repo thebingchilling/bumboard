@@ -23,6 +23,9 @@
 >
     <include
         latin:keyboardLayout="@xml/key_styles_common" />
+    <!-- BUMBOARD -->
+    <include
+        latin:keyboardLayout="@xml/bum_row_numbers" />
     <Row
         latin:keyWidth="9.091%p"
     >

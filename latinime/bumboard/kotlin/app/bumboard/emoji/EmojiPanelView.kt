@@ -12,6 +12,7 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.ViewGroup
 import android.widget.HorizontalScrollView
@@ -22,6 +23,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import app.bumboard.ui.M3Colors
 import com.android.inputmethod.keyboard.KeyboardActionListener
+import com.android.inputmethod.keyboard.KeyboardTheme
 import com.android.inputmethod.keyboard.internal.KeyVisualAttributes
 import com.android.inputmethod.keyboard.internal.KeyboardIconsSet
 import com.android.inputmethod.latin.R
@@ -77,7 +79,8 @@ class EmojiPanelView @JvmOverloads constructor(
                 if (adapter.rows.getOrNull(position) is Row.Header) layoutManager.spanCount else 1
         }
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-        addView(bottomBar(), LayoutParams(LayoutParams.MATCH_PARENT, dp(48)))
+        pinchToResize()
+        addView(bottomBar(), LayoutParams(LayoutParams.MATCH_PARENT, dp(50)))
     }
 
     // ------------------------------------------------------------ LatinIME's EmojiPalettesView API
@@ -93,6 +96,7 @@ class EmojiPanelView @JvmOverloads constructor(
 
     @Suppress("UNUSED_PARAMETER")
     fun startEmojiPalettes(switchToAlphaLabel: String?, keyVisualAttr: KeyVisualAttributes?, iconSet: KeyboardIconsSet?) {
+        applyColumns()
         EmojiData.load(context) { rebuild() }
     }
 
@@ -104,8 +108,12 @@ class EmojiPanelView @JvmOverloads constructor(
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         // Same size as the keyboard plus its suggestion strip, like LatinIME's emoji palette.
         val res = context.resources
-        val width = ResourceUtils.getDefaultKeyboardWidth(context) + paddingLeft + paddingRight
-        val height = ResourceUtils.getDefaultKeyboardHeight(res) +
+        val layout = app.bumboard.layout.BumLayout.get(context)
+        val full = ResourceUtils.getDefaultKeyboardWidth(context)
+        // one-handed: the panel spans the whole width; floating: the floating keyboard's size
+        val width = (if (layout.mode == app.bumboard.layout.BumLayout.Mode.FLOATING) layout.keyboardWidth(full) else full) +
+            paddingLeft + paddingRight
+        val height = layout.keyboardHeight(ResourceUtils.getDefaultKeyboardHeight(res)) +
             res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height) + paddingTop + paddingBottom
         super.onMeasure(
             MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
@@ -115,8 +123,62 @@ class EmojiPanelView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        layoutManager.spanCount = (w / dp(46)).coerceAtLeast(6)
+        applyColumns()
     }
+
+    /**
+     * Columns: the saved emoji size, or as many 46 dp cells as fit. Each emoji fills its cell,
+     * so fewer columns means bigger emoji.
+     */
+    private fun applyColumns() {
+        val w = grid.width.takeIf { it > 0 } ?: (width - paddingLeft - paddingRight)
+        if (w <= 0) return
+        @Suppress("DEPRECATION")
+        val saved = PreferenceManager.getDefaultSharedPreferences(context).getInt(PREF_COLUMNS, 0)
+        val columns = if (saved > 0) saved else (w / dp(46)).coerceAtLeast(6)
+        cellSize = w / columns
+        if (layoutManager.spanCount != columns) layoutManager.spanCount = columns
+        adapter.notifyDataSetChanged()
+    }
+
+    /** Pinch the grid to change the emoji size (the number of columns), like a photo grid. */
+    private fun pinchToResize() {
+        val detector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            private var total = 1f
+            override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
+                total = 1f
+                return true
+            }
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                total *= detector.scaleFactor
+                val step = when {
+                    total > 1.18f -> -1
+                    total < 0.85f -> 1
+                    else -> 0
+                }
+                if (step != 0) {
+                    total = 1f
+                    val columns = (layoutManager.spanCount + step).coerceIn(MIN_COLUMNS, MAX_COLUMNS)
+                    @Suppress("DEPRECATION")
+                    PreferenceManager.getDefaultSharedPreferences(context).edit().putInt(PREF_COLUMNS, columns).apply()
+                    applyColumns()
+                }
+                return true
+            }
+        })
+        grid.addOnItemTouchListener(object : RecyclerView.SimpleOnItemTouchListener() {
+            override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
+                detector.onTouchEvent(e)
+                return e.pointerCount > 1
+            }
+            override fun onTouchEvent(rv: RecyclerView, e: MotionEvent) {
+                detector.onTouchEvent(e)
+            }
+        })
+    }
+
+    /** Width (and height) of one emoji cell, in pixels. */
+    private var cellSize = 0
 
     // ------------------------------------------------------------ content
 
@@ -218,27 +280,34 @@ class EmojiPanelView @JvmOverloads constructor(
     private fun bottomBar() = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(4), 0, dp(4), 0)
+        setPadding(dp(6), dp(2), dp(6), dp(4))
+        // ABC and delete are drawn as the keyboard's own functional keys, flat or raised.
         addView(TextView(context).apply {
             text = context.getString(R.string.bum_emoji_abc)
-            setTextColor(palette.onSurface)
+            setTextColor(palette.onSecondaryContainer)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
             gravity = Gravity.CENTER
-            background = pill(palette.surfaceContainerHigh, 18)
+            background = functionalKey()
             setOnClickListener { sendCode(Constants.CODE_ALPHA_FROM_EMOJI) }
-        }, LayoutParams(dp(56), dp(36)))
+        }, LayoutParams(dp(64), dp(40)))
         addView(HorizontalScrollView(context).apply {
             isHorizontalScrollBarEnabled = false
             addView(tabs)
         }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(4); marginEnd = dp(4) })
         addView(ImageView(context).apply {
             setImageResource(R.drawable.ic_sym_backspace)
-            imageTintList = ColorStateList.valueOf(palette.onSurface)
+            imageTintList = ColorStateList.valueOf(palette.onSecondaryContainer)
             scaleType = ImageView.ScaleType.CENTER
+            background = functionalKey()
             contentDescription = context.getString(R.string.bum_emoji_delete)
-            setOnTouchListener { _, event -> onDeleteTouch(event); true }
-        }, LayoutParams(dp(56), dp(40)))
+            setOnTouchListener { view, event ->
+                view.isPressed = event.actionMasked == MotionEvent.ACTION_DOWN ||
+                    event.actionMasked == MotionEvent.ACTION_MOVE
+                onDeleteTouch(event)
+                true
+            }
+        }, LayoutParams(dp(64), dp(40)))
     }
 
     private fun onDeleteTouch(event: MotionEvent) {
@@ -264,6 +333,13 @@ class EmojiPanelView @JvmOverloads constructor(
         l.onCodeInput(code, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
         l.onReleaseKey(code, false)
     }
+
+    /** The keyboard's functional key background in the selected key style. */
+    private fun functionalKey() = context.getDrawable(
+        if (KeyboardTheme.getKeyboardTheme(context).mThemeId == KeyboardTheme.THEME_ID_BUM_RAISED)
+            R.drawable.bum_m3_key_functional_raised
+        else R.drawable.bum_m3_key_functional_flat
+    )
 
     private fun pill(color: Int, radiusDp: Int) = GradientDrawable().apply {
         setColor(color)
@@ -291,7 +367,6 @@ class EmojiPanelView @JvmOverloads constructor(
                     layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 } else {
                     typeface = EmojiData.typeface
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 28f)
                     includeFontPadding = false
                     background = selectable()
                     layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50))
@@ -305,6 +380,14 @@ class EmojiPanelView @JvmOverloads constructor(
             when (val row = rows[position]) {
                 is Row.Header -> view.text = context.getString(row.title)
                 is Row.Cell -> {
+                    // the emoji fills its cell
+                    val size = if (cellSize > 0) cellSize else dp(46)
+                    view.setTextSize(TypedValue.COMPLEX_UNIT_PX, size * EMOJI_FILL)
+                    val lp = view.layoutParams
+                    if (lp.height != size) {
+                        lp.height = size
+                        view.layoutParams = lp
+                    }
                     val shown = row.form ?: store.shown(row.emoji)
                     view.text = shown
                     view.contentDescription = row.emoji.name
@@ -328,8 +411,15 @@ class EmojiPanelView @JvmOverloads constructor(
         }
     }
 
-    private companion object {
-        val GROUP_INFO = mapOf(
+    companion object {
+        /** Saved number of emoji columns (0: as many 46 dp cells as fit). */
+        const val PREF_COLUMNS = "bum_emoji_columns"
+        const val MIN_COLUMNS = 5
+        const val MAX_COLUMNS = 12
+        /** Emoji glyph size as a share of its cell. */
+        private const val EMOJI_FILL = 0.74f
+
+        private val GROUP_INFO = mapOf(
             "smileys" to (R.string.bum_emoji_smileys to R.drawable.ic_sym_mood),
             "people" to (R.string.bum_emoji_people to R.drawable.ic_sym_emoji_people),
             "animals" to (R.string.bum_emoji_animals to R.drawable.ic_sym_pets),

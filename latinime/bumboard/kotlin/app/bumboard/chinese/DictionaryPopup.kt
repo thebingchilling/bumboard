@@ -59,7 +59,7 @@ class DictionaryPopup(private val ctx: Context) {
         val card = MaxHeightLayout(ctx, maxHeight).apply {
             orientation = LinearLayout.VERTICAL
             background = GradientDrawable().apply {
-                setColor(c.surface)
+                setColor(c.surfaceContainerHigh)
                 cornerRadius = dp(24).toFloat()
             }
             elevation = dp(8).toFloat()

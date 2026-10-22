@@ -247,6 +247,10 @@ public final class Constants {
     public static final int CODE_ALPHA_FROM_EMOJI = -14;
     // Code value representing the code is not specified.
     public static final int CODE_UNSPECIFIED = -15;
+    // BUMBOARD: the language key in the comma's popup; LatinIME shows BumBoard's keyboards.
+    public static final int CODE_BUM_LANGUAGES = -16;
+    // BUMBOARD: one-handed mode, from the comma's popup.
+    public static final int CODE_BUM_ONE_HANDED = -17;
 
     public static boolean isLetterCode(final int code) {
         return code >= CODE_SPACE;

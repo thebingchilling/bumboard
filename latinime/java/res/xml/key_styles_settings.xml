@@ -31,11 +31,22 @@
                 latin:backgroundType="functional" />
         </case>
         <!-- clobberSettingsKey="false" -->
+        <!-- BUMBOARD: settings and one-handed mode, plus whichever of emoji and languages
+             has no key of its own beside the comma. -->
+        <case
+            latin:bumEmojiKey="true"
+        >
+            <key-style
+                latin:styleName="settingsMoreKeysStyle"
+                latin:keyLabelFlags="hasPopupHint"
+                latin:additionalMoreKeys="!text/keyspec_settings,!icon/bum_one_handed_key|!code/key_bum_one_handed,!icon/language_switch_key|!code/key_bum_languages"
+                latin:backgroundType="functional" />
+        </case>
         <default>
             <key-style
                 latin:styleName="settingsMoreKeysStyle"
                 latin:keyLabelFlags="hasPopupHint"
-                latin:additionalMoreKeys="!text/keyspec_settings"
+                latin:additionalMoreKeys="!text/keyspec_settings,!icon/bum_one_handed_key|!code/key_bum_one_handed,!icon/emoji_normal_key|!code/key_emoji"
                 latin:backgroundType="functional" />
         </default>
     </switch>

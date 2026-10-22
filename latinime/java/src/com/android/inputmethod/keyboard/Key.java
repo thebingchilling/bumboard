@@ -357,8 +357,13 @@ public class Key implements Comparable<Key> {
         if ((mLabelFlags & LABEL_FLAGS_DISABLE_HINT_LABEL) != 0) {
             mHintLabel = null;
         } else {
-            final String hintLabel = style.getString(
+            String hintLabel = style.getString(
                     keyAttr, R.styleable.Keyboard_Key_keyHintLabel);
+            // BUMBOARD: with the number row on, the top letters drop their digit hints.
+            if (params.mId.mBumNumberRow && hintLabel != null && hintLabel.length() == 1
+                    && Character.isDigit(hintLabel.charAt(0))) {
+                hintLabel = null;
+            }
             mHintLabel = needsToUpcase
                     ? StringUtils.toTitleCaseOfKeyLabel(hintLabel, localeForUpcasing)
                     : hintLabel;
@@ -600,6 +605,16 @@ public class Key implements Comparable<Key> {
 
     public final boolean isActionKey() {
         return mBackgroundType == BACKGROUND_TYPE_ACTION;
+    }
+
+    // BUMBOARD: lets KeyboardView tint a key's icon to suit the key's fill.
+    public final boolean hasFunctionalBackground() {
+        return mBackgroundType == BACKGROUND_TYPE_FUNCTIONAL
+                || mBackgroundType == BACKGROUND_TYPE_STICKY_OFF;
+    }
+
+    public final boolean isStickyOn() {
+        return mBackgroundType == BACKGROUND_TYPE_STICKY_ON;
     }
 
     public final boolean isShift() {
