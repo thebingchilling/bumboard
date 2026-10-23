@@ -52,7 +52,8 @@ class EmojiPanelView @JvmOverloads constructor(
     private val layoutManager = GridLayoutManager(context, 8)
     private val grid = RecyclerView(context)
     private val tabs = LinearLayout(context)
-    private val tabViews = mutableListOf<ImageView>()
+    /** One per section; null for recents, which has no tab (it is the top of the grid). */
+    private val tabViews = mutableListOf<ImageView?>()
     private var sections: List<Section> = emptyList()
     private val repeat = Handler(Looper.getMainLooper())
 
@@ -209,6 +210,10 @@ class EmojiPanelView @JvmOverloads constructor(
         tabs.removeAllViews()
         tabViews.clear()
         sections.forEachIndexed { s, section ->
+            if (section.id == "recents") {
+                tabViews += null
+                return@forEachIndexed
+            }
             val tab = ImageView(context).apply {
                 setImageResource(section.icon)
                 scaleType = ImageView.ScaleType.CENTER
@@ -239,6 +244,7 @@ class EmojiPanelView @JvmOverloads constructor(
 
     private fun selectTab(section: Int) {
         tabViews.forEachIndexed { i, tab ->
+            if (tab == null) return@forEachIndexed
             val selected = i == section
             tab.imageTintList = ColorStateList.valueOf(if (selected) palette.onSecondaryContainer else palette.onSurfaceVariant)
             tab.background = if (selected) pill(palette.secondaryContainer, 18) else null

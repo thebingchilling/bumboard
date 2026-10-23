@@ -62,6 +62,21 @@
             android:layout_marginStart="@dimen/bum_script_key_width"
             android:layout_marginEnd="@dimen/config_suggestions_strip_edge_key_width"
             android:visibility="gone" />
+        <!-- Opens every candidate, with readings and meanings, over the keys. -->
+        <ImageView
+            android:id="@+id/bum_candidate_more"
+            android:layout_width="@dimen/config_suggestions_strip_edge_key_width"
+            android:layout_height="@dimen/config_suggestions_strip_height"
+            android:layout_gravity="end|top"
+            android:scaleType="center"
+            android:src="@drawable/ic_sym_keyboard_arrow_down"
+            android:contentDescription="@string/bum_candidates_all"
+            android:visibility="gone" />
+        <!-- Voice typing, in place of the strip like Gboard's. -->
+        <app.bumboard.voice.VoicePanelView
+            android:id="@+id/bum_voice_panel"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/config_suggestions_strip_height" />
     </FrameLayout>
 
     <LinearLayout

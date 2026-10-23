@@ -59,11 +59,15 @@ class CandidateBarView @JvmOverloads constructor(
     /** Lines under each candidate's characters: readings, and whether a meaning follows. */
     data class Lines(val readings: Int, val meaning: Boolean)
 
-    /** Text scale: the candidate size setting. */
+    /** Text scale: the candidate size setting, limited so the row fits its height. */
     private var scale = 1f
 
-    fun setScale(scale: Float) {
+    /** Compact (false): the characters and one reading. Full: every reading and the meaning. */
+    private var full = false
+
+    fun setStyle(scale: Float, full: Boolean) {
         this.scale = scale
+        this.full = full
     }
 
     /**
@@ -125,13 +129,13 @@ class CandidateBarView @JvmOverloads constructor(
     private fun fill(cell: LinearLayout, index: Int, annotation: Annotation) {
         val color = colorFor(index)
         while (cell.childCount > 1) cell.removeViewAt(1)
-        annotation.lines.forEach { line ->
+        (if (full) annotation.lines else annotation.lines.take(1)).forEach { line ->
             cell.addView(text(line, READING_SP * scale, ColorUtils.setAlphaComponent(color, 0xD0)).apply {
                 typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
                 includeFontPadding = false
             }, wrap())
         }
-        annotation.meaning?.let { meaning ->
+        annotation.meaning?.takeIf { full }?.let { meaning ->
             cell.addView(text(meaning, MEANING_SP * scale, ColorUtils.setAlphaComponent(color, 0xA0)).apply {
                 // the definition in full, up to a generous width
                 maxWidth = dp(240)
@@ -167,6 +171,13 @@ class CandidateBarView @JvmOverloads constructor(
         const val CHAR_SP = 20f
         const val READING_SP = 11.5f
         const val MEANING_SP = 10.5f
+
+        /** The largest scale at which the compact row (characters + one reading) fits [height]. */
+        fun compactFit(context: Context, height: Int): Float {
+            val sp = context.resources.displayMetrics.scaledDensity
+            val density = context.resources.displayMetrics.density
+            return (height - density * 6) / ((CHAR_SP + READING_SP) * 1.22f * sp)
+        }
 
         /** The bar's height for [lines] at [scale], in pixels. */
         fun heightFor(context: Context, lines: Lines, scale: Float): Int {

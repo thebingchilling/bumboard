@@ -33,13 +33,14 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:visibility="gone" />
-    <!-- BUMBOARD: panels drawn over the keys (voice typing, shortcuts, text editing, resizing);
-         BumPanels places them on the keyboard view. -->
-    <app.bumboard.voice.VoicePanelView
-        android:id="@+id/bum_voice_panel"
+    <!-- BUMBOARD: panels drawn over the keys (shortcuts, text editing, number pad, resizing,
+         Chinese candidates); BumPanels places them on the keyboard view. -->
+    <app.bumboard.chinese.CandidatePanelView
+        android:id="@+id/bum_candidate_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|start" />
+        android:layout_gravity="bottom|start"
+        android:visibility="gone" />
     <app.bumboard.toolbar.ShortcutGalleryView
         android:id="@+id/bum_gallery_panel"
         android:layout_width="match_parent"
@@ -63,5 +64,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
+        android:visibility="gone" />
+    <!-- BUMBOARD: resizing the floating keyboard with handles on it; covers the input view. -->
+    <app.bumboard.layout.FloatResizeView
+        android:id="@+id/bum_float_resize"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         android:visibility="gone" />
 </com.android.inputmethod.latin.InputView>

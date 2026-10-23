@@ -88,18 +88,28 @@ class ShortcutGalleryView @JvmOverloads constructor(
             override fun clearView(rv: RecyclerView, holder: RecyclerView.ViewHolder) {
                 super.clearView(rv, holder)
                 save()
-                // the tile may have crossed into the other part: redraw its pinned look
-                grid.post { adapter.notifyDataSetChanged() }
+                // the tile may have crossed into the other part: redraw just its pinned look
+                // (refreshing the whole grid during the drop animation can leave tiles hidden)
+                val at = holder.bindingAdapterPosition
+                if (at >= 0) adapter.onBindViewHolder(holder, at)
             }
 
             override fun onSwiped(holder: RecyclerView.ViewHolder, direction: Int) {}
         })
         dragger.attachToRecyclerView(grid)
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        addView(LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(4), 0, dp(4), dp(2))
+            addView(BumPanels.backButton(context) { visibility = GONE }, LayoutParams(dp(48), dp(48)))
+        }, LayoutParams(LayoutParams.MATCH_PARENT, dp(50)))
         visibility = GONE
     }
 
     fun show() {
+        editing = false
+        grid.adapter = adapter
         setEditing(false)
         visibility = VISIBLE
     }
@@ -149,8 +159,7 @@ class ShortcutGalleryView @JvmOverloads constructor(
     private fun header() = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(4), 0, dp(4), 0)
-        addView(BumPanels.backButton(context) { visibility = GONE }, LayoutParams(dp(48), dp(48)))
+        setPadding(dp(12), 0, dp(4), 0)
         title.apply {
             setTextColor(palette.onSurface)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)

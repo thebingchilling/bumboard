@@ -26,6 +26,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private var session = 0L
     private var engine: String? = null
     private var bar: CandidateBarView? = null
+    private var panel: CandidatePanelView? = null
+    private var moreButton: android.widget.ImageView? = null
+    private var inputView: View? = null
     private var strip: View? = null
     private var popup: DictionaryPopup? = null
     private var keyboardFrame: View? = null
@@ -44,6 +47,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         popup?.dismiss()
         popup = DictionaryPopup(inputView.context)
         keyboardFrame = inputView.findViewById(R.id.main_keyboard_frame)
+        this.inputView = inputView
+        panel = inputView.findViewById<CandidatePanelView>(R.id.bum_candidate_panel)?.also { p ->
+            p.onPick = { index -> pick(index) }
+        }
+        moreButton = inputView.findViewById<android.widget.ImageView>(R.id.bum_candidate_more)?.also { b ->
+            b.imageTintList = android.content.res.ColorStateList.valueOf(ime.getColor(R.color.bum_m3_on_key_variant))
+            b.background = ime.getDrawable(R.drawable.bum_m3_suggestion)
+            b.setOnClickListener { openPanel() }
+        }
         bar?.onPick = { index -> pick(index) }
         bar?.onLongPick = { index, anchor -> showDictionary(index, anchor) }
         // hold to peek: the card goes when the finger lifts
@@ -179,6 +191,16 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         else -> PUNCTUATION.getValue(code)
     }
 
+    /** Every candidate, with readings and meanings, over the keys. */
+    private fun openPanel() {
+        val panel = panel ?: return
+        val view = inputView ?: return
+        val candidates = shown?.candidates ?: return
+        app.bumboard.layout.BumPanels.hideOthers(view, panel)
+        app.bumboard.layout.BumPanels.cover(panel, view)
+        panel.show(candidates, annotation(), candidateScale())
+    }
+
     /** Drops any composition, e.g. when the text field changes. */
     fun reset() {
         popup?.dismiss()
@@ -230,26 +252,35 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         if (!isActive || candidates.isEmpty()) {
             bar.setCandidates(emptyList(), null)
             bar.visibility = View.GONE
+            moreButton?.visibility = View.GONE
+            panel?.visibility = View.GONE
             stripView?.setBumCandidatesShowing(false)
             return
         }
-        bar.setScale(candidateScale())
+        val full = meaningsInRow()
+        val standard = ime.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+        val scale = if (full) candidateScale() else minOf(candidateScale(), CandidateBarView.compactFit(ime, standard))
+        bar.setStyle(scale, full)
         bar.setCandidates(candidates, annotation())
         bar.visibility = View.VISIBLE
+        moreButton?.visibility = View.VISIBLE
         stripView?.setBumCandidatesShowing(true)
     }
 
     private fun candidateScale() = prefs.getFloat(PREF_CANDIDATE_SIZE, 1f).coerceIn(0.7f, 1.6f)
 
+    private fun meaningsInRow() = prefs.getBoolean(PREF_MEANINGS_IN_ROW, false)
+
     /**
-     * On the Chinese keyboards the whole top bar is as tall as a candidate with its readings
-     * and meaning (at the candidate size setting), all the time, so nothing is cut off and the
-     * keyboard never jumps; elsewhere it is the usual strip height.
+     * The candidate row is the usual strip height, like English, so the keyboard keeps its size
+     * between languages. With "meanings in the candidate row" on, the top bar on the Chinese
+     * keyboards is as tall as a candidate with every reading and its meaning, all the time, so
+     * nothing is cut off and it never jumps while typing.
      */
     private fun updateBarHeight(stripView: SuggestionStripView?) {
         val res = ime.resources
         val standard = res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
-        val height = if (!isActive) standard
+        val height = if (!isActive || !meaningsInRow()) standard
         else maxOf(standard, CandidateBarView.heightFor(ime, annotationLines(), candidateScale()))
         for (view in listOfNotNull(stripView, bar)) {
             val lp = view.layoutParams ?: continue
@@ -300,6 +331,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         const val PREF_SCRIPT = "bum_chinese_script"
         /** Candidate text size, 0.7 .. 1.6. */
         const val PREF_CANDIDATE_SIZE = "bum_candidate_size"
+        /** Every reading and the meaning in the candidate row (a taller bar); off: compact. */
+        const val PREF_MEANINGS_IN_ROW = "bum_meanings_in_row"
         /** Long-press on a candidate: "peek" (while held) or "pin" (until closed). */
         const val PREF_DICTIONARY_HOLD = "bum_dictionary_hold"
         const val PREF_CANTONESE_INPUT = "bum_cantonese_input"

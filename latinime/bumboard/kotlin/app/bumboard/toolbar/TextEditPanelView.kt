@@ -45,11 +45,11 @@ class TextEditPanelView @JvmOverloads constructor(
         setBackgroundColor(palette.surface)
         setPadding(dp(4), dp(4), dp(4), dp(4))
         // left, as Gboard lays it out: up on top, left / Select / right across the middle,
-        // down below, then start and end of line; Back in the top-left corner
+        // down below, then start and end of line; Back in the bottom-left corner
         val left = LinearLayout(context).apply { orientation = VERTICAL }
         selectKey = label(R.string.bum_edit_select) { toggleSelect() }
         left.addView(row(
-            BumPanels.backButton(context) { visibility = GONE },
+            View(context),
             icon(R.drawable.ic_sym_keyboard_arrow_up, R.string.bum_edit_up, repeats = true) { move(KeyEvent.KEYCODE_DPAD_UP) },
             View(context),
         ), rowParams())
@@ -64,6 +64,7 @@ class TextEditPanelView @JvmOverloads constructor(
             View(context),
         ), rowParams())
         left.addView(row(
+            BumPanels.backButton(context) { visibility = GONE },
             icon(R.drawable.ic_sym_first_page, R.string.bum_edit_line_start) { move(KeyEvent.KEYCODE_MOVE_HOME) },
             icon(R.drawable.ic_sym_last_page, R.string.bum_edit_line_end) { move(KeyEvent.KEYCODE_MOVE_END) },
         ), rowParams())

@@ -73,6 +73,7 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
     private final TextView mBumScriptKey;
     private boolean mBumHasSuggestions;
     private boolean mBumCandidatesShowing;
+    private boolean mBumVoiceEnabled;
     private final View mImportantNoticeStrip;
     MainKeyboardView mMainKeyboardView;
 
@@ -153,8 +154,11 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         chip.setColor(context.getColor(R.color.bum_m3_primary_container));
         chip.setCornerRadius(10 * density);
         mBumScriptKey.setBackground(new android.graphics.drawable.InsetDrawable(chip,
-                (int) (4 * density), (int) (8 * density), (int) (4 * density), (int) (8 * density)));
-        mBumScriptKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14);
+                (int) (3 * density), (int) (3 * density), (int) (3 * density), (int) (3 * density)));
+        mBumScriptKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11);
+        mBumScriptKey.setLineSpacing(0, 0.9f);
+        mBumScriptKey.setIncludeFontPadding(false);
+        mBumScriptKey.setPadding(0, 0, 0, 0);
         mImportantNoticeStrip = findViewById(R.id.important_notice_strip);
         mStripVisibilityGroup = new StripVisibilityGroup(this, mSuggestionsStrip,
                 mImportantNoticeStrip);
@@ -222,17 +226,17 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mBumScriptKey.setVisibility(shown ? VISIBLE : GONE);
         mBumScriptKey.setOnClickListener(onClick);
         if (shown) {
+            // 繁 above 简, the one in use emphasised: a slim vertical toggle
             final int strong = getContext().getColor(R.color.bum_m3_on_primary_container);
             final int faded = (strong & 0x00FFFFFF) | 0x66000000;
             final android.text.SpannableStringBuilder label =
-                    new android.text.SpannableStringBuilder("\u7E41/\u7B80");
+                    new android.text.SpannableStringBuilder("\u7E41\n\u7B80");
             final int on = simplified ? 2 : 0;
             final int off = simplified ? 0 : 2;
             label.setSpan(new android.text.style.ForegroundColorSpan(strong), on, on + 1, 0);
             label.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
                     on, on + 1, 0);
             label.setSpan(new android.text.style.ForegroundColorSpan(faded), off, off + 1, 0);
-            label.setSpan(new android.text.style.ForegroundColorSpan(faded), 1, 2, 0);
             mBumScriptKey.setText(label);
             mBumScriptKey.setContentDescription(getContext().getString(simplified
                     ? R.string.bum_script_key_simplified : R.string.bum_script_key_traditional));
@@ -245,13 +249,23 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         }
     }
 
+    /**
+     * The bar shows shortcuts and the mic while idle; suggestions or Chinese candidates take
+     * their place and the whole width (the Traditional/Simplified chip stays).
+     */
     private void updateBumMiddle() {
         final boolean notice = mStripVisibilityGroup.isShowingImportantNoticeStrip();
-        mBumToolbar.setVisibility(!mBumHasSuggestions && !mBumCandidatesShowing && !notice
-                ? VISIBLE : INVISIBLE);
+        final boolean idle = !mBumHasSuggestions && !mBumCandidatesShowing && !notice;
+        mBumToolbar.setVisibility(idle ? VISIBLE : INVISIBLE);
+        mVoiceKey.setVisibility(idle && mBumVoiceEnabled ? VISIBLE : INVISIBLE);
         if (!notice) {
             mSuggestionsStrip.setVisibility(mBumHasSuggestions && !mBumCandidatesShowing
                     ? VISIBLE : INVISIBLE);
+        }
+        final MarginLayoutParams lp = (MarginLayoutParams) mSuggestionsStrip.getLayoutParams();
+        if (lp.rightMargin != 0) {
+            lp.rightMargin = 0;
+            mSuggestionsStrip.setLayoutParams(lp);
         }
     }
 
@@ -268,7 +282,9 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         final int visibility = shouldBeVisible ? VISIBLE : (isFullscreenMode ? GONE : INVISIBLE);
         setVisibility(visibility);
         final SettingsValues currentSettingsValues = Settings.getInstance().getCurrent();
-        mVoiceKey.setVisibility(currentSettingsValues.mShowsVoiceInputKey ? VISIBLE : INVISIBLE);
+        // BUMBOARD: the mic shows only while the bar is idle (see updateBumMiddle)
+        mBumVoiceEnabled = currentSettingsValues.mShowsVoiceInputKey;
+        updateBumMiddle();
     }
 
     public void setSuggestions(final SuggestedWords suggestedWords, final boolean isRtlLanguage) {

@@ -25,7 +25,7 @@ import app.bumboard.ui.M3Colors
 import com.android.inputmethod.latin.R
 
 /**
- * Voice typing over the keys. Speech goes to Google's recognition service when the phone has
+ * Voice typing in the bar above the keys, like Gboard's. Speech goes to Google's recognition service when the phone has
  * it (Speech Services by Google, then the Google app), otherwise to the system default. The
  * panel shows what is heard as it is heard and hands the final text to [onText]; nothing is
  * typed until the recogniser is done, so LatinIME's own composing state is never disturbed.
@@ -50,25 +50,31 @@ class VoicePanelView @JvmOverloads constructor(
     val isActive: Boolean get() = visibility == VISIBLE
 
     init {
+        // a bar in place of the strip, like Gboard's: Back, what is heard, and the mic
         setBackgroundColor(palette.surface)
-        isClickable = true // keep touches off the keys underneath
-        val column = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER_HORIZONTAL
+        isClickable = true
+        val row = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        row.addView(app.bumboard.layout.BumPanels.backButton(context) { cancel() },
+            LinearLayout.LayoutParams(dp(48), LayoutParams.MATCH_PARENT))
+        val words = FrameLayout(context)
+        status.apply {
+            setTextColor(palette.onSurfaceVariant)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            gravity = Gravity.CENTER_VERTICAL
         }
         heard.apply {
             setTextColor(palette.onSurface)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-            gravity = Gravity.CENTER
-            maxLines = 3
-            setPadding(dp(24), 0, dp(24), dp(16))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            gravity = Gravity.CENTER_VERTICAL
+            isSingleLine = true
+            ellipsize = android.text.TextUtils.TruncateAt.START
         }
-        status.apply {
-            setTextColor(palette.onSurfaceVariant)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            gravity = Gravity.CENTER
-            setPadding(0, dp(16), 0, 0)
-        }
+        words.addView(status, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        words.addView(heard, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        row.addView(words, LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(8) })
         val micBox = FrameLayout(context)
         micHalo.background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
@@ -85,14 +91,10 @@ class VoicePanelView @JvmOverloads constructor(
             contentDescription = context.getString(R.string.bum_voice_stop)
             setOnClickListener { recognizer?.stopListening() }
         }
-        micBox.addView(micHalo, LayoutParams(dp(72), dp(72), Gravity.CENTER))
-        micBox.addView(mic, LayoutParams(dp(64), dp(64), Gravity.CENTER))
-        column.addView(heard, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        column.addView(micBox, LinearLayout.LayoutParams(dp(96), dp(96)))
-        column.addView(status)
-        addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
-        addView(app.bumboard.layout.BumPanels.backButton(context) { cancel() },
-            LayoutParams(dp(56), dp(56), Gravity.TOP or Gravity.START))
+        micBox.addView(micHalo, LayoutParams(dp(34), dp(34), Gravity.CENTER))
+        micBox.addView(mic, LayoutParams(dp(32), dp(32), Gravity.CENTER))
+        row.addView(micBox, LinearLayout.LayoutParams(dp(48), LayoutParams.MATCH_PARENT))
+        addView(row, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         visibility = GONE
     }
 
@@ -122,6 +124,7 @@ class VoicePanelView @JvmOverloads constructor(
             .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
         if (language != null) intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
         heard.text = ""
+        status.visibility = VISIBLE
         status.setText(R.string.bum_voice_starting)
         visibility = VISIBLE
         r.startListening(intent)
@@ -161,7 +164,7 @@ class VoicePanelView @JvmOverloads constructor(
         override fun onReadyForSpeech(params: Bundle?) = status.setText(R.string.bum_voice_listening)
         override fun onBeginningOfSpeech() {}
         override fun onRmsChanged(rmsdB: Float) {
-            val scale = 1f + (rmsdB.coerceIn(0f, 10f) / 10f) * 0.35f
+            val scale = 1f + (rmsdB.coerceIn(0f, 10f) / 10f) * 0.45f
             micHalo.scaleX = scale
             micHalo.scaleY = scale
         }
@@ -180,7 +183,10 @@ class VoicePanelView @JvmOverloads constructor(
         }
         override fun onResults(results: Bundle?) = finish(best(results))
         override fun onPartialResults(partialResults: Bundle?) {
-            best(partialResults)?.let { heard.text = it }
+            best(partialResults)?.let {
+                heard.text = it
+                status.visibility = if (it.isEmpty()) VISIBLE else INVISIBLE
+            }
         }
         override fun onEvent(eventType: Int, params: Bundle?) {}
     }

@@ -71,8 +71,8 @@
     <!-- BUMBOARD: a little taller, holding shortcuts, suggestions or Chinese candidates at one
          height; the edge keys are the locked Traditional/Simplified and mic keys. -->
     <dimen name="config_suggestions_strip_height">46dp</dimen>
-    <dimen name="config_suggestions_strip_horizontal_margin">44dp</dimen>
-    <dimen name="config_suggestions_strip_edge_key_width">44dp</dimen>
+    <dimen name="config_suggestions_strip_horizontal_margin">36dp</dimen>
+    <dimen name="config_suggestions_strip_edge_key_width">36dp</dimen>
     <dimen name="config_more_suggestions_row_height">40dp</dimen>
     <integer name="config_max_more_suggestions_row">6</integer>
     <fraction name="config_min_more_suggestions_width">90%</fraction>

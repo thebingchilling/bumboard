@@ -43,12 +43,13 @@ object BumPanels {
 
     private val PANELS = intArrayOf(
         R.id.bum_voice_panel, R.id.bum_gallery_panel, R.id.bum_text_edit_panel,
-        R.id.bum_resize_panel, R.id.bum_numpad_panel,
+        R.id.bum_resize_panel, R.id.bum_numpad_panel, R.id.bum_candidate_panel,
+        R.id.bum_float_resize,
     )
 
     /**
-     * The Back button every panel has in its top-left corner: a filled circle in the accent
-     * colour, so it never looks like one of the keys.
+     * The Back button every panel has, in its bottom-left corner where possible: a filled
+     * circle in the accent colour, so it never looks like one of the keys.
      */
     @JvmStatic
     fun backButton(context: Context, onClick: () -> Unit): View {

@@ -50,7 +50,7 @@ class ResizePanelView @JvmOverloads constructor(
         topHandle.background = pill()
         outline.addView(topHandle, LayoutParams(dp(48), dp(6), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(6) })
         outline.addView(BumPanels.backButton(context) { visibility = GONE },
-            LayoutParams(dp(56), dp(56), Gravity.TOP or Gravity.START))
+            LayoutParams(dp(56), dp(56), Gravity.BOTTOM or Gravity.START))
         sideHandle.background = pill()
         outline.addView(sideHandle, LayoutParams(dp(6), dp(48), Gravity.END or Gravity.CENTER_VERTICAL).apply { rightMargin = dp(6) })
         outline.addView(LinearLayout(context).apply {

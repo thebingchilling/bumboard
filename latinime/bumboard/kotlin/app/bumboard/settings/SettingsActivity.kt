@@ -569,10 +569,17 @@ private fun ChinesePage() {
         }
     }
     val candidateSize = prefs.floatPref(ChineseInput.PREF_CANDIDATE_SIZE) { prefs.getFloat(ChineseInput.PREF_CANDIDATE_SIZE, 1f) }
+    val meaningsInRow = prefs.boolPref(ChineseInput.PREF_MEANINGS_IN_ROW) { prefs.getBoolean(ChineseInput.PREF_MEANINGS_IN_ROW, false) }
     val dictionaryHold = prefs.stringPref(ChineseInput.PREF_DICTIONARY_HOLD) {
         prefs.getString(ChineseInput.PREF_DICTIONARY_HOLD, null) ?: "pin"
     }
     Group {
+        row {
+            SwitchRow(
+                it, stringResource(R.string.bum_pref_meanings_in_row), stringResource(R.string.bum_pref_meanings_in_row_summary),
+                meaningsInRow.value, meaningsInRow::set,
+            )
+        }
         row {
             SliderRow(
                 it, stringResource(R.string.bum_pref_candidate_size), (candidateSize.value * 100).roundToInt(),

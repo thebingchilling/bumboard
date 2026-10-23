@@ -916,7 +916,6 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         if (mBumVoice == null) return;
         mBumChinese.reset();
         app.bumboard.layout.BumPanels.hideOthers(mInputView, mBumVoice);
-        app.bumboard.layout.BumPanels.cover(mBumVoice, mInputView);
         String language = mBumChinese.voiceLanguage();
         if (language == null) {
             language = mRichImm.getCurrentSubtypeLocale().toLanguageTag();
@@ -945,9 +944,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             onTextInput(emoji);
             return kotlin.Unit.INSTANCE;
         });
+        // closing search returns to the letters, which are already showing under it
         mBumEmojiSearch.setOnClose(() -> {
             endBumEmojiSearch();
-            sendBumKey(Constants.CODE_EMOJI);
             return kotlin.Unit.INSTANCE;
         });
     }
@@ -1400,7 +1399,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // Need to set expanded touchable region only if a keyboard view is being shown.
         if (visibleKeyboardView.isShown() || showingEmoji) {
             outInsets.touchableInsets = InputMethodService.Insets.TOUCHABLE_INSETS_REGION;
-            if (mKeyboardSwitcher.isShowingMoreKeysPanel()) {
+            final View floatResize = mInputView.findViewById(R.id.bum_float_resize);
+            if (mKeyboardSwitcher.isShowingMoreKeysPanel()
+                    || (floatResize != null && floatResize.getVisibility() == View.VISIBLE)) {
                 outInsets.touchableRegion.set(0, 0, mInputView.getWidth(), inputHeight);
             } else {
                 outInsets.touchableRegion.set(frame.getLeft(), frameTop,
@@ -2111,7 +2112,20 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             showBumPanel(R.id.bum_numpad_panel);
             break;
         case RESIZE:
-            showBumPanel(R.id.bum_resize_panel);
+            if (mode == app.bumboard.layout.BumLayout.Mode.FLOATING) {
+                // floating: handles right on the keyboard
+                final app.bumboard.layout.FloatResizeView resize =
+                        (app.bumboard.layout.FloatResizeView) mInputView.findViewById(
+                                R.id.bum_float_resize);
+                if (resize != null) {
+                    app.bumboard.layout.BumPanels.hideOthers(mInputView, resize);
+                    resize.bringToFront();
+                    resize.show(mInputView.findViewById(R.id.main_keyboard_frame),
+                            mInputView.findViewById(R.id.keyboard_view));
+                }
+            } else {
+                showBumPanel(R.id.bum_resize_panel);
+            }
             break;
         case ONE_HANDED:
             layout.setMode(mode == app.bumboard.layout.BumLayout.Mode.ONE_HANDED
@@ -2189,6 +2203,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         mBumChinese.reset();
         app.bumboard.layout.BumPanels.hideOthers(mInputView, panel);
         app.bumboard.layout.BumPanels.cover(panel, mInputView);
+        panel.bringToFront();
         if (panel instanceof app.bumboard.layout.ResizePanelView) {
             // taller (and, floating, wider) than the keys, so the outline can grow
             final android.widget.FrameLayout.LayoutParams lp =

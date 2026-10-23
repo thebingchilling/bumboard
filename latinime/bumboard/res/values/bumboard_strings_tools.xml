@@ -80,4 +80,7 @@
     <string name="bum_pref_dictionary_hold_summary">Peek shows the entry while you hold a candidate; pin keeps it open until you close it</string>
     <string name="bum_pref_dictionary_peek">Hold to peek</string>
     <string name="bum_pref_dictionary_pin">Hold to pin</string>
+    <string name="bum_pref_meanings_in_row">Meanings in the candidate row</string>
+    <string name="bum_pref_meanings_in_row_summary">Every reading and the meaning under each candidate, in a taller bar. Off: characters and one reading; tap ⌄ for everything.</string>
+    <string name="bum_candidates_all">All candidates with readings and meanings</string>
 </resources>

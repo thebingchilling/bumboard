@@ -37,12 +37,12 @@ class NumpadPanelView @JvmOverloads constructor(
         isClickable = true
         setBackgroundColor(palette.surface)
         setPadding(dp(3), dp(4), dp(3), dp(4))
-        // Back in the top-left corner, operators down the left, digits like a phone keypad
-        addRow(BumPanels.backButton(context) { visibility = GONE }, digit("1"), digit("2"), digit("3"),
+        // operators down the left, digits like a phone keypad, Back in the bottom-left corner
+        addRow(text("+"), digit("1"), digit("2"), digit("3"),
             icon(R.drawable.ic_sym_backspace, R.string.bum_emoji_delete, repeats = true) { send(Constants.CODE_DELETE) })
-        addRow(text("+"), digit("4"), digit("5"), digit("6"), spaceKey())
-        addRow(text("-"), digit("7"), digit("8"), digit("9"), enterKey())
-        addRow(text("*"), text(","), digit("0"), text("."), text("/"))
+        addRow(text("-"), digit("4"), digit("5"), digit("6"), spaceKey())
+        addRow(text("*"), digit("7"), digit("8"), digit("9"), enterKey())
+        addRow(BumPanels.backButton(context) { visibility = GONE }, text("/"), digit("0"), text("."), text(","))
         visibility = GONE
     }
 

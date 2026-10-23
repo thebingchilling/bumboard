@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- BUMBOARD: with the number row on, an extra row of symbols keeps ?123 as tall as the letters. -->
+<merge
+    xmlns:latin="http://schemas.android.com/apk/res-auto"
+>
+    <switch>
+        <case
+            latin:bumNumberRow="true"
+        >
+            <Row
+                latin:keyWidth="10%p"
+            >
+                <Key latin:keySpec="~" latin:moreKeys="≈,∼,～" />
+                <Key latin:keySpec="`" latin:moreKeys="´,ˋ" />
+                <Key latin:keySpec="|" latin:moreKeys="¦,‖" />
+                <Key latin:keySpec="&#x2022;" latin:moreKeys="♪,♥,♠,♦,♣" />
+                <Key latin:keySpec="&#x221A;" latin:moreKeys="∛,∜" />
+                <Key latin:keySpec="&#x03C0;" latin:moreKeys="Π" />
+                <Key latin:keySpec="&#x00F7;" latin:moreKeys="⁄,∕" />
+                <Key latin:keySpec="&#x00D7;" latin:moreKeys="⋅,✕" />
+                <Key latin:keySpec="&#x00B6;" latin:moreKeys="§" />
+                <Key latin:keySpec="&#x2206;" latin:moreKeys="∇,Δ" />
+            </Row>
+        </case>
+    </switch>
+</merge>

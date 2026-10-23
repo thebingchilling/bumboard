@@ -3,5 +3,5 @@
     <!-- Emoji search: the results row above the search pill. -->
     <dimen name="bum_emoji_search_height">100dp</dimen>
     <!-- The Traditional/Simplified chip on the strip's left edge. -->
-    <dimen name="bum_script_key_width">60dp</dimen>
+    <dimen name="bum_script_key_width">30dp</dimen>
 </resources>

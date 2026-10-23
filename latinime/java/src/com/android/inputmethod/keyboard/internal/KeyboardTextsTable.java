@@ -4195,6 +4195,26 @@ public final class KeyboardTextsTable {
             sTextsTableToLocaleMap.put(textsTable, locale);
         }
         putBumChinese();
+        putBumEnglish();
+    }
+
+    // BUMBOARD: English letters get the same long-press letters as Gboard's English keyboard.
+    private static void putBumEnglish() {
+        final String[] en = java.util.Arrays.copyOf(TEXTS_en, NAMES.length);
+        final String[][] texts = {
+            { "morekeys_s", "ß,ś,š" },          // ß ś š
+            { "morekeys_c", "ç,ć,č" },          // ç ć č
+            { "morekeys_n", "ñ,ń" },                 // ñ ń
+            { "morekeys_y", "ÿ" },                        // ÿ
+            { "morekeys_l", "ł" },                        // ł
+            { "morekeys_z", "ž,ź,ż" },          // ž ź ż
+        };
+        for (final String[] text : texts) {
+            final Integer index = sNameToIndexesMap.get(text[0]);
+            if (index != null) en[index] = text[1];
+        }
+        sLocaleToTextsTableMap.put("en", en);
+        sTextsTableToLocaleMap.put(en, "en");
     }
 
     // BUMBOARD: the Chinese keyboards (zh_HK, zh_CN) label their punctuation keys with the
