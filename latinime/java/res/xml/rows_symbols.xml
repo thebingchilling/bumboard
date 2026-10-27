@@ -25,9 +25,6 @@
         latin:keyboardLayout="@xml/key_styles_common" />
     <include
         latin:keyboardLayout="@xml/key_styles_currency" />
-    <!-- BUMBOARD -->
-    <include
-        latin:keyboardLayout="@xml/bum_row_symbols_extra" />
     <Row
         latin:keyWidth="10%p"
     >

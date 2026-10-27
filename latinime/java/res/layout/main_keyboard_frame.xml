@@ -59,8 +59,7 @@
             android:layoutDirection="ltr"
             android:layout_width="match_parent"
             android:layout_height="@dimen/config_suggestions_strip_height"
-            android:layout_marginStart="@dimen/bum_script_key_width"
-            android:layout_marginEnd="@dimen/config_suggestions_strip_edge_key_width"
+            android:layout_marginEnd="@dimen/bum_candidate_bar_end"
             android:visibility="gone" />
         <!-- Opens every candidate, with readings and meanings, over the keys. -->
         <ImageView
@@ -68,6 +67,7 @@
             android:layout_width="@dimen/config_suggestions_strip_edge_key_width"
             android:layout_height="@dimen/config_suggestions_strip_height"
             android:layout_gravity="end|top"
+            android:layout_marginEnd="@dimen/bum_script_key_width"
             android:scaleType="center"
             android:src="@drawable/ic_sym_keyboard_arrow_down"
             android:contentDescription="@string/bum_candidates_all"

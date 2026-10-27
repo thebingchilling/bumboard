@@ -8,7 +8,6 @@
     <string name="bum_sc_one_handed">One-handed</string>
     <string name="bum_sc_floating">Floating</string>
     <string name="bum_sc_resize">Resize</string>
-    <string name="bum_sc_number_row">Number row</string>
     <string name="bum_sc_numpad">Number pad</string>
     <string name="bum_sc_emoji">Emoji</string>
     <string name="bum_sc_undo">Undo</string>
@@ -17,11 +16,7 @@
 
     <!-- Shortcuts gallery -->
     <string name="bum_gallery_title">Shortcuts</string>
-    <string name="bum_gallery_edit_title">Edit shortcuts</string>
     <string name="bum_gallery_edit">Edit</string>
-    <string name="bum_gallery_close">Close</string>
-    <string name="bum_gallery_on_bar">On the bar · touch and hold to drag in, out or into order</string>
-    <string name="bum_gallery_more">More shortcuts</string>
 
     <!-- Text editing -->
     <string name="bum_edit_select">Select</string>
@@ -80,7 +75,8 @@
     <string name="bum_pref_dictionary_hold_summary">Peek shows the entry while you hold a candidate; pin keeps it open until you close it</string>
     <string name="bum_pref_dictionary_peek">Hold to peek</string>
     <string name="bum_pref_dictionary_pin">Hold to pin</string>
-    <string name="bum_pref_meanings_in_row">Meanings in the candidate row</string>
-    <string name="bum_pref_meanings_in_row_summary">Every reading and the meaning under each candidate, in a taller bar. Off: characters and one reading; tap ⌄ for everything.</string>
-    <string name="bum_candidates_all">All candidates with readings and meanings</string>
+    <string name="bum_candidates_all">All candidates</string>
+    <string name="bum_pref_comma_key_none">None</string>
+    <string name="bum_pref_comma_menu">Comma long-press</string>
+    <string name="bum_pref_comma_menu_settings">Always first</string>
 </resources>

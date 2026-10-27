@@ -510,6 +510,8 @@
         <!-- BUMBOARD: number row above the letters; emoji (true) or language key beside the comma. -->
         <attr name="bumNumberRow" format="boolean" />
         <attr name="bumEmojiKey" format="boolean" />
+        <!-- BUMBOARD: whether there is a key beside the comma at all. -->
+        <attr name="bumSideKey" format="boolean" />
         <attr name="isMultiLine" format="boolean" />
         <attr name="imeAction" format="enum">
             <!-- This should be aligned with

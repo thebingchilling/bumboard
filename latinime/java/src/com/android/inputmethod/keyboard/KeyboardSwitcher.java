@@ -124,8 +124,14 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         final int keyboardHeight = bumLayout.keyboardHeight(
                 ResourceUtils.getKeyboardHeight(res, settingsValues));
         builder.setKeyboardGeometry(keyboardWidth, keyboardHeight);
+        final boolean languageKey = mLatinIME.shouldShowLanguageSwitchKey();
         builder.setBumOptions(bumLayout.getNumberRow(),
-                bumLayout.getEmojiKey() || !mLatinIME.shouldShowLanguageSwitchKey());
+                bumLayout.getEmojiKey() || !languageKey, bumLayout.getSideKey());
+        // the comma's popup comes from Settings; a change makes cached keyboards stale
+        if (com.android.inputmethod.keyboard.internal.KeyboardTextsSet.setBumCommaMoreKeys(
+                bumLayout.commaMoreKeys(languageKey))) {
+            KeyboardLayoutSet.onKeyboardThemeChanged();
+        }
         builder.setSubtype(mRichImm.getCurrentSubtype());
         builder.setVoiceInputKeyEnabled(settingsValues.mShowsVoiceInputKey);
         builder.setLanguageSwitchKeyEnabled(mLatinIME.shouldShowLanguageSwitchKey());

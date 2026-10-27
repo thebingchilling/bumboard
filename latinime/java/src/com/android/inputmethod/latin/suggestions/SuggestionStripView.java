@@ -148,17 +148,12 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mVoiceKey = (ImageButton)findViewById(R.id.suggestions_strip_voice_key);
         mBumToolbar = (app.bumboard.toolbar.ToolbarView)findViewById(R.id.bum_toolbar);
         mBumScriptKey = (TextView)findViewById(R.id.bum_script_key);
-        final float density = getResources().getDisplayMetrics().density;
-        final android.graphics.drawable.GradientDrawable chip =
-                new android.graphics.drawable.GradientDrawable();
-        chip.setColor(context.getColor(R.color.bum_m3_primary_container));
-        chip.setCornerRadius(10 * density);
-        mBumScriptKey.setBackground(new android.graphics.drawable.InsetDrawable(chip,
-                (int) (3 * density), (int) (3 * density), (int) (3 * density), (int) (3 * density)));
-        mBumScriptKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 11);
-        mBumScriptKey.setLineSpacing(0, 0.9f);
+        mBumScriptKey.setBackground(bumRoundRaisedButton(context));
+        mBumScriptKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+        mBumScriptKey.setTextColor(context.getColor(R.color.bum_m3_on_primary_container));
+        mBumScriptKey.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         mBumScriptKey.setIncludeFontPadding(false);
-        mBumScriptKey.setPadding(0, 0, 0, 0);
+        mBumScriptKey.setPadding(0, 0, 0, (int) (getResources().getDisplayMetrics().density * 2));
         mImportantNoticeStrip = findViewById(R.id.important_notice_strip);
         mStripVisibilityGroup = new StripVisibilityGroup(this, mSuggestionsStrip,
                 mImportantNoticeStrip);
@@ -226,47 +221,72 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mBumScriptKey.setVisibility(shown ? VISIBLE : GONE);
         mBumScriptKey.setOnClickListener(onClick);
         if (shown) {
-            // 繁 above 简, the one in use emphasised: a slim vertical toggle
-            final int strong = getContext().getColor(R.color.bum_m3_on_primary_container);
-            final int faded = (strong & 0x00FFFFFF) | 0x66000000;
-            final android.text.SpannableStringBuilder label =
-                    new android.text.SpannableStringBuilder("\u7E41\n\u7B80");
-            final int on = simplified ? 2 : 0;
-            final int off = simplified ? 0 : 2;
-            label.setSpan(new android.text.style.ForegroundColorSpan(strong), on, on + 1, 0);
-            label.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
-                    on, on + 1, 0);
-            label.setSpan(new android.text.style.ForegroundColorSpan(faded), off, off + 1, 0);
-            mBumScriptKey.setText(label);
+            // the script in use, one character on a round raised button; a tap switches
+            mBumScriptKey.setText(simplified ? "\u7B80" : "\u7E41");
             mBumScriptKey.setContentDescription(getContext().getString(simplified
                     ? R.string.bum_script_key_simplified : R.string.bum_script_key_traditional));
         }
-        final int edge = getResources().getDimensionPixelSize(R.dimen.bum_script_key_width);
-        for (final View v : new View[] { mBumToolbar, mSuggestionsStrip }) {
-            final MarginLayoutParams lp = (MarginLayoutParams) v.getLayoutParams();
-            lp.leftMargin = shown ? edge : 0;
-            v.setLayoutParams(lp);
-        }
+        mBumScriptShown = shown;
+        updateBumMiddle();
+    }
+
+    private boolean mBumScriptShown;
+
+    /** A round key with a soft shadow under it, like the raised keys. */
+    private static android.graphics.drawable.Drawable bumRoundRaisedButton(final Context context) {
+        final float density = context.getResources().getDisplayMetrics().density;
+        final android.graphics.drawable.GradientDrawable shadow =
+                new android.graphics.drawable.GradientDrawable();
+        shadow.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        shadow.setColor(context.getColor(R.color.bum_m3_shadow));
+        final android.graphics.drawable.GradientDrawable face =
+                new android.graphics.drawable.GradientDrawable();
+        face.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        face.setColor(context.getColor(R.color.bum_m3_primary_container));
+        final android.graphics.drawable.LayerDrawable button =
+                new android.graphics.drawable.LayerDrawable(
+                        new android.graphics.drawable.Drawable[] { shadow, face });
+        final int d = (int) (36 * density);
+        final int lift = (int) (2 * density);
+        button.setLayerSize(0, d, d);
+        button.setLayerSize(1, d, d);
+        button.setLayerGravity(0, android.view.Gravity.CENTER);
+        button.setLayerGravity(1, android.view.Gravity.CENTER);
+        button.setLayerInsetTop(0, lift);
+        button.setLayerInsetBottom(1, lift);
+        return button;
     }
 
     /**
      * The bar shows shortcuts and the mic while idle; suggestions or Chinese candidates take
      * their place and the whole width (the Traditional/Simplified chip stays).
      */
+    private static void setBumMargins(final View view, final int left, final int right) {
+        final MarginLayoutParams lp = (MarginLayoutParams) view.getLayoutParams();
+        if (lp.leftMargin != left || lp.rightMargin != right) {
+            lp.leftMargin = left;
+            lp.rightMargin = right;
+            view.setLayoutParams(lp);
+        }
+    }
+
     private void updateBumMiddle() {
         final boolean notice = mStripVisibilityGroup.isShowingImportantNoticeStrip();
         final boolean idle = !mBumHasSuggestions && !mBumCandidatesShowing && !notice;
         mBumToolbar.setVisibility(idle ? VISIBLE : INVISIBLE);
-        mVoiceKey.setVisibility(idle && mBumVoiceEnabled ? VISIBLE : INVISIBLE);
+        final boolean voice = idle && mBumVoiceEnabled;
+        mVoiceKey.setVisibility(voice ? VISIBLE : GONE);
         if (!notice) {
             mSuggestionsStrip.setVisibility(mBumHasSuggestions && !mBumCandidatesShowing
                     ? VISIBLE : INVISIBLE);
         }
-        final MarginLayoutParams lp = (MarginLayoutParams) mSuggestionsStrip.getLayoutParams();
-        if (lp.rightMargin != 0) {
-            lp.rightMargin = 0;
-            mSuggestionsStrip.setLayoutParams(lp);
-        }
+        // the right edge: the 繁/简 button (Chinese keyboards), and the mic while idle
+        final int script = mBumScriptShown
+                ? getResources().getDimensionPixelSize(R.dimen.bum_script_key_width) : 0;
+        final int mic = getResources().getDimensionPixelSize(
+                R.dimen.config_suggestions_strip_edge_key_width);
+        setBumMargins(mBumToolbar, 0, script + (voice ? mic : 0));
+        setBumMargins(mSuggestionsStrip, 0, script);
     }
 
     /**

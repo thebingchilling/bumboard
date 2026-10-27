@@ -49,12 +49,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         keyboardFrame = inputView.findViewById(R.id.main_keyboard_frame)
         this.inputView = inputView
         panel = inputView.findViewById<CandidatePanelView>(R.id.bum_candidate_panel)?.also { p ->
-            p.onPick = { index -> pick(index) }
+            p.onPick = { index -> pick(index); updateMoreButton() }
         }
         moreButton = inputView.findViewById<android.widget.ImageView>(R.id.bum_candidate_more)?.also { b ->
             b.imageTintList = android.content.res.ColorStateList.valueOf(ime.getColor(R.color.bum_m3_on_key_variant))
             b.background = ime.getDrawable(R.drawable.bum_m3_suggestion)
-            b.setOnClickListener { openPanel() }
+            b.setOnClickListener { togglePanel() }
         }
         bar?.onPick = { index -> pick(index) }
         bar?.onLongPick = { index, anchor -> showDictionary(index, anchor) }
@@ -126,8 +126,17 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /** Returns true when the event was used for Chinese input. */
     fun onEvent(event: Event): Boolean {
-        if (!isActive || !RimeService.ready || session == 0L) return false
+        if (!isActive) return false
         val code = event.mCodePoint
+        if (!RimeService.ready || session == 0L) {
+            // Rime is still loading: letters go to LatinIME, but punctuation is Chinese already
+            val mark = when {
+                code in PUNCTUATION || code == '"'.code || code == '\''.code -> fullWidth(code)
+                else -> return false
+            }
+            ime.currentInputConnection?.commitText(mark, 1)
+            return true
+        }
         val handled = when {
             event.mKeyCode == Constants.CODE_DELETE -> isComposing && key(KEY_BACKSPACE)
             code == Constants.CODE_ENTER -> {
@@ -191,14 +200,25 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         else -> PUNCTUATION.getValue(code)
     }
 
-    /** Every candidate, with readings and meanings, over the keys. */
-    private fun openPanel() {
+    /** The ⌄ / ⌃ at the end of the row: every candidate over the keys, like Gboard. */
+    private fun togglePanel() {
         val panel = panel ?: return
         val view = inputView ?: return
-        val candidates = shown?.candidates ?: return
-        app.bumboard.layout.BumPanels.hideOthers(view, panel)
-        app.bumboard.layout.BumPanels.cover(panel, view)
-        panel.show(candidates, annotation(), candidateScale())
+        if (panel.visibility == View.VISIBLE) {
+            panel.visibility = View.GONE
+        } else {
+            val candidates = shown?.candidates ?: return
+            app.bumboard.layout.BumPanels.hideOthers(view, panel)
+            app.bumboard.layout.BumPanels.cover(panel, view)
+            panel.bringToFront()
+            panel.show(candidates, candidateScale())
+        }
+        updateMoreButton()
+    }
+
+    private fun updateMoreButton() {
+        val open = panel?.visibility == View.VISIBLE
+        moreButton?.setImageResource(if (open) R.drawable.ic_sym_keyboard_arrow_up else R.drawable.ic_sym_keyboard_arrow_down)
     }
 
     /** Drops any composition, e.g. when the text field changes. */
@@ -254,34 +274,36 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             bar.visibility = View.GONE
             moreButton?.visibility = View.GONE
             panel?.visibility = View.GONE
+            updateMoreButton()
             stripView?.setBumCandidatesShowing(false)
             return
         }
-        val full = meaningsInRow()
-        val standard = ime.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
-        val scale = if (full) candidateScale() else minOf(candidateScale(), CandidateBarView.compactFit(ime, standard))
-        bar.setStyle(scale, full)
+        bar.setScale(candidateScale())
         bar.setCandidates(candidates, annotation())
         bar.visibility = View.VISIBLE
         moreButton?.visibility = View.VISIBLE
+        // the open dropdown follows the typing
+        if (panel?.visibility == View.VISIBLE) panel?.show(candidates, candidateScale())
+        updateMoreButton()
         stripView?.setBumCandidatesShowing(true)
     }
 
     private fun candidateScale() = prefs.getFloat(PREF_CANDIDATE_SIZE, 1f).coerceIn(0.7f, 1.6f)
 
-    private fun meaningsInRow() = prefs.getBoolean(PREF_MEANINGS_IN_ROW, false)
-
     /**
-     * The candidate row is the usual strip height, like English, so the keyboard keeps its size
-     * between languages. With "meanings in the candidate row" on, the top bar on the Chinese
-     * keyboards is as tall as a candidate with every reading and its meaning, all the time, so
-     * nothing is cut off and it never jumps while typing.
+     * On the Chinese keyboards the top bar is as tall as a candidate with its readings and one
+     * line of meaning (measured, at the candidate size setting), all the time, so nothing is
+     * cut off and it never jumps while typing; elsewhere it is the usual strip height.
      */
     private fun updateBarHeight(stripView: SuggestionStripView?) {
         val res = ime.resources
         val standard = res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
-        val height = if (!isActive || !meaningsInRow()) standard
-        else maxOf(standard, CandidateBarView.heightFor(ime, annotationLines(), candidateScale()))
+        val bar = bar
+        val height = if (!isActive || bar == null) standard
+        else {
+            bar.setScale(candidateScale())
+            maxOf(standard, bar.heightFor(annotationLines()))
+        }
         for (view in listOfNotNull(stripView, bar)) {
             val lp = view.layoutParams ?: continue
             if (lp.height != height) {
@@ -331,8 +353,6 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         const val PREF_SCRIPT = "bum_chinese_script"
         /** Candidate text size, 0.7 .. 1.6. */
         const val PREF_CANDIDATE_SIZE = "bum_candidate_size"
-        /** Every reading and the meaning in the candidate row (a taller bar); off: compact. */
-        const val PREF_MEANINGS_IN_ROW = "bum_meanings_in_row"
         /** Long-press on a candidate: "peek" (while held) or "pin" (until closed). */
         const val PREF_DICTIONARY_HOLD = "bum_dictionary_hold"
         const val PREF_CANTONESE_INPUT = "bum_cantonese_input"

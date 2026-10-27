@@ -1684,6 +1684,19 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             startBumVoice();
             return;
         }
+        // BUMBOARD: the "1234" key on the symbols page.
+        if (Constants.CODE_BUM_NUMPAD == event.mKeyCode) {
+            showBumPanel(R.id.bum_numpad_panel);
+            return;
+        }
+        // BUMBOARD: a shortcut from the comma's popup.
+        if (event.mKeyCode <= Constants.CODE_BUM_SHORTCUT_BASE
+                && event.mKeyCode >= Constants.CODE_BUM_SHORTCUT_LAST) {
+            final app.bumboard.toolbar.Shortcut[] all = app.bumboard.toolbar.Shortcut.values();
+            final int ordinal = Constants.CODE_BUM_SHORTCUT_BASE - event.mKeyCode;
+            if (ordinal < all.length) bumRunShortcut(all[ordinal]);
+            return;
+        }
         // BUMBOARD: one-handed mode from the comma's popup.
         if (Constants.CODE_BUM_ONE_HANDED == event.mKeyCode) {
             bumRunShortcut(app.bumboard.toolbar.Shortcut.ONE_HANDED);
@@ -2108,9 +2121,6 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         case TEXT_EDIT:
             showBumPanel(R.id.bum_text_edit_panel);
             break;
-        case NUMPAD:
-            showBumPanel(R.id.bum_numpad_panel);
-            break;
         case RESIZE:
             if (mode == app.bumboard.layout.BumLayout.Mode.FLOATING) {
                 // floating: handles right on the keyboard
@@ -2137,11 +2147,6 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             layout.setMode(mode == app.bumboard.layout.BumLayout.Mode.FLOATING
                     ? app.bumboard.layout.BumLayout.Mode.NORMAL
                     : app.bumboard.layout.BumLayout.Mode.FLOATING);
-            bumReloadLayout();
-            break;
-        case NUMBER_ROW:
-            layout.edit().putBoolean(app.bumboard.layout.BumLayout.PREF_NUMBER_ROW,
-                    !layout.getNumberRow()).apply();
             bumReloadLayout();
             break;
         case EMOJI:
@@ -2179,7 +2184,10 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
     @Override
     public void bumSendCode(final int code) {
+        // a whole key press, so keyboard switches (handled on press/release) work too
+        onPressKey(code, 0, true);
         onCodeInput(code, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false);
+        onReleaseKey(code, false);
     }
 
     @Override

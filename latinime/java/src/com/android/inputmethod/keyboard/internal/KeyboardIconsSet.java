@@ -92,10 +92,19 @@ public final class KeyboardIconsSet {
         NAME_BUM_ONE_HANDED_KEY,          R.styleable.Keyboard_iconOneHandedKey,
     };
 
-    private static int NUM_ICONS = NAMES_AND_ATTR_IDS.length / 2;
+    // BUMBOARD: every shortcut has an icon too ("bum_sc_<id>"), for the comma's popup; they are
+    // loaded straight from their drawables, after the theme's icons.
+    private static final app.bumboard.toolbar.Shortcut[] BUM_SHORTCUTS =
+            app.bumboard.toolbar.Shortcut.values();
+    private static final int NUM_THEME_ICONS = NAMES_AND_ATTR_IDS.length / 2;
+    private static int NUM_ICONS = NUM_THEME_ICONS + BUM_SHORTCUTS.length;
     private static final String[] ICON_NAMES = new String[NUM_ICONS];
     private final Drawable[] mIcons = new Drawable[NUM_ICONS];
     private final int[] mIconResourceIds = new int[NUM_ICONS];
+
+    public static String bumShortcutIconName(final app.bumboard.toolbar.Shortcut shortcut) {
+        return "bum_sc_" + shortcut.getId();
+    }
 
     static {
         int iconId = ICON_UNDEFINED;
@@ -105,6 +114,12 @@ public final class KeyboardIconsSet {
             if (attrId != ATTR_UNDEFINED) {
                 ATTR_ID_TO_ICON_ID.put(attrId, iconId);
             }
+            sNameToIdsMap.put(name, iconId);
+            ICON_NAMES[iconId] = name;
+            iconId++;
+        }
+        for (final app.bumboard.toolbar.Shortcut shortcut : BUM_SHORTCUTS) {
+            final String name = bumShortcutIconName(shortcut);
             sNameToIdsMap.put(name, iconId);
             ICON_NAMES[iconId] = name;
             iconId++;
@@ -126,6 +141,13 @@ public final class KeyboardIconsSet {
                         + keyboardAttrs.getResources().getResourceEntryName(attrId)
                         + " not found");
             }
+        }
+        for (int i = 0; i < BUM_SHORTCUTS.length; i++) {
+            final int resId = BUM_SHORTCUTS[i].getIcon();
+            final Drawable icon = keyboardAttrs.getResources().getDrawable(resId, null);
+            setDefaultBounds(icon);
+            mIcons[NUM_THEME_ICONS + i] = icon;
+            mIconResourceIds[NUM_THEME_ICONS + i] = resId;
         }
     }
 

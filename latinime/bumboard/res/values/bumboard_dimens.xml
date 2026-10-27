@@ -3,5 +3,7 @@
     <!-- Emoji search: the results row above the search pill. -->
     <dimen name="bum_emoji_search_height">100dp</dimen>
     <!-- The Traditional/Simplified chip on the strip's left edge. -->
-    <dimen name="bum_script_key_width">30dp</dimen>
+    <dimen name="bum_script_key_width">44dp</dimen>
+    <!-- Right of the candidates: the ⌄ (36dp) and the 繁/简 button (44dp). -->
+    <dimen name="bum_candidate_bar_end">80dp</dimen>
 </resources>

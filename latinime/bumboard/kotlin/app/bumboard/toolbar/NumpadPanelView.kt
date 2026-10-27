@@ -22,7 +22,8 @@ import com.android.inputmethod.latin.common.Constants
 
 /**
  * A number pad over the keys: digits in a phone-style 3 x 3 grid with 0 below, operators on
- * the left, and backspace, space and Enter on the right; Back in the top-left corner.
+ * the left, backspace, space and Enter on the right, and ABC (bottom left) back to the letters.
+ * It opens from the "1234" key on the symbols page, like Gboard's.
  */
 class NumpadPanelView @JvmOverloads constructor(
     context: Context,
@@ -37,12 +38,16 @@ class NumpadPanelView @JvmOverloads constructor(
         isClickable = true
         setBackgroundColor(palette.surface)
         setPadding(dp(3), dp(4), dp(3), dp(4))
-        // operators down the left, digits like a phone keypad, Back in the bottom-left corner
+        // operators down the left, digits like a phone keypad, ABC back to the letters
         addRow(text("+"), digit("1"), digit("2"), digit("3"),
             icon(R.drawable.ic_sym_backspace, R.string.bum_emoji_delete, repeats = true) { send(Constants.CODE_DELETE) })
         addRow(text("-"), digit("4"), digit("5"), digit("6"), spaceKey())
         addRow(text("*"), digit("7"), digit("8"), digit("9"), enterKey())
-        addRow(BumPanels.backButton(context) { visibility = GONE }, text("/"), digit("0"), text("."), text(","))
+        addRow(key(context.getString(R.string.bum_emoji_abc), letter = false, size = 15f) {
+                visibility = GONE
+                bumHost()?.bumSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
+            },
+            text("/"), digit("0"), text("."), text(","))
         visibility = GONE
     }
 

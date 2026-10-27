@@ -21,9 +21,12 @@
 <merge xmlns:latin="http://schemas.android.com/apk/res-auto" >
     <Key
         latin:keySpec="!text/keyspec_comma" />
+    <!-- BUMBOARD: the number pad, as on Gboard's symbols page ("_" is in the "-" key's popup). -->
     <Key
-        latin:keySpec="_"
-                latin:moreKeys="‿,‾,＿" />
+        latin:keySpec="1234|!code/key_bum_numpad"
+        latin:keyLabelFlags="followFunctionalTextColor|autoXScale"
+        latin:keyActionFlags="noKeyPreview"
+        latin:backgroundType="functional" />
     <include
         latin:keyboardLayout="@xml/key_space_symbols" />
     <Key

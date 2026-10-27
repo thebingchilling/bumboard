@@ -251,6 +251,11 @@ public final class Constants {
     public static final int CODE_BUM_LANGUAGES = -16;
     // BUMBOARD: one-handed mode, from the comma's popup.
     public static final int CODE_BUM_ONE_HANDED = -17;
+    // BUMBOARD: the "1234" key on the symbols page opens the number pad.
+    public static final int CODE_BUM_NUMPAD = -18;
+    // BUMBOARD: shortcuts in the comma's popup: CODE_BUM_SHORTCUT_BASE - Shortcut.ordinal.
+    public static final int CODE_BUM_SHORTCUT_BASE = -100;
+    public static final int CODE_BUM_SHORTCUT_LAST = -199;
 
     public static boolean isLetterCode(final int code) {
         return code >= CODE_SPACE;

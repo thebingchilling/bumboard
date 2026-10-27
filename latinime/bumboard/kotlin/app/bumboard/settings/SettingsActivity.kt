@@ -69,6 +69,7 @@ import app.bumboard.chinese.ChineseInput
 import app.bumboard.chinese.Readings
 import com.android.inputmethod.keyboard.KeyboardTheme
 import app.bumboard.layout.BumLayout
+import app.bumboard.toolbar.Shortcut
 import app.bumboard.emoji.EmojiPanelView
 import com.android.inputmethod.latin.AudioAndHapticFeedbackManager
 import com.android.inputmethod.latin.R
@@ -569,17 +570,10 @@ private fun ChinesePage() {
         }
     }
     val candidateSize = prefs.floatPref(ChineseInput.PREF_CANDIDATE_SIZE) { prefs.getFloat(ChineseInput.PREF_CANDIDATE_SIZE, 1f) }
-    val meaningsInRow = prefs.boolPref(ChineseInput.PREF_MEANINGS_IN_ROW) { prefs.getBoolean(ChineseInput.PREF_MEANINGS_IN_ROW, false) }
     val dictionaryHold = prefs.stringPref(ChineseInput.PREF_DICTIONARY_HOLD) {
         prefs.getString(ChineseInput.PREF_DICTIONARY_HOLD, null) ?: "pin"
     }
     Group {
-        row {
-            SwitchRow(
-                it, stringResource(R.string.bum_pref_meanings_in_row), stringResource(R.string.bum_pref_meanings_in_row_summary),
-                meaningsInRow.value, meaningsInRow::set,
-            )
-        }
         row {
             SliderRow(
                 it, stringResource(R.string.bum_pref_candidate_size), (candidateSize.value * 100).roundToInt(),
@@ -641,11 +635,13 @@ private fun PreferencesPage() {
                 listOf(
                     "emoji" to stringResource(R.string.bum_pref_comma_key_emoji),
                     "language" to stringResource(R.string.bum_pref_comma_key_language),
+                    "none" to stringResource(R.string.bum_pref_comma_key_none),
                 ),
                 commaKey.value, commaKey::set,
             )
         }
     }
+    CommaMenuGroup(commaKey.value)
     Group {
         if (hasVibrator) {
             row { SwitchRow(it, stringResource(R.string.vibrate_on_keypress), null, vibrate.value, vibrate::set) }
@@ -655,6 +651,25 @@ private fun PreferencesPage() {
             row { SwitchRow(it, stringResource(R.string.popup_on_keypress), null, popup.value, popup::set) }
         }
         row { SwitchRow(it, stringResource(R.string.voice_input), null, voice.value, voice::set) }
+    }
+}
+
+/** What the comma's long-press shows: Settings always, then the shortcuts switched on here. */
+@Composable
+private fun CommaMenuGroup(commaKey: String) {
+    val context = LocalContext.current
+    val layout = remember(commaKey) { BumLayout.get(context) }
+    var chosen by remember(commaKey) { mutableStateOf(layout.commaMenu()) }
+    Group(stringResource(R.string.bum_pref_comma_menu)) {
+        row { TextRow(it, stringResource(R.string.bum_sc_settings), stringResource(R.string.bum_pref_comma_menu_settings)) }
+        Shortcut.entries.filter { it != Shortcut.SETTINGS }.forEach { sc ->
+            row {
+                SwitchRow(it, stringResource(sc.label), null, sc in chosen) { on ->
+                    chosen = if (on) Shortcut.entries.filter { e -> e in chosen || e == sc } else chosen - sc
+                    layout.setCommaMenu(chosen)
+                }
+            }
+        }
     }
 }
 

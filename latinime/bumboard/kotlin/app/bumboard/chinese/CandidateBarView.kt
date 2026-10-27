@@ -1,6 +1,7 @@
 package app.bumboard.chinese
 
 import android.content.Context
+import android.graphics.Paint
 import android.graphics.Typeface
 import android.text.TextUtils
 import android.util.AttributeSet
@@ -18,16 +19,18 @@ import com.android.inputmethod.latin.R
 import java.util.concurrent.Executors
 
 /**
- * A scrolling row of Chinese candidates shown in place of LatinIME's suggestion strip.
- * Characters appear at once; readings and meanings are looked up off the main thread and
- * filled in as they arrive, so typing never waits for the dictionary.
- * Colours come from the keyboard theme's suggestion strip style so it matches the keys.
+ * A scrolling row of Chinese candidates in the strip: each with its characters, its readings
+ * and, on one line, as many words of its meaning as fit the candidate's own width (the meaning
+ * never widens a candidate; hold one for the full dictionary entry). Characters appear at
+ * once; readings and meanings are looked up off the main thread and filled in as they arrive.
+ * Candidates the phone has no font for are left out.
  */
 class CandidateBarView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
 ) : HorizontalScrollView(context, attrs) {
 
+    /** A candidate was tapped; the index is Rime's, as given to [setCandidates]. */
     var onPick: (Int) -> Unit = {}
     var onLongPick: (Int, View) -> Unit = { _, _ -> }
     /** The finger left a candidate (after a long-press, for hold-to-peek). */
@@ -39,10 +42,14 @@ class CandidateBarView @JvmOverloads constructor(
     }
     private val textColor: Int
     private val firstColor: Int
-    private val cells = mutableListOf<LinearLayout>()
+    /** Shown cells by Rime's candidate index. */
+    private val cells = HashMap<Int, LinearLayout>()
 
     @Volatile
     private var generation = 0
+
+    /** Text scale: the candidate size setting. */
+    private var scale = 1f
 
     init {
         isHorizontalScrollBarEnabled = false
@@ -59,42 +66,36 @@ class CandidateBarView @JvmOverloads constructor(
     /** Lines under each candidate's characters: readings, and whether a meaning follows. */
     data class Lines(val readings: Int, val meaning: Boolean)
 
-    /** Text scale: the candidate size setting, limited so the row fits its height. */
-    private var scale = 1f
-
-    /** Compact (false): the characters and one reading. Full: every reading and the meaning. */
-    private var full = false
-
-    fun setStyle(scale: Float, full: Boolean) {
+    fun setScale(scale: Float) {
         this.scale = scale
-        this.full = full
     }
 
     /**
-     * Shows [candidates]. [annotate], when given, runs on a background thread for each
-     * candidate in order; results for a superseded list are dropped.
+     * Shows [candidates] (skipping any the phone cannot draw). [annotate], when given, runs on
+     * a background thread for each candidate in order; results for a superseded list are dropped.
      */
     fun setCandidates(candidates: List<Candidate>, annotate: ((Candidate) -> Annotation?)?) {
         val gen = ++generation
         row.removeAllViews()
         cells.clear()
-        candidates.forEachIndexed { index, candidate ->
-            val cell = cell(index, candidate)
-            cells += cell
+        val shown = candidates.withIndex().filter { renderable(it.value.text) }
+        shown.forEach { (index, candidate) ->
+            val cell = cell(index, candidate, first = cells.isEmpty())
+            cells[index] = cell
             row.addView(cell, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT,
             ))
         }
         scrollTo(0, 0)
-        if (annotate == null || candidates.isEmpty()) return
+        if (annotate == null || shown.isEmpty()) return
         annotator.execute {
             val batch = ArrayList<Pair<Int, Annotation>>()
-            for ((index, candidate) in candidates.withIndex()) {
+            for ((n, item) in shown.withIndex()) {
                 if (gen != generation) return@execute
-                val annotation = runCatching { annotate(candidate) }.getOrNull() ?: continue
-                batch += index to annotation
+                val annotation = runCatching { annotate(item.value) }.getOrNull() ?: continue
+                batch += item.index to annotation
                 // the first few appear right away, the rest in larger groups
-                if (index < 4 || batch.size >= 8) {
+                if (n < 4 || batch.size >= 8) {
                     deliver(gen, ArrayList(batch))
                     batch.clear()
                 }
@@ -106,15 +107,16 @@ class CandidateBarView @JvmOverloads constructor(
     private fun deliver(gen: Int, results: List<Pair<Int, Annotation>>) {
         post {
             if (gen != generation) return@post
-            results.forEach { (index, annotation) -> cells.getOrNull(index)?.let { fill(it, index, annotation) } }
+            results.forEach { (index, annotation) -> cells[index]?.let { fill(it, annotation) } }
         }
     }
 
-    private fun cell(index: Int, candidate: Candidate) = LinearLayout(context).apply {
+    private fun cell(index: Int, candidate: Candidate, first: Boolean) = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
-        setPadding(dp(10), dp(1), dp(10), dp(1))
+        setPadding(dp(10), dp(2), dp(10), dp(2))
         minimumWidth = dp(44)
+        tag = if (first) firstColor else textColor
         background = selectableBackground()
         setOnClickListener { onPick(index) }
         setOnLongClickListener { view -> onLongPick(index, view); true }
@@ -123,28 +125,37 @@ class CandidateBarView @JvmOverloads constructor(
                 event.actionMasked == android.view.MotionEvent.ACTION_CANCEL) onRelease()
             false
         }
-        addView(text(candidate.text, CHAR_SP * scale, colorFor(index)).apply { includeFontPadding = false }, wrap())
+        addView(text(candidate.text, CHAR_SP * scale, tag as Int).apply { includeFontPadding = false }, wrap())
     }
 
-    private fun fill(cell: LinearLayout, index: Int, annotation: Annotation) {
-        val color = colorFor(index)
+    private fun fill(cell: LinearLayout, annotation: Annotation) {
+        val color = cell.tag as Int
         while (cell.childCount > 1) cell.removeViewAt(1)
-        (if (full) annotation.lines else annotation.lines.take(1)).forEach { line ->
+        annotation.lines.forEach { line ->
             cell.addView(text(line, READING_SP * scale, ColorUtils.setAlphaComponent(color, 0xD0)).apply {
                 typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
                 includeFontPadding = false
             }, wrap())
         }
-        annotation.meaning?.takeIf { full }?.let { meaning ->
-            cell.addView(text(meaning, MEANING_SP * scale, ColorUtils.setAlphaComponent(color, 0xA0)).apply {
-                // the definition in full, up to a generous width
-                maxWidth = dp(240)
+        annotation.meaning?.let { meaning ->
+            // as wide as the characters and readings above it, never wider
+            cell.addView(FittedWordsView(context).apply {
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, MEANING_SP * scale)
+                setTextColor(ColorUtils.setAlphaComponent(color, 0xA0))
                 includeFontPadding = false
-            }, wrap())
+                gravity = Gravity.CENTER
+                fullText = meaning
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
     }
 
-    private fun colorFor(index: Int) = if (index == 0) firstColor else textColor
+    /** The bar's exact height for [lines], measured from a sample candidate. */
+    fun heightFor(lines: Lines): Int {
+        val sample = cell(0, Candidate("漢字", ""), first = false)
+        fill(sample, Annotation(List(lines.readings) { "hon3 zi6" }, if (lines.meaning) "Chinese characters" else null, null))
+        sample.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
+        return sample.measuredHeight
+    }
 
     private fun text(value: String, sp: Float, color: Int) = TextView(context).apply {
         text = value
@@ -166,25 +177,53 @@ class CandidateBarView @JvmOverloads constructor(
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 
+    /**
+     * One line holding as many whole words of [fullText] as fit its width (the width comes from
+     * the cell, never from the text).
+     */
+    private class FittedWordsView(context: Context) : TextView(context) {
+        var fullText: String = ""
+            set(value) {
+                field = value
+                requestLayout()
+            }
+
+        init {
+            isSingleLine = true
+            ellipsize = TextUtils.TruncateAt.END
+        }
+
+        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+            val available = MeasureSpec.getSize(widthMeasureSpec) - paddingLeft - paddingRight
+            val fitted = if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.UNSPECIFIED || available <= 0) {
+                fullText
+            } else fit(available.toFloat())
+            if (text.toString() != fitted) text = fitted
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        }
+
+        /** The longest run of whole words (split at spaces and list punctuation) that fits. */
+        private fun fit(width: Float): String {
+            val words = fullText.split(' ').filter { it.isNotEmpty() }
+            var best = ""
+            for (n in 1..words.size) {
+                val candidate = words.take(n).joinToString(" ").trimEnd(',', ';', '/')
+                if (paint.measureText(candidate) > width) break
+                best = candidate
+            }
+            // not even one word fits: let the first word ellipsize
+            return best.ifEmpty { words.firstOrNull().orEmpty() }
+        }
+    }
+
     companion object {
         private val annotator = Executors.newSingleThreadExecutor()
+        private val glyphs = Paint()
         const val CHAR_SP = 20f
         const val READING_SP = 11.5f
         const val MEANING_SP = 10.5f
 
-        /** The largest scale at which the compact row (characters + one reading) fits [height]. */
-        fun compactFit(context: Context, height: Int): Float {
-            val sp = context.resources.displayMetrics.scaledDensity
-            val density = context.resources.displayMetrics.density
-            return (height - density * 6) / ((CHAR_SP + READING_SP) * 1.22f * sp)
-        }
-
-        /** The bar's height for [lines] at [scale], in pixels. */
-        fun heightFor(context: Context, lines: Lines, scale: Float): Int {
-            val sp = context.resources.displayMetrics.scaledDensity
-            val density = context.resources.displayMetrics.density
-            val text = CHAR_SP + lines.readings * READING_SP + (if (lines.meaning) MEANING_SP else 0f)
-            return (text * scale * sp * 1.22f + density * 8).toInt()
-        }
+        /** Whether the phone's fonts can draw [text] (no empty boxes). */
+        fun renderable(text: String): Boolean = text.isNotEmpty() && glyphs.hasGlyph(text)
     }
 }

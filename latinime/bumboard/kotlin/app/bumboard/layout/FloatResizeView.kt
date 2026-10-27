@@ -52,7 +52,7 @@ class FloatResizeView @JvmOverloads constructor(
     init {
         setWillNotDraw(false)
         isClickable = true
-        buttons.addView(BumPanels.backButton(context) { visibility = GONE },
+        buttons.addView(BumPanels.backButton(context) { cancel() },
             LayoutParams(dp(48), dp(48), Gravity.BOTTOM or Gravity.START))
         buttons.addView(TextView(context).apply {
             setText(R.string.bum_resize_done)
@@ -65,7 +65,7 @@ class FloatResizeView @JvmOverloads constructor(
                 cornerRadius = dp(24).toFloat()
                 setColor(palette.primary)
             }
-            setOnClickListener { done() }
+            setOnClickListener { visibility = GONE }
         }, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         addView(buttons)
         visibility = GONE
@@ -76,10 +76,11 @@ class FloatResizeView @JvmOverloads constructor(
      * height is what the height setting scales.
      */
     fun show(frame: View, keys: View) {
-        val me = IntArray(2).also { getLocationInWindow(it) }
-        val f = IntArray(2).also { frame.getLocationInWindow(it) }
-        start.set((f[0] - me[0]).toFloat(), (f[1] - me[1]).toFloat(),
-            (f[0] - me[0] + frame.width).toFloat(), (f[1] - me[1] + frame.height).toFloat())
+        if (visibility != VISIBLE) remember()
+        this.frame = frame
+        this.keys = keys
+        // both are children of the input view, so the frame's layout bounds are ours too
+        start.set(frame.left.toFloat(), frame.top.toFloat(), frame.right.toFloat(), frame.bottom.toFloat())
         outline.set(start)
         openedHeight = start.height()
         keysHeight = keys.height
@@ -136,10 +137,15 @@ class FloatResizeView @JvmOverloads constructor(
                 }
                 if (dragging != NONE) placeButtons()
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+            MotionEvent.ACTION_UP -> {
+                // let go of a handle: the keyboard takes the new size now
+                if (dragging != NONE) apply()
                 dragging = NONE
-                // the next drag starts from here
-                start.set(outline)
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                dragging = NONE
+                outline.set(start)
+                placeButtons()
             }
         }
         return true
@@ -147,8 +153,35 @@ class FloatResizeView @JvmOverloads constructor(
 
     private fun currentScale() = BumLayout.get(context).heightScale
 
-    /** Saves the outline as the floating keyboard's width, height and position, and rebuilds. */
-    private fun done() {
+    private var frame: View? = null
+    private var keys: View? = null
+    /** The size and place before resizing started, for Back. */
+    private var before: FloatArray? = null
+
+    private fun remember() {
+        val layout = BumLayout.get(context)
+        before = floatArrayOf(layout.heightScale, layout.floatWidth, layout.floatX.toFloat(), layout.floatY.toFloat())
+    }
+
+    /** Back: the size and place from before resizing. */
+    private fun cancel() {
+        before?.let { b ->
+            BumLayout.get(context).edit()
+                .putFloat(BumLayout.PREF_HEIGHT_SCALE, b[0])
+                .putFloat(BumLayout.PREF_FLOAT_WIDTH, b[1])
+                .putInt(BumLayout.PREF_FLOAT_X, b[2].toInt())
+                .putInt(BumLayout.PREF_FLOAT_Y, b[3].toInt())
+                .apply()
+        }
+        visibility = GONE
+        bumHost()?.bumReloadLayout()
+    }
+
+    /**
+     * Saves the outline as the floating keyboard's width, height and position and rebuilds the
+     * keys at that size; the handles then reopen on the resized keyboard.
+     */
+    private fun apply() {
         val layout = BumLayout.get(context)
         val full = ResourceUtils.getDefaultKeyboardWidth(context)
         // the extra height all goes to the keys; the bar and handle keep theirs
@@ -159,10 +192,21 @@ class FloatResizeView @JvmOverloads constructor(
             .putFloat(BumLayout.PREF_HEIGHT_SCALE, scale)
             .putFloat(BumLayout.PREF_FLOAT_WIDTH, (outline.width() / full).coerceIn(BumLayout.MIN_FLOAT_WIDTH, 1f))
             .putInt(BumLayout.PREF_FLOAT_X, outline.left.toInt())
-            .putInt(BumLayout.PREF_FLOAT_Y, (height - outline.bottom).toInt())
+            .putInt(BumLayout.PREF_FLOAT_Y, ((parent as View).height - outline.bottom).toInt())
             .apply()
-        visibility = GONE
-        bumHost()?.bumReloadLayout()
+        val host = bumHost() ?: return
+        val frame = frame ?: return
+        val keys = keys ?: return
+        val saved = before
+        host.bumReloadLayout() // hides the handles with the other panels
+        // back on the keyboard once it has been laid out at its new size
+        frame.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                frame.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                show(frame, keys)
+                before = saved
+            }
+        })
     }
 
     /** The frame's height when resizing opened. */

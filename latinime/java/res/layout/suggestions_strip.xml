@@ -59,24 +59,24 @@
         android:layout_height="match_parent"
         android:layout_marginLeft="@dimen/config_suggestions_strip_horizontal_margin"
         android:layout_marginRight="@dimen/config_suggestions_strip_horizontal_margin" />
-    <!-- BUMBOARD: Traditional/Simplified, locked on the left on the Chinese keyboards. -->
+    <!-- BUMBOARD: Traditional/Simplified, a round button locked on the right on the Chinese
+         keyboards; the mic sits to its left while the bar is idle. -->
     <TextView
         android:id="@+id/bum_script_key"
         android:layout_width="@dimen/bum_script_key_width"
         android:layout_height="fill_parent"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentLeft="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentRight="true"
         android:layout_centerVertical="true"
         android:gravity="center"
-        android:textSize="18sp"
-        android:visibility="gone"
-        style="?attr/suggestionWordStyle" />
+        android:visibility="gone" />
     <ImageButton
         android:id="@+id/suggestions_strip_voice_key"
         android:layout_width="@dimen/config_suggestions_strip_edge_key_width"
         android:layout_height="fill_parent"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentRight="true"
+        android:layout_toStartOf="@id/bum_script_key"
+        android:layout_toLeftOf="@id/bum_script_key"
+        android:layout_alignWithParentIfMissing="true"
         android:layout_centerVertical="true"
         android:contentDescription="@string/spoken_description_mic"
         style="?attr/suggestionWordStyle" />

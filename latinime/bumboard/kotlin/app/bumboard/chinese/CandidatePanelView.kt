@@ -1,144 +1,114 @@
 package app.bumboard.chinese
 
 import android.content.Context
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
-import android.text.TextUtils
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.ViewGroup
-import android.widget.LinearLayout
+import android.widget.FrameLayout
 import android.widget.TextView
-import androidx.core.graphics.ColorUtils
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import app.bumboard.core.Annotation
-import app.bumboard.layout.BumPanels
 import app.bumboard.rime.Candidate
 import app.bumboard.ui.M3Colors
 import com.android.inputmethod.latin.R
-import java.util.concurrent.Executors
 
 /**
- * Every candidate over the keys, opened from the ⌄ at the end of the candidate row: roomy cards
- * with the characters, all the readings chosen in Settings and the full meaning. Tap a card to
- * type it; Back (bottom left) returns to the keys. Readings and meanings are looked up off the
- * main thread and filled in as they arrive.
+ * Every candidate over the keys, like Gboard's expanded candidates: a scrolling grid of the
+ * characters alone, each candidate as wide as it needs (1 to 3 columns), thin dividers between.
+ * Opened and closed with the ⌄ / ⌃ at the end of the candidate row; tap one to type it.
+ * Candidates the phone cannot draw are left out.
  */
 class CandidatePanelView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-) : LinearLayout(context, attrs) {
+) : FrameLayout(context, attrs) {
 
+    /** A candidate was tapped; the index is Rime's. */
     var onPick: (Int) -> Unit = {}
 
     private val palette = M3Colors.of(context)
     private val grid = RecyclerView(context)
     private val adapter = Adapter()
-    private var annotations = arrayOfNulls<Annotation>(0)
-    @Volatile
-    private var generation = 0
+    private val layoutManager = GridLayoutManager(context, COLUMNS)
+    private val divider = Paint().apply {
+        color = palette.outlineVariant
+        strokeWidth = resources.displayMetrics.density
+    }
 
     init {
-        orientation = VERTICAL
         isClickable = true
         setBackgroundColor(palette.surface)
-        grid.layoutManager = GridLayoutManager(context, COLUMNS)
+        layoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
+            override fun getSpanSize(position: Int) = adapter.items.getOrNull(position)?.let { spanFor(it.value.text) } ?: 1
+        }
+        grid.layoutManager = layoutManager
         grid.adapter = adapter
-        grid.setPadding(dp(6), dp(6), dp(6), dp(6))
-        grid.clipToPadding = false
-        addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-        // Back in the bottom-left corner
-        addView(LinearLayout(context).apply {
-            orientation = HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(4), 0, dp(4), dp(2))
-            addView(BumPanels.backButton(context) { visibility = GONE }, LayoutParams(dp(48), dp(48)))
-        }, LayoutParams(LayoutParams.MATCH_PARENT, dp(50)))
+        grid.addItemDecoration(object : RecyclerView.ItemDecoration() {
+            override fun onDrawOver(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+                for (i in 0 until parent.childCount) {
+                    val v = parent.getChildAt(i)
+                    c.drawLine(v.left.toFloat(), v.bottom.toFloat(), v.right.toFloat(), v.bottom.toFloat(), divider)
+                    c.drawLine(v.right.toFloat(), v.top + v.height * 0.25f, v.right.toFloat(), v.bottom - v.height * 0.25f, divider)
+                }
+            }
+        })
+        addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         visibility = GONE
     }
 
-    /** Shows [candidates]; [annotate] (null when readings are off) runs in the background. */
-    fun show(candidates: List<Candidate>, annotate: ((Candidate) -> Annotation?)?, scale: Float) {
-        val gen = ++generation
-        adapter.candidates = candidates
+    /** Shows [candidates] (by Rime's index) that the phone can draw. */
+    fun show(candidates: List<Candidate>, scale: Float) {
+        adapter.items = candidates.withIndex().filter { CandidateBarView.renderable(it.value.text) }
         adapter.scale = scale
-        annotations = arrayOfNulls(candidates.size)
         adapter.notifyDataSetChanged()
         grid.scrollToPosition(0)
         visibility = VISIBLE
-        if (annotate == null) return
-        worker.execute {
-            candidates.forEachIndexed { i, candidate ->
-                if (gen != generation) return@execute
-                val a = runCatching { annotate(candidate) }.getOrNull() ?: return@forEachIndexed
-                post {
-                    if (gen == generation && i < annotations.size) {
-                        annotations[i] = a
-                        adapter.notifyItemChanged(i)
-                    }
-                }
-            }
+    }
+
+    private fun spanFor(text: String): Int {
+        val chars = text.codePointCount(0, text.length)
+        return when {
+            chars <= 1 -> 1
+            chars <= 3 -> 2
+            else -> 3
         }
     }
 
     private inner class Adapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-        var candidates: List<Candidate> = emptyList()
+        var items: List<IndexedValue<Candidate>> = emptyList()
         var scale = 1f
 
-        override fun getItemCount() = candidates.size
+        override fun getItemCount() = items.size
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            val card = LinearLayout(context).apply {
-                orientation = VERTICAL
-                gravity = Gravity.CENTER_HORIZONTAL
-                setPadding(dp(8), dp(8), dp(8), dp(8))
-                minimumHeight = dp(72)
-                layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                    .apply { setMargins(dp(3), dp(3), dp(3), dp(3)) }
+            val cell = TextView(context).apply {
+                gravity = Gravity.CENTER
+                isSingleLine = true
+                layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(54))
+                background = context.getDrawable(R.drawable.bum_m3_suggestion)
             }
-            return object : RecyclerView.ViewHolder(card) {}
+            return object : RecyclerView.ViewHolder(cell) {}
         }
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            val card = holder.itemView as LinearLayout
-            card.removeAllViews()
-            val first = position == 0
-            card.background = GradientDrawable().apply {
-                cornerRadius = dp(14).toFloat()
-                setColor(if (first) palette.primaryContainer else palette.surfaceContainer)
-            }
-            val color = if (first) palette.onPrimaryContainer else palette.onSurface
-            card.addView(text(candidates[position].text, 24f * scale, color, bold = false, lines = 2))
-            annotations.getOrNull(position)?.let { a ->
-                a.lines.forEach { card.addView(text(it, 12f * scale, ColorUtils.setAlphaComponent(color, 0xD0), bold = true, lines = 2)) }
-                a.meaning?.let { card.addView(text(it, 11.5f * scale, ColorUtils.setAlphaComponent(color, 0xB0), bold = false, lines = 4)) }
-            }
-            card.setOnClickListener {
-                val at = holder.bindingAdapterPosition
-                if (at >= 0) {
-                    visibility = GONE
-                    onPick(at)
-                }
+            val (index, candidate) = items[position]
+            val cell = holder.itemView as TextView
+            cell.text = candidate.text
+            cell.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f * scale)
+            cell.setTextColor(if (position == 0) palette.primary else palette.onSurface)
+            cell.setOnClickListener {
+                visibility = GONE
+                onPick(index)
             }
         }
-    }
-
-    private fun text(value: String, sp: Float, color: Int, bold: Boolean, lines: Int) = TextView(context).apply {
-        text = value
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, sp)
-        setTextColor(color)
-        gravity = Gravity.CENTER
-        maxLines = lines
-        ellipsize = TextUtils.TruncateAt.END
-        if (bold) typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
     }
 
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 
     private companion object {
-        const val COLUMNS = 3
-        val worker = Executors.newSingleThreadExecutor()
+        const val COLUMNS = 6
     }
 }

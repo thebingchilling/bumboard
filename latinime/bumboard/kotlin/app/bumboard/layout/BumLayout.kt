@@ -3,6 +3,7 @@ package app.bumboard.layout
 import android.content.Context
 import android.content.SharedPreferences
 import android.preference.PreferenceManager
+import app.bumboard.toolbar.Shortcut
 
 /**
  * How the keyboard is laid out: normal, one-handed (narrower, against one side) or floating
@@ -36,8 +37,36 @@ class BumLayout private constructor(private val prefs: SharedPreferences) {
 
     val numberRow: Boolean get() = prefs.getBoolean(PREF_NUMBER_ROW, false)
 
-    /** True: an emoji key beside the comma; false: a next-language key (emoji goes in the popup). */
-    val emojiKey: Boolean get() = prefs.getString(PREF_COMMA_KEY, "emoji") != "language"
+    /** The key beside the comma: "emoji", "language" or "none". */
+    val commaKey: String get() = prefs.getString(PREF_COMMA_KEY, null) ?: "emoji"
+
+    /** True: an emoji key beside the comma (when there is one); false: a next-language key. */
+    val emojiKey: Boolean get() = commaKey != "language"
+
+    /** Whether there is a key beside the comma at all. */
+    val sideKey: Boolean get() = commaKey != "none"
+
+    /**
+     * The shortcuts in the comma's popup, after Settings (which is always first). By default
+     * one-handed mode and whichever of emoji and next language has no key beside the comma.
+     */
+    fun commaMenu(): List<Shortcut> {
+        val saved = prefs.getString(PREF_COMMA_MENU, null)
+        if (saved != null) return saved.split(',').mapNotNull { Shortcut.byId(it) }.filter { it != Shortcut.SETTINGS }
+        return buildList {
+            add(Shortcut.ONE_HANDED)
+            if (commaKey != "emoji") add(Shortcut.EMOJI)
+            if (commaKey != "language") add(Shortcut.LANGUAGE)
+        }
+    }
+
+    fun setCommaMenu(shortcuts: List<Shortcut>) =
+        prefs.edit().putString(PREF_COMMA_MENU, shortcuts.joinToString(",") { it.id }).apply()
+
+    /** The comma's popup as LatinIME more-keys: Settings, then each chosen shortcut. */
+    fun commaMoreKeys(@Suppress("UNUSED_PARAMETER") languageKey: Boolean): String =
+        (listOf("!text/keyspec_settings") + commaMenu().map { "!icon/bum_sc_${it.id}|!code/key_bum_sc_${it.id}" })
+            .joinToString(",")
 
     fun keyboardWidth(fullWidth: Int): Int = when (mode) {
         Mode.NORMAL -> fullWidth
@@ -69,6 +98,7 @@ class BumLayout private constructor(private val prefs: SharedPreferences) {
         const val PREF_FLOAT_Y = "bum_float_y"
         const val PREF_NUMBER_ROW = "bum_number_row"
         const val PREF_COMMA_KEY = "bum_comma_key"
+        const val PREF_COMMA_MENU = "bum_comma_menu"
 
         const val MIN_HEIGHT = 0.7f
         const val MAX_HEIGHT = 1.5f

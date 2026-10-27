@@ -122,6 +122,7 @@ public final class KeyboardLayoutSet {
         // BUMBOARD
         boolean mBumNumberRow;
         boolean mBumEmojiKey = true;
+        boolean mBumSideKey = true;
         RichInputMethodSubtype mSubtype;
         boolean mIsSpellChecker;
         int mKeyboardWidth;
@@ -326,9 +327,11 @@ public final class KeyboardLayoutSet {
         }
 
         // BUMBOARD: the number row and the key beside the comma.
-        public Builder setBumOptions(final boolean numberRow, final boolean emojiKey) {
+        public Builder setBumOptions(final boolean numberRow, final boolean emojiKey,
+                final boolean sideKey) {
             mParams.mBumNumberRow = numberRow;
             mParams.mBumEmojiKey = emojiKey;
+            mParams.mBumSideKey = sideKey;
             return this;
         }
 

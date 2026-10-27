@@ -12,8 +12,6 @@ enum class Shortcut(val id: String, @DrawableRes val icon: Int, @StringRes val l
     ONE_HANDED("one_handed", R.drawable.ic_sym_front_hand, R.string.bum_sc_one_handed),
     FLOATING("floating", R.drawable.ic_sym_picture_in_picture, R.string.bum_sc_floating),
     RESIZE("resize", R.drawable.ic_sym_height, R.string.bum_sc_resize),
-    NUMBER_ROW("number_row", R.drawable.ic_sym_pin, R.string.bum_sc_number_row),
-    NUMPAD("numpad", R.drawable.ic_sym_dialpad, R.string.bum_sc_numpad),
     EMOJI("emoji", R.drawable.ic_sym_mood, R.string.bum_sc_emoji),
     UNDO("undo", R.drawable.ic_sym_undo, R.string.bum_sc_undo),
     REDO("redo", R.drawable.ic_sym_redo, R.string.bum_sc_redo),

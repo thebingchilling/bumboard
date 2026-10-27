@@ -85,6 +85,7 @@ public final class KeyboardId {
     // BUMBOARD
     public final boolean mBumNumberRow;
     public final boolean mBumEmojiKey;
+    public final boolean mBumSideKey;
 
     private final int mHashCode;
 
@@ -103,6 +104,7 @@ public final class KeyboardId {
         mIsSplitLayout = params.mIsSplitLayoutEnabled;
         mBumNumberRow = params.mBumNumberRow;
         mBumEmojiKey = params.mBumEmojiKey;
+        mBumSideKey = params.mBumSideKey;
 
         mHashCode = computeHashCode(this);
     }
@@ -125,7 +127,8 @@ public final class KeyboardId {
                 id.mSubtype,
                 id.mIsSplitLayout,
                 id.mBumNumberRow,
-                id.mBumEmojiKey
+                id.mBumEmojiKey,
+                id.mBumSideKey
         });
     }
 
@@ -142,6 +145,7 @@ public final class KeyboardId {
                 && other.mLanguageSwitchKeyEnabled == mLanguageSwitchKeyEnabled
                 && other.mBumNumberRow == mBumNumberRow
                 && other.mBumEmojiKey == mBumEmojiKey
+                && other.mBumSideKey == mBumSideKey
                 && other.isMultiLine() == isMultiLine()
                 && other.imeAction() == imeAction()
                 && TextUtils.equals(other.mCustomActionLabel, mCustomActionLabel)

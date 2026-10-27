@@ -193,7 +193,17 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
 
     @Nonnull
     public Keyboard build() {
+        // BUMBOARD: the symbols pages' taller rows (see parseKeyboardAttributes) keep the text
+        // size of the usual rows, which is worked out from the most common key height
+        if (mParams.mId.mBumNumberRow && isBumSymbols(mParams.mId)) {
+            mParams.mMostCommonKeyHeight = mParams.mMostCommonKeyHeight * 4 / 5;
+        }
         return new Keyboard(mParams);
+    }
+
+    private static boolean isBumSymbols(final KeyboardId id) {
+        return id.mElementId == KeyboardId.ELEMENT_SYMBOLS
+                || id.mElementId == KeyboardId.ELEMENT_SYMBOLS_SHIFTED;
     }
 
     private int mIndent;
@@ -277,14 +287,17 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
             params.mBaseHeight = baseHeight;
             params.mDefaultRowHeight = (int)ResourceUtils.getDimensionOrFraction(keyboardAttr,
                     R.styleable.Keyboard_rowHeight, baseHeight, baseHeight / DEFAULT_KEYBOARD_ROWS);
-            // the letters gain the number row and the symbols pages an extra row of symbols, so
-            // switching between them never changes the keyboard's height (an app resizing under
-            // the keyboard may restart its input, which reloads the letters)
-            final int elementId = params.mId.mElementId;
-            if (params.mId.mBumNumberRow && (params.mId.isAlphabetKeyboard()
-                    || elementId == KeyboardId.ELEMENT_SYMBOLS
-                    || elementId == KeyboardId.ELEMENT_SYMBOLS_SHIFTED)) {
-                params.mOccupiedHeight = height + params.mDefaultRowHeight;
+            // the letters gain the number row on top; the symbols pages (whose top row is already
+            // the digits) spread their four rows over the same height, so switching between them
+            // never changes the keyboard's height (an app resizing under the keyboard may restart
+            // its input, which reloads the letters)
+            if (params.mId.mBumNumberRow) {
+                if (params.mId.isAlphabetKeyboard()) {
+                    params.mOccupiedHeight = height + params.mDefaultRowHeight;
+                } else if (isBumSymbols(params.mId)) {
+                    params.mOccupiedHeight = height + params.mDefaultRowHeight;
+                    params.mDefaultRowHeight = params.mDefaultRowHeight * 5 / 4;
+                }
             }
 
             params.mKeyVisualAttributes = KeyVisualAttributes.newInstance(keyAttr);
@@ -697,7 +710,9 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
             final boolean bumMatched = matchBoolean(caseAttr,
                     R.styleable.Keyboard_Case_bumNumberRow, id.mBumNumberRow)
                     && matchBoolean(caseAttr, R.styleable.Keyboard_Case_bumEmojiKey,
-                            id.mBumEmojiKey);
+                            id.mBumEmojiKey)
+                    && matchBoolean(caseAttr, R.styleable.Keyboard_Case_bumSideKey,
+                            id.mBumSideKey);
             final boolean selected = keyboardLayoutSetMatched && keyboardLayoutSetElementMatched
                     && keyboardThemeMacthed && modeMatched && navigateNextMatched
                     && navigatePreviousMatched && passwordInputMatched && clobberSettingsKeyMatched

@@ -22,6 +22,7 @@ import java.util.HashMap;
 
 public final class KeyboardCodesSet {
     public static final String PREFIX_CODE = "!code/";
+    public static final String BUM_SHORTCUT_PREFIX = "key_bum_sc_";
 
     private static final HashMap<String, Integer> sNameToIdMap = new HashMap<>();
 
@@ -30,6 +31,14 @@ public final class KeyboardCodesSet {
     }
 
     public static int getCode(final String name) {
+        // BUMBOARD: "key_bum_sc_<id>" is a shortcut (see Constants.CODE_BUM_SHORTCUT_BASE)
+        if (name.startsWith(BUM_SHORTCUT_PREFIX)) {
+            final app.bumboard.toolbar.Shortcut shortcut = app.bumboard.toolbar.Shortcut.Companion
+                    .byId(name.substring(BUM_SHORTCUT_PREFIX.length()));
+            if (shortcut != null) {
+                return Constants.CODE_BUM_SHORTCUT_BASE - shortcut.ordinal();
+            }
+        }
         Integer id = sNameToIdMap.get(name);
         if (id == null) throw new RuntimeException("Unknown key code: " + name);
         return DEFAULT[id];
@@ -55,6 +64,7 @@ public final class KeyboardCodesSet {
         "key_unspecified",
         "key_bum_languages",
         "key_bum_one_handed",
+        "key_bum_numpad",
     };
 
     private static final int[] DEFAULT = {
@@ -77,6 +87,7 @@ public final class KeyboardCodesSet {
         Constants.CODE_UNSPECIFIED,
         Constants.CODE_BUM_LANGUAGES,
         Constants.CODE_BUM_ONE_HANDED,
+        Constants.CODE_BUM_NUMPAD,
     };
 
     static {

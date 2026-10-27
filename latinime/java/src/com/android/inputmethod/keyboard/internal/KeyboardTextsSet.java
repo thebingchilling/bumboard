@@ -59,7 +59,19 @@ public final class KeyboardTextsSet {
         mTextsTable = KeyboardTextsTable.getTextsTable(locale);
     }
 
+    // BUMBOARD: the comma's popup, chosen in Settings (app.bumboard.layout.BumLayout).
+    public static final String BUM_COMMA_MORE_KEYS = "bum_comma_more";
+    private static volatile String sBumCommaMoreKeys = "!text/keyspec_settings";
+
+    /** Sets the comma's popup; returns true when it changed (cached keyboards are then stale). */
+    public static boolean setBumCommaMoreKeys(final String moreKeys) {
+        if (moreKeys.equals(sBumCommaMoreKeys)) return false;
+        sBumCommaMoreKeys = moreKeys;
+        return true;
+    }
+
     public String getText(final String name) {
+        if (BUM_COMMA_MORE_KEYS.equals(name)) return sBumCommaMoreKeys;
         return KeyboardTextsTable.getText(name, mTextsTable);
     }
 
