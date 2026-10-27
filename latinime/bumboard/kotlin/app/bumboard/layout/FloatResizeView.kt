@@ -48,6 +48,18 @@ class FloatResizeView @JvmOverloads constructor(
     private var downX = 0f
     private var downY = 0f
     private var keysHeight = 0
+    /** The keyboard's exact size in pixels, updated while dragging. */
+    private val sizeLabel = TextView(context).apply {
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        setTextColor(palette.onPrimaryContainer)
+        gravity = Gravity.CENTER
+        setPadding(dp(12), dp(4), dp(12), dp(4))
+        background = GradientDrawable().apply {
+            cornerRadius = dp(14).toFloat()
+            setColor(palette.primaryContainer)
+        }
+    }
 
     init {
         setWillNotDraw(false)
@@ -67,6 +79,8 @@ class FloatResizeView @JvmOverloads constructor(
             }
             setOnClickListener { visibility = GONE }
         }, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        buttons.addView(sizeLabel, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT,
+            Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(16) })
         addView(buttons)
         visibility = GONE
     }
@@ -96,6 +110,7 @@ class FloatResizeView @JvmOverloads constructor(
         lp.topMargin = outline.top.toInt()
         lp.gravity = Gravity.TOP or Gravity.START
         buttons.layoutParams = lp
+        sizeLabel.text = context.getString(R.string.bum_resize_size_wh, lp.width, lp.height)
         invalidate()
     }
 

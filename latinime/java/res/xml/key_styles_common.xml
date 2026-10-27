@@ -59,7 +59,7 @@
         >
             <key-style
                 latin:styleName="shiftKeyStyle"
-                latin:keySpec="!icon/shift_key_shifted|!code/key_shift"
+                latin:keySpec="!icon/bum_shift_locked|!code/key_shift"
                 latin:backgroundType="stickyOn"
                 latin:parentStyle="baseForShiftKeyStyle" />
         </case>
@@ -151,6 +151,14 @@
         latin:styleName="toAlphaKeyStyle"
         latin:keySpec="!text/keylabel_to_alpha|!code/key_switch_alpha_symbol"
         latin:parentStyle="baseForLayoutSwitchKeyStyle" />
+    <!-- BUMBOARD: the number pad key on the symbols pages; the label shrinks evenly to fit
+         instead of being squeezed sideways. -->
+    <key-style
+        latin:styleName="bumNumpadKeyStyle"
+        latin:keySpec="1234|!code/key_bum_numpad"
+        latin:keyLabelFlags="preserveCase|followFunctionalTextColor|autoScale"
+        latin:keyActionFlags="noKeyPreview"
+        latin:backgroundType="functional" />
     <key-style
         latin:styleName="toMoreSymbolKeyStyle"
         latin:keySpec="!text/keylabel_to_more_symbol|!code/key_shift"

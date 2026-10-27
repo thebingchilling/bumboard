@@ -6,7 +6,6 @@ import android.util.TypedValue
 import android.view.View
 import android.view.inputmethod.InputMethodSubtype
 import app.bumboard.core.Annotation
-import app.bumboard.core.CantoneseRomanization
 import app.bumboard.core.InputMode
 import app.bumboard.rime.Candidate
 import app.bumboard.rime.Composition
@@ -266,9 +265,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         popup?.dismiss()
         val stripView = strip as? SuggestionStripView
         updateScriptKey(stripView)
-        updateBarHeight(stripView)
-        val bar = bar ?: return
         val candidates = composition?.candidates.orEmpty()
+        updateBarHeight(stripView, isActive && candidates.isNotEmpty())
+        val bar = bar ?: return
         if (!isActive || candidates.isEmpty()) {
             bar.setCandidates(emptyList(), null)
             bar.visibility = View.GONE
@@ -291,15 +290,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private fun candidateScale() = prefs.getFloat(PREF_CANDIDATE_SIZE, 1f).coerceIn(0.7f, 1.6f)
 
     /**
-     * On the Chinese keyboards the top bar is as tall as a candidate with its readings and one
-     * line of meaning (measured, at the candidate size setting), all the time, so nothing is
-     * cut off and it never jumps while typing; elsewhere it is the usual strip height.
+     * The top bar keeps the usual strip height (the same as on the English keyboards) and only
+     * grows while candidates show, to fit a candidate with its readings and one line of meaning
+     * (measured, at the candidate size setting). The keys at its edges stay at the bottom.
      */
-    private fun updateBarHeight(stripView: SuggestionStripView?) {
+    private fun updateBarHeight(stripView: SuggestionStripView?, candidates: Boolean) {
         val res = ime.resources
         val standard = res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
         val bar = bar
-        val height = if (!isActive || bar == null) standard
+        val height = if (!candidates || bar == null) standard
         else {
             bar.setScale(candidateScale())
             maxOf(standard, bar.heightFor(annotationLines()))
@@ -333,7 +332,6 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         if (!Readings.showReadings(prefs)) return CandidateBarView.Lines(0, false)
         val display = Readings.displayPrefs(prefs)
         var lines = 1
-        if (display.cantonese == CantoneseRomanization.Both && engine == "yue") lines++
         if (display.showOtherLanguage) lines++
         return CandidateBarView.Lines(lines, display.showMeaning)
     }

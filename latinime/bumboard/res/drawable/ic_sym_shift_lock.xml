@@ -1,0 +1,18 @@
+<!-- Caps lock: a filled arrow with a line under it. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:fillColor="@android:color/white"
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="60"
+      android:strokeLineJoin="round"
+      android:pathData="M480,130L150,470L340,470L340,670L620,670L620,470L810,470Z"/>
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="60"
+      android:strokeLineCap="round"
+      android:pathData="M340,820L620,820"/>
+</vector>

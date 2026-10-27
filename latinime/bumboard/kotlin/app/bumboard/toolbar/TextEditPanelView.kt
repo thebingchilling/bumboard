@@ -45,7 +45,7 @@ class TextEditPanelView @JvmOverloads constructor(
         setBackgroundColor(palette.surface)
         setPadding(dp(4), dp(4), dp(4), dp(4))
         // left, as Gboard lays it out: up on top, left / Select / right across the middle,
-        // down below, then start and end of line; Back in the bottom-left corner
+        // down below, then cut and start and end of line
         val left = LinearLayout(context).apply { orientation = VERTICAL }
         selectKey = label(R.string.bum_edit_select) { toggleSelect() }
         left.addView(row(
@@ -63,8 +63,9 @@ class TextEditPanelView @JvmOverloads constructor(
             icon(R.drawable.ic_sym_keyboard_arrow_down, R.string.bum_edit_down, repeats = true) { move(KeyEvent.KEYCODE_DPAD_DOWN) },
             View(context),
         ), rowParams())
+        // Back is on the bar above, with the panel's name (see show())
         left.addView(row(
-            BumPanels.backButton(context) { visibility = GONE },
+            icon(R.drawable.ic_sym_content_cut, R.string.bum_edit_cut) { menu(android.R.id.cut); setSelecting(false) },
             icon(R.drawable.ic_sym_first_page, R.string.bum_edit_line_start) { move(KeyEvent.KEYCODE_MOVE_HOME) },
             icon(R.drawable.ic_sym_last_page, R.string.bum_edit_line_end) { move(KeyEvent.KEYCODE_MOVE_END) },
         ), rowParams())
@@ -99,14 +100,22 @@ class TextEditPanelView @JvmOverloads constructor(
         setOnClickListener { action() }
     }
 
+    private fun toolbar(): ToolbarView? = rootView.findViewById(R.id.bum_toolbar)
+
     fun show() {
         setSelecting(false)
         visibility = VISIBLE
+        // the bar above shows Back and "Text editing" in place of the suggestions
+        toolbar()?.showTitle(R.string.bum_sc_text_edit) { visibility = GONE }
     }
 
     override fun setVisibility(visibility: Int) {
         if (visibility != VISIBLE) repeat.removeCallbacksAndMessages(null)
+        val wasVisible = this.visibility == VISIBLE
         super.setVisibility(visibility)
+        if (wasVisible && visibility != VISIBLE) {
+            toolbar()?.let { if (it.mode == ToolbarView.Mode.TITLE) it.mode = ToolbarView.Mode.NORMAL }
+        }
     }
 
     private fun toggleSelect() = setSelecting(!selecting)

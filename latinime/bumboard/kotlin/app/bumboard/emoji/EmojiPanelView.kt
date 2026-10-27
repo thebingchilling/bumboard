@@ -34,6 +34,7 @@ import com.android.inputmethod.latin.utils.ResourceUtils
  * one vertically scrolling grid with a header per category, category tabs that jump and follow
  * the scroll, recents, skin tones on long-press (two-person emoji included) and search.
  * Emoji are drawn with the bundled Noto Color Emoji font so new emoji show on older phones.
+ * Swipe sideways on the grid, or slide along the tabs, to move between categories.
  */
 class EmojiPanelView @JvmOverloads constructor(
     context: Context,
@@ -51,7 +52,29 @@ class EmojiPanelView @JvmOverloads constructor(
     private val adapter = Adapter()
     private val layoutManager = GridLayoutManager(context, 8)
     private val grid = RecyclerView(context)
-    private val tabs = LinearLayout(context)
+    /** The category tabs; sliding a finger along them moves through the categories. */
+    private val tabs = object : LinearLayout(context) {
+        override fun onInterceptTouchEvent(ev: MotionEvent) = true
+
+        @SuppressLint("ClickableViewAccessibility")
+        override fun onTouchEvent(ev: MotionEvent): Boolean {
+            when (ev.actionMasked) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                    for (i in 0 until childCount) {
+                        val child = getChildAt(i)
+                        if (ev.x >= child.left && ev.x < child.right) {
+                            val section = tabViews.indexOf(child)
+                            if (section >= 0 && section != currentSection) jumpTo(section)
+                            break
+                        }
+                    }
+                }
+            }
+            return true
+        }
+    }
+    /** The category the grid is showing. */
+    private var currentSection = 0
     /** One per section; null for recents, which has no tab (it is the top of the grid). */
     private val tabViews = mutableListOf<ImageView?>()
     private var sections: List<Section> = emptyList()
@@ -80,6 +103,7 @@ class EmojiPanelView @JvmOverloads constructor(
         }
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         pinchToResize()
+        swipeBetweenCategories()
         addView(bottomBar(), LayoutParams(LayoutParams.MATCH_PARENT, dp(50)))
     }
 
@@ -177,6 +201,45 @@ class EmojiPanelView @JvmOverloads constructor(
         })
     }
 
+    /** A sideways swipe on the grid goes to the next (left) or previous (right) category. */
+    private fun swipeBetweenCategories() {
+        val slop = android.view.ViewConfiguration.get(context).scaledTouchSlop
+        grid.addOnItemTouchListener(object : RecyclerView.SimpleOnItemTouchListener() {
+            private var downX = 0f
+            private var downY = 0f
+            private var sideways = false
+
+            override fun onInterceptTouchEvent(rv: RecyclerView, e: MotionEvent): Boolean {
+                when (e.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        downX = e.x
+                        downY = e.y
+                        sideways = false
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = kotlin.math.abs(e.x - downX)
+                        val dy = kotlin.math.abs(e.y - downY)
+                        if (e.pointerCount == 1 && rv.scrollState != RecyclerView.SCROLL_STATE_DRAGGING &&
+                            dx > slop * 2 && dx > dy * 2) {
+                            sideways = true
+                        }
+                    }
+                }
+                return sideways
+            }
+
+            override fun onTouchEvent(rv: RecyclerView, e: MotionEvent) {
+                if (e.actionMasked != MotionEvent.ACTION_UP) return
+                val dx = e.x - downX
+                if (sideways && kotlin.math.abs(dx) > dp(40)) {
+                    val next = (currentSection + if (dx < 0) 1 else -1).coerceIn(0, sections.lastIndex)
+                    if (next != currentSection) jumpTo(next)
+                }
+                sideways = false
+            }
+        })
+    }
+
     /** Width (and height) of one emoji cell, in pixels. */
     private var cellSize = 0
 
@@ -243,6 +306,7 @@ class EmojiPanelView @JvmOverloads constructor(
     }
 
     private fun selectTab(section: Int) {
+        currentSection = section
         tabViews.forEachIndexed { i, tab ->
             if (tab == null) return@forEachIndexed
             val selected = i == section

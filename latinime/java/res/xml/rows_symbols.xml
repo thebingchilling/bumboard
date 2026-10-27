@@ -52,9 +52,10 @@
             latin:keyWidth="fillRight"
             latin:visualInsetsLeft="1%p" />
     </Row>
+    <!-- BUMBOARD: no row-wide functional background, so the bottom row looks the same as
+         on the letters. -->
     <Row
         latin:keyWidth="10%p"
-        latin:backgroundType="functional"
     >
         <Key
             latin:keyStyle="toAlphaKeyStyle"

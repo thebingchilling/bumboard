@@ -18,6 +18,7 @@ import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.TextView
 import app.bumboard.core.Annotator
+import app.bumboard.core.CantoneseRomanization
 import app.bumboard.core.DisplayPrefs
 import app.bumboard.core.Headword
 import app.bumboard.core.Lang
@@ -168,8 +169,12 @@ class DictionaryPopup(private val ctx: Context) {
                 hw?.readings?.get(Lang.Mandarin)?.forEach { if (it !in this) add(it) }
             }.take(3)
             if (yue.isNotEmpty()) {
-                out += "Jyutping" to yue.joinToString("  ·  ")
-                out += "Yale" to yue.joinToString("  ·  ") { Annotator.yale(it, prefs.copy(yaleToneMarks = true)) }
+                // only the romanisation chosen in Settings, never both
+                out += if (prefs.cantonese == CantoneseRomanization.Yale) {
+                    "Yale" to yue.joinToString("  ·  ") { Annotator.yale(it, prefs.copy(yaleToneMarks = true)) }
+                } else {
+                    "Jyutping" to yue.joinToString("  ·  ")
+                }
             }
             if (cmn.isNotEmpty()) {
                 out += "Pinyin" to cmn.joinToString("  ·  ") {

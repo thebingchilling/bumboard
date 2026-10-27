@@ -49,7 +49,9 @@ const float ScoringParams::INSERTION_COST_SAME_CHAR = 0.5508f;
 const float ScoringParams::INSERTION_COST_PROXIMITY_CHAR = 0.674f;
 const float ScoringParams::INSERTION_COST_FIRST_CHAR = 0.639f;
 const float ScoringParams::TRANSPOSITION_COST = 0.5608f;
-const float ScoringParams::SPACE_SUBSTITUTION_COST = 0.33f;
+// BUMBOARD: a letter hit instead of the space bar ("thisvis" -> "this is") and a missed
+// space ("thisis") are corrected more readily, as on Gboard.
+const float ScoringParams::SPACE_SUBSTITUTION_COST = 0.26f;
 const float ScoringParams::SPACE_OMISSION_COST = 0.1f;
 const float ScoringParams::ADDITIONAL_PROXIMITY_COST = 0.37972f;
 const float ScoringParams::SUBSTITUTION_COST = 0.3806f;
@@ -59,7 +61,7 @@ const float ScoringParams::COST_FIRST_COMPLETION = 0.4836f;
 const float ScoringParams::COST_COMPLETION = 0.00624f;
 const float ScoringParams::HAS_PROXIMITY_TERMINAL_COST = 0.0683f;
 const float ScoringParams::HAS_EDIT_CORRECTION_TERMINAL_COST = 0.0362f;
-const float ScoringParams::HAS_MULTI_WORD_TERMINAL_COST = 0.3482f;
+const float ScoringParams::HAS_MULTI_WORD_TERMINAL_COST = 0.24f; // BUMBOARD: was 0.3482
 const float ScoringParams::TYPING_BASE_OUTPUT_SCORE = 1.0f;
 const float ScoringParams::TYPING_MAX_OUTPUT_SCORE_PER_INPUT = 0.1f;
 const float ScoringParams::NORMALIZED_SPATIAL_DISTANCE_THRESHOLD_FOR_EDIT = 0.095f;

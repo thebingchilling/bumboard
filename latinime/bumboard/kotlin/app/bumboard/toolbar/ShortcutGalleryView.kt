@@ -42,16 +42,26 @@ class ShortcutGalleryView @JvmOverloads constructor(
     private val grid = RecyclerView(context)
     private val adapter = Adapter()
     private var editing = false
+    /** Shown when every shortcut is on the bar. */
+    private val empty = TextView(context).apply {
+        setText(R.string.bum_gallery_all_on_bar)
+        setTextColor(palette.onSurfaceVariant)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        gravity = Gravity.CENTER
+        setPadding(dp(24), 0, dp(24), 0)
+        visibility = GONE
+    }
 
     init {
         isClickable = true
         setBackgroundColor(palette.surface)
         grid.layoutManager = GridLayoutManager(context, COLUMNS)
         grid.adapter = adapter
-        grid.setPadding(dp(8), dp(8), dp(8), dp(8))
+        grid.setPadding(dp(12), dp(12), dp(12), dp(12))
         grid.clipToPadding = false
         grid.setOnDragListener { _, event -> onDrag(event) }
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(empty, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         visibility = GONE
     }
 
@@ -81,12 +91,12 @@ class ShortcutGalleryView @JvmOverloads constructor(
         load()
     }
 
-    /** All shortcuts (bar ones first), or while editing only those not on the bar. */
+    /** The shortcuts not already on the bar (those are one tap away there). */
     private fun load() {
         val bar = store.toolbar()
-        val rest = store.order().filter { it !in bar }
-        adapter.items = (if (editing) rest else bar + rest).toMutableList()
+        adapter.items = store.order().filter { it !in bar }.toMutableList()
         adapter.notifyDataSetChanged()
+        empty.visibility = if (adapter.items.isEmpty()) VISIBLE else GONE
     }
 
     /** Saves the bar (unchanged) and the grid's order, after a drag within or into the grid. */
@@ -141,24 +151,25 @@ class ShortcutGalleryView @JvmOverloads constructor(
         override fun getItemCount() = items.size
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            // Gboard-style tile: the icon on a rounded key-coloured square, its name underneath
             val tile = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER_HORIZONTAL
-                setPadding(dp(4), dp(8), dp(4), dp(8))
+                setPadding(dp(4), dp(6), dp(4), dp(6))
                 layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                background = context.getDrawable(R.drawable.bum_m3_suggestion)
                 addView(ImageView(context).apply {
                     id = ICON
                     scaleType = ImageView.ScaleType.CENTER
-                }, LinearLayout.LayoutParams(dp(56), dp(44)))
+                    elevation = dp(1).toFloat()
+                }, LinearLayout.LayoutParams(dp(56), dp(56)).apply { bottomMargin = dp(6) })
                 addView(TextView(context).apply {
                     id = LABEL
                     setTextColor(palette.onSurface)
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                    typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
                     gravity = Gravity.CENTER
                     maxLines = 2
                     ellipsize = TextUtils.TruncateAt.END
-                    setPadding(0, dp(4), 0, 0)
                 })
             }
             return object : RecyclerView.ViewHolder(tile) {}
@@ -170,11 +181,16 @@ class ShortcutGalleryView @JvmOverloads constructor(
             tile.alpha = 1f
             val icon = tile.findViewById<ImageView>(ICON)
             icon.setImageResource(sc.icon)
-            icon.imageTintList = ColorStateList.valueOf(palette.onSecondaryContainer)
-            icon.background = GradientDrawable().apply {
-                cornerRadius = dp(16).toFloat()
-                setColor(palette.secondaryContainer)
-            }
+            icon.imageTintList = ColorStateList.valueOf(palette.onSurface)
+            icon.background = android.graphics.drawable.RippleDrawable(
+                ColorStateList.valueOf(palette.surfaceContainerPressed),
+                GradientDrawable().apply {
+                    cornerRadius = dp(18).toFloat()
+                    setColor(palette.surfaceContainer)
+                },
+                null,
+            )
+            icon.duplicateParentStateEnabled = true
             tile.findViewById<TextView>(LABEL).setText(sc.label)
             tile.contentDescription = context.getString(sc.label)
             tile.setOnClickListener {

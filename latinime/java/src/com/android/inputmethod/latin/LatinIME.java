@@ -606,6 +606,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     @Override
     public void onCreate() {
         app.bumboard.CrashLog.install(this);
+        // BUMBOARD: English (US or UK) and Mandarin only, out of the box.
+        app.bumboard.settings.DefaultLanguages.removeOldInputStyles(this);
         Settings.init(this);
         DebugFlags.init(PreferenceManager.getDefaultSharedPreferences(this));
         RichInputMethodManager.init(this);
@@ -974,6 +976,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
     @Override
     public void onStartInputView(final EditorInfo editorInfo, final boolean restarting) {
+        // BUMBOARD: the first time BumBoard is in use, only English and Mandarin are on.
+        app.bumboard.settings.DefaultLanguages.applyOnce(this);
         mHandler.onStartInputView(editorInfo, restarting);
         mStatsUtilsManager.onStartInputView();
     }

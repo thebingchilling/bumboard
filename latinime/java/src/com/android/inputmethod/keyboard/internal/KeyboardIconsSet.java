@@ -97,7 +97,12 @@ public final class KeyboardIconsSet {
     private static final app.bumboard.toolbar.Shortcut[] BUM_SHORTCUTS =
             app.bumboard.toolbar.Shortcut.values();
     private static final int NUM_THEME_ICONS = NAMES_AND_ATTR_IDS.length / 2;
-    private static int NUM_ICONS = NUM_THEME_ICONS + BUM_SHORTCUTS.length;
+    // BUMBOARD: BumBoard's own key icons, also loaded straight from their drawables.
+    private static final Object[] BUM_EXTRA_ICONS = {
+        "bum_shift_locked", R.drawable.ic_sym_shift_lock,
+    };
+    private static int NUM_ICONS = NUM_THEME_ICONS + BUM_SHORTCUTS.length
+            + BUM_EXTRA_ICONS.length / 2;
     private static final String[] ICON_NAMES = new String[NUM_ICONS];
     private final Drawable[] mIcons = new Drawable[NUM_ICONS];
     private final int[] mIconResourceIds = new int[NUM_ICONS];
@@ -120,6 +125,12 @@ public final class KeyboardIconsSet {
         }
         for (final app.bumboard.toolbar.Shortcut shortcut : BUM_SHORTCUTS) {
             final String name = bumShortcutIconName(shortcut);
+            sNameToIdsMap.put(name, iconId);
+            ICON_NAMES[iconId] = name;
+            iconId++;
+        }
+        for (int i = 0; i < BUM_EXTRA_ICONS.length; i += 2) {
+            final String name = (String)BUM_EXTRA_ICONS[i];
             sNameToIdsMap.put(name, iconId);
             ICON_NAMES[iconId] = name;
             iconId++;
@@ -148,6 +159,14 @@ public final class KeyboardIconsSet {
             setDefaultBounds(icon);
             mIcons[NUM_THEME_ICONS + i] = icon;
             mIconResourceIds[NUM_THEME_ICONS + i] = resId;
+        }
+        for (int i = 0; i < BUM_EXTRA_ICONS.length; i += 2) {
+            final int resId = (Integer)BUM_EXTRA_ICONS[i + 1];
+            final Drawable icon = keyboardAttrs.getResources().getDrawable(resId, null);
+            setDefaultBounds(icon);
+            final int iconId = NUM_THEME_ICONS + BUM_SHORTCUTS.length + i / 2;
+            mIcons[iconId] = icon;
+            mIconResourceIds[iconId] = resId;
         }
     }
 

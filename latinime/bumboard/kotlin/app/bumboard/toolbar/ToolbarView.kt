@@ -30,13 +30,15 @@ import com.android.inputmethod.latin.R
  *   edit button.
  * - Editing: the shortcuts on the bar, which take shortcuts dragged up from the gallery and can
  *   be dragged back down into it or along the bar; a tick ends editing.
+ * - Title: a panel over the keys (text editing) is open; Back and the panel's name, like the
+ *   gallery's title, in place of the suggestions.
  */
 class ToolbarView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
 ) : HorizontalScrollView(context, attrs), SharedPreferences.OnSharedPreferenceChangeListener {
 
-    enum class Mode { NORMAL, GALLERY, EDIT }
+    enum class Mode { NORMAL, GALLERY, EDIT, TITLE }
 
     @Suppress("DEPRECATION")
     private val prefs = PreferenceManager.getDefaultSharedPreferences(context)
@@ -60,8 +62,20 @@ class ToolbarView @JvmOverloads constructor(
             if (field != value) {
                 field = value
                 rebuild()
+                // the strip hides its suggestions and mic while a title shows here
+                (parent as? com.android.inputmethod.latin.suggestions.SuggestionStripView)?.bumRefresh()
             }
         }
+
+    private var title = 0
+    private var onBack: () -> Unit = {}
+
+    /** Shows Back and [title] for an open panel; Back runs [back]. NORMAL mode ends it. */
+    fun showTitle(title: Int, back: () -> Unit) {
+        this.title = title
+        onBack = back
+        if (mode == Mode.TITLE) rebuild() else mode = Mode.TITLE
+    }
 
     init {
         isHorizontalScrollBarEnabled = false
@@ -88,22 +102,22 @@ class ToolbarView @JvmOverloads constructor(
 
     private fun rebuild() {
         row.removeAllViews()
+        if (mode == Mode.TITLE) {
+            row.addView(button(R.drawable.ic_sym_arrow_back, R.string.bum_back, highlighted = true) { onBack() })
+            row.addView(titleText(title), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+            return
+        }
         row.addView(button(R.drawable.ic_sym_grid_view, R.string.bum_sc_gallery, highlighted = mode != Mode.NORMAL) { onGallery() })
         when (mode) {
             Mode.NORMAL -> store.toolbar().forEach { sc ->
                 row.addView(button(sc.icon, sc.label) { bumHost()?.bumRunShortcut(sc) })
             }
             Mode.GALLERY -> {
-                row.addView(TextView(context).apply {
-                    setText(R.string.bum_gallery_title)
-                    setTextColor(palette.onSurface)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-                    typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-                    gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(8), 0, 0, 0)
-                }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+                row.addView(titleText(R.string.bum_gallery_title),
+                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
                 row.addView(button(R.drawable.ic_sym_edit, R.string.bum_gallery_edit) { onEditToggle() })
             }
+            Mode.TITLE -> Unit
             Mode.EDIT -> {
                 store.toolbar().forEach { sc ->
                     row.addView(button(sc.icon, sc.label) {}.apply {
@@ -121,6 +135,15 @@ class ToolbarView @JvmOverloads constructor(
                 row.addView(button(R.drawable.ic_sym_check, R.string.bum_resize_done) { onEditToggle() })
             }
         }
+    }
+
+    private fun titleText(text: Int) = TextView(context).apply {
+        setText(text)
+        setTextColor(palette.onSurface)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(8), 0, 0, 0)
     }
 
     /** Where a dragged shortcut came from. */

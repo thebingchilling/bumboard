@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The key preview grows up out of the key and fades in, like Gboard's. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <objectAnimator
+        android:propertyName="scaleX"
+        android:duration="90"
+        android:valueFrom="0.75"
+        android:valueTo="1.00" />
+    <objectAnimator
+        android:propertyName="scaleY"
+        android:duration="90"
+        android:valueFrom="0.6"
+        android:valueTo="1.00" />
+    <objectAnimator
+        android:propertyName="alpha"
+        android:duration="60"
+        android:valueFrom="0.0"
+        android:valueTo="1.0" />
+</set>

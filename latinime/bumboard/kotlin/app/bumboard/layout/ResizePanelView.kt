@@ -31,6 +31,18 @@ class ResizePanelView @JvmOverloads constructor(
     private val outline = FrameLayout(context)
     private val topHandle = View(context)
     private val sideHandle = View(context)
+    /** The keys' exact size in pixels, updated while dragging. */
+    private val sizeLabel = TextView(context).apply {
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        setTextColor(palette.onPrimaryContainer)
+        gravity = Gravity.CENTER
+        setPadding(dp(12), dp(4), dp(12), dp(4))
+        background = GradientDrawable().apply {
+            cornerRadius = dp(14).toFloat()
+            setColor(palette.primaryContainer)
+        }
+    }
     private var startHeight = 0
     private var startWidth = 0
     private var downY = 0f
@@ -49,6 +61,8 @@ class ResizePanelView @JvmOverloads constructor(
         addView(outline, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT, Gravity.BOTTOM or Gravity.START))
         topHandle.background = pill()
         outline.addView(topHandle, LayoutParams(dp(48), dp(6), Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(6) })
+        outline.addView(sizeLabel, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT,
+            Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(20) })
         outline.addView(BumPanels.backButton(context) { visibility = GONE },
             LayoutParams(dp(56), dp(56), Gravity.BOTTOM or Gravity.START))
         sideHandle.background = pill()
@@ -114,6 +128,11 @@ class ResizePanelView @JvmOverloads constructor(
         lp.height = (startHeight * heightFactor).toInt()
         lp.width = (startWidth * widthFactor).toInt()
         outline.layoutParams = lp
+        sizeLabel.text = if (sideHandle.visibility == VISIBLE) {
+            context.getString(R.string.bum_resize_size_wh, lp.width, lp.height)
+        } else {
+            context.getString(R.string.bum_resize_size_h, lp.height)
+        }
     }
 
     private fun done() {

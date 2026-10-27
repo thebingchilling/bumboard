@@ -70,6 +70,10 @@ import javax.annotation.Nonnull;
  * This class manages the input logic.
  */
 public final class InputLogic {
+    // BUMBOARD: LatinIME's revert-on-backspace (autocorrection, double-space period, swapped
+    // punctuation) is off; backspace always deletes a single character.
+    private static final boolean BUM_REVERT_ON_BACKSPACE = false;
+
     private static final String TAG = InputLogic.class.getSimpleName();
 
     // TODO : Remove this member when we can.
@@ -319,13 +323,25 @@ public final class InputLogic {
             return inputTransaction;
         }
 
+        final boolean bumWasBatchMode = mWordComposer.isBatchMode();
         commitChosenWord(settingsValues, suggestion, LastComposedWord.COMMIT_TYPE_MANUAL_PICK,
                 LastComposedWord.NOT_A_SEPARATOR);
+        // BUMBOARD: like Gboard, a picked suggestion is followed by a real space straight away
+        // (unless one already follows the cursor); punctuation typed next swaps in before it
+        // ("word ," becomes "word, ") through the usual weak-space handling.
+        final boolean bumSpace = !bumWasBatchMode
+                && settingsValues.shouldInsertSpacesAutomatically()
+                && settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces
+                && !mConnection.textBeforeCursorLooksLikeURL()
+                && !bumSpaceFollowsCursor();
+        if (bumSpace) {
+            sendKeyCodePoint(settingsValues, Constants.CODE_SPACE);
+        }
         mConnection.endBatchEdit();
         // Don't allow cancellation of manual pick
         mLastComposedWord.deactivate();
         // Space state must be updated before calling updateShiftState
-        mSpaceState = SpaceState.PHANTOM;
+        mSpaceState = bumSpace ? SpaceState.WEAK : SpaceState.PHANTOM;
         inputTransaction.requireShiftUpdate(InputTransaction.SHIFT_UPDATE_NOW);
 
         // If we're not showing the "Touch again to save", then update the suggestion strip.
@@ -1035,7 +1051,10 @@ public final class InputLogic {
             }
             inputTransaction.setRequiresUpdateSuggestions();
         } else {
-            if (mLastComposedWord.canRevertCommit()) {
+            // BUMBOARD: backspace deletes one character, as on Gboard: it never undoes an
+            // autocorrection together with its space, nor a double-space period or a swapped
+            // space. Backspacing to the end of a word picks it up again for suggestions.
+            if (BUM_REVERT_ON_BACKSPACE && mLastComposedWord.canRevertCommit()) {
                 final String lastComposedWord = mLastComposedWord.mTypedWord;
                 revertCommit(inputTransaction, inputTransaction.mSettingsValues);
                 StatsUtils.onRevertAutoCorrect();
@@ -1068,7 +1087,9 @@ public final class InputLogic {
                 // reverting any autocorrect at this point. So we can safely return.
                 return;
             }
-            if (SpaceState.DOUBLE == inputTransaction.mSpaceState) {
+            if (!BUM_REVERT_ON_BACKSPACE) {
+                cancelDoubleSpacePeriodCountdown();
+            } else if (SpaceState.DOUBLE == inputTransaction.mSpaceState) {
                 cancelDoubleSpacePeriodCountdown();
                 if (mConnection.revertDoubleSpacePeriod(
                         inputTransaction.mSettingsValues.mSpacingAndPunctuations)) {
@@ -2017,6 +2038,12 @@ public final class InputLogic {
      *
      * @param settingsValues the current values of the settings.
      */
+    // BUMBOARD: whether the text right after the cursor is already a space.
+    private boolean bumSpaceFollowsCursor() {
+        final CharSequence after = mConnection.getTextAfterCursor(1, 0);
+        return after != null && after.length() > 0 && Character.isWhitespace(after.charAt(0));
+    }
+
     private void insertAutomaticSpaceIfOptionsAndTextAllow(final SettingsValues settingsValues) {
         if (settingsValues.shouldInsertSpacesAutomatically()
                 && settingsValues.mSpacingAndPunctuations.mCurrentLanguageHasSpaces

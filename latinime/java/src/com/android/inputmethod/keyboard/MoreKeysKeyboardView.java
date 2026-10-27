@@ -141,6 +141,15 @@ public class MoreKeysKeyboardView extends KeyboardView implements MoreKeysPanel 
         mOriginX = x + container.getPaddingLeft();
         mOriginY = y + container.getPaddingTop();
         controller.onShowMoreKeysPanel(this);
+        // BUMBOARD: the popup grows up out of the key and fades in, like Gboard's.
+        container.setPivotX(Math.max(0, Math.min(container.getMeasuredWidth(),
+                pointX + CoordinateUtils.x(mCoordinates) - panelX)));
+        container.setPivotY(container.getMeasuredHeight());
+        container.setAlpha(0f);
+        container.setScaleX(0.85f);
+        container.setScaleY(0.85f);
+        container.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(120)
+                .setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
         final MoreKeysKeyboardAccessibilityDelegate accessibilityDelegate = mAccessibilityDelegate;
         if (accessibilityDelegate != null
                 && AccessibilityUtils.getInstance().isAccessibilityEnabled()) {

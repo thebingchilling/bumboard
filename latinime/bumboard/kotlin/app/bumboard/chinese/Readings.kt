@@ -65,10 +65,11 @@ object Readings {
 
     /** What to show under candidates, from the Chinese settings page. */
     fun displayPrefs(prefs: SharedPreferences) = DisplayPrefs(
-        cantonese = when (prefs.getString(PREF_ROMANIZATION, "jyutping")) {
-            "yale" -> CantoneseRomanization.Yale
-            "both" -> CantoneseRomanization.Both
-            else -> CantoneseRomanization.Jyutping
+        // one romanisation everywhere: the one Cantonese is typed in (Jyutping or Yale)
+        cantonese = if (prefs.getString(ChineseInput.PREF_CANTONESE_INPUT, "jyutping") == "yale") {
+            CantoneseRomanization.Yale
+        } else {
+            CantoneseRomanization.Jyutping
         },
         showOtherLanguage = prefs.getBoolean(PREF_OTHER_LANGUAGE, false),
         showMeaning = prefs.getBoolean(PREF_MEANING, true),
@@ -78,7 +79,6 @@ object Readings {
     fun showReadings(prefs: SharedPreferences) = prefs.getBoolean(PREF_SHOW_READINGS, true)
 
     const val PREF_SHOW_READINGS = "bum_show_readings"
-    const val PREF_ROMANIZATION = "bum_romanization"
     const val PREF_OTHER_LANGUAGE = "bum_other_language"
     const val PREF_MEANING = "bum_show_meaning"
 }

@@ -8,6 +8,8 @@
 -->
 <resources>
     <style name="KeyboardIcons.BumM3" parent="KeyboardIcons.LXX_Light">
+        <item name="iconShiftKey">@drawable/ic_sym_shift</item>
+        <item name="iconShiftKeyShifted">@drawable/ic_sym_shift_filled</item>
         <item name="iconDeleteKey">@drawable/ic_sym_backspace</item>
         <item name="iconLanguageSwitchKey">@drawable/ic_sym_language</item>
         <item name="iconEmojiActionKey">@drawable/ic_sym_mood</item>
@@ -45,11 +47,19 @@
         <item name="themeId">BumFlat</item>
         <!-- a slim margin under the bottom row, right above the navigation bar -->
         <item name="keyboardBottomPadding">1.2%p</item>
+        <!-- Gboard-like spacing: taller keys with slimmer gaps between the rows -->
+        <item name="keyboardTopPadding">1.5%p</item>
+        <item name="verticalGap">3.6%p</item>
+        <item name="horizontalGap">1.5%p</item>
     </style>
     <style name="Keyboard.BumM3.Raised" parent="Keyboard">
         <item name="themeId">BumRaised</item>
         <!-- a slim margin under the bottom row, right above the navigation bar -->
         <item name="keyboardBottomPadding">1.2%p</item>
+        <!-- Gboard-like spacing: taller keys with slimmer gaps between the rows -->
+        <item name="keyboardTopPadding">1.5%p</item>
+        <item name="verticalGap">3.6%p</item>
+        <item name="horizontalGap">1.5%p</item>
     </style>
 
     <style name="KeyboardView.BumM3" parent="KeyboardView.LXX">
@@ -65,6 +75,7 @@
         <item name="keyShiftedLetterHintInactivatedColor">@color/bum_m3_on_key_variant</item>
         <item name="keyShiftedLetterHintActivatedColor">@color/bum_m3_on_key</item>
         <item name="keyPreviewTextColor">@color/bum_m3_on_key</item>
+        <item name="keyPreviewTextRatio">52%</item>
         <item name="bumIconColor">@color/bum_m3_on_key</item>
         <item name="bumFunctionalIconColor">@color/bum_m3_on_key_functional</item>
         <item name="bumActionColor">@color/bum_m3_on_primary</item>
@@ -73,16 +84,18 @@
     <style name="MainKeyboardView.BumM3" parent="KeyboardView.BumM3">
         <item name="moreKeysKeyboardForActionLayout">@layout/more_keys_keyboard_for_action_lxx</item>
         <item name="keyPreviewBackground">@drawable/bum_m3_key_preview</item>
-        <item name="keyPreviewHeight">@dimen/config_key_preview_height_lxx</item>
-        <item name="keyPreviewOffset">@dimen/config_key_preview_offset_lxx</item>
-        <item name="keyPreviewShowUpAnimator">@anim/key_preview_show_up_lxx</item>
-        <item name="keyPreviewDismissAnimator">@anim/key_preview_dismiss_lxx</item>
+        <item name="keyPreviewHeight">@dimen/bum_key_preview_height</item>
+        <item name="keyPreviewOffset">@dimen/bum_key_preview_offset</item>
+        <item name="keyPreviewShowUpAnimator">@anim/bum_key_preview_show</item>
+        <item name="keyPreviewDismissAnimator">@anim/bum_key_preview_dismiss</item>
         <item name="gestureFloatingPreviewTextColor">@color/bum_m3_on_key</item>
         <item name="gestureFloatingPreviewColor">@color/bum_m3_surface_high</item>
         <item name="gestureTrailColor">@color/bum_m3_primary</item>
         <item name="slidingKeyInputPreviewColor">@color/bum_m3_sliding_preview</item>
-        <item name="languageOnSpacebarTextColor">@color/bum_m3_on_key_variant</item>
+        <item name="languageOnSpacebarTextColor">@color/bum_m3_on_key</item>
         <item name="languageOnSpacebarTextShadowRadius">-1.0</item>
+        <!-- the language name stays fully dark, like Gboard's -->
+        <item name="languageOnSpacebarFinalAlpha">255</item>
     </style>
 
     <style name="MoreKeysKeyboard.BumM3.Flat" parent="Keyboard.BumM3.Flat">

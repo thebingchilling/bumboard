@@ -110,9 +110,10 @@ public final class KeyPreviewChoreographer {
         keyPreviewView.measure(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         mParams.setGeometry(keyPreviewView);
-        final int previewWidth = keyPreviewView.getMeasuredWidth();
-        final int previewHeight = mParams.mPreviewHeight;
         final int keyDrawWidth = key.getDrawWidth();
+        // BUMBOARD: the preview is at least as wide as its key, like Gboard's.
+        final int previewWidth = Math.max(keyPreviewView.getMeasuredWidth(), keyDrawWidth);
+        final int previewHeight = mParams.mPreviewHeight;
         // The key preview is horizontally aligned with the center of the visible part of the
         // parent key. If it doesn't fit in this {@link KeyboardView}, it is moved inward to fit and
         // the left/right background is used if such background is specified.

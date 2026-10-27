@@ -17,6 +17,7 @@
     <!-- Shortcuts gallery -->
     <string name="bum_gallery_title">Shortcuts</string>
     <string name="bum_gallery_edit">Edit</string>
+    <string name="bum_gallery_all_on_bar">Every shortcut is on the bar. Tap Edit to change which ones are there.</string>
 
     <!-- Text editing -->
     <string name="bum_edit_select">Select</string>
@@ -37,6 +38,9 @@
     <string name="bum_float_dock">Dock keyboard</string>
     <string name="bum_resize_reset">Reset</string>
     <string name="bum_resize_done">Done</string>
+    <!-- The keyboard's size while resizing, in pixels. -->
+    <string name="bum_resize_size_h">Height %1$d px</string>
+    <string name="bum_resize_size_wh">%1$d × %2$d px</string>
 
     <!-- Number pad -->
     <string name="bum_numpad_space">Space</string>

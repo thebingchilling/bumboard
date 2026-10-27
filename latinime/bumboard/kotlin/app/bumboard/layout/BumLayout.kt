@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.preference.PreferenceManager
 import app.bumboard.toolbar.Shortcut
+import app.bumboard.toolbar.ShortcutStore
 
 /**
  * How the keyboard is laid out: normal, one-handed (narrower, against one side) or floating
@@ -48,9 +49,13 @@ class BumLayout private constructor(private val prefs: SharedPreferences) {
 
     /**
      * The shortcuts in the comma's popup, after Settings (which is always first). By default
-     * one-handed mode and whichever of emoji and next language has no key beside the comma.
+     * one-handed mode and whichever of emoji and next language has no key beside the comma;
+     * shortcuts already on the bar above the keys are left out.
      */
-    fun commaMenu(): List<Shortcut> {
+    fun commaMenu(): List<Shortcut> = chosenCommaMenu().filter { it !in ShortcutStore(prefs).toolbar() }
+
+    /** The comma popup as chosen in Settings, before leaving out what is on the bar. */
+    fun chosenCommaMenu(): List<Shortcut> {
         val saved = prefs.getString(PREF_COMMA_MENU, null)
         if (saved != null) return saved.split(',').mapNotNull { Shortcut.byId(it) }.filter { it != Shortcut.SETTINGS }
         return buildList {

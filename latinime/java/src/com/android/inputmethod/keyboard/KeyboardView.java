@@ -459,7 +459,17 @@ public class KeyboardView extends View {
                 paint.clearShadowLayer();
             }
             blendAlpha(paint, params.mAnimAlpha);
-            canvas.drawText(label, 0, label.length(), labelX, labelBaseline, paint);
+            // BUMBOARD: full-width CJK punctuation (，。？) sits in a corner of its em box;
+            // centre its ink on the key instead so it looks like the other labels.
+            if (isBumFullWidthMark(label) && paint.getTextAlign() == Align.CENTER) {
+                paint.getTextBounds(label, 0, label.length(), mBumInkBounds);
+                paint.setTextAlign(Align.LEFT);
+                canvas.drawText(label, 0, label.length(),
+                        labelX - mBumInkBounds.exactCenterX(), labelBaseline, paint);
+                paint.setTextAlign(Align.CENTER);
+            } else {
+                canvas.drawText(label, 0, label.length(), labelX, labelBaseline, paint);
+            }
             // Turn off drop shadow and reset x-scale.
             paint.clearShadowLayer();
             paint.setTextScaleX(1.0f);
@@ -552,6 +562,17 @@ public class KeyboardView extends View {
                 - TypefaceUtils.getReferenceCharWidth(paint) / 2.0f;
         final float hintY = keyHeight - mKeyPopupHintLetterPadding;
         canvas.drawText(mKeyPopupHintLetter, hintX, hintY, paint);
+    }
+
+    private final Rect mBumInkBounds = new Rect();
+
+    /** A single full-width CJK punctuation mark (U+3000-303F, U+FF00-FF65). */
+    public static boolean isBumFullWidthMark(@Nullable final String label) {
+        if (label == null || label.isEmpty() || label.length() > 2) return false;
+        final char c = label.charAt(0);
+        return (c >= '\u3000' && c <= '\u303F') || (c >= '\uFF00' && c <= '\uFF65')
+                || c == '\u2026' || c == '\u2014' || c == '\u201C' || c == '\u201D'
+                || c == '\u2018' || c == '\u2019';
     }
 
     private int bumIconTint(@Nonnull final Key key) {

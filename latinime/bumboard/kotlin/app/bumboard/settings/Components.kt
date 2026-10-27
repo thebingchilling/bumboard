@@ -122,12 +122,23 @@ fun NavRow(shape: Shape, title: String, summary: String? = null, @DrawableRes ic
 }
 
 @Composable
-fun SwitchRow(shape: Shape, title: String, summary: String? = null, checked: Boolean, onChange: (Boolean) -> Unit) {
+fun SwitchRow(shape: Shape, title: String, summary: String? = null, checked: Boolean, onChange: (Boolean) -> Unit) =
+    IconSwitchRow(shape, title, summary, checked, null, onChange)
+
+/** A [SwitchRow] with an icon badge in front. */
+@Composable
+fun IconSwitchRow(
+    shape: Shape, title: String, summary: String?, checked: Boolean,
+    @DrawableRes icon: Int?, onChange: (Boolean) -> Unit,
+) {
     RowSurface(shape, { onChange(!checked) }) {
         ListItem(
             headlineContent = { Text(title) },
             supportingContent = if (summary != null) {
                 { Text(summary) }
+            } else null,
+            leadingContent = if (icon != null) {
+                { IconBadge(icon) }
             } else null,
             trailingContent = { Switch(checked = checked, onCheckedChange = onChange) },
             colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -136,7 +147,12 @@ fun SwitchRow(shape: Shape, title: String, summary: String? = null, checked: Boo
 }
 
 @Composable
-fun <T> ChoiceRow(shape: Shape, title: String, summary: String? = null, options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit) {
+fun <T> ChoiceRow(
+    shape: Shape, title: String, summary: String? = null, options: List<Pair<T, String>>, selected: T,
+    /** An icon for each option (shown before its label), or null for text only. */
+    @DrawableRes icons: List<Int>? = null,
+    onSelect: (T) -> Unit,
+) {
     RowSurface(shape, null) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
@@ -150,6 +166,14 @@ fun <T> ChoiceRow(shape: Shape, title: String, summary: String? = null, options:
                         selected = value == selected,
                         onClick = { onSelect(value) },
                         shape = SegmentedButtonDefaults.itemShape(i, options.size),
+                        icon = {
+                            val res = icons?.getOrNull(i)
+                            if (res != null) {
+                                Icon(painterResource(res), contentDescription = null, modifier = Modifier.size(18.dp))
+                            } else {
+                                SegmentedButtonDefaults.Icon(value == selected)
+                            }
+                        },
                     ) { Text(label, maxLines = 1) }
                 }
             }

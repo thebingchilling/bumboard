@@ -223,7 +223,20 @@ class CandidateBarView @JvmOverloads constructor(
         const val READING_SP = 11.5f
         const val MEANING_SP = 10.5f
 
-        /** Whether the phone's fonts can draw [text] (no empty boxes). */
-        fun renderable(text: String): Boolean = text.isNotEmpty() && glyphs.hasGlyph(text)
+        /**
+         * Whether the phone's fonts can draw [text] (no empty boxes). Paint.hasGlyph takes one
+         * grapheme at a time (a whole word is always "missing"), so each character is checked.
+         */
+        fun renderable(text: String): Boolean {
+            if (text.isEmpty()) return false
+            var i = 0
+            while (i < text.length) {
+                val cp = text.codePointAt(i)
+                val n = Character.charCount(cp)
+                if (!Character.isWhitespace(cp) && !glyphs.hasGlyph(text.substring(i, i + n))) return false
+                i += n
+            }
+            return true
+        }
     }
 }

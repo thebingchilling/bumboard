@@ -498,9 +498,6 @@ private fun ChinesePage() {
         prefs.getString(ChineseInput.PREF_CANTONESE_INPUT, null) ?: "jyutping"
     }
     val showReadings = prefs.boolPref(Readings.PREF_SHOW_READINGS) { Readings.showReadings(prefs) }
-    val romanization = prefs.stringPref(Readings.PREF_ROMANIZATION) {
-        prefs.getString(Readings.PREF_ROMANIZATION, null) ?: "jyutping"
-    }
     val otherLanguage = prefs.boolPref(Readings.PREF_OTHER_LANGUAGE) {
         prefs.getBoolean(Readings.PREF_OTHER_LANGUAGE, false)
     }
@@ -544,20 +541,9 @@ private fun ChinesePage() {
         }
         if (showReadings.value) {
             row {
-                ChoiceRow(
-                    it, stringResource(R.string.bum_cantonese_reading),
-                    options = listOf(
-                        "jyutping" to stringResource(R.string.bum_jyutping),
-                        "yale" to stringResource(R.string.bum_yale),
-                        "both" to stringResource(R.string.bum_both),
-                    ),
-                    selected = romanization.value,
-                    onSelect = romanization::set,
-                )
-            }
-            row {
                 SwitchRow(
-                    it, stringResource(R.string.bum_other_language), stringResource(R.string.bum_other_language_summary),
+                    it, stringResource(R.string.bum_other_language), stringResource(R.string.bum_other_language_summary,
+                        stringResource(if (cantonese.value == "yale") R.string.bum_yale else R.string.bum_jyutping)),
                     otherLanguage.value, otherLanguage::set,
                 )
             }
@@ -587,7 +573,7 @@ private fun ChinesePage() {
                     "peek" to stringResource(R.string.bum_pref_dictionary_peek),
                     "pin" to stringResource(R.string.bum_pref_dictionary_pin),
                 ),
-                dictionaryHold.value, dictionaryHold::set,
+                dictionaryHold.value, onSelect = dictionaryHold::set,
             )
         }
     }
@@ -637,7 +623,9 @@ private fun PreferencesPage() {
                     "language" to stringResource(R.string.bum_pref_comma_key_language),
                     "none" to stringResource(R.string.bum_pref_comma_key_none),
                 ),
-                commaKey.value, commaKey::set,
+                commaKey.value,
+                icons = listOf(R.drawable.ic_sym_mood, R.drawable.ic_sym_language, R.drawable.ic_sym_close),
+                onSelect = commaKey::set,
             )
         }
     }
@@ -659,12 +647,12 @@ private fun PreferencesPage() {
 private fun CommaMenuGroup(commaKey: String) {
     val context = LocalContext.current
     val layout = remember(commaKey) { BumLayout.get(context) }
-    var chosen by remember(commaKey) { mutableStateOf(layout.commaMenu()) }
+    var chosen by remember(commaKey) { mutableStateOf(layout.chosenCommaMenu()) }
     Group(stringResource(R.string.bum_pref_comma_menu)) {
-        row { TextRow(it, stringResource(R.string.bum_sc_settings), stringResource(R.string.bum_pref_comma_menu_settings)) }
+        row { NavRow(it, stringResource(R.string.bum_sc_settings), stringResource(R.string.bum_pref_comma_menu_settings), R.drawable.ic_sym_settings) {} }
         Shortcut.entries.filter { it != Shortcut.SETTINGS }.forEach { sc ->
             row {
-                SwitchRow(it, stringResource(sc.label), null, sc in chosen) { on ->
+                IconSwitchRow(it, stringResource(sc.label), null, sc in chosen, sc.icon) { on ->
                     chosen = if (on) Shortcut.entries.filter { e -> e in chosen || e == sc } else chosen - sc
                     layout.setCommaMenu(chosen)
                 }
@@ -711,7 +699,7 @@ private fun ThemePage() {
                     "one_handed" to stringResource(R.string.bum_pref_layout_one_handed),
                     "floating" to stringResource(R.string.bum_pref_layout_floating),
                 ),
-                mode.value, mode::set,
+                mode.value, onSelect = mode::set,
             )
         }
         row {

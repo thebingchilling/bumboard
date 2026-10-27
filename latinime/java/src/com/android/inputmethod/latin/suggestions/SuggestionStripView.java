@@ -270,14 +270,21 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         }
     }
 
+    /** Called when the bar's mode changes (a gallery or panel title showing, or not). */
+    public void bumRefresh() {
+        updateBumMiddle();
+    }
+
     private void updateBumMiddle() {
         final boolean notice = mStripVisibilityGroup.isShowingImportantNoticeStrip();
-        final boolean idle = !mBumHasSuggestions && !mBumCandidatesShowing && !notice;
+        // a panel's title (shortcuts gallery, text editing) takes the bar over suggestions
+        final boolean panel = mBumToolbar.getMode() != app.bumboard.toolbar.ToolbarView.Mode.NORMAL;
+        final boolean idle = panel || (!mBumHasSuggestions && !mBumCandidatesShowing && !notice);
         mBumToolbar.setVisibility(idle ? VISIBLE : INVISIBLE);
-        final boolean voice = idle && mBumVoiceEnabled;
+        final boolean voice = idle && !panel && mBumVoiceEnabled;
         mVoiceKey.setVisibility(voice ? VISIBLE : GONE);
         if (!notice) {
-            mSuggestionsStrip.setVisibility(mBumHasSuggestions && !mBumCandidatesShowing
+            mSuggestionsStrip.setVisibility(mBumHasSuggestions && !mBumCandidatesShowing && !panel
                     ? VISIBLE : INVISIBLE);
         }
         // the right edge: the 繁/简 button (Chinese keyboards), and the mic while idle
@@ -314,8 +321,10 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mStartIndexOfMoreSuggestions = mLayoutHelper.layoutAndReturnStartIndexOfMoreSuggestions(
                 getContext(), mSuggestedWords, mSuggestionsStrip, this);
         mStripVisibilityGroup.showSuggestionsStrip();
-        // BUMBOARD: punctuation "suggestions" give way to the shortcuts.
-        mBumHasSuggestions = !suggestedWords.isEmpty() && !suggestedWords.isPunctuationSuggestions();
+        // BUMBOARD: suggestions only while a word is being typed; next-word predictions and
+        // punctuation "suggestions" give way to the shortcuts.
+        mBumHasSuggestions = !suggestedWords.isEmpty() && !suggestedWords.isPunctuationSuggestions()
+                && !suggestedWords.isPrediction();
         updateBumMiddle();
     }
 

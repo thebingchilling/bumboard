@@ -152,8 +152,9 @@ public class SettingsValues {
                 && inputAttributes.mIsGeneralTextInput;
         mBlockPotentiallyOffensive = Settings.readBlockPotentiallyOffensive(prefs, res);
         mAutoCorrectEnabled = Settings.readAutoCorrectEnabled(prefs, res);
+        // BUMBOARD: corrects as readily as Gboard ("aggressive"; LatinIME used "modest").
         final String autoCorrectionThresholdRawValue = mAutoCorrectEnabled
-                ? res.getString(R.string.auto_correction_threshold_mode_index_modest)
+                ? res.getString(R.string.auto_correction_threshold_mode_index_aggressive)
                 : res.getString(R.string.auto_correction_threshold_mode_index_off);
         mBigramPredictionEnabled = readBigramPredictionEnabled(prefs, res);
         mDoubleSpacePeriodTimeout = res.getInteger(R.integer.config_double_space_period_timeout);

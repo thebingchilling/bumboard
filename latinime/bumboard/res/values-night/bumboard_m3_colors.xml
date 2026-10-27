@@ -18,6 +18,7 @@
     <color name="bum_m3_surface_high">#2F3533</color>
     <color name="bum_m3_outline">#899390</color>
     <color name="bum_m3_outline_variant">#3F4946</color>
-    <color name="bum_m3_shadow">#73000000</color>
+    <color name="bum_m3_shadow">#59000000</color>
     <color name="bum_m3_shadow_soft">#33000000</color>
+    <color name="bum_m3_shadow_ambient">#1A000000</color>
 </resources>
