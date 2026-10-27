@@ -190,7 +190,7 @@ class ShortcutGalleryView @JvmOverloads constructor(
                 },
                 null,
             )
-            icon.duplicateParentStateEnabled = true
+            icon.isDuplicateParentStateEnabled = true
             tile.findViewById<TextView>(LABEL).setText(sc.label)
             tile.contentDescription = context.getString(sc.label)
             tile.setOnClickListener {
