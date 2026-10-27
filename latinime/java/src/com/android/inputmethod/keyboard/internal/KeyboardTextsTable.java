@@ -4198,16 +4198,12 @@ public final class KeyboardTextsTable {
         putBumEnglish();
     }
 
-    // BUMBOARD: English letters get the same long-press letters as Gboard's English keyboard.
+    // BUMBOARD: English letters get Gboard's long-press letters (as in FlorisBoard's English
+    // popup mappings): LatinIME's accents, plus ń on n.
     private static void putBumEnglish() {
         final String[] en = java.util.Arrays.copyOf(TEXTS_en, NAMES.length);
         final String[][] texts = {
-            { "morekeys_s", "ß,ś,š" },          // ß ś š
-            { "morekeys_c", "ç,ć,č" },          // ç ć č
             { "morekeys_n", "ñ,ń" },                 // ñ ń
-            { "morekeys_y", "ÿ" },                        // ÿ
-            { "morekeys_l", "ł" },                        // ł
-            { "morekeys_z", "ž,ź,ż" },          // ž ź ż
         };
         for (final String[] text : texts) {
             final Integer index = sNameToIndexesMap.get(text[0]);
@@ -4248,7 +4244,10 @@ public final class KeyboardTextsTable {
             final Integer index = sNameToIndexesMap.get(text[0]);
             if (index != null) zh[index] = text[1];
         }
-        sLocaleToTextsTableMap.put("zh", zh);
+        // the Chinese subtypes' locales come from their language tags: yue (Cantonese) and cmn
+        for (final String language : new String[] { "zh", "yue", "cmn" }) {
+            sLocaleToTextsTableMap.put(language, zh);
+        }
         sTextsTableToLocaleMap.put(zh, "zh");
     }
 }
