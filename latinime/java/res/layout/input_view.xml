@@ -26,54 +26,54 @@
     <include
         android:id="@+id/main_keyboard_frame"
         layout="@layout/main_keyboard_frame" />
-    <!-- BUMBOARD: BumBoard's emoji panel replaces LatinIME's EmojiPalettesView. -->
-    <app.bumboard.emoji.EmojiPanelView
+    <!-- LYCHEE: Lychee's emoji panel replaces LatinIME's EmojiPalettesView. -->
+    <app.lychee.emoji.EmojiPanelView
         android:id="@+id/emoji_palettes_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:visibility="gone" />
-    <!-- BUMBOARD: panels drawn over the keys (shortcuts, text editing, number pad, resizing,
-         Chinese candidates); BumPanels places them on the keyboard view. -->
-    <app.bumboard.chinese.CandidatePanelView
-        android:id="@+id/bum_candidate_panel"
+    <!-- LYCHEE: panels drawn over the keys (shortcuts, text editing, number pad, resizing,
+         Chinese candidates); LycheePanels places them on the keyboard view. -->
+    <app.lychee.chinese.CandidatePanelView
+        android:id="@+id/lychee_candidate_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:visibility="gone" />
-    <app.bumboard.toolbar.ShortcutGalleryView
-        android:id="@+id/bum_gallery_panel"
+    <app.lychee.toolbar.ShortcutGalleryView
+        android:id="@+id/lychee_gallery_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:visibility="gone" />
-    <app.bumboard.toolbar.TextEditPanelView
-        android:id="@+id/bum_text_edit_panel"
+    <app.lychee.toolbar.TextEditPanelView
+        android:id="@+id/lychee_text_edit_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:visibility="gone" />
-    <app.bumboard.handwriting.HandwritingPanelView
-        android:id="@+id/bum_handwriting_panel"
+    <app.lychee.handwriting.HandwritingPanelView
+        android:id="@+id/lychee_handwriting_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:visibility="gone" />
-    <app.bumboard.toolbar.NumpadPanelView
-        android:id="@+id/bum_numpad_panel"
+    <app.lychee.toolbar.NumpadPanelView
+        android:id="@+id/lychee_numpad_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:visibility="gone" />
-    <app.bumboard.layout.ResizePanelView
-        android:id="@+id/bum_resize_panel"
+    <app.lychee.layout.ResizePanelView
+        android:id="@+id/lychee_resize_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:visibility="gone" />
-    <!-- BUMBOARD: resizing the floating keyboard with handles on it; covers the input view. -->
-    <app.bumboard.layout.FloatResizeView
-        android:id="@+id/bum_float_resize"
+    <!-- LYCHEE: resizing the floating keyboard with handles on it; covers the input view. -->
+    <app.lychee.layout.FloatResizeView
+        android:id="@+id/lychee_float_resize"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone" />

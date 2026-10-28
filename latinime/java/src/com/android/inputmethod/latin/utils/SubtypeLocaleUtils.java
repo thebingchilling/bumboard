@@ -98,7 +98,7 @@ public final class SubtypeLocaleUtils {
     private static void initLocked(final Context context) {
         final Resources res = context.getResources();
         sResources = res;
-        // BUMBOARD: look names up in the APK's resource package (app.bumboard).
+        // LYCHEE: look names up in the APK's resource package (app.lychee).
         final String resourcePackageName = DictionaryInfoUtils.getResourcePackageName(res);
 
         final String[] predefinedLayoutSet = res.getStringArray(R.array.predefined_layouts);

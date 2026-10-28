@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds BumBoard's handwriting packs (Zinnia models) into $1:
+# Builds Lychee's handwriting packs (Zinnia models) into $1:
 #   lychee-hw-ja.zip, lychee-hw-zh-hans.zip, lychee-hw-zh-hant.zip
 # Models come from Ubuntu's tegaki-zinnia-* packages (LGPL-2.1, from the Tegaki project), or
 # else from zinnia-tomoe (LGPL-2.1, Tomoe project) converted with zinnia_convert. A pack whose

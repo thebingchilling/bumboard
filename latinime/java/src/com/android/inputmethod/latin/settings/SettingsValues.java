@@ -142,17 +142,17 @@ public class SettingsValues {
                 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN;
         mIncludesOtherImesInLanguageSwitchList = Settings.ENABLE_SHOW_LANGUAGE_SWITCH_KEY_SETTINGS
                 ? prefs.getBoolean(Settings.PREF_INCLUDE_OTHER_IMES_IN_LANGUAGE_SWITCH_LIST, false)
-                : false /* BUMBOARD: the language key never includes other input methods */;
+                : false /* LYCHEE: the language key never includes other input methods */;
         mShowsLanguageSwitchKey = Settings.ENABLE_SHOW_LANGUAGE_SWITCH_KEY_SETTINGS
                 ? Settings.readShowsLanguageSwitchKey(prefs) : true /* forcibly */;
-        // BUMBOARD: no contact names in suggestions, and no notice asking for contacts.
+        // LYCHEE: no contact names in suggestions, and no notice asking for contacts.
         mUseContactsDict = false;
         mUsePersonalizedDicts = prefs.getBoolean(Settings.PREF_KEY_USE_PERSONALIZED_DICTS, true);
         mUseDoubleSpacePeriod = prefs.getBoolean(Settings.PREF_KEY_USE_DOUBLE_SPACE_PERIOD, true)
                 && inputAttributes.mIsGeneralTextInput;
         mBlockPotentiallyOffensive = Settings.readBlockPotentiallyOffensive(prefs, res);
         mAutoCorrectEnabled = Settings.readAutoCorrectEnabled(prefs, res);
-        // BUMBOARD: corrects as readily as Gboard ("aggressive"; LatinIME used "modest").
+        // LYCHEE: corrects as readily as Gboard ("aggressive"; LatinIME used "modest").
         final String autoCorrectionThresholdRawValue = mAutoCorrectEnabled
                 ? res.getString(R.string.auto_correction_threshold_mode_index_aggressive)
                 : res.getString(R.string.auto_correction_threshold_mode_index_off);
@@ -183,7 +183,7 @@ public class SettingsValues {
         mAccount = prefs.getString(LocalSettingsConstants.PREF_ACCOUNT_NAME,
                 null /* default */);
         mGestureFloatingPreviewTextEnabled = !mInputAttributes.mDisableGestureFloatingPreviewText
-                // BUMBOARD: off by default, like Gboard: the word shows in the bar
+                // LYCHEE: off by default, like Gboard: the word shows in the bar
                 && prefs.getBoolean(Settings.PREF_GESTURE_FLOATING_PREVIEW_TEXT, false);
         mAutoCorrectionEnabledPerUserSettings = mAutoCorrectEnabled
                 && !mInputAttributes.mInputTypeNoAutoCorrect;

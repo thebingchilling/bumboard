@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fetches Zinnia (BSD-3-Clause), Taku Kudo's handwriting recogniser, into prebuilt/zinnia.
-# Only its library sources are compiled (latinime/bumboard/cpp/CMakeLists.txt).
+# Only its library sources are compiled (latinime/lychee/cpp/CMakeLists.txt).
 set -euo pipefail
 
 DEST="$(cd "$(dirname "$0")/.." && pwd)/prebuilt/zinnia"

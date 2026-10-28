@@ -9,3 +9,4 @@ data/out/
 data/.cache/
 data/packs/ja/.cache/
 out/
+__pycache__/

@@ -53,8 +53,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private InputView mCurrentInputView;
     private View mMainKeyboardFrame;
     private MainKeyboardView mKeyboardView;
-    // BUMBOARD: BumBoard's emoji panel, with the same start/stop API as EmojiPalettesView.
-    private app.bumboard.emoji.EmojiPanelView mEmojiPalettesView;
+    // LYCHEE: Lychee's emoji panel, with the same start/stop API as EmojiPalettesView.
+    private app.lychee.emoji.EmojiPanelView mEmojiPalettesView;
     private LatinIME mLatinIME;
     private RichInputMethodManager mRichImm;
     private boolean mIsHardwareAcceleratedDrawingEnabled;
@@ -67,8 +67,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
 
     private KeyboardTheme mKeyboardTheme;
     private Context mThemeContext;
-    // BUMBOARD: the colour style (neutral or wallpaper) applied over the keyboard theme
-    private int mBumColorOverlay;
+    // LYCHEE: the colour style (neutral or wallpaper) applied over the keyboard theme
+    private int mLycheeColorOverlay;
 
     private static final KeyboardSwitcher sInstance = new KeyboardSwitcher();
 
@@ -103,12 +103,12 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
 
     private boolean updateKeyboardThemeAndContextThemeWrapper(final Context context,
             final KeyboardTheme keyboardTheme) {
-        final int colorOverlay = app.bumboard.ui.BumColorStyle.overlay(context);
+        final int colorOverlay = app.lychee.ui.LycheeColorStyle.overlay(context);
         if (mThemeContext == null || !keyboardTheme.equals(mKeyboardTheme)
-                || colorOverlay != mBumColorOverlay
+                || colorOverlay != mLycheeColorOverlay
                 || !mThemeContext.getResources().equals(context.getResources())) {
             mKeyboardTheme = keyboardTheme;
-            mBumColorOverlay = colorOverlay;
+            mLycheeColorOverlay = colorOverlay;
             mThemeContext = new ContextThemeWrapper(context, keyboardTheme.mStyleId);
             mThemeContext.getTheme().applyStyle(colorOverlay, true);
             KeyboardLayoutSet.onKeyboardThemeChanged();
@@ -122,21 +122,21 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         final KeyboardLayoutSet.Builder builder = new KeyboardLayoutSet.Builder(
                 mThemeContext, editorInfo);
         final Resources res = mThemeContext.getResources();
-        // BUMBOARD: one-handed, floating and resized keyboards, and the number row.
-        final app.bumboard.layout.BumLayout bumLayout =
-                app.bumboard.layout.BumLayout.get(mThemeContext);
-        final int keyboardWidth = bumLayout.keyboardWidth(
+        // LYCHEE: one-handed, floating and resized keyboards, and the number row.
+        final app.lychee.layout.LycheeLayout lycheeLayout =
+                app.lychee.layout.LycheeLayout.get(mThemeContext);
+        final int keyboardWidth = lycheeLayout.keyboardWidth(
                 ResourceUtils.getDefaultKeyboardWidth(mThemeContext));
-        final int keyboardHeight = bumLayout.keyboardHeight(
+        final int keyboardHeight = lycheeLayout.keyboardHeight(
                 ResourceUtils.getKeyboardHeight(res, settingsValues));
         builder.setKeyboardGeometry(keyboardWidth, keyboardHeight);
         final boolean languageKey = mLatinIME.shouldShowLanguageSwitchKey();
-        builder.setBumOptions(bumLayout.getNumberRow(),
-                bumLayout.getEmojiKey() || !languageKey, bumLayout.getSideKey());
-        KeyboardView.sBumEmojiOnComma = bumLayout.getEmojiOnComma();
+        builder.setLycheeOptions(lycheeLayout.getNumberRow(),
+                lycheeLayout.getEmojiKey() || !languageKey, lycheeLayout.getSideKey());
+        KeyboardView.sLycheeEmojiOnComma = lycheeLayout.getEmojiOnComma();
         // the comma's popup comes from Settings; a change makes cached keyboards stale
-        if (com.android.inputmethod.keyboard.internal.KeyboardTextsSet.setBumCommaMoreKeys(
-                bumLayout.commaMoreKeys(languageKey))) {
+        if (com.android.inputmethod.keyboard.internal.KeyboardTextsSet.setLycheeCommaMoreKeys(
+                lycheeLayout.commaMoreKeys(languageKey))) {
             KeyboardLayoutSet.onKeyboardThemeChanged();
         }
         builder.setSubtype(mRichImm.getCurrentSubtype());
@@ -489,7 +489,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         mCurrentInputView = (InputView)LayoutInflater.from(mThemeContext).inflate(
                 R.layout.input_view, null);
         mMainKeyboardFrame = mCurrentInputView.findViewById(R.id.main_keyboard_frame);
-        mEmojiPalettesView = (app.bumboard.emoji.EmojiPanelView)mCurrentInputView.findViewById(
+        mEmojiPalettesView = (app.lychee.emoji.EmojiPanelView)mCurrentInputView.findViewById(
                 R.id.emoji_palettes_view);
 
         mKeyboardView = (MainKeyboardView) mCurrentInputView.findViewById(R.id.keyboard_view);

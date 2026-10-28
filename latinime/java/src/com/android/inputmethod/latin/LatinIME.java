@@ -119,8 +119,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         SuggestionStripView.Listener, SuggestionStripViewAccessor,
         DictionaryFacilitator.DictionaryInitializationListener,
         PermissionsManager.PermissionsResultCallback,
-        // BUMBOARD: shortcuts, panels over the keys and keyboard layout modes.
-        app.bumboard.BumHost {
+        // LYCHEE: shortcuts, panels over the keys and keyboard layout modes.
+        app.lychee.LycheeHost {
     static final String TAG = LatinIME.class.getSimpleName();
     private static final boolean TRACE = false;
 
@@ -138,9 +138,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     /**
      * A custom permission for external apps to send {@link #ACTION_HIDE_SOFT_INPUT}.
      */
-    // BUMBOARD: own permission name so it never clashes with a stock LatinIME install.
+    // LYCHEE: own permission name so it never clashes with a stock LatinIME install.
     static final String PERMISSION_HIDE_SOFT_INPUT =
-            "app.bumboard.permission.HIDE_SOFT_INPUT";
+            "app.lychee.permission.HIDE_SOFT_INPUT";
 
     /**
      * The name of the scheme used by the Package Manager to warn of a new package installation,
@@ -160,12 +160,12 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
     // TODO: Move these {@link View}s to {@link KeyboardSwitcher}.
     private View mInputView;
-    // BUMBOARD: Chinese and Japanese input through Rime, and Korean (app.bumboard.engine).
-    private app.bumboard.engine.Engines mBumChinese;
-    // BUMBOARD: emoji search above the letter keys.
-    private app.bumboard.emoji.EmojiSearchBar mBumEmojiSearch;
-    // BUMBOARD: voice typing over the keys.
-    private app.bumboard.voice.VoicePanelView mBumVoice;
+    // LYCHEE: Chinese and Japanese input through Rime, and Korean (app.lychee.engine).
+    private app.lychee.engine.Engines mLycheeChinese;
+    // LYCHEE: emoji search above the letter keys.
+    private app.lychee.emoji.EmojiSearchBar mLycheeEmojiSearch;
+    // LYCHEE: voice typing over the keys.
+    private app.lychee.voice.VoicePanelView mLycheeVoice;
     private InsetsUpdater mInsetsUpdater;
     private SuggestionStripView mSuggestionStripView;
 
@@ -605,9 +605,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
     @Override
     public void onCreate() {
-        app.bumboard.CrashLog.install(this);
-        // BUMBOARD: English (US or UK) and Mandarin only, out of the box.
-        app.bumboard.settings.DefaultLanguages.removeOldInputStyles(this);
+        app.lychee.CrashLog.install(this);
+        // LYCHEE: English (US or UK) and Mandarin only, out of the box.
+        app.lychee.settings.DefaultLanguages.removeOldInputStyles(this);
         Settings.init(this);
         DebugFlags.init(PreferenceManager.getDefaultSharedPreferences(this));
         RichInputMethodManager.init(this);
@@ -626,7 +626,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // {@link #resetDictionaryFacilitatorIfNecessary()}.
         loadSettings();
         resetDictionaryFacilitatorIfNecessary();
-        mBumChinese = new app.bumboard.engine.Engines(this,
+        mLycheeChinese = new app.lychee.engine.Engines(this,
                 PreferenceManager.getDefaultSharedPreferences(this));
 
         // Register to receive ringer mode change.
@@ -876,102 +876,102 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         if (hasSuggestionStripView()) {
             mSuggestionStripView.setListener(this, view);
         }
-        mBumChinese.attachViews(
-                (app.bumboard.chinese.CandidateBarView) view.findViewById(R.id.bum_candidate_bar),
+        mLycheeChinese.attachViews(
+                (app.lychee.chinese.CandidateBarView) view.findViewById(R.id.lychee_candidate_bar),
                 mSuggestionStripView, view);
-        // BUMBOARD: keep the keys above the navigation bar (edge to edge from Android 15).
-        app.bumboard.KeyboardInsets.apply(view);
-        setUpBumEmoji(view);
+        // LYCHEE: keep the keys above the navigation bar (edge to edge from Android 15).
+        app.lychee.KeyboardInsets.apply(view);
+        setUpLycheeEmoji(view);
         if (mSuggestionStripView != null) {
-            mSuggestionStripView.getBumToolbar().setOnGallery(() -> {
+            mSuggestionStripView.getLycheeToolbar().setOnGallery(() -> {
                 // the gallery button opens the shortcuts, and closes them again
-                final View gallery = mInputView.findViewById(R.id.bum_gallery_panel);
+                final View gallery = mInputView.findViewById(R.id.lychee_gallery_panel);
                 if (gallery != null && gallery.getVisibility() == View.VISIBLE) {
                     gallery.setVisibility(View.GONE);
                 } else {
-                    showBumPanel(R.id.bum_gallery_panel);
+                    showLycheePanel(R.id.lychee_gallery_panel);
                 }
                 return kotlin.Unit.INSTANCE;
             });
         }
-        app.bumboard.layout.LayoutApplier.apply(view);
-        // BUMBOARD: let the keyboard's own colour show behind the navigation buttons instead of
+        app.lychee.layout.LayoutApplier.apply(view);
+        // LYCHEE: let the keyboard's own colour show behind the navigation buttons instead of
         // the system's dark bar (3-button navigation).
-        final Window bumWindow = getWindow().getWindow();
-        if (bumWindow != null) {
-            bumWindow.setNavigationBarColor(Color.TRANSPARENT);
+        final Window lycheeWindow = getWindow().getWindow();
+        if (lycheeWindow != null) {
+            lycheeWindow.setNavigationBarColor(Color.TRANSPARENT);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                bumWindow.setNavigationBarContrastEnforced(false);
+                lycheeWindow.setNavigationBarContrastEnforced(false);
             }
         }
-        updateBumHandwriting();
-        mBumVoice =(app.bumboard.voice.VoicePanelView) view.findViewById(R.id.bum_voice_panel);
-        if (mBumVoice != null) {
-            mBumVoice.setOnText(text -> {
+        updateLycheeHandwriting();
+        mLycheeVoice =(app.lychee.voice.VoicePanelView) view.findViewById(R.id.lychee_voice_panel);
+        if (mLycheeVoice != null) {
+            mLycheeVoice.setOnText(text -> {
                 onTextInput(text);
                 return kotlin.Unit.INSTANCE;
             });
         }
     }
 
-    // BUMBOARD: on the Handwriting keyboard (BumHandwriting) the pad stands in for the letters.
-    private void updateBumHandwriting() {
+    // LYCHEE: on the Handwriting keyboard (LycheeHandwriting) the pad stands in for the letters.
+    private void updateLycheeHandwriting() {
         if (mInputView == null) return;
-        final app.bumboard.handwriting.HandwritingPanelView pad =
-                (app.bumboard.handwriting.HandwritingPanelView) mInputView.findViewById(R.id.bum_handwriting_panel);
+        final app.lychee.handwriting.HandwritingPanelView pad =
+                (app.lychee.handwriting.HandwritingPanelView) mInputView.findViewById(R.id.lychee_handwriting_panel);
         if (pad == null) return;
         final InputMethodSubtype subtype = mRichImm.getCurrentSubtype().getRawSubtype();
-        pad.setKeyboardMode(subtype != null && subtype.getExtraValueOf("BumHandwriting") != null);
+        pad.setKeyboardMode(subtype != null && subtype.getExtraValueOf("LycheeHandwriting") != null);
     }
 
-    // BUMBOARD: the mic key starts voice typing in the current keyboard's language.
-    private void startBumVoice() {
-        if (mBumVoice == null) return;
-        mBumChinese.reset();
-        app.bumboard.layout.BumPanels.hideOthers(mInputView, mBumVoice);
-        String language = mBumChinese.voiceLanguage();
+    // LYCHEE: the mic key starts voice typing in the current keyboard's language.
+    private void startLycheeVoice() {
+        if (mLycheeVoice == null) return;
+        mLycheeChinese.reset();
+        app.lychee.layout.LycheePanels.hideOthers(mInputView, mLycheeVoice);
+        String language = mLycheeChinese.voiceLanguage();
         if (language == null) {
             language = mRichImm.getCurrentSubtypeLocale().toLanguageTag();
         }
-        mBumVoice.start(language);
+        mLycheeVoice.start(language);
     }
 
-    // BUMBOARD: the emoji panel's search box opens search over the letter keys.
-    private void setUpBumEmoji(final View view) {
-        mBumEmojiSearch = (app.bumboard.emoji.EmojiSearchBar) view.findViewById(R.id.bum_emoji_search);
-        final app.bumboard.emoji.EmojiPanelView panel =
-                (app.bumboard.emoji.EmojiPanelView) view.findViewById(R.id.emoji_palettes_view);
-        if (mBumEmojiSearch == null || panel == null) {
+    // LYCHEE: the emoji panel's search box opens search over the letter keys.
+    private void setUpLycheeEmoji(final View view) {
+        mLycheeEmojiSearch = (app.lychee.emoji.EmojiSearchBar) view.findViewById(R.id.lychee_emoji_search);
+        final app.lychee.emoji.EmojiPanelView panel =
+                (app.lychee.emoji.EmojiPanelView) view.findViewById(R.id.emoji_palettes_view);
+        if (mLycheeEmojiSearch == null || panel == null) {
             return;
         }
-        final View candidateBar = view.findViewById(R.id.bum_candidate_bar);
+        final View candidateBar = view.findViewById(R.id.lychee_candidate_bar);
         panel.setOnSearch(() -> {
-            mBumChinese.reset();
+            mLycheeChinese.reset();
             if (mSuggestionStripView != null) mSuggestionStripView.setVisibility(View.GONE);
             if (candidateBar != null) candidateBar.setVisibility(View.GONE);
-            mBumEmojiSearch.start();
-            sendBumKey(Constants.CODE_ALPHA_FROM_EMOJI);
+            mLycheeEmojiSearch.start();
+            sendLycheeKey(Constants.CODE_ALPHA_FROM_EMOJI);
             return kotlin.Unit.INSTANCE;
         });
-        mBumEmojiSearch.setOnType(emoji -> {
+        mLycheeEmojiSearch.setOnType(emoji -> {
             onTextInput(emoji);
             return kotlin.Unit.INSTANCE;
         });
         // closing search returns to the letters, which are already showing under it
-        mBumEmojiSearch.setOnClose(() -> {
-            endBumEmojiSearch();
+        mLycheeEmojiSearch.setOnClose(() -> {
+            endLycheeEmojiSearch();
             return kotlin.Unit.INSTANCE;
         });
     }
 
-    private void endBumEmojiSearch() {
-        if (mBumEmojiSearch != null) mBumEmojiSearch.stop();
+    private void endLycheeEmojiSearch() {
+        if (mLycheeEmojiSearch != null) mLycheeEmojiSearch.stop();
         if (mSuggestionStripView != null) mSuggestionStripView.setVisibility(View.VISIBLE);
         // puts the Chinese candidate bar back in place of the strip when Chinese is active
-        mBumChinese.onSettingsChanged();
+        mLycheeChinese.onSettingsChanged();
     }
 
-    private void sendBumKey(final int code) {
+    private void sendLycheeKey(final int code) {
         onCodeInput(code, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false);
     }
 
@@ -987,8 +987,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
     @Override
     public void onStartInputView(final EditorInfo editorInfo, final boolean restarting) {
-        // BUMBOARD: the first time BumBoard is in use, only English and Mandarin are on.
-        app.bumboard.settings.DefaultLanguages.applyOnce(this);
+        // LYCHEE: the first time Lychee is in use, only English and Mandarin are on.
+        app.lychee.settings.DefaultLanguages.applyOnce(this);
         mHandler.onStartInputView(editorInfo, restarting);
         mStatsUtilsManager.onStartInputView();
     }
@@ -1013,8 +1013,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         InputMethodSubtype oldSubtype = mRichImm.getCurrentSubtype().getRawSubtype();
         StatsUtils.onSubtypeChanged(oldSubtype, subtype);
         mRichImm.onSubtypeChanged(subtype);
-        if (mBumChinese != null) mBumChinese.onSubtypeChanged(subtype);
-        updateBumHandwriting();
+        if (mLycheeChinese != null) mLycheeChinese.onSubtypeChanged(subtype);
+        updateLycheeHandwriting();
         mInputLogic.onSubtypeChanged(SubtypeLocaleUtils.getCombiningRulesExtraValue(subtype),
                 mSettings.getCurrent());
         loadKeyboard();
@@ -1040,10 +1040,10 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     @SuppressWarnings("deprecation")
     void onStartInputViewInternal(final EditorInfo editorInfo, final boolean restarting) {
         super.onStartInputView(editorInfo, restarting);
-        mBumChinese.reset();
-        mBumChinese.onSubtypeChanged(mRichImm.getCurrentSubtype().getRawSubtype());
-        updateBumHandwriting();
-        mBumChinese.onSettingsChanged();
+        mLycheeChinese.reset();
+        mLycheeChinese.onSubtypeChanged(mRichImm.getCurrentSubtype().getRawSubtype());
+        updateLycheeHandwriting();
+        mLycheeChinese.onSettingsChanged();
 
         mDictionaryFacilitator.onStartInput();
         // Switch to the null consumer to handle cases leading to early exit below, for which we
@@ -1175,10 +1175,10 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
             switcher.loadKeyboard(editorInfo, currentSettingsValues, getCurrentAutoCapsState(),
                     getCurrentRecapitalizeState());
-            // BUMBOARD: layout mode or size may have changed in the settings meanwhile.
+            // LYCHEE: layout mode or size may have changed in the settings meanwhile.
             if (mInputView != null) {
-                app.bumboard.layout.LayoutApplier.apply(mInputView);
-                app.bumboard.KeyboardInsets.apply(mInputView);
+                app.lychee.layout.LayoutApplier.apply(mInputView);
+                app.lychee.KeyboardInsets.apply(mInputView);
             }
             if (needToCallLoadKeyboardLater) {
                 // If we need to call loadKeyboard again later, we need to save its state now. The
@@ -1209,16 +1209,16 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                 currentSettingsValues.mKeyPreviewPopupDismissDelay);
         mainKeyboardView.setSlidingKeyInputPreviewEnabled(
                 currentSettingsValues.mSlidingKeyInputPreviewEnabled);
-        // BUMBOARD: glide typing on the keyboards with a word list (not Chinese or Korean),
-        // decoded by app.bumboard.glide; its word list loads in the background.
-        final boolean bumGlide = currentSettingsValues.mGestureInputEnabled
-                && app.bumboard.Features.isEnabled(app.bumboard.Feature.GLIDE_TYPING)
-                && mRichImm.getCurrentSubtype().getRawSubtype().getExtraValueOf("BumEngine") == null;
-        if (bumGlide) {
-            app.bumboard.glide.GlideTyping.prepare(this, mRichImm.getCurrentSubtypeLocale());
+        // LYCHEE: glide typing on the keyboards with a word list (not Chinese or Korean),
+        // decoded by app.lychee.glide; its word list loads in the background.
+        final boolean lycheeGlide = currentSettingsValues.mGestureInputEnabled
+                && app.lychee.Features.isEnabled(app.lychee.Feature.GLIDE_TYPING)
+                && mRichImm.getCurrentSubtype().getRawSubtype().getExtraValueOf("LycheeEngine") == null;
+        if (lycheeGlide) {
+            app.lychee.glide.GlideTyping.prepare(this, mRichImm.getCurrentSubtypeLocale());
         }
         mainKeyboardView.setGestureHandlingEnabledByUser(
-                bumGlide,
+                lycheeGlide,
                 currentSettingsValues.mGestureTrailEnabled,
                 currentSettingsValues.mGestureFloatingPreviewTextEnabled);
 
@@ -1253,11 +1253,11 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
     void onFinishInputViewInternal(final boolean finishingInput) {
         super.onFinishInputView(finishingInput);
-        if (mBumEmojiSearch != null && mBumEmojiSearch.isActive()) {
-            endBumEmojiSearch();
+        if (mLycheeEmojiSearch != null && mLycheeEmojiSearch.isActive()) {
+            endLycheeEmojiSearch();
         }
-        if (mInputView != null) app.bumboard.layout.BumPanels.hideOthers(mInputView, null);
-        mBumChinese.reset();
+        if (mInputView != null) app.lychee.layout.LycheePanels.hideOthers(mInputView, null);
+        mLycheeChinese.reset();
         cleanupInternalStateForFinishInput();
     }
 
@@ -1278,16 +1278,16 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             final int composingSpanStart, final int composingSpanEnd) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
                 composingSpanStart, composingSpanEnd);
-        // BUMBOARD: the composing text belongs to Rime or the Korean composer; LatinIME would
+        // LYCHEE: the composing text belongs to Rime or the Korean composer; LatinIME would
         // otherwise reset it. A tap outside it (the cursor moved away) ends the composition.
-        if (mBumChinese.isComposing()) {
+        if (mLycheeChinese.isComposing()) {
             final boolean outside = composingSpanStart >= 0
                     && (newSelStart != newSelEnd || newSelEnd < composingSpanStart
                             || newSelEnd > composingSpanEnd);
             if (!outside) {
                 return;
             }
-            mBumChinese.reset();
+            mLycheeChinese.reset();
         }
         if (DebugFlags.DEBUG_ENABLED) {
             Log.i(TAG, "onUpdateSelection: oss=" + oldSelStart + ", ose=" + oldSelEnd
@@ -1412,7 +1412,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             mInsetsUpdater.setInsets(outInsets);
             return;
         }
-        // BUMBOARD: the keyboard is whatever of the frame (or the emoji panel, which takes its
+        // LYCHEE: the keyboard is whatever of the frame (or the emoji panel, which takes its
         // place) is on screen: full width, one-handed with its side panel, or floating. The
         // frame holds the top bar, the keys and the navigation bar padding. A floating
         // keyboard leaves the app its full height and takes touches only on itself.
@@ -1421,9 +1421,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                 ? mInputView.findViewById(R.id.emoji_palettes_view)
                 : mInputView.findViewById(R.id.main_keyboard_frame);
         if (frame == null) return;
-        final boolean floating = app.bumboard.layout.BumLayout.get(this).getMode()
-                == app.bumboard.layout.BumLayout.Mode.FLOATING;
-        final View resize = mInputView.findViewById(R.id.bum_resize_panel);
+        final boolean floating = app.lychee.layout.LycheeLayout.get(this).getMode()
+                == app.lychee.layout.LycheeLayout.Mode.FLOATING;
+        final View resize = mInputView.findViewById(R.id.lychee_resize_panel);
         final boolean resizing = resize != null && resize.getVisibility() == View.VISIBLE;
         final int frameTop = frame.getTop();
         final int visibleTopY = floating ? inputHeight : frameTop;
@@ -1431,7 +1431,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // Need to set expanded touchable region only if a keyboard view is being shown.
         if (visibleKeyboardView.isShown() || showingEmoji) {
             outInsets.touchableInsets = InputMethodService.Insets.TOUCHABLE_INSETS_REGION;
-            final View floatResize = mInputView.findViewById(R.id.bum_float_resize);
+            final View floatResize = mInputView.findViewById(R.id.lychee_float_resize);
             if (mKeyboardSwitcher.isShowingMoreKeysPanel()
                     || (floatResize != null && floatResize.getVisibility() == View.VISIBLE)) {
                 outInsets.touchableRegion.set(0, 0, mInputView.getWidth(), inputHeight);
@@ -1507,7 +1507,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     }
 
     private void updateSoftInputWindowLayoutParameters() {
-        // BUMBOARD: this reaches into the framework's IME window, whose layout changes between
+        // LYCHEE: this reaches into the framework's IME window, whose layout changes between
         // Android versions; never let it crash the keyboard.
         try {
             updateSoftInputWindowLayoutParametersInternal();
@@ -1536,7 +1536,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             ViewLayoutUtils.updateLayoutHeightOf(inputArea, layoutHeight);
             ViewLayoutUtils.updateLayoutGravityOf(inputArea, Gravity.BOTTOM);
             ViewLayoutUtils.updateLayoutHeightOf(mInputView, layoutHeight);
-            // BUMBOARD: newer Android versions wrap the input view in other containers (and
+            // LYCHEE: newer Android versions wrap the input view in other containers (and
             // may have no inputArea), which would leave the window only as tall as the keys and
             // cut off long-press popups above them. Stretch every container up to the window.
             if (!isFullscreenMode()) {
@@ -1586,7 +1586,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         setNeutralSuggestionStrip();
     }
 
-    // BUMBOARD: the settings key opens BumBoard's settings straight away, with no dialog;
+    // LYCHEE: the settings key opens Lychee's settings straight away, with no dialog;
     // languages have their own key next to it.
     public void displaySettingsDialog() {
         if (isShowingOptionDialog()) {
@@ -1600,7 +1600,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         if (isShowingOptionDialog()) return false;
         switch (requestCode) {
         case Constants.CUSTOM_CODE_SHOW_INPUT_METHOD_PICKER:
-            showBumLanguagePicker();
+            showLycheeLanguagePicker();
             return true;
         }
         return false;
@@ -1617,16 +1617,16 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
     // TODO: Revise the language switch key behavior to make it much smarter and more reasonable.
     public void switchToNextSubtype() {
-        // BUMBOARD: the language key only cycles BumBoard's own keyboards, never other apps'.
+        // LYCHEE: the language key only cycles Lychee's own keyboards, never other apps'.
         final List<InputMethodSubtype> subtypes = mRichImm.getMyEnabledInputMethodSubtypeList(true);
         if (subtypes.size() < 2) {
             return;
         }
         final int index = subtypes.indexOf(mRichImm.getCurrentSubtype().getRawSubtype());
-        switchToBumSubtype(subtypes.get((index + 1) % subtypes.size()));
+        switchToLycheeSubtype(subtypes.get((index + 1) % subtypes.size()));
     }
 
-    private void switchToBumSubtype(final InputMethodSubtype subtype) {
+    private void switchToLycheeSubtype(final InputMethodSubtype subtype) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             switchInputMethod(mRichImm.getInputMethodIdOfThisIme(), subtype);
         } else {
@@ -1635,11 +1635,11 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         }
     }
 
-    // BUMBOARD: long-press on the language key lists BumBoard's keyboards, not the system picker.
-    private void showBumLanguagePicker() {
+    // LYCHEE: long-press on the language key lists Lychee's keyboards, not the system picker.
+    private void showLycheeLanguagePicker() {
         final List<InputMethodSubtype> subtypes = mRichImm.getMyEnabledInputMethodSubtypeList(true);
         if (subtypes.size() < 2) {
-            launchBumSettingsPage("Languages");
+            launchLycheeSettingsPage("Languages");
             return;
         }
         final List<CharSequence> names = new ArrayList<>();
@@ -1652,11 +1652,11 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // a card over the faded keys, like Gboard's
         final View keys = mKeyboardSwitcher.getMainKeyboardView();
         if (keys == null || keys.getWidth() == 0) return;
-        app.bumboard.layout.LanguageCard.show(keys, names, checked, position -> {
-            switchToBumSubtype(subtypes.get(position));
+        app.lychee.layout.LanguageCard.show(keys, names, checked, position -> {
+            switchToLycheeSubtype(subtypes.get(position));
             return kotlin.Unit.INSTANCE;
         }, () -> {
-            launchBumSettingsPage("Languages");
+            launchLycheeSettingsPage("Languages");
             return kotlin.Unit.INSTANCE;
         });
     }
@@ -1695,47 +1695,47 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     // This method is public for testability of LatinIME, but also in the future it should
     // completely replace #onCodeInput.
     public void onEvent(@Nonnull final Event event) {
-        // BUMBOARD: emoji search takes typed keys while it is open.
-        if (mBumEmojiSearch != null && mBumEmojiSearch.isActive()) {
-            if (mBumEmojiSearch.onEvent(event)) {
+        // LYCHEE: emoji search takes typed keys while it is open.
+        if (mLycheeEmojiSearch != null && mLycheeEmojiSearch.isActive()) {
+            if (mLycheeEmojiSearch.onEvent(event)) {
                 return;
             }
-            if (!mBumEmojiSearch.isActive()) {
-                endBumEmojiSearch();
+            if (!mLycheeEmojiSearch.isActive()) {
+                endLycheeEmojiSearch();
             }
         }
-        // BUMBOARD: Chinese subtypes send keys to Rime first.
-        if (mBumChinese.onEvent(event)) {
+        // LYCHEE: Chinese subtypes send keys to Rime first.
+        if (mLycheeChinese.onEvent(event)) {
             mKeyboardSwitcher.onEvent(event, getCurrentAutoCapsState(),
                     getCurrentRecapitalizeState());
             return;
         }
-        // BUMBOARD: the mic key types by voice here instead of switching to another IME.
+        // LYCHEE: the mic key types by voice here instead of switching to another IME.
         if (Constants.CODE_SHORTCUT == event.mKeyCode) {
-            startBumVoice();
+            startLycheeVoice();
             return;
         }
-        // BUMBOARD: the "1234" key on the symbols page.
-        if (Constants.CODE_BUM_NUMPAD == event.mKeyCode) {
-            showBumPanel(R.id.bum_numpad_panel);
+        // LYCHEE: the "1234" key on the symbols page.
+        if (Constants.CODE_LYCHEE_NUMPAD == event.mKeyCode) {
+            showLycheePanel(R.id.lychee_numpad_panel);
             return;
         }
-        // BUMBOARD: a shortcut from the comma's popup.
-        if (event.mKeyCode <= Constants.CODE_BUM_SHORTCUT_BASE
-                && event.mKeyCode >= Constants.CODE_BUM_SHORTCUT_LAST) {
-            final app.bumboard.toolbar.Shortcut[] all = app.bumboard.toolbar.Shortcut.values();
-            final int ordinal = Constants.CODE_BUM_SHORTCUT_BASE - event.mKeyCode;
-            if (ordinal < all.length) bumRunShortcut(all[ordinal]);
+        // LYCHEE: a shortcut from the comma's popup.
+        if (event.mKeyCode <= Constants.CODE_LYCHEE_SHORTCUT_BASE
+                && event.mKeyCode >= Constants.CODE_LYCHEE_SHORTCUT_LAST) {
+            final app.lychee.toolbar.Shortcut[] all = app.lychee.toolbar.Shortcut.values();
+            final int ordinal = Constants.CODE_LYCHEE_SHORTCUT_BASE - event.mKeyCode;
+            if (ordinal < all.length) lycheeRunShortcut(all[ordinal]);
             return;
         }
-        // BUMBOARD: one-handed mode from the comma's popup.
-        if (Constants.CODE_BUM_ONE_HANDED == event.mKeyCode) {
-            bumRunShortcut(app.bumboard.toolbar.Shortcut.ONE_HANDED);
+        // LYCHEE: one-handed mode from the comma's popup.
+        if (Constants.CODE_LYCHEE_ONE_HANDED == event.mKeyCode) {
+            lycheeRunShortcut(app.lychee.toolbar.Shortcut.ONE_HANDED);
             return;
         }
-        // BUMBOARD: the language key in the comma's popup.
-        if (Constants.CODE_BUM_LANGUAGES == event.mKeyCode) {
-            showBumLanguagePicker();
+        // LYCHEE: the language key in the comma's popup.
+        if (Constants.CODE_LYCHEE_LANGUAGES == event.mKeyCode) {
+            showLycheeLanguagePicker();
             return;
         }
         final InputTransaction completeInputTransaction =
@@ -1767,7 +1767,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     // Called from PointerTracker through the KeyboardActionListener interface
     @Override
     public void onTextInput(final String rawText) {
-        mBumChinese.beforeExternalText();
+        mLycheeChinese.beforeExternalText();
         // TODO: have the keyboard pass the correct key code when we need it.
         final Event event = Event.createSoftwareTextEvent(rawText, Constants.CODE_OUTPUT_TEXT);
         final InputTransaction completeInputTransaction =
@@ -1863,7 +1863,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                 || currentSettingsValues.mShowsVoiceInputKey
                 || shouldShowSuggestionCandidates
                 || currentSettingsValues.isApplicationSpecifiedCompletionsOn();
-        // BUMBOARD: the strip always shows, holding the shortcuts when there is nothing else.
+        // LYCHEE: the strip always shows, holding the shortcuts when there is nothing else.
         final boolean shouldShowSuggestionsStrip = true;
         mSuggestionStripView.updateVisibility(shouldShowSuggestionsStrip, isFullscreenMode());
         if (!shouldShowSuggestionsStrip) {
@@ -2129,8 +2129,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             mainKeyboardView.closing();
         }
         final Intent intent = new Intent();
-        // BUMBOARD: open the Material 3 settings instead of LatinIME's PreferenceActivity.
-        intent.setClass(LatinIME.this, app.bumboard.settings.SettingsActivity.class);
+        // LYCHEE: open the Material 3 settings instead of LatinIME's PreferenceActivity.
+        intent.setClass(LatinIME.this, app.lychee.settings.SettingsActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                 | Intent.FLAG_ACTIVITY_CLEAR_TOP);
@@ -2139,56 +2139,56 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         startActivityOnTheSameDisplay(intent);
     }
 
-    // BUMBOARD: BumHost ----------------------------------------------------------------------
+    // LYCHEE: LycheeHost ----------------------------------------------------------------------
 
     @Override
-    public void bumRunShortcut(@Nonnull final app.bumboard.toolbar.Shortcut shortcut) {
-        final app.bumboard.layout.BumLayout layout = app.bumboard.layout.BumLayout.get(this);
-        final app.bumboard.layout.BumLayout.Mode mode = layout.getMode();
+    public void lycheeRunShortcut(@Nonnull final app.lychee.toolbar.Shortcut shortcut) {
+        final app.lychee.layout.LycheeLayout layout = app.lychee.layout.LycheeLayout.get(this);
+        final app.lychee.layout.LycheeLayout.Mode mode = layout.getMode();
         switch (shortcut) {
         case LANGUAGE:
             switchToNextSubtype();
             break;
         case TEXT_EDIT:
-            showBumPanel(R.id.bum_text_edit_panel);
+            showLycheePanel(R.id.lychee_text_edit_panel);
             break;
         case RESIZE:
-            if (mode == app.bumboard.layout.BumLayout.Mode.FLOATING) {
+            if (mode == app.lychee.layout.LycheeLayout.Mode.FLOATING) {
                 // floating: handles right on the keyboard
-                final app.bumboard.layout.FloatResizeView resize =
-                        (app.bumboard.layout.FloatResizeView) mInputView.findViewById(
-                                R.id.bum_float_resize);
+                final app.lychee.layout.FloatResizeView resize =
+                        (app.lychee.layout.FloatResizeView) mInputView.findViewById(
+                                R.id.lychee_float_resize);
                 if (resize != null) {
-                    app.bumboard.layout.BumPanels.hideOthers(mInputView, resize);
+                    app.lychee.layout.LycheePanels.hideOthers(mInputView, resize);
                     resize.bringToFront();
                     resize.show(mInputView.findViewById(R.id.main_keyboard_frame),
                             mInputView.findViewById(R.id.keyboard_view));
                 }
             } else {
-                showBumPanel(R.id.bum_resize_panel);
+                showLycheePanel(R.id.lychee_resize_panel);
             }
             break;
         case ONE_HANDED:
-            layout.setMode(mode == app.bumboard.layout.BumLayout.Mode.ONE_HANDED
-                    ? app.bumboard.layout.BumLayout.Mode.NORMAL
-                    : app.bumboard.layout.BumLayout.Mode.ONE_HANDED);
-            bumReloadLayout();
+            layout.setMode(mode == app.lychee.layout.LycheeLayout.Mode.ONE_HANDED
+                    ? app.lychee.layout.LycheeLayout.Mode.NORMAL
+                    : app.lychee.layout.LycheeLayout.Mode.ONE_HANDED);
+            lycheeReloadLayout();
             break;
         case FLOATING:
-            layout.setMode(mode == app.bumboard.layout.BumLayout.Mode.FLOATING
-                    ? app.bumboard.layout.BumLayout.Mode.NORMAL
-                    : app.bumboard.layout.BumLayout.Mode.FLOATING);
-            bumReloadLayout();
+            layout.setMode(mode == app.lychee.layout.LycheeLayout.Mode.FLOATING
+                    ? app.lychee.layout.LycheeLayout.Mode.NORMAL
+                    : app.lychee.layout.LycheeLayout.Mode.FLOATING);
+            lycheeReloadLayout();
             break;
         case EMOJI:
-            bumSendCode(Constants.CODE_EMOJI);
+            lycheeSendCode(Constants.CODE_EMOJI);
             break;
         case UNDO:
         case REDO:
             final InputConnection ic = getCurrentInputConnection();
             if (ic != null) {
                 final int meta = KeyEvent.META_CTRL_ON | KeyEvent.META_CTRL_LEFT_ON
-                        | (shortcut == app.bumboard.toolbar.Shortcut.REDO
+                        | (shortcut == app.lychee.toolbar.Shortcut.REDO
                                 ? KeyEvent.META_SHIFT_ON | KeyEvent.META_SHIFT_LEFT_ON : 0);
                 final long now = android.os.SystemClock.uptimeMillis();
                 ic.sendKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_Z,
@@ -2201,16 +2201,16 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             launchSettings(null);
             break;
         case HANDWRITING:
-            showBumPanel(R.id.bum_handwriting_panel);
+            showLycheePanel(R.id.lychee_handwriting_panel);
             break;
         case WRITTEN_CHINESE:
-            if (app.bumboard.Features.isEnabled(app.bumboard.Feature.WRITTEN_CHINESE)) {
-                mBumChinese.reset();
+            if (app.lychee.Features.isEnabled(app.lychee.Feature.WRITTEN_CHINESE)) {
+                mLycheeChinese.reset();
                 final InputConnection connection = getCurrentInputConnection();
                 final View frame = mInputView == null ? null
                         : mInputView.findViewById(R.id.main_keyboard_frame);
                 if (connection != null && frame != null) {
-                    app.bumboard.written.WrittenChinesePopup.INSTANCE.show(this, connection, frame);
+                    app.lychee.written.WrittenChinesePopup.INSTANCE.show(this, connection, frame);
                 }
             }
             break;
@@ -2218,17 +2218,17 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     }
 
     @Override
-    public void bumReloadLayout() {
+    public void lycheeReloadLayout() {
         if (mInputView == null) return;
-        app.bumboard.layout.BumPanels.hideOthers(mInputView, null);
+        app.lychee.layout.LycheePanels.hideOthers(mInputView, null);
         loadKeyboard();
-        app.bumboard.layout.LayoutApplier.apply(mInputView);
-        app.bumboard.KeyboardInsets.apply(mInputView);
+        app.lychee.layout.LayoutApplier.apply(mInputView);
+        app.lychee.KeyboardInsets.apply(mInputView);
         mInputView.requestLayout();
     }
 
     @Override
-    public void bumSendCode(final int code) {
+    public void lycheeSendCode(final int code) {
         // a whole key press, so keyboard switches (handled on press/release) work too
         onPressKey(code, 0, true);
         onCodeInput(code, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false);
@@ -2236,69 +2236,69 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     }
 
     @Override
-    public void bumType(@Nonnull final String text) {
+    public void lycheeType(@Nonnull final String text) {
         onTextInput(text);
     }
 
     @Override
-    public InputConnection bumInputConnection() {
+    public InputConnection lycheeInputConnection() {
         return getCurrentInputConnection();
     }
 
     @Override
-    public String bumEngine() {
-        return mBumChinese == null ? null : mBumChinese.getCurrentEngine();
+    public String lycheeEngine() {
+        return mLycheeChinese == null ? null : mLycheeChinese.getCurrentEngine();
     }
 
     @Override
-    public void bumOpenSettings(@Nonnull final String page) {
-        launchBumSettingsPage(page);
+    public void lycheeOpenSettings(@Nonnull final String page) {
+        launchLycheeSettingsPage(page);
     }
 
     /** Shows one of the panels over the keys (gallery, text editing, numpad, resizing). */
-    private void showBumPanel(final int id) {
+    private void showLycheePanel(final int id) {
         if (mInputView == null) return;
         final View panel = mInputView.findViewById(id);
         if (panel == null) return;
         if (mKeyboardSwitcher.isShowingEmojiPalettes()) {
-            bumSendCode(Constants.CODE_ALPHA_FROM_EMOJI);
+            lycheeSendCode(Constants.CODE_ALPHA_FROM_EMOJI);
         }
-        mBumChinese.reset();
-        app.bumboard.layout.BumPanels.hideOthers(mInputView, panel);
-        app.bumboard.layout.BumPanels.cover(panel, mInputView);
+        mLycheeChinese.reset();
+        app.lychee.layout.LycheePanels.hideOthers(mInputView, panel);
+        app.lychee.layout.LycheePanels.cover(panel, mInputView);
         panel.bringToFront();
-        if (panel instanceof app.bumboard.layout.ResizePanelView) {
+        if (panel instanceof app.lychee.layout.ResizePanelView) {
             // taller (and, floating, wider) than the keys, so the outline can grow
             final android.widget.FrameLayout.LayoutParams lp =
                     (android.widget.FrameLayout.LayoutParams) panel.getLayoutParams();
             final int keysWidth = lp.width;
             final int keysHeight = lp.height;
-            lp.height = Math.min((int) (keysHeight * app.bumboard.layout.ResizePanelView.ROOM),
+            lp.height = Math.min((int) (keysHeight * app.lychee.layout.ResizePanelView.ROOM),
                     mInputView.getHeight() - lp.bottomMargin);
-            if (app.bumboard.layout.BumLayout.get(this).getMode()
-                    == app.bumboard.layout.BumLayout.Mode.FLOATING) {
+            if (app.lychee.layout.LycheeLayout.get(this).getMode()
+                    == app.lychee.layout.LycheeLayout.Mode.FLOATING) {
                 lp.width = mInputView.getWidth() - lp.leftMargin;
             }
             panel.setLayoutParams(lp);
-            ((app.bumboard.layout.ResizePanelView) panel).show(keysWidth, keysHeight);
-        } else if (panel instanceof app.bumboard.toolbar.ShortcutGalleryView) {
-            ((app.bumboard.toolbar.ShortcutGalleryView) panel).show();
-        } else if (panel instanceof app.bumboard.toolbar.TextEditPanelView) {
-            ((app.bumboard.toolbar.TextEditPanelView) panel).show();
-        } else if (panel instanceof app.bumboard.handwriting.HandwritingPanelView) {
-            ((app.bumboard.handwriting.HandwritingPanelView) panel).show();
+            ((app.lychee.layout.ResizePanelView) panel).show(keysWidth, keysHeight);
+        } else if (panel instanceof app.lychee.toolbar.ShortcutGalleryView) {
+            ((app.lychee.toolbar.ShortcutGalleryView) panel).show();
+        } else if (panel instanceof app.lychee.toolbar.TextEditPanelView) {
+            ((app.lychee.toolbar.TextEditPanelView) panel).show();
+        } else if (panel instanceof app.lychee.handwriting.HandwritingPanelView) {
+            ((app.lychee.handwriting.HandwritingPanelView) panel).show();
         } else {
             panel.setVisibility(View.VISIBLE);
         }
     }
 
-    // BUMBOARD: opens one page of BumBoard's settings.
-    private void launchBumSettingsPage(final String page) {
-        final Intent intent = new Intent(this, app.bumboard.settings.SettingsActivity.class);
+    // LYCHEE: opens one page of Lychee's settings.
+    private void launchLycheeSettingsPage(final String page) {
+        final Intent intent = new Intent(this, app.lychee.settings.SettingsActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                 | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                 | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        intent.putExtra(app.bumboard.settings.SettingsActivity.EXTRA_PAGE, page);
+        intent.putExtra(app.lychee.settings.SettingsActivity.EXTRA_PAGE, page);
         startActivityOnTheSameDisplay(intent);
     }
 
@@ -2404,7 +2404,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // TODO: Revisit here to reorganize the settings. Probably we can/should use different
         // strategy once the implementation of
         // {@link InputMethodManager#shouldOfferSwitchingToNextInputMethod} is defined well.
-        // BUMBOARD: show the key whenever BumBoard itself has more than one keyboard on; it
+        // LYCHEE: show the key whenever Lychee itself has more than one keyboard on; it
         // never switches to other input methods, so the system's opinion does not matter.
         return mSettings.getCurrent().isLanguageSwitchKeyEnabled();
     }

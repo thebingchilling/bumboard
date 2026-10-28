@@ -1,4 +1,4 @@
-# BumBoard's Cantonese -> Standard Written Chinese table (書面語), written for BumBoard.
+# Lychee's Cantonese -> Standard Written Chinese table (書面語), written for Lychee.
 # phrase<TAB>replacement, longest match first. Lines mapping a word to itself keep standard
 # words that contain a colloquial character (關係, 一點) from being changed.
 # Simplified forms are added at build time with OpenCC (data/build_data.py).

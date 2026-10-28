@@ -1,4 +1,4 @@
-# BumBoard: Gradle/CMake build of libjni_latinime, mirroring Android.bp.
+# Lychee: Gradle/CMake build of libjni_latinime, mirroring Android.bp.
 cmake_minimum_required(VERSION 3.22)
 project(jni_latinime CXX)
 

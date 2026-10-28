@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Build BumBoard's emoji data.
+"""Build Lychee's emoji data.
 
-Outputs (in --out, default bumboard/data/out; Gradle packages out/assets as APK assets):
-  assets/bumboard/emoji.json             groups of emoji in Unicode order, with skin-tone
+Outputs (in --out, default lychee/data/out; Gradle packages out/assets as APK assets):
+  assets/lychee/emoji.json             groups of emoji in Unicode order, with skin-tone
                                          variants folded under their base emoji and search
                                          keywords (English, Cantonese, Chinese)
-  assets/bumboard/NotoColorEmoji.ttf     colour emoji font covering every emoji in the list
+  assets/lychee/NotoColorEmoji.ttf     colour emoji font covering every emoji in the list
 
 emoji.json:
   {"version": "18.0",
@@ -112,7 +112,7 @@ def main():
     ap.add_argument("--cache", type=Path, default=HERE / ".cache" / "emoji")
     args = ap.parse_args()
     src = fetch(args.cache)
-    assets = args.out / "assets" / "bumboard"
+    assets = args.out / "assets" / "lychee"
     assets.mkdir(parents=True, exist_ok=True)
 
     words: dict[str, list[str]] = {}

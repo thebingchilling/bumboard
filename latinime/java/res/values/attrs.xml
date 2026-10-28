@@ -238,9 +238,9 @@
             <enum name="KLP" value="2" />
             <enum name="LXXLight" value="3" />
             <enum name="LXXDark" value="4" />
-            <!-- BUMBOARD: Material 3 themes (KeyboardTheme.THEME_ID_BUM_*). -->
-            <enum name="BumFlat" value="5" />
-            <enum name="BumRaised" value="6" />
+            <!-- LYCHEE: Material 3 themes (KeyboardTheme.THEME_ID_LYCHEE_*). -->
+            <enum name="LycheeFlat" value="5" />
+            <enum name="LycheeRaised" value="6" />
         </attr>
         <!-- Touch position correction -->
         <attr name="touchPositionCorrectionData" format="reference" />
@@ -282,7 +282,7 @@
         <attr name="iconImeKey" format="reference" />
         <attr name="iconEmojiActionKey" format="reference" />
         <attr name="iconEmojiNormalKey" format="reference" />
-        <!-- BUMBOARD -->
+        <!-- LYCHEE -->
         <attr name="iconOneHandedKey" format="reference" />
     </declare-styleable>
 
@@ -487,9 +487,9 @@
             <enum name="KLP" value="2" />
             <enum name="LXXLight" value="3" />
             <enum name="LXXDark" value="4" />
-            <!-- BUMBOARD: Material 3 themes (KeyboardTheme.THEME_ID_BUM_*). -->
-            <enum name="BumFlat" value="5" />
-            <enum name="BumRaised" value="6" />
+            <!-- LYCHEE: Material 3 themes (KeyboardTheme.THEME_ID_LYCHEE_*). -->
+            <enum name="LycheeFlat" value="5" />
+            <enum name="LycheeRaised" value="6" />
         </attr>
         <!-- This should be aligned with
              {@link com.android.inputmethod.keyboard.KeyboardId#MODE_TEXT} etc. -->
@@ -507,11 +507,11 @@
         <attr name="clobberSettingsKey" format="boolean" />
         <attr name="hasShortcutKey" format="boolean" />
         <attr name="languageSwitchKeyEnabled" format="boolean" />
-        <!-- BUMBOARD: number row above the letters; emoji (true) or language key beside the comma. -->
-        <attr name="bumNumberRow" format="boolean" />
-        <attr name="bumEmojiKey" format="boolean" />
-        <!-- BUMBOARD: whether there is a key beside the comma at all. -->
-        <attr name="bumSideKey" format="boolean" />
+        <!-- LYCHEE: number row above the letters; emoji (true) or language key beside the comma. -->
+        <attr name="lycheeNumberRow" format="boolean" />
+        <attr name="lycheeEmojiKey" format="boolean" />
+        <!-- LYCHEE: whether there is a key beside the comma at all. -->
+        <attr name="lycheeSideKey" format="boolean" />
         <attr name="isMultiLine" format="boolean" />
         <attr name="imeAction" format="enum">
             <!-- This should be aligned with

@@ -1,36 +1,36 @@
 # schema	input	options	expected	top_n	comment
-bum_yue	neihou	-	你好	1	nei5 hou2
-bum_yue	nei5hou2	-	你好	1	nei5 hou2
-bum_yue	nh	-	你好	5
-bum_yue	syutgwai	-	雪櫃	3	syut3 gwai6
-bum_yue	hai	-	係	3	hai6
-bum_yue	ngodei	-	我哋	3
-bum_yue	ngo5dei6	-	我哋	3
-bum_yue_yale	yut6	-	月	5
-bum_yue	gwongdungwaa	-	廣東話	1
-bum_yue	tausaat	simplification=1	头纱	3
-bum_yue_yale	jungman	-	中文	1	zung1 man2
-bum_yue_yale	yuht	-	月	5
-bum_yue_yale	chaan	-	餐	5
-bum_yue_yale	neihou	-	你好	1
-bum_yue_yale	heunggong	-	香港	1	hoeng1 gong2
-bum_cmn	nihao	-	你好	1	ni hao
-bum_cmn	zhongguo	-	中国	1
-bum_cmn	nv	-	女	3
-bum_cmn	lvse	-	绿色	1
-bum_cmn	toufa	traditionalization=1	頭髮	1
-bum_cmn	xingren	-	行人	1	xing ren
-bum_en_yue	fridge	-	雪櫃	1
-bum_en_yue	apple	-	蘋果	1
-bum_en_yue	hello	-	你好	3
-bum_en_yue	fridge	simplification=1	雪柜	1
-bum_en_cmn	apple	-	苹果	1
-bum_en_cmn	eat	-	吃	2
-bum_en_cmn	refrigerator	-	冰箱	3
-bum_en_cmn	hello	traditionalization=1	你好	3
-bum_ko	annyeong	-	안녕	3
-bum_ko	gamsahamnida	-	감사합니다	3
-bum_ko	kimchi	-	김치	5
-bum_ko	hangeul	-	한글	5
-bum_ko	eopseoyo	-	없어요	5
-bum_ko	saranghae	-	사랑해	3
+lychee_yue	neihou	-	你好	1	nei5 hou2
+lychee_yue	nei5hou2	-	你好	1	nei5 hou2
+lychee_yue	nh	-	你好	5
+lychee_yue	syutgwai	-	雪櫃	3	syut3 gwai6
+lychee_yue	hai	-	係	3	hai6
+lychee_yue	ngodei	-	我哋	3
+lychee_yue	ngo5dei6	-	我哋	3
+lychee_yue_yale	yut6	-	月	5
+lychee_yue	gwongdungwaa	-	廣東話	1
+lychee_yue	tausaat	simplification=1	头纱	3
+lychee_yue_yale	jungman	-	中文	1	zung1 man2
+lychee_yue_yale	yuht	-	月	5
+lychee_yue_yale	chaan	-	餐	5
+lychee_yue_yale	neihou	-	你好	1
+lychee_yue_yale	heunggong	-	香港	1	hoeng1 gong2
+lychee_cmn	nihao	-	你好	1	ni hao
+lychee_cmn	zhongguo	-	中国	1
+lychee_cmn	nv	-	女	3
+lychee_cmn	lvse	-	绿色	1
+lychee_cmn	toufa	traditionalization=1	頭髮	1
+lychee_cmn	xingren	-	行人	1	xing ren
+lychee_en_yue	fridge	-	雪櫃	1
+lychee_en_yue	apple	-	蘋果	1
+lychee_en_yue	hello	-	你好	3
+lychee_en_yue	fridge	simplification=1	雪柜	1
+lychee_en_cmn	apple	-	苹果	1
+lychee_en_cmn	eat	-	吃	2
+lychee_en_cmn	refrigerator	-	冰箱	3
+lychee_en_cmn	hello	traditionalization=1	你好	3
+lychee_ko	annyeong	-	안녕	3
+lychee_ko	gamsahamnida	-	감사합니다	3
+lychee_ko	kimchi	-	김치	5
+lychee_ko	hangeul	-	한글	5
+lychee_ko	eopseoyo	-	없어요	5
+lychee_ko	saranghae	-	사랑해	3

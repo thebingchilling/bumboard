@@ -247,15 +247,15 @@ public final class Constants {
     public static final int CODE_ALPHA_FROM_EMOJI = -14;
     // Code value representing the code is not specified.
     public static final int CODE_UNSPECIFIED = -15;
-    // BUMBOARD: the language key in the comma's popup; LatinIME shows BumBoard's keyboards.
-    public static final int CODE_BUM_LANGUAGES = -16;
-    // BUMBOARD: one-handed mode, from the comma's popup.
-    public static final int CODE_BUM_ONE_HANDED = -17;
-    // BUMBOARD: the "1234" key on the symbols page opens the number pad.
-    public static final int CODE_BUM_NUMPAD = -18;
-    // BUMBOARD: shortcuts in the comma's popup: CODE_BUM_SHORTCUT_BASE - Shortcut.ordinal.
-    public static final int CODE_BUM_SHORTCUT_BASE = -100;
-    public static final int CODE_BUM_SHORTCUT_LAST = -199;
+    // LYCHEE: the language key in the comma's popup; LatinIME shows Lychee's keyboards.
+    public static final int CODE_LYCHEE_LANGUAGES = -16;
+    // LYCHEE: one-handed mode, from the comma's popup.
+    public static final int CODE_LYCHEE_ONE_HANDED = -17;
+    // LYCHEE: the "1234" key on the symbols page opens the number pad.
+    public static final int CODE_LYCHEE_NUMPAD = -18;
+    // LYCHEE: shortcuts in the comma's popup: CODE_LYCHEE_SHORTCUT_BASE - Shortcut.ordinal.
+    public static final int CODE_LYCHEE_SHORTCUT_BASE = -100;
+    public static final int CODE_LYCHEE_SHORTCUT_LAST = -199;
 
     public static boolean isLetterCode(final int code) {
         return code >= CODE_SPACE;

@@ -22,7 +22,7 @@ import java.util.HashMap;
 
 public final class KeyboardCodesSet {
     public static final String PREFIX_CODE = "!code/";
-    public static final String BUM_SHORTCUT_PREFIX = "key_bum_sc_";
+    public static final String LYCHEE_SHORTCUT_PREFIX = "key_lychee_sc_";
 
     private static final HashMap<String, Integer> sNameToIdMap = new HashMap<>();
 
@@ -31,12 +31,12 @@ public final class KeyboardCodesSet {
     }
 
     public static int getCode(final String name) {
-        // BUMBOARD: "key_bum_sc_<id>" is a shortcut (see Constants.CODE_BUM_SHORTCUT_BASE)
-        if (name.startsWith(BUM_SHORTCUT_PREFIX)) {
-            final app.bumboard.toolbar.Shortcut shortcut = app.bumboard.toolbar.Shortcut.Companion
-                    .byId(name.substring(BUM_SHORTCUT_PREFIX.length()));
+        // LYCHEE: "key_lychee_sc_<id>" is a shortcut (see Constants.CODE_LYCHEE_SHORTCUT_BASE)
+        if (name.startsWith(LYCHEE_SHORTCUT_PREFIX)) {
+            final app.lychee.toolbar.Shortcut shortcut = app.lychee.toolbar.Shortcut.Companion
+                    .byId(name.substring(LYCHEE_SHORTCUT_PREFIX.length()));
             if (shortcut != null) {
-                return Constants.CODE_BUM_SHORTCUT_BASE - shortcut.ordinal();
+                return Constants.CODE_LYCHEE_SHORTCUT_BASE - shortcut.ordinal();
             }
         }
         Integer id = sNameToIdMap.get(name);
@@ -62,9 +62,9 @@ public final class KeyboardCodesSet {
         "key_emoji",
         "key_alpha_from_emoji",
         "key_unspecified",
-        "key_bum_languages",
-        "key_bum_one_handed",
-        "key_bum_numpad",
+        "key_lychee_languages",
+        "key_lychee_one_handed",
+        "key_lychee_numpad",
     };
 
     private static final int[] DEFAULT = {
@@ -85,9 +85,9 @@ public final class KeyboardCodesSet {
         Constants.CODE_EMOJI,
         Constants.CODE_ALPHA_FROM_EMOJI,
         Constants.CODE_UNSPECIFIED,
-        Constants.CODE_BUM_LANGUAGES,
-        Constants.CODE_BUM_ONE_HANDED,
-        Constants.CODE_BUM_NUMPAD,
+        Constants.CODE_LYCHEE_LANGUAGES,
+        Constants.CODE_LYCHEE_ONE_HANDED,
+        Constants.CODE_LYCHEE_NUMPAD,
     };
 
     static {

@@ -107,9 +107,9 @@ public class RichInputMethodSubtype {
     // Get the RichInputMethodSubtype's full display name in its locale.
     @Nonnull
     public String getFullDisplayName() {
-        final String bum = bumDisplayName(true);
-        if (bum != null) {
-            return bum;
+        final String own = lycheeDisplayName(true);
+        if (own != null) {
+            return own;
         }
         if (isNoLanguage()) {
             return SubtypeLocaleUtils.getKeyboardLayoutSetDisplayName(mSubtype);
@@ -120,9 +120,9 @@ public class RichInputMethodSubtype {
     // Get the RichInputMethodSubtype's middle display name in its locale.
     @Nonnull
     public String getMiddleDisplayName() {
-        final String bum = bumDisplayName(false);
-        if (bum != null) {
-            return bum;
+        final String own = lycheeDisplayName(false);
+        if (own != null) {
+            return own;
         }
         if (isNoLanguage()) {
             return SubtypeLocaleUtils.getKeyboardLayoutSetDisplayName(mSubtype);
@@ -130,19 +130,19 @@ public class RichInputMethodSubtype {
         return SubtypeLocaleUtils.getSubtypeLanguageDisplayName(mSubtype.getLocale());
     }
 
-    // BUMBOARD: BumBoard's own keyboards are named in their language and English on the spacebar.
-    public boolean isBumChinese() {
-        return mSubtype.containsExtraValueKey("BumEngine");
+    // LYCHEE: Lychee's own keyboards are named in their language and English on the spacebar.
+    public boolean isLycheeChinese() {
+        return mSubtype.containsExtraValueKey("LycheeEngine");
     }
 
-    private String bumDisplayName(final boolean full) {
+    private String lycheeDisplayName(final boolean full) {
         final String native_;
         final String english;
-        if (mSubtype.containsExtraValueKey("BumHandwriting")) {
+        if (mSubtype.containsExtraValueKey("LycheeHandwriting")) {
             native_ = "手寫";
             english = "Handwriting";
-        } else if (isBumChinese()) {
-            switch (String.valueOf(mSubtype.getExtraValueOf("BumEngine"))) {
+        } else if (isLycheeChinese()) {
+            switch (String.valueOf(mSubtype.getExtraValueOf("LycheeEngine"))) {
                 case "yue": native_ = "粵語"; english = "Cantonese"; break;
                 case "ja": native_ = "日本語"; english = "Japanese"; break;
                 case "ko": native_ = "한국어"; english = "Korean"; break;

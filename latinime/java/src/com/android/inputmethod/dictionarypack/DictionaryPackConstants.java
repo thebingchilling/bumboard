@@ -28,8 +28,8 @@ public class DictionaryPackConstants {
      * The root domain for the dictionary pack, upon which authorities and actions will append
      * their own distinctive strings.
      */
-    // BUMBOARD: own domain so the authority and broadcasts never clash with stock LatinIME.
-    private static final String DICTIONARY_DOMAIN = "app.bumboard.dictionarypack";
+    // LYCHEE: own domain so the authority and broadcasts never clash with stock LatinIME.
+    private static final String DICTIONARY_DOMAIN = "app.lychee.dictionarypack";
 
     /**
      * Authority for the ContentProvider protocol.

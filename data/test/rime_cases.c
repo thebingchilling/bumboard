@@ -1,5 +1,5 @@
 /*
- * Runs BumBoard's Rime schemas on the host librime and checks candidates.
+ * Runs Lychee's Rime schemas on the host librime and checks candidates.
  *
  *   rime_cases <shared_data_dir> <user_data_dir> cases.txt     check every case
  *   rime_cases <shared_data_dir> <user_data_dir> -d schema input [option=0|1 ...]
@@ -105,10 +105,10 @@ int main(int argc, char **argv) {
   RIME_STRUCT(RimeTraits, traits);
   traits.shared_data_dir = argv[1];
   traits.user_data_dir = argv[2];
-  traits.distribution_name = "BumBoard test";
-  traits.distribution_code_name = "bumboard-test";
+  traits.distribution_name = "Lychee test";
+  traits.distribution_code_name = "lychee-test";
   traits.distribution_version = "1";
-  traits.app_name = "rime.bumboard-test";
+  traits.app_name = "rime.lychee-test";
   traits.min_log_level = 2;
   rime->setup(&traits);
   rime->initialize(&traits);

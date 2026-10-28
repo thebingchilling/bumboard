@@ -193,15 +193,15 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
 
     @Nonnull
     public Keyboard build() {
-        // BUMBOARD: the symbols pages' taller rows (see parseKeyboardAttributes) keep the text
+        // LYCHEE: the symbols pages' taller rows (see parseKeyboardAttributes) keep the text
         // size of the usual rows, which is worked out from the most common key height
-        if (mParams.mId.mBumNumberRow && isBumSymbols(mParams.mId)) {
+        if (mParams.mId.mLycheeNumberRow && isLycheeSymbols(mParams.mId)) {
             mParams.mMostCommonKeyHeight = mParams.mMostCommonKeyHeight * 4 / 5;
         }
         return new Keyboard(mParams);
     }
 
-    private static boolean isBumSymbols(final KeyboardId id) {
+    private static boolean isLycheeSymbols(final KeyboardId id) {
         return id.mElementId == KeyboardId.ELEMENT_SYMBOLS
                 || id.mElementId == KeyboardId.ELEMENT_SYMBOLS_SHIFTED;
     }
@@ -251,12 +251,12 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
         final TypedArray keyAttr = mResources.obtainAttributes(attr, R.styleable.Keyboard_Key);
         try {
             final KeyboardParams params = mParams;
-            // BUMBOARD: with the number row on, the keyboard is given one row's worth of extra
-            // height (BumLayout). Every keyboard is laid out at its usual four-row height, so
+            // LYCHEE: with the number row on, the keyboard is given one row's worth of extra
+            // height (LycheeLayout). Every keyboard is laid out at its usual four-row height, so
             // keys, gaps and text keep their size, and the extra height holds one more row.
             final int givenHeight = params.mId.mHeight;
-            final int height = params.mId.mBumNumberRow
-                    ? Math.round(givenHeight / app.bumboard.layout.BumLayout.NUMBER_ROW_GROWTH)
+            final int height = params.mId.mLycheeNumberRow
+                    ? Math.round(givenHeight / app.lychee.layout.LycheeLayout.NUMBER_ROW_GROWTH)
                     : givenHeight;
             final int width = params.mId.mWidth;
             params.mOccupiedHeight = height;
@@ -291,10 +291,10 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
             // the digits) spread their four rows over the same height, so switching between them
             // never changes the keyboard's height (an app resizing under the keyboard may restart
             // its input, which reloads the letters)
-            if (params.mId.mBumNumberRow) {
+            if (params.mId.mLycheeNumberRow) {
                 if (params.mId.isAlphabetKeyboard()) {
                     params.mOccupiedHeight = height + params.mDefaultRowHeight;
-                } else if (isBumSymbols(params.mId)) {
+                } else if (isLycheeSymbols(params.mId)) {
                     params.mOccupiedHeight = height + params.mDefaultRowHeight;
                     params.mDefaultRowHeight = params.mDefaultRowHeight * 5 / 4;
                 }
@@ -706,20 +706,20 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
             final boolean countryCodeMatched = matchCountryCodes(caseAttr, locale);
             final boolean splitLayoutMatched = matchBoolean(caseAttr,
                     R.styleable.Keyboard_Case_isSplitLayout, id.mIsSplitLayout);
-            // BUMBOARD
-            final boolean bumMatched = matchBoolean(caseAttr,
-                    R.styleable.Keyboard_Case_bumNumberRow, id.mBumNumberRow)
-                    && matchBoolean(caseAttr, R.styleable.Keyboard_Case_bumEmojiKey,
-                            id.mBumEmojiKey)
-                    && matchBoolean(caseAttr, R.styleable.Keyboard_Case_bumSideKey,
-                            id.mBumSideKey);
+            // LYCHEE
+            final boolean lycheeMatched = matchBoolean(caseAttr,
+                    R.styleable.Keyboard_Case_lycheeNumberRow, id.mLycheeNumberRow)
+                    && matchBoolean(caseAttr, R.styleable.Keyboard_Case_lycheeEmojiKey,
+                            id.mLycheeEmojiKey)
+                    && matchBoolean(caseAttr, R.styleable.Keyboard_Case_lycheeSideKey,
+                            id.mLycheeSideKey);
             final boolean selected = keyboardLayoutSetMatched && keyboardLayoutSetElementMatched
                     && keyboardThemeMacthed && modeMatched && navigateNextMatched
                     && navigatePreviousMatched && passwordInputMatched && clobberSettingsKeyMatched
                     && hasShortcutKeyMatched  && languageSwitchKeyEnabledMatched
                     && isMultiLineMatched && imeActionMatched && isIconDefinedMatched
                     && localeCodeMatched && languageCodeMatched && countryCodeMatched
-                    && splitLayoutMatched && bumMatched;
+                    && splitLayoutMatched && lycheeMatched;
 
             if (DEBUG) {
                 startTag("<%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s>%s", TAG_CASE,

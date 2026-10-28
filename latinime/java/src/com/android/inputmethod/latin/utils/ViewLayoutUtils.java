@@ -64,7 +64,7 @@ public final class ViewLayoutUtils {
     }
 
     public static void updateLayoutHeightOf(final View view, final int layoutHeight) {
-        // BUMBOARD: the framework's IME window layout differs between Android versions;
+        // LYCHEE: the framework's IME window layout differs between Android versions;
         // a missing view must not crash the keyboard.
         if (view == null) {
             return;
@@ -94,7 +94,7 @@ public final class ViewLayoutUtils {
                 view.setLayoutParams(params);
             }
         }
-        // BUMBOARD: other layout params (newer framework layouts) are left alone instead of
+        // LYCHEE: other layout params (newer framework layouts) are left alone instead of
         // throwing IllegalArgumentException, which crashed the keyboard on Android 16.
     }
 }

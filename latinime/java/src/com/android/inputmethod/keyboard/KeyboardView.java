@@ -91,16 +91,16 @@ public class KeyboardView extends View {
     private final float mVerticalCorrection;
     private final Drawable mKeyBackground;
     private final Drawable mFunctionalKeyBackground;
-    @Nullable private final Drawable mBumPillBackground;
+    @Nullable private final Drawable mLycheePillBackground;
     private final Drawable mSpacebarBackground;
     private final float mSpacebarIconWidthRatio;
     private final Rect mKeyBackgroundPadding = new Rect();
-    // BUMBOARD: see BumKeyboardView in bumboard_attrs.xml.
-    private final int mBumIconColor;
-    private final int mBumFunctionalIconColor;
-    private final int mBumActionColor;
-    private final int mBumStickyOnColor;
-    private final int mBumPressedTextColor;
+    // LYCHEE: see LycheeKeyboardView in lychee_attrs.xml.
+    private final int mLycheeIconColor;
+    private final int mLycheeFunctionalIconColor;
+    private final int mLycheeActionColor;
+    private final int mLycheeStickyOnColor;
+    private final int mLycheePressedTextColor;
     private static final float KET_TEXT_SHADOW_RADIUS_DISABLED = -1.0f;
 
     // The maximum key label width in the proportion to the key width.
@@ -147,10 +147,10 @@ public class KeyboardView extends View {
         final Drawable spacebarBackground = keyboardViewAttr.getDrawable(
                 R.styleable.KeyboardView_spacebarBackground);
         mSpacebarBackground = (spacebarBackground != null) ? spacebarBackground : mKeyBackground;
-        final TypedArray bumTheme = context.obtainStyledAttributes(
-                new int[] { R.attr.bumPillKeyBackground });
-        mBumPillBackground = bumTheme.getDrawable(0);
-        bumTheme.recycle();
+        final TypedArray lycheeTheme = context.obtainStyledAttributes(
+                new int[] { R.attr.lycheePillKeyBackground });
+        mLycheePillBackground = lycheeTheme.getDrawable(0);
+        lycheeTheme.recycle();
         mSpacebarIconWidthRatio = keyboardViewAttr.getFloat(
                 R.styleable.KeyboardView_spacebarIconWidthRatio, 1.0f);
         mKeyHintLetterPadding = keyboardViewAttr.getDimension(
@@ -167,17 +167,17 @@ public class KeyboardView extends View {
                 R.styleable.KeyboardView_verticalCorrection, 0.0f);
         keyboardViewAttr.recycle();
 
-        // BUMBOARD: icon tints for the Material 3 theme (0 = draw icons untinted).
-        final TypedArray bumAttr = context.obtainStyledAttributes(attrs,
-                R.styleable.BumKeyboardView, defStyle, R.style.KeyboardView);
-        mBumIconColor = bumAttr.getColor(R.styleable.BumKeyboardView_bumIconColor, 0);
-        mBumFunctionalIconColor = bumAttr.getColor(
-                R.styleable.BumKeyboardView_bumFunctionalIconColor, mBumIconColor);
-        mBumActionColor = bumAttr.getColor(R.styleable.BumKeyboardView_bumActionColor, 0);
-        mBumStickyOnColor = bumAttr.getColor(
-                R.styleable.BumKeyboardView_bumStickyOnColor, mBumIconColor);
-        mBumPressedTextColor = bumAttr.getColor(R.styleable.BumKeyboardView_bumPressedTextColor, 0);
-        bumAttr.recycle();
+        // LYCHEE: icon tints for the Material 3 theme (0 = draw icons untinted).
+        final TypedArray lycheeAttr = context.obtainStyledAttributes(attrs,
+                R.styleable.LycheeKeyboardView, defStyle, R.style.KeyboardView);
+        mLycheeIconColor = lycheeAttr.getColor(R.styleable.LycheeKeyboardView_lycheeIconColor, 0);
+        mLycheeFunctionalIconColor = lycheeAttr.getColor(
+                R.styleable.LycheeKeyboardView_lycheeFunctionalIconColor, mLycheeIconColor);
+        mLycheeActionColor = lycheeAttr.getColor(R.styleable.LycheeKeyboardView_lycheeActionColor, 0);
+        mLycheeStickyOnColor = lycheeAttr.getColor(
+                R.styleable.LycheeKeyboardView_lycheeStickyOnColor, mLycheeIconColor);
+        mLycheePressedTextColor = lycheeAttr.getColor(R.styleable.LycheeKeyboardView_lycheePressedTextColor, 0);
+        lycheeAttr.recycle();
 
         final TypedArray keyAttr = context.obtainStyledAttributes(attrs,
                 R.styleable.Keyboard_Key, defStyle, R.style.KeyboardView);
@@ -360,11 +360,11 @@ public class KeyboardView extends View {
         if (!key.isSpacer()) {
             Drawable background = key.selectBackgroundDrawable(
                     mKeyBackground, mFunctionalKeyBackground, mSpacebarBackground);
-            // BUMBOARD: ?123 and ABC are pills, like Gboard's
-            if (background != null && mBumPillBackground != null
+            // LYCHEE: ?123 and ABC are pills, like Gboard's
+            if (background != null && mLycheePillBackground != null
                     && key.getCode() == Constants.CODE_SWITCH_ALPHA_SYMBOL) {
-                mBumPillBackground.setState(background.getState());
-                background = mBumPillBackground;
+                mLycheePillBackground.setState(background.getState());
+                background = mLycheePillBackground;
             }
             if (background != null) {
                 onDrawKeyBackground(key, canvas, background);
@@ -384,7 +384,7 @@ public class KeyboardView extends View {
         if (key.needsToKeepBackgroundAspectRatio(mDefaultKeyLabelFlags)
                 // HACK: To disable expanding normal/functional key background.
                 && !key.hasCustomActionLabel()
-                // BUMBOARD: shape drawables have no intrinsic size; they fill the key.
+                // LYCHEE: shape drawables have no intrinsic size; they fill the key.
                 && background.getIntrinsicWidth() > 0 && background.getIntrinsicHeight() > 0) {
             final int intrinsicWidth = background.getIntrinsicWidth();
             final int intrinsicHeight = background.getIntrinsicHeight();
@@ -426,18 +426,18 @@ public class KeyboardView extends View {
         float labelBaseline = centerY;
         final String label = key.getLabel();
         if (label != null) {
-            // BUMBOARD: the Chinese font from Settings > Fonts, when it is used on the keys too.
-            final Typeface bumKeysFace = app.bumboard.fonts.BumFonts.keys(getContext());
-            paint.setTypeface(bumKeysFace != null ? bumKeysFace
-                    : app.bumboard.fonts.BumFonts.uiLike(getContext(), key.selectTypeface(params)));
+            // LYCHEE: the Chinese font from Settings > Fonts, when it is used on the keys too.
+            final Typeface lycheeKeysFace = app.lychee.fonts.LycheeFonts.keys(getContext());
+            paint.setTypeface(lycheeKeysFace != null ? lycheeKeysFace
+                    : app.lychee.fonts.LycheeFonts.uiLike(getContext(), key.selectTypeface(params)));
             paint.setTextSize(key.selectTextSize(params));
             final float labelCharHeight = TypefaceUtils.getReferenceCharHeight(paint);
             final float labelCharWidth = TypefaceUtils.getReferenceCharWidth(paint);
 
             // Vertical label text alignment.
             labelBaseline = centerY + labelCharHeight / 2.0f;
-            // BUMBOARD: the comma sits low, under the emoji face (Gboard's emoji-comma key)
-            if (isBumEmojiComma(key)) {
+            // LYCHEE: the comma sits low, under the emoji face (Gboard's emoji-comma key)
+            if (isLycheeEmojiComma(key)) {
                 labelBaseline = keyHeight * 0.80f;
             }
 
@@ -463,13 +463,13 @@ public class KeyboardView extends View {
 
             if (key.isEnabled()) {
                 paint.setColor(key.selectTextColor(params));
-                // BUMBOARD: labels on the action key sit on the primary colour.
-                if (key.isActionKey() && mBumActionColor != 0) {
-                    paint.setColor(mBumActionColor);
+                // LYCHEE: labels on the action key sit on the primary colour.
+                if (key.isActionKey() && mLycheeActionColor != 0) {
+                    paint.setColor(mLycheeActionColor);
                 }
-                // BUMBOARD: the selected key of a popup is white on its accent circle
-                if (key.isPressed() && mBumPressedTextColor != 0) {
-                    paint.setColor(mBumPressedTextColor);
+                // LYCHEE: the selected key of a popup is white on its accent circle
+                if (key.isPressed() && mLycheePressedTextColor != 0) {
+                    paint.setColor(mLycheePressedTextColor);
                 }
                 // Set a drop shadow for the text if the shadow radius is positive value.
                 if (mKeyTextShadowRadius > 0.0f) {
@@ -483,21 +483,21 @@ public class KeyboardView extends View {
                 paint.clearShadowLayer();
             }
             blendAlpha(paint, params.mAnimAlpha);
-            // BUMBOARD: full-width CJK punctuation (，。？) sits in a corner of its em box;
+            // LYCHEE: full-width CJK punctuation (，。？) sits in a corner of its em box;
             // centre its ink on the key instead so it looks like the other labels.
-            if ("1234".equals(label) && key.getCode() == Constants.CODE_BUM_NUMPAD) {
-                // BUMBOARD: Gboard's number pad key, "12" over "34"
+            if ("1234".equals(label) && key.getCode() == Constants.CODE_LYCHEE_NUMPAD) {
+                // LYCHEE: Gboard's number pad key, "12" over "34"
                 final float size = paint.getTextSize();
                 paint.setTextSize(size * 0.78f);
                 final float lineHeight = TypefaceUtils.getReferenceCharHeight(paint);
                 canvas.drawText("12", labelX, centerY - lineHeight * 0.18f, paint);
                 canvas.drawText("34", labelX, centerY + lineHeight * 1.18f, paint);
                 paint.setTextSize(size);
-            } else if (isBumFullWidthMark(label) && paint.getTextAlign() == Align.CENTER) {
-                paint.getTextBounds(label, 0, label.length(), mBumInkBounds);
+            } else if (isLycheeFullWidthMark(label) && paint.getTextAlign() == Align.CENTER) {
+                paint.getTextBounds(label, 0, label.length(), mLycheeInkBounds);
                 paint.setTextAlign(Align.LEFT);
                 canvas.drawText(label, 0, label.length(),
-                        labelX - mBumInkBounds.exactCenterX(), labelBaseline, paint);
+                        labelX - mLycheeInkBounds.exactCenterX(), labelBaseline, paint);
                 paint.setTextAlign(Align.CENTER);
             } else {
                 canvas.drawText(label, 0, label.length(), labelX, labelBaseline, paint);
@@ -512,8 +512,8 @@ public class KeyboardView extends View {
         if (hintLabel != null) {
             paint.setTextSize(key.selectHintTextSize(params));
             paint.setColor(key.selectHintTextColor(params));
-            // BUMBOARD: hint symbols in the interface font's regular weight, like Gboard's
-            paint.setTypeface(app.bumboard.fonts.BumFonts.ui(getContext(), 400));
+            // LYCHEE: hint symbols in the interface font's regular weight, like Gboard's
+            paint.setTypeface(app.lychee.fonts.LycheeFonts.ui(getContext(), 400));
             blendAlpha(paint, params.mAnimAlpha);
             final float labelCharHeight = TypefaceUtils.getReferenceCharHeight(paint);
             final float labelCharWidth = TypefaceUtils.getReferenceCharWidth(paint);
@@ -564,17 +564,17 @@ public class KeyboardView extends View {
                 iconY = (keyHeight - iconHeight) / 2; // Align vertically center.
             }
             final int iconX = (keyWidth - iconWidth) / 2; // Align horizontally center.
-            // BUMBOARD: tint icons to suit the key's fill in the Material 3 theme.
-            final int tint = bumIconTint(key);
+            // LYCHEE: tint icons to suit the key's fill in the Material 3 theme.
+            final int tint = lycheeIconTint(key);
             if (tint != 0) {
                 icon.setColorFilter(tint, PorterDuff.Mode.SRC_IN);
             }
             drawIcon(canvas, icon, iconX, iconY, iconWidth, iconHeight);
         }
 
-        // BUMBOARD: the emoji face above the comma
-        if (isBumEmojiComma(key)) {
-            drawBumEmojiFace(key, canvas, params);
+        // LYCHEE: the emoji face above the comma
+        if (isLycheeEmojiComma(key)) {
+            drawLycheeEmojiFace(key, canvas, params);
             return;
         }
         if (key.hasPopupHint() && key.getMoreKeys() != null) {
@@ -591,7 +591,7 @@ public class KeyboardView extends View {
         final int keyWidth = key.getDrawWidth();
         final int keyHeight = key.getHeight();
 
-        paint.setTypeface(app.bumboard.fonts.BumFonts.uiLike(getContext(), params.mTypeface));
+        paint.setTypeface(app.lychee.fonts.LycheeFonts.uiLike(getContext(), params.mTypeface));
         paint.setTextSize(params.mHintLetterSize);
         paint.setColor(params.mHintLabelColor);
         paint.setTextAlign(Align.CENTER);
@@ -601,41 +601,41 @@ public class KeyboardView extends View {
         canvas.drawText(mKeyPopupHintLetter, hintX, hintY, paint);
     }
 
-    private final Rect mBumInkBounds = new Rect();
+    private final Rect mLycheeInkBounds = new Rect();
 
-    /** BUMBOARD: true when the emoji key is folded into the comma key (BumLayout "combined"). */
-    public static boolean sBumEmojiOnComma = true;
-    private Drawable mBumEmojiFace;
+    /** LYCHEE: true when the emoji key is folded into the comma key (LycheeLayout "combined"). */
+    public static boolean sLycheeEmojiOnComma = true;
+    private Drawable mLycheeEmojiFace;
 
     /** The comma key of a letters keyboard, when it carries the emoji face. */
-    private boolean isBumEmojiComma(@Nonnull final Key key) {
-        if (!sBumEmojiOnComma) return false;
+    private boolean isLycheeEmojiComma(@Nonnull final Key key) {
+        if (!sLycheeEmojiOnComma) return false;
         final Keyboard keyboard = getKeyboard();
         if (keyboard == null || !keyboard.mId.isAlphabetKeyboard()) return false;
         final int code = key.getCode();
         return code == ',' || code == 0xFF0C || code == 0x3001;
     }
 
-    private void drawBumEmojiFace(@Nonnull final Key key, @Nonnull final Canvas canvas,
+    private void drawLycheeEmojiFace(@Nonnull final Key key, @Nonnull final Canvas canvas,
             @Nonnull final KeyDrawParams params) {
-        if (mBumEmojiFace == null) {
+        if (mLycheeEmojiFace == null) {
             final Drawable face = getContext().getDrawable(R.drawable.ic_sym_mood);
             if (face == null) return;
-            mBumEmojiFace = face.mutate();
+            mLycheeEmojiFace = face.mutate();
         }
-        final int color = mBumFunctionalIconColor != 0 ? mBumFunctionalIconColor
+        final int color = mLycheeFunctionalIconColor != 0 ? mLycheeFunctionalIconColor
                 : key.selectTextColor(params);
-        mBumEmojiFace.setColorFilter(new android.graphics.PorterDuffColorFilter(
+        mLycheeEmojiFace.setColorFilter(new android.graphics.PorterDuffColorFilter(
                 color, android.graphics.PorterDuff.Mode.SRC_IN));
-        mBumEmojiFace.setAlpha(params.mAnimAlpha);
+        mLycheeEmojiFace.setAlpha(params.mAnimAlpha);
         final int size = Math.round(key.getHeight() * 0.34f);
         final int x = (key.getDrawWidth() - size) / 2;
         final int y = Math.round(key.getHeight() * 0.38f) - size / 2;
-        drawIcon(canvas, mBumEmojiFace, x, y, size, size);
+        drawIcon(canvas, mLycheeEmojiFace, x, y, size, size);
     }
 
     /** A single full-width CJK punctuation mark (U+3000-303F, U+FF00-FF65). */
-    public static boolean isBumFullWidthMark(@Nullable final String label) {
+    public static boolean isLycheeFullWidthMark(@Nullable final String label) {
         if (label == null || label.isEmpty() || label.length() > 2) return false;
         final char c = label.charAt(0);
         return (c >= '\u3000' && c <= '\u303F') || (c >= '\uFF00' && c <= '\uFF65')
@@ -643,20 +643,20 @@ public class KeyboardView extends View {
                 || c == '\u2018' || c == '\u2019';
     }
 
-    private int bumIconTint(@Nonnull final Key key) {
-        if (mBumIconColor == 0) {
+    private int lycheeIconTint(@Nonnull final Key key) {
+        if (mLycheeIconColor == 0) {
             return 0;
         }
-        if (key.isPressed() && mBumPressedTextColor != 0) {
-            return mBumPressedTextColor;
+        if (key.isPressed() && mLycheePressedTextColor != 0) {
+            return mLycheePressedTextColor;
         }
-        if (key.isActionKey() && mBumActionColor != 0) {
-            return mBumActionColor;
+        if (key.isActionKey() && mLycheeActionColor != 0) {
+            return mLycheeActionColor;
         }
         if (key.isStickyOn()) {
-            return mBumStickyOnColor;
+            return mLycheeStickyOnColor;
         }
-        return key.hasFunctionalBackground() ? mBumFunctionalIconColor : mBumIconColor;
+        return key.hasFunctionalBackground() ? mLycheeFunctionalIconColor : mLycheeIconColor;
     }
 
     protected static void drawIcon(@Nonnull final Canvas canvas,@Nonnull final Drawable icon,
@@ -671,11 +671,11 @@ public class KeyboardView extends View {
         final Paint paint = new Paint();
         paint.setAntiAlias(true);
         if (key == null) {
-            paint.setTypeface(app.bumboard.fonts.BumFonts.uiLike(getContext(), mKeyDrawParams.mTypeface));
+            paint.setTypeface(app.lychee.fonts.LycheeFonts.uiLike(getContext(), mKeyDrawParams.mTypeface));
             paint.setTextSize(mKeyDrawParams.mLabelSize);
         } else {
             paint.setColor(key.selectTextColor(mKeyDrawParams));
-            paint.setTypeface(app.bumboard.fonts.BumFonts.uiLike(getContext(), key.selectTypeface(mKeyDrawParams)));
+            paint.setTypeface(app.lychee.fonts.LycheeFonts.uiLike(getContext(), key.selectTypeface(mKeyDrawParams)));
             paint.setTextSize(key.selectTextSize(mKeyDrawParams));
         }
         return paint;

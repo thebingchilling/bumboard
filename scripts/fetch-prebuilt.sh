@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fetches the prebuilt static librime (BSD-3-Clause) and its dependencies from
-# fcitx5-android/prebuilt into bumboard/prebuilt, at a pinned commit.
+# fcitx5-android/prebuilt into lychee/prebuilt, at a pinned commit.
 set -euo pipefail
 
 COMMIT=3f987c60ae1485a7b2a2cf7db301726af4700f29

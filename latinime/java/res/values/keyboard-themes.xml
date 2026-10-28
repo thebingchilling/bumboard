@@ -19,10 +19,10 @@
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- For keyboard color scheme option dialog. -->
-    <!-- BUMBOARD: one Material 3 theme in two key styles; LatinIME's own themes are not offered. -->
+    <!-- LYCHEE: one Material 3 theme in two key styles; LatinIME's own themes are not offered. -->
     <string-array name="keyboard_theme_names" translatable="false">
-        <item>@string/bum_key_style_raised</item>
-        <item>@string/bum_key_style_flat</item>
+        <item>@string/lychee_key_style_raised</item>
+        <item>@string/lychee_key_style_flat</item>
     </string-array>
     <!-- An element must be a keyboard theme id of
          {@link com.android.inputmethod.keyboard.KeyboardTheme#THEME_ID_ICS} etc. -->

@@ -18,7 +18,7 @@
 */
 -->
 
-<!-- BUMBOARD: Gboard's second symbols page, second row (「 」 on the Chinese keyboards), with its popups -->
+<!-- LYCHEE: Gboard's second symbols page, second row (「 」 on the Chinese keyboards), with its popups -->
 <merge
     xmlns:latin="http://schemas.android.com/apk/res-auto"
 >

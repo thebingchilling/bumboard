@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Mirror the font and emoji packs in BumBoard's catalogue as one-tap downloads.
+"""Mirror the font and emoji packs in Lychee's catalogue as one-tap downloads.
 
 The fonts' own release pages list many files, which is hard to pick from on a phone. This
-fetches each font named in latinime/bumboard/assets/bumboard/packs.json (its latest release,
+fetches each font named in latinime/lychee/assets/lychee/packs.json (its latest release,
 the file matching 'pick', ties broken by 'prefer') and writes lychee-<id>.zip: the font, its
-licence when the release has one, and a pack.json so BumBoard knows which pack it is. The
+licence when the release has one, and a pack.json so Lychee knows which pack it is. The
 packs workflow attaches these to the "packs" release; the catalogue's 'download' links point
 there. Uses GH_TOKEN for the GitHub API when set.
 """
@@ -22,7 +22,7 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-CATALOGUE = ROOT / "latinime/bumboard/assets/bumboard/packs.json"
+CATALOGUE = ROOT / "latinime/lychee/assets/lychee/packs.json"
 FONT = re.compile(r"(?i)\.(ttf|otf)$")
 LICENCE = re.compile(r"(?i)(^|/)(OFL|LICEN[CS]E)[^/]*$")
 

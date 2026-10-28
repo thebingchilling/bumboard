@@ -213,7 +213,7 @@ public final class ResourceUtils {
         return defaultKeyboardHeight;
     }
 
-    private static final float BUM_PORTRAIT_HEIGHT = 0.5f;
+    private static final float LYCHEE_PORTRAIT_HEIGHT = 0.5f;
 
     public static int getDefaultKeyboardHeight(final Resources res) {
         final DisplayMetrics dm = res.getDisplayMetrics();
@@ -221,9 +221,9 @@ public final class ResourceUtils {
                 res, R.array.keyboard_heights, null /* defaultValue */);
         final float keyboardHeight;
         if (dm.heightPixels > dm.widthPixels && dm.widthPixels < 600 * dm.density) {
-            // BUMBOARD: on phones held upright, Gboard's proportions: the four rows of letters
+            // LYCHEE: on phones held upright, Gboard's proportions: the four rows of letters
             // are half as tall as the screen is wide (the number row adds a quarter of that)
-            return (int)Math.min(dm.widthPixels * BUM_PORTRAIT_HEIGHT, dm.heightPixels * 0.46f);
+            return (int)Math.min(dm.widthPixels * LYCHEE_PORTRAIT_HEIGHT, dm.heightPixels * 0.46f);
         }
         if (TextUtils.isEmpty(keyboardHeightInDp)) {
             keyboardHeight = res.getDimension(R.dimen.config_default_keyboard_height);

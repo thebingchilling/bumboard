@@ -58,8 +58,8 @@ public final class KeyboardIconsSet {
     public static final String NAME_ZWJ_KEY = "zwj_key";
     public static final String NAME_EMOJI_ACTION_KEY = "emoji_action_key";
     public static final String NAME_EMOJI_NORMAL_KEY = "emoji_normal_key";
-    // BUMBOARD
-    public static final String NAME_BUM_ONE_HANDED_KEY = "bum_one_handed_key";
+    // LYCHEE
+    public static final String NAME_LYCHEE_ONE_HANDED_KEY = "lychee_one_handed_key";
 
     private static final SparseIntArray ATTR_ID_TO_ICON_ID = new SparseIntArray();
 
@@ -89,26 +89,26 @@ public final class KeyboardIconsSet {
         NAME_ZWJ_KEY,                     R.styleable.Keyboard_iconZwjKey,
         NAME_EMOJI_ACTION_KEY,            R.styleable.Keyboard_iconEmojiActionKey,
         NAME_EMOJI_NORMAL_KEY,            R.styleable.Keyboard_iconEmojiNormalKey,
-        NAME_BUM_ONE_HANDED_KEY,          R.styleable.Keyboard_iconOneHandedKey,
+        NAME_LYCHEE_ONE_HANDED_KEY,          R.styleable.Keyboard_iconOneHandedKey,
     };
 
-    // BUMBOARD: every shortcut has an icon too ("bum_sc_<id>"), for the comma's popup; they are
+    // LYCHEE: every shortcut has an icon too ("lychee_sc_<id>"), for the comma's popup; they are
     // loaded straight from their drawables, after the theme's icons.
-    private static final app.bumboard.toolbar.Shortcut[] BUM_SHORTCUTS =
-            app.bumboard.toolbar.Shortcut.values();
+    private static final app.lychee.toolbar.Shortcut[] LYCHEE_SHORTCUTS =
+            app.lychee.toolbar.Shortcut.values();
     private static final int NUM_THEME_ICONS = NAMES_AND_ATTR_IDS.length / 2;
-    // BUMBOARD: BumBoard's own key icons, also loaded straight from their drawables.
-    private static final Object[] BUM_EXTRA_ICONS = {
-        "bum_shift_locked", R.drawable.ic_sym_shift_lock,
+    // LYCHEE: Lychee's own key icons, also loaded straight from their drawables.
+    private static final Object[] LYCHEE_EXTRA_ICONS = {
+        "lychee_shift_locked", R.drawable.ic_sym_shift_lock,
     };
-    private static int NUM_ICONS = NUM_THEME_ICONS + BUM_SHORTCUTS.length
-            + BUM_EXTRA_ICONS.length / 2;
+    private static int NUM_ICONS = NUM_THEME_ICONS + LYCHEE_SHORTCUTS.length
+            + LYCHEE_EXTRA_ICONS.length / 2;
     private static final String[] ICON_NAMES = new String[NUM_ICONS];
     private final Drawable[] mIcons = new Drawable[NUM_ICONS];
     private final int[] mIconResourceIds = new int[NUM_ICONS];
 
-    public static String bumShortcutIconName(final app.bumboard.toolbar.Shortcut shortcut) {
-        return "bum_sc_" + shortcut.getId();
+    public static String lycheeShortcutIconName(final app.lychee.toolbar.Shortcut shortcut) {
+        return "lychee_sc_" + shortcut.getId();
     }
 
     static {
@@ -123,14 +123,14 @@ public final class KeyboardIconsSet {
             ICON_NAMES[iconId] = name;
             iconId++;
         }
-        for (final app.bumboard.toolbar.Shortcut shortcut : BUM_SHORTCUTS) {
-            final String name = bumShortcutIconName(shortcut);
+        for (final app.lychee.toolbar.Shortcut shortcut : LYCHEE_SHORTCUTS) {
+            final String name = lycheeShortcutIconName(shortcut);
             sNameToIdsMap.put(name, iconId);
             ICON_NAMES[iconId] = name;
             iconId++;
         }
-        for (int i = 0; i < BUM_EXTRA_ICONS.length; i += 2) {
-            final String name = (String)BUM_EXTRA_ICONS[i];
+        for (int i = 0; i < LYCHEE_EXTRA_ICONS.length; i += 2) {
+            final String name = (String)LYCHEE_EXTRA_ICONS[i];
             sNameToIdsMap.put(name, iconId);
             ICON_NAMES[iconId] = name;
             iconId++;
@@ -153,18 +153,18 @@ public final class KeyboardIconsSet {
                         + " not found");
             }
         }
-        for (int i = 0; i < BUM_SHORTCUTS.length; i++) {
-            final int resId = BUM_SHORTCUTS[i].getIcon();
+        for (int i = 0; i < LYCHEE_SHORTCUTS.length; i++) {
+            final int resId = LYCHEE_SHORTCUTS[i].getIcon();
             final Drawable icon = keyboardAttrs.getResources().getDrawable(resId, null);
             setDefaultBounds(icon);
             mIcons[NUM_THEME_ICONS + i] = icon;
             mIconResourceIds[NUM_THEME_ICONS + i] = resId;
         }
-        for (int i = 0; i < BUM_EXTRA_ICONS.length; i += 2) {
-            final int resId = (Integer)BUM_EXTRA_ICONS[i + 1];
+        for (int i = 0; i < LYCHEE_EXTRA_ICONS.length; i += 2) {
+            final int resId = (Integer)LYCHEE_EXTRA_ICONS[i + 1];
             final Drawable icon = keyboardAttrs.getResources().getDrawable(resId, null);
             setDefaultBounds(icon);
-            final int iconId = NUM_THEME_ICONS + BUM_SHORTCUTS.length + i / 2;
+            final int iconId = NUM_THEME_ICONS + LYCHEE_SHORTCUTS.length + i / 2;
             mIcons[iconId] = icon;
             mIconResourceIds[iconId] = resId;
         }

@@ -1,0 +1,41 @@
+# Type an English word, get Cantonese words that mean it.
+schema:
+  schema_id: lychee_en_yue
+  name: 英→粵
+  version: "1"
+  description: English to Cantonese lookup
+
+switches:
+  - name: ascii_mode
+    reset: 0
+    states: [ 英→粵, A ]
+  - name: full_shape
+    states: [ 半角, 全角 ]
+  - name: simplification
+    states: [ 繁, 简 ]
+
+engine:
+  __include: lychee_common:/english_lookup_engine
+
+speller:
+  alphabet: abcdefghijklmnopqrstuvwxyz
+  delimiter: " "
+
+translator:
+  dictionary: lychee_en_yue
+  enable_completion: true
+  enable_sentence: false
+  enable_user_dict: false
+  enable_encoder: false
+  comment_format:
+    - xform/^~.*$//
+
+simplifier:
+  option_name: simplification
+  opencc_config: t2s.json
+  tips: none
+
+punctuator:
+  __include: lychee_common:/punctuator
+key_binder:
+  __include: lychee_common:/key_binder

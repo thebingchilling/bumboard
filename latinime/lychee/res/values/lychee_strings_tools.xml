@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shortcuts, panels over the keys, keyboard layout modes and the emoji tone picker. -->
+<resources>
+    <!-- Shortcuts -->
+    <string name="lychee_sc_gallery">All shortcuts</string>
+    <string name="lychee_sc_language">Next language</string>
+    <string name="lychee_sc_text_edit">Text editing</string>
+    <string name="lychee_sc_one_handed">One-handed</string>
+    <string name="lychee_sc_floating">Floating</string>
+    <string name="lychee_sc_resize">Resize</string>
+    <string name="lychee_sc_numpad">Number pad</string>
+    <string name="lychee_sc_emoji">Emoji</string>
+    <string name="lychee_sc_undo">Undo</string>
+    <string name="lychee_sc_redo">Redo</string>
+    <string name="lychee_sc_settings">Settings</string>
+
+    <!-- Shortcuts gallery -->
+    <string name="lychee_gallery_title">Shortcuts</string>
+    <string name="lychee_gallery_edit">Edit</string>
+    <string name="lychee_gallery_all_on_bar">Every shortcut is on the bar. Tap the pencil to change which ones are there.</string>
+    <string name="lychee_gallery_hint">Hold and drag to customise</string>
+    <string name="lychee_gallery_close">Close</string>
+
+    <!-- Text editing -->
+    <string name="lychee_edit_select">Select</string>
+    <string name="lychee_edit_select_all">Select all</string>
+    <string name="lychee_edit_cut">Cut</string>
+    <string name="lychee_edit_copy">Copy</string>
+    <string name="lychee_edit_paste">Paste</string>
+    <string name="lychee_edit_up">Up</string>
+    <string name="lychee_edit_down">Down</string>
+    <string name="lychee_edit_left">Left</string>
+    <string name="lychee_edit_right">Right</string>
+    <string name="lychee_edit_line_start">Start of line</string>
+    <string name="lychee_edit_line_end">End of line</string>
+
+    <!-- Layout modes -->
+    <string name="lychee_one_handed_exit">Full-width keyboard</string>
+    <string name="lychee_one_handed_swap">Move keyboard to the other side</string>
+    <string name="lychee_float_dock">Dock keyboard</string>
+    <string name="lychee_resize_reset">Reset</string>
+    <string name="lychee_resize_done">Done</string>
+    <!-- The keyboard's size while resizing, in pixels. -->
+    <string name="lychee_resize_size_h">Height %1$d px</string>
+    <string name="lychee_resize_size_wh">%1$d × %2$d px</string>
+
+    <!-- Number pad -->
+    <string name="lychee_numpad_space">Space</string>
+    <string name="lychee_numpad_enter">Enter</string>
+
+    <!-- Emoji skin tones -->
+    <string name="lychee_tone_person1">Left</string>
+    <string name="lychee_tone_person2">Right</string>
+    <string name="lychee_tone_type">Type this emoji</string>
+    <string name="lychee_tone_1">Light skin tone</string>
+    <string name="lychee_tone_2">Medium-light skin tone</string>
+    <string name="lychee_tone_3">Medium skin tone</string>
+    <string name="lychee_tone_4">Medium-dark skin tone</string>
+    <string name="lychee_tone_5">Dark skin tone</string>
+
+    <!-- Settings -->
+    <string name="lychee_pref_number_row">Number row</string>
+    <string name="lychee_pref_number_row_summary">Show 1–0 above the letters</string>
+    <string name="lychee_pref_comma_key">Emoji key</string>
+    <string name="lychee_pref_comma_key_summary">On the comma (long-press it for emoji) or a key beside the comma. What has no key goes in the comma\'s long-press menu, with Settings and one-handed mode</string>
+    <string name="lychee_pref_comma_key_combined">On comma</string>
+    <string name="lychee_pref_comma_key_emoji">Emoji</string>
+    <string name="lychee_pref_comma_key_language">Next language</string>
+    <string name="lychee_pref_emoji_size">Emoji per row</string>
+    <string name="lychee_pref_emoji_size_summary">Fewer means bigger emoji. You can also pinch the emoji grid.</string>
+    <string name="lychee_pref_height">Keyboard height</string>
+    <string name="lychee_pref_layout">Keyboard mode</string>
+    <string name="lychee_pref_layout_normal">Full width</string>
+    <string name="lychee_pref_layout_one_handed">One-handed</string>
+    <string name="lychee_pref_layout_floating">Floating</string>
+
+    <!-- Chinese -->
+    <string name="lychee_script_key_traditional">Traditional Chinese. Tap for Simplified.</string>
+    <string name="lychee_script_key_simplified">Simplified Chinese. Tap for Traditional.</string>
+    <string name="lychee_zhong_key_off">English to Chinese: off. Tap to type English words and get Chinese.</string>
+    <string name="lychee_zhong_key_on">English to Chinese: on. Tap to type pinyin or Jyutping again.</string>
+    <string name="lychee_pref_candidate_size">Candidate size</string>
+    <string name="lychee_pref_dictionary_hold">Dictionary on long-press</string>
+    <string name="lychee_pref_dictionary_hold_summary">Peek shows the entry while you hold a candidate; pin keeps it open until you close it</string>
+    <string name="lychee_pref_dictionary_peek">Hold to peek</string>
+    <string name="lychee_pref_dictionary_pin">Hold to pin</string>
+    <string name="lychee_candidates_all">All candidates</string>
+    <string name="lychee_pref_comma_key_none">None</string>
+    <string name="lychee_pref_comma_menu">Comma long-press</string>
+    <string name="lychee_pref_comma_menu_settings">Always first</string>
+</resources>

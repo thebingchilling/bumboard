@@ -68,13 +68,13 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
 
     private final ViewGroup mSuggestionsStrip;
     private final ImageButton mVoiceKey;
-    // BUMBOARD: shortcuts while there are no suggestions; Traditional/Simplified on the left.
-    private final app.bumboard.toolbar.ToolbarView mBumToolbar;
-    private final TextView mBumScriptKey;
-    private final TextView mBumZhongKey;
-    private boolean mBumHasSuggestions;
-    private boolean mBumCandidatesShowing;
-    private boolean mBumVoiceEnabled;
+    // LYCHEE: shortcuts while there are no suggestions; Traditional/Simplified on the left.
+    private final app.lychee.toolbar.ToolbarView mLycheeToolbar;
+    private final TextView mLycheeScriptKey;
+    private final TextView mLycheeZhongKey;
+    private boolean mLycheeHasSuggestions;
+    private boolean mLycheeCandidatesShowing;
+    private boolean mLycheeVoiceEnabled;
     private final View mImportantNoticeStrip;
     MainKeyboardView mMainKeyboardView;
 
@@ -147,28 +147,28 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
 
         mSuggestionsStrip = (ViewGroup)findViewById(R.id.suggestions_strip);
         mVoiceKey = (ImageButton)findViewById(R.id.suggestions_strip_voice_key);
-        mBumToolbar = (app.bumboard.toolbar.ToolbarView)findViewById(R.id.bum_toolbar);
-        mBumScriptKey = (TextView)findViewById(R.id.bum_script_key);
-        mBumScriptKey.setBackground(bumRoundRaisedButton(context,
-                context.getColor(R.color.bum_m3_primary_container)));
-        mBumScriptKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
-        mBumScriptKey.setTextColor(context.getColor(R.color.bum_m3_on_primary_container));
-        mBumScriptKey.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        mBumScriptKey.setIncludeFontPadding(false);
-        mBumScriptKey.setPadding(0, 0, 0, (int) (getResources().getDisplayMetrics().density * 2));
-        mBumZhongKey = (TextView)findViewById(R.id.bum_zhong_key);
-        mBumZhongKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
-        mBumZhongKey.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        mBumZhongKey.setIncludeFontPadding(false);
-        mBumZhongKey.setText("\u4E2D");
-        mBumZhongKey.setPadding(0, 0, 0, (int) (getResources().getDisplayMetrics().density * 2));
+        mLycheeToolbar = (app.lychee.toolbar.ToolbarView)findViewById(R.id.lychee_toolbar);
+        mLycheeScriptKey = (TextView)findViewById(R.id.lychee_script_key);
+        mLycheeScriptKey.setBackground(lycheeRoundRaisedButton(context,
+                context.getColor(R.color.lychee_m3_primary_container)));
+        mLycheeScriptKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+        mLycheeScriptKey.setTextColor(context.getColor(R.color.lychee_m3_on_primary_container));
+        mLycheeScriptKey.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        mLycheeScriptKey.setIncludeFontPadding(false);
+        mLycheeScriptKey.setPadding(0, 0, 0, (int) (getResources().getDisplayMetrics().density * 2));
+        mLycheeZhongKey = (TextView)findViewById(R.id.lychee_zhong_key);
+        mLycheeZhongKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+        mLycheeZhongKey.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        mLycheeZhongKey.setIncludeFontPadding(false);
+        mLycheeZhongKey.setText("\u4E2D");
+        mLycheeZhongKey.setPadding(0, 0, 0, (int) (getResources().getDisplayMetrics().density * 2));
         mImportantNoticeStrip = findViewById(R.id.important_notice_strip);
         mStripVisibilityGroup = new StripVisibilityGroup(this, mSuggestionsStrip,
                 mImportantNoticeStrip);
 
         for (int pos = 0; pos < SuggestedWords.MAX_SUGGESTIONS; pos++) {
             final TextView word = new TextView(context, null, R.attr.suggestionWordStyle);
-            word.setTypeface(app.bumboard.fonts.BumFonts.ui(context, 400));
+            word.setTypeface(app.lychee.fonts.LycheeFonts.ui(context, 400));
             word.setContentDescription(getResources().getString(R.string.spoken_empty_suggestion));
             word.setOnClickListener(this);
             word.setOnLongClickListener(this);
@@ -201,29 +201,29 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         keyboardAttr.recycle();
         mVoiceKey.setImageDrawable(iconVoice);
         mVoiceKey.setOnClickListener(this);
-        // BUMBOARD: the mic icon is a white Material Symbol, tinted to suit the strip, on a white
+        // LYCHEE: the mic icon is a white Material Symbol, tinted to suit the strip, on a white
         // circle like Gboard's.
         mVoiceKey.setImageTintList(android.content.res.ColorStateList.valueOf(
-                context.getColor(R.color.bum_m3_on_key)));
+                context.getColor(R.color.lychee_m3_on_key)));
         final android.graphics.drawable.GradientDrawable micCircle =
                 new android.graphics.drawable.GradientDrawable();
         micCircle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-        micCircle.setColor(context.getColor(R.color.bum_m3_key));
+        micCircle.setColor(context.getColor(R.color.lychee_m3_key));
         final int micInset = (int) (getResources().getDisplayMetrics().density * 6);
         mVoiceKey.setBackground(new android.graphics.drawable.InsetDrawable(micCircle, micInset));
-        setBumScriptKey(null, null);
+        setLycheeScriptKey(null, null);
     }
 
-    // BUMBOARD ---------------------------------------------------------------------------
+    // LYCHEE ---------------------------------------------------------------------------
 
-    public app.bumboard.toolbar.ToolbarView getBumToolbar() {
-        return mBumToolbar;
+    public app.lychee.toolbar.ToolbarView getLycheeToolbar() {
+        return mLycheeToolbar;
     }
 
     /** While Chinese candidates show in the middle of the strip, the strip's own middle hides. */
-    public void setBumCandidatesShowing(final boolean showing) {
-        mBumCandidatesShowing = showing;
-        updateBumMiddle();
+    public void setLycheeCandidatesShowing(final boolean showing) {
+        mLycheeCandidatesShowing = showing;
+        updateLycheeMiddle();
     }
 
     /**
@@ -232,64 +232,64 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
      * chip reading 繁/简 with the script in use emphasised, so it never looks like a character
      * to type.
      */
-    public void setBumScriptKey(final Boolean simplified, final OnClickListener onClick) {
+    public void setLycheeScriptKey(final Boolean simplified, final OnClickListener onClick) {
         final boolean shown = simplified != null;
-        mBumScriptKey.setVisibility(shown ? VISIBLE : GONE);
-        mBumScriptKey.setOnClickListener(onClick);
+        mLycheeScriptKey.setVisibility(shown ? VISIBLE : GONE);
+        mLycheeScriptKey.setOnClickListener(onClick);
         if (shown) {
             // the script in use, one character on a round raised button; a tap switches
-            mBumScriptKey.setText(simplified ? "\u7B80" : "\u7E41");
-            mBumScriptKey.setContentDescription(getContext().getString(simplified
-                    ? R.string.bum_script_key_simplified : R.string.bum_script_key_traditional));
+            mLycheeScriptKey.setText(simplified ? "\u7B80" : "\u7E41");
+            mLycheeScriptKey.setContentDescription(getContext().getString(simplified
+                    ? R.string.lychee_script_key_simplified : R.string.lychee_script_key_traditional));
         }
-        mBumScriptShown = shown;
-        updateBumMiddle();
+        mLycheeScriptShown = shown;
+        updateLycheeMiddle();
     }
 
-    private boolean mBumScriptShown;
-    private boolean mBumZhongShown;
+    private boolean mLycheeScriptShown;
+    private boolean mLycheeZhongShown;
 
     /**
      * The 中 key left of 繁/简 (null hides it): when [active], English words typed are looked
      * up and come back as Chinese candidates; it is then filled in the accent colour.
      */
-    public void setBumZhongKey(final Boolean active, final OnClickListener onClick) {
+    public void setLycheeZhongKey(final Boolean active, final OnClickListener onClick) {
         final boolean shown = active != null;
-        mBumZhongKey.setVisibility(shown ? VISIBLE : GONE);
-        mBumZhongKey.setOnClickListener(onClick);
+        mLycheeZhongKey.setVisibility(shown ? VISIBLE : GONE);
+        mLycheeZhongKey.setOnClickListener(onClick);
         if (shown) {
             final Context context = getContext();
-            mBumZhongKey.setBackground(bumRoundRaisedButton(context, context.getColor(active
-                    ? R.color.bum_m3_primary : R.color.bum_m3_key)));
-            mBumZhongKey.setTextColor(context.getColor(active
-                    ? R.color.bum_m3_on_primary : R.color.bum_m3_on_key));
-            mBumZhongKey.setContentDescription(context.getString(active
-                    ? R.string.bum_zhong_key_on : R.string.bum_zhong_key_off));
+            mLycheeZhongKey.setBackground(lycheeRoundRaisedButton(context, context.getColor(active
+                    ? R.color.lychee_m3_primary : R.color.lychee_m3_key)));
+            mLycheeZhongKey.setTextColor(context.getColor(active
+                    ? R.color.lychee_m3_on_primary : R.color.lychee_m3_on_key));
+            mLycheeZhongKey.setContentDescription(context.getString(active
+                    ? R.string.lychee_zhong_key_on : R.string.lychee_zhong_key_off));
         }
-        mBumZhongShown = shown;
-        updateBumMiddle();
+        mLycheeZhongShown = shown;
+        updateLycheeMiddle();
     }
 
     /** How much of the strip's right edge the locked 繁/简 key takes. */
-    public int getBumEdgeWidth() {
-        final int key = getResources().getDimensionPixelSize(R.dimen.bum_script_key_width);
-        return mBumScriptShown ? key : 0;
+    public int getLycheeEdgeWidth() {
+        final int key = getResources().getDimensionPixelSize(R.dimen.lychee_script_key_width);
+        return mLycheeScriptShown ? key : 0;
     }
 
     /** How much of the strip's left edge the pinned 中 key takes. */
-    public int getBumStartWidth() {
-        final int key = getResources().getDimensionPixelSize(R.dimen.bum_script_key_width);
-        return mBumZhongShown ? key : 0;
+    public int getLycheeStartWidth() {
+        final int key = getResources().getDimensionPixelSize(R.dimen.lychee_script_key_width);
+        return mLycheeZhongShown ? key : 0;
     }
 
     /** A round key with a soft shadow under it, like the raised keys. */
-    private static android.graphics.drawable.Drawable bumRoundRaisedButton(final Context context,
+    private static android.graphics.drawable.Drawable lycheeRoundRaisedButton(final Context context,
             final int color) {
         final float density = context.getResources().getDisplayMetrics().density;
         final android.graphics.drawable.GradientDrawable shadow =
                 new android.graphics.drawable.GradientDrawable();
         shadow.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-        shadow.setColor(context.getColor(R.color.bum_m3_shadow));
+        shadow.setColor(context.getColor(R.color.lychee_m3_shadow));
         final android.graphics.drawable.GradientDrawable face =
                 new android.graphics.drawable.GradientDrawable();
         face.setShape(android.graphics.drawable.GradientDrawable.OVAL);
@@ -312,7 +312,7 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
      * The bar shows shortcuts and the mic while idle; suggestions or Chinese candidates take
      * their place and the whole width (the Traditional/Simplified chip stays).
      */
-    private static void setBumMargins(final View view, final int left, final int right) {
+    private static void setLycheeMargins(final View view, final int left, final int right) {
         final MarginLayoutParams lp = (MarginLayoutParams) view.getLayoutParams();
         if (lp.leftMargin != left || lp.rightMargin != right) {
             lp.leftMargin = left;
@@ -322,30 +322,30 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
     }
 
     /** Called when the bar's mode changes (a gallery or panel title showing, or not). */
-    public void bumRefresh() {
-        updateBumMiddle();
+    public void lycheeRefresh() {
+        updateLycheeMiddle();
     }
 
-    private void updateBumMiddle() {
+    private void updateLycheeMiddle() {
         final boolean notice = mStripVisibilityGroup.isShowingImportantNoticeStrip();
         // a panel's title (shortcuts gallery, text editing) takes the bar over suggestions
-        final boolean panel = mBumToolbar.getMode() != app.bumboard.toolbar.ToolbarView.Mode.NORMAL;
-        final boolean idle = panel || (!mBumHasSuggestions && !mBumCandidatesShowing && !notice);
-        mBumToolbar.setVisibility(idle ? VISIBLE : INVISIBLE);
+        final boolean panel = mLycheeToolbar.getMode() != app.lychee.toolbar.ToolbarView.Mode.NORMAL;
+        final boolean idle = panel || (!mLycheeHasSuggestions && !mLycheeCandidatesShowing && !notice);
+        mLycheeToolbar.setVisibility(idle ? VISIBLE : INVISIBLE);
         // like Gboard's, the mic stays on the right while suggestions show (not over candidates)
-        final boolean voice = !panel && !mBumCandidatesShowing && !notice && mBumVoiceEnabled;
+        final boolean voice = !panel && !mLycheeCandidatesShowing && !notice && mLycheeVoiceEnabled;
         mVoiceKey.setVisibility(voice ? VISIBLE : GONE);
         if (!notice) {
-            mSuggestionsStrip.setVisibility(mBumHasSuggestions && !mBumCandidatesShowing && !panel
+            mSuggestionsStrip.setVisibility(mLycheeHasSuggestions && !mLycheeCandidatesShowing && !panel
                     ? VISIBLE : INVISIBLE);
         }
         // the edges: 中 on the left and 繁/简 on the right (Chinese keyboards), and the mic
-        final int start = getBumStartWidth();
-        final int script = getBumEdgeWidth();
+        final int start = getLycheeStartWidth();
+        final int script = getLycheeEdgeWidth();
         final int mic = getResources().getDimensionPixelSize(
                 R.dimen.config_suggestions_strip_height);
-        setBumMargins(mBumToolbar, start, script + (voice ? mic : 0));
-        setBumMargins(mSuggestionsStrip, start, script + (voice ? mic : 0));
+        setLycheeMargins(mLycheeToolbar, start, script + (voice ? mic : 0));
+        setLycheeMargins(mSuggestionsStrip, start, script + (voice ? mic : 0));
     }
 
     /**
@@ -361,9 +361,9 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         final int visibility = shouldBeVisible ? VISIBLE : (isFullscreenMode ? GONE : INVISIBLE);
         setVisibility(visibility);
         final SettingsValues currentSettingsValues = Settings.getInstance().getCurrent();
-        // BUMBOARD: the mic shows only while the bar is idle (see updateBumMiddle)
-        mBumVoiceEnabled = currentSettingsValues.mShowsVoiceInputKey;
-        updateBumMiddle();
+        // LYCHEE: the mic shows only while the bar is idle (see updateLycheeMiddle)
+        mLycheeVoiceEnabled = currentSettingsValues.mShowsVoiceInputKey;
+        updateLycheeMiddle();
     }
 
     public void setSuggestions(final SuggestedWords suggestedWords, final boolean isRtlLanguage) {
@@ -373,11 +373,11 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mStartIndexOfMoreSuggestions = mLayoutHelper.layoutAndReturnStartIndexOfMoreSuggestions(
                 getContext(), mSuggestedWords, mSuggestionsStrip, this);
         mStripVisibilityGroup.showSuggestionsStrip();
-        // BUMBOARD: suggestions only while a word is being typed; next-word predictions and
+        // LYCHEE: suggestions only while a word is being typed; next-word predictions and
         // punctuation "suggestions" give way to the shortcuts.
-        mBumHasSuggestions = !suggestedWords.isEmpty() && !suggestedWords.isPunctuationSuggestions()
+        mLycheeHasSuggestions = !suggestedWords.isEmpty() && !suggestedWords.isPunctuationSuggestions()
                 && !suggestedWords.isPrediction();
-        updateBumMiddle();
+        updateLycheeMiddle();
     }
 
     public void setMoreSuggestionsHeight(final int remainingHeight) {
@@ -414,8 +414,8 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         removeAllDebugInfoViews();
         mStripVisibilityGroup.showSuggestionsStrip();
         dismissMoreSuggestionsPanel();
-        mBumHasSuggestions = false;
-        updateBumMiddle();
+        mLycheeHasSuggestions = false;
+        updateLycheeMiddle();
     }
 
     private void removeAllDebugInfoViews() {

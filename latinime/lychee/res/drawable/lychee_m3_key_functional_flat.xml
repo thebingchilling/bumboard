@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated: Lychee Material 3 keys. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="?attr/lycheeColorFunctionalPressed" /><corners android:radius="8dp" /></shape></item>
+    <item><shape android:shape="rectangle"><solid android:color="?attr/lycheeColorFunctional" /><corners android:radius="8dp" /></shape></item>
+</selector>

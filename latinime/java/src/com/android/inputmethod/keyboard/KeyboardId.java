@@ -82,10 +82,10 @@ public final class KeyboardId {
     public final String mCustomActionLabel;
     public final boolean mHasShortcutKey;
     public final boolean mIsSplitLayout;
-    // BUMBOARD
-    public final boolean mBumNumberRow;
-    public final boolean mBumEmojiKey;
-    public final boolean mBumSideKey;
+    // LYCHEE
+    public final boolean mLycheeNumberRow;
+    public final boolean mLycheeEmojiKey;
+    public final boolean mLycheeSideKey;
 
     private final int mHashCode;
 
@@ -102,9 +102,9 @@ public final class KeyboardId {
                 ? mEditorInfo.actionLabel.toString() : null;
         mHasShortcutKey = params.mVoiceInputKeyEnabled;
         mIsSplitLayout = params.mIsSplitLayoutEnabled;
-        mBumNumberRow = params.mBumNumberRow;
-        mBumEmojiKey = params.mBumEmojiKey;
-        mBumSideKey = params.mBumSideKey;
+        mLycheeNumberRow = params.mLycheeNumberRow;
+        mLycheeEmojiKey = params.mLycheeEmojiKey;
+        mLycheeSideKey = params.mLycheeSideKey;
 
         mHashCode = computeHashCode(this);
     }
@@ -126,9 +126,9 @@ public final class KeyboardId {
                 id.navigatePrevious(),
                 id.mSubtype,
                 id.mIsSplitLayout,
-                id.mBumNumberRow,
-                id.mBumEmojiKey,
-                id.mBumSideKey
+                id.mLycheeNumberRow,
+                id.mLycheeEmojiKey,
+                id.mLycheeSideKey
         });
     }
 
@@ -143,9 +143,9 @@ public final class KeyboardId {
                 && other.mClobberSettingsKey == mClobberSettingsKey
                 && other.mHasShortcutKey == mHasShortcutKey
                 && other.mLanguageSwitchKeyEnabled == mLanguageSwitchKeyEnabled
-                && other.mBumNumberRow == mBumNumberRow
-                && other.mBumEmojiKey == mBumEmojiKey
-                && other.mBumSideKey == mBumSideKey
+                && other.mLycheeNumberRow == mLycheeNumberRow
+                && other.mLycheeEmojiKey == mLycheeEmojiKey
+                && other.mLycheeSideKey == mLycheeSideKey
                 && other.isMultiLine() == isMultiLine()
                 && other.imeAction() == imeAction()
                 && TextUtils.equals(other.mCustomActionLabel, mCustomActionLabel)

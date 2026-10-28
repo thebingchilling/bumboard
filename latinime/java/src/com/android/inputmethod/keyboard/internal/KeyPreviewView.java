@@ -64,10 +64,10 @@ public class KeyPreviewView extends TextView {
         setCompoundDrawables(null, null, null, null);
         setTextColor(drawParams.mPreviewTextColor);
         setTextSize(TypedValue.COMPLEX_UNIT_PX, key.selectPreviewTextSize(drawParams));
-        setTypeface(app.bumboard.fonts.BumFonts.uiLike(getContext(), key.selectPreviewTypeface(drawParams)));
+        setTypeface(app.lychee.fonts.LycheeFonts.uiLike(getContext(), key.selectPreviewTypeface(drawParams)));
         // TODO Should take care of temporaryShiftLabel here.
         setTextAndScaleX(key.getPreviewLabel());
-        // BUMBOARD: Gboard's "…" under the letter when the key has a long-press popup
+        // LYCHEE: Gboard's "…" under the letter when the key has a long-press popup
         final String label = key.getPreviewLabel();
         if (key.getMoreKeys() != null && label != null && label.length() <= 2) {
             final android.text.SpannableString text = new android.text.SpannableString(label + "\n\u2026");

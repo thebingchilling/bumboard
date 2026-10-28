@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Fetches Google Sans Flex (SIL Open Font License 1.1), BumBoard's interface font, from the
-# google/fonts repository into the APK's assets. Without it BumBoard falls back to the system font.
+# Fetches Google Sans Flex (SIL Open Font License 1.1), Lychee's interface font, from the
+# google/fonts repository into the APK's assets. Without it Lychee falls back to the system font.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT="$ROOT/data/out/assets/bumboard"
+OUT="$ROOT/data/out/assets/lychee"
 if [ -f "$OUT/GoogleSansFlex.ttf" ]; then
     exit 0
 fi

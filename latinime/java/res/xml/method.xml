@@ -113,12 +113,12 @@
 <!-- If IME doesn't have an applicable subtype, the first subtype will be used as a default
      subtype.-->
 <input-method xmlns:android="http://schemas.android.com/apk/res/android"
-        android:settingsActivity="app.bumboard.settings.SettingsActivity"
+        android:settingsActivity="app.lychee.settings.SettingsActivity"
         android:isDefault="@bool/im_is_default"
         android:supportsSwitchingToNextInputMethod="true">
-    <!-- BUMBOARD: English plus Chinese through Rime (BumEngine=yue|cmn, see app.bumboard.chinese)
-         Japanese (BumEngine=ja, with the Japanese dictionary pack) and Korean (BumEngine=ko)
-         through Rime too, all typed in romanisation on QWERTY: BumBoard is for learners. -->
+    <!-- LYCHEE: English plus Chinese through Rime (LycheeEngine=yue|cmn, see app.lychee.chinese)
+         Japanese (LycheeEngine=ja, with the Japanese dictionary pack) and Korean (LycheeEngine=ko)
+         through Rime too, all typed in romanisation on QWERTY: Lychee is for learners. -->
     <subtype android:icon="@drawable/ic_ime_switcher_dark"
             android:label="@string/subtype_en_US"
             android:subtypeId="0xc9194f98"
@@ -138,49 +138,49 @@
             android:isAsciiCapable="true"
     />
     <subtype android:icon="@drawable/ic_ime_switcher_dark"
-            android:label="@string/bum_subtype_yue"
+            android:label="@string/lychee_subtype_yue"
             android:subtypeId="0x42756d01"
             android:imeSubtypeLocale="zh_HK"
             android:languageTag="yue-Hant-HK"
             android:imeSubtypeMode="keyboard"
-            android:imeSubtypeExtraValue="KeyboardLayoutSet=qwerty,AsciiCapable,EmojiCapable,BumEngine=yue"
+            android:imeSubtypeExtraValue="KeyboardLayoutSet=qwerty,AsciiCapable,EmojiCapable,LycheeEngine=yue"
             android:isAsciiCapable="true"
     />
     <subtype android:icon="@drawable/ic_ime_switcher_dark"
-            android:label="@string/bum_subtype_cmn"
+            android:label="@string/lychee_subtype_cmn"
             android:subtypeId="0x42756d02"
             android:imeSubtypeLocale="zh_CN"
             android:languageTag="cmn"
             android:imeSubtypeMode="keyboard"
-            android:imeSubtypeExtraValue="KeyboardLayoutSet=qwerty,AsciiCapable,EmojiCapable,BumEngine=cmn"
+            android:imeSubtypeExtraValue="KeyboardLayoutSet=qwerty,AsciiCapable,EmojiCapable,LycheeEngine=cmn"
             android:isAsciiCapable="true"
     />
     <subtype android:icon="@drawable/ic_ime_switcher_dark"
-            android:label="@string/bum_subtype_ko"
+            android:label="@string/lychee_subtype_ko"
             android:subtypeId="0x42756d03"
             android:imeSubtypeLocale="ko"
             android:languageTag="ko"
             android:imeSubtypeMode="keyboard"
-            android:imeSubtypeExtraValue="KeyboardLayoutSet=qwerty,AsciiCapable,EmojiCapable,BumEngine=ko"
+            android:imeSubtypeExtraValue="KeyboardLayoutSet=qwerty,AsciiCapable,EmojiCapable,LycheeEngine=ko"
             android:isAsciiCapable="true"
     />
     <subtype android:icon="@drawable/ic_ime_switcher_dark"
-            android:label="@string/bum_subtype_ja"
+            android:label="@string/lychee_subtype_ja"
             android:subtypeId="0x42756d04"
             android:imeSubtypeLocale="ja"
             android:languageTag="ja"
             android:imeSubtypeMode="keyboard"
-            android:imeSubtypeExtraValue="KeyboardLayoutSet=qwerty,AsciiCapable,EmojiCapable,BumEngine=ja"
+            android:imeSubtypeExtraValue="KeyboardLayoutSet=qwerty,AsciiCapable,EmojiCapable,LycheeEngine=ja"
             android:isAsciiCapable="true"
     />
-    <!-- BUMBOARD: handwriting as a keyboard of its own (the pad in place of the letters). -->
+    <!-- LYCHEE: handwriting as a keyboard of its own (the pad in place of the letters). -->
     <subtype android:icon="@drawable/ic_ime_switcher_dark"
-            android:label="@string/bum_subtype_hw"
+            android:label="@string/lychee_subtype_hw"
             android:subtypeId="0x42756d06"
             android:imeSubtypeLocale="zh_TW"
             android:languageTag="zh-Hant"
             android:imeSubtypeMode="keyboard"
-            android:imeSubtypeExtraValue="KeyboardLayoutSet=qwerty,AsciiCapable,EmojiCapable,BumHandwriting=1"
+            android:imeSubtypeExtraValue="KeyboardLayoutSet=qwerty,AsciiCapable,EmojiCapable,LycheeHandwriting=1"
             android:isAsciiCapable="true"
     />
 </input-method>

@@ -17,16 +17,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
      xmlns:tools="http://schemas.android.com/tools"
      coreApp="true">
-    <!-- BUMBOARD: package, versions and SDK levels come from build.gradle.kts.
+    <!-- LYCHEE: package, versions and SDK levels come from build.gradle.kts.
          Network, contacts, accounts, sync and storage permissions are dropped. -->
 
     <uses-permission android:name="android.permission.READ_USER_DICTIONARY"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY"/>
-    <!-- BUMBOARD: voice typing through the phone's speech recogniser (Google's when present). -->
+    <!-- LYCHEE: voice typing through the phone's speech recogniser (Google's when present). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <!-- BUMBOARD: never on the network. Packs (fonts, models, dictionaries) are downloaded by
+    <!-- LYCHEE: never on the network. Packs (fonts, models, dictionaries) are downloaded by
          the browser and imported from a file; CI fails if any of these ever reappear. -->
     <uses-permission android:name="android.permission.INTERNET" tools:node="remove"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove"/>
@@ -59,7 +59,7 @@
                               .setPackage("com.android.inputmethod.latin"));
                       }
          </pre> -->
-    <permission android:name="app.bumboard.permission.HIDE_SOFT_INPUT"
+    <permission android:name="app.lychee.permission.HIDE_SOFT_INPUT"
          android:protectionLevel="signature"/>
 
     <!-- To query enabled input methods. -->
@@ -106,16 +106,16 @@
         </service>
 
         <!-- Activities -->
-        <!-- BUMBOARD: asks for the microphone on the voice key's first use. -->
-        <!-- BUMBOARD: opening a downloaded pack (the browser's "Open", or sharing it) installs it. -->
-        <activity android:name="app.bumboard.packs.PackImportActivity"
-             android:theme="@style/Theme.BumBoard.Translucent"
-             android:label="@string/bum_import_open_with"
+        <!-- LYCHEE: asks for the microphone on the voice key's first use. -->
+        <!-- LYCHEE: opening a downloaded pack (the browser's "Open", or sharing it) installs it. -->
+        <activity android:name="app.lychee.packs.PackImportActivity"
+             android:theme="@style/Theme.Lychee.Translucent"
+             android:label="@string/lychee_import_open_with"
              android:icon="@mipmap/ic_launcher"
              android:excludeFromRecents="true"
              android:taskAffinity=""
              android:exported="true">
-            <intent-filter android:label="@string/bum_import_open_with">
+            <intent-filter android:label="@string/lychee_import_open_with">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:scheme="content"/>
@@ -129,7 +129,7 @@
                 <data android:mimeType="application/x-font-ttf"/>
                 <data android:mimeType="application/x-font-otf"/>
             </intent-filter>
-            <intent-filter android:label="@string/bum_import_open_with">
+            <intent-filter android:label="@string/lychee_import_open_with">
                 <action android:name="android.intent.action.SEND"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <data android:mimeType="application/zip"/>
@@ -139,14 +139,14 @@
                 <data android:mimeType="application/x-font-ttf"/>
             </intent-filter>
         </activity>
-        <activity android:name="app.bumboard.voice.MicPermissionActivity"
+        <activity android:name="app.lychee.voice.MicPermissionActivity"
              android:theme="@android:style/Theme.Translucent.NoTitleBar"
              android:excludeFromRecents="true"
              android:noHistory="true"
              android:exported="false"/>
-        <!-- BUMBOARD: Material 3 settings app; the launcher entry and the IME's settings screen. -->
-        <activity android:name="app.bumboard.settings.SettingsActivity"
-             android:theme="@style/Theme.BumBoard"
+        <!-- LYCHEE: Material 3 settings app; the launcher entry and the IME's settings screen. -->
+        <activity android:name="app.lychee.settings.SettingsActivity"
+             android:theme="@style/Theme.Lychee"
              android:label="@string/english_ime_name"
              android:icon="@mipmap/ic_launcher"
              android:launchMode="singleTask"
@@ -220,7 +220,7 @@
         <receiver android:name="DictionaryPackInstallBroadcastReceiver"
              android:exported="false">
             <intent-filter>
-                <action android:name="app.bumboard.dictionarypack.UNKNOWN_CLIENT"/>
+                <action android:name="app.lychee.dictionarypack.UNKNOWN_CLIENT"/>
             </intent-filter>
         </receiver>
 

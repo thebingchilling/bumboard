@@ -23,9 +23,9 @@
 >
     <include
         latin:keyboardLayout="@xml/key_styles_common" />
-    <!-- BUMBOARD -->
+    <!-- LYCHEE -->
     <include
-        latin:keyboardLayout="@xml/bum_row_numbers" />
+        latin:keyboardLayout="@xml/lychee_row_numbers" />
     <Row
         latin:keyWidth="9.091%p"
     >

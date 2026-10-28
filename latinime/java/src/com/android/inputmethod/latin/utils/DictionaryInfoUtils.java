@@ -54,7 +54,7 @@ import javax.annotation.Nullable;
  */
 public class DictionaryInfoUtils {
     private static final String TAG = DictionaryInfoUtils.class.getSimpleName();
-    // BUMBOARD: resources live under the APK's package (app.bumboard), not R's Java package
+    // LYCHEE: resources live under the APK's package (app.lychee), not R's Java package
     // (com.android.inputmethod.latin), so name lookups must ask Resources for it.
     public static String getResourcePackageName(final Resources res) {
         return res.getResourcePackageName(R.string.english_ime_name);

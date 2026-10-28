@@ -19,11 +19,11 @@ kotlin {
 
 dependencies {
     testImplementation(libs.junit)
-    // tests read the real readings.db when bumboard/data/build_data.py has built it
+    // tests read the real readings.db when lychee/data/build_data.py has built it
     testImplementation(libs.sqlite.jdbc)
 }
 
 tasks.test {
-    systemProperty("bumboard.readingsDb",
-        rootDir.resolve("data/out/assets/bumboard/readings.db").canonicalPath)
+    systemProperty("lychee.readingsDb",
+        rootDir.resolve("data/out/assets/lychee/readings.db").canonicalPath)
 }

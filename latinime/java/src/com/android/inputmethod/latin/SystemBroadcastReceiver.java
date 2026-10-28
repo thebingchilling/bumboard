@@ -143,7 +143,7 @@ public final class SystemBroadcastReceiver extends BroadcastReceiver {
     }
 
     public static void toggleAppIcon(final Context context) {
-        // BUMBOARD: the launcher entry is the settings app and always stays visible.
+        // LYCHEE: the launcher entry is the settings app and always stays visible.
         if (true) return;
         final int appInfoFlags = context.getApplicationInfo().flags;
         final boolean isSystemApp = (appInfoFlags & ApplicationInfo.FLAG_SYSTEM) > 0;

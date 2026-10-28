@@ -41,19 +41,19 @@ public final class KeyboardTheme implements Comparable<KeyboardTheme> {
     public static final int THEME_ID_KLP = 2;
     public static final int THEME_ID_LXX_LIGHT = 3;
     public static final int THEME_ID_LXX_DARK = 4;
-    // BUMBOARD: Material 3, following the system's light/dark mode and wallpaper colours.
-    public static final int THEME_ID_BUM_FLAT = 5;
-    public static final int THEME_ID_BUM_RAISED = 6;
-    public static final int DEFAULT_THEME_ID = THEME_ID_BUM_RAISED;
+    // LYCHEE: Material 3, following the system's light/dark mode and wallpaper colours.
+    public static final int THEME_ID_LYCHEE_FLAT = 5;
+    public static final int THEME_ID_LYCHEE_RAISED = 6;
+    public static final int DEFAULT_THEME_ID = THEME_ID_LYCHEE_RAISED;
 
     private static KeyboardTheme[] AVAILABLE_KEYBOARD_THEMES;
 
     /* package private for testing */
     static final KeyboardTheme[] KEYBOARD_THEMES = {
-        // BUMBOARD: raised keys first, as the default (the sort below is stable).
-        new KeyboardTheme(THEME_ID_BUM_RAISED, "BumRaised", R.style.KeyboardTheme_BumM3_Raised,
+        // LYCHEE: raised keys first, as the default (the sort below is stable).
+        new KeyboardTheme(THEME_ID_LYCHEE_RAISED, "LycheeRaised", R.style.KeyboardTheme_LycheeM3_Raised,
                 VERSION_CODES.BASE),
-        new KeyboardTheme(THEME_ID_BUM_FLAT, "BumFlat", R.style.KeyboardTheme_BumM3_Flat,
+        new KeyboardTheme(THEME_ID_LYCHEE_FLAT, "LycheeFlat", R.style.KeyboardTheme_LycheeM3_Flat,
                 VERSION_CODES.BASE),
         new KeyboardTheme(THEME_ID_ICS, "ICS", R.style.KeyboardTheme_ICS,
                 // This has never been selected because we support ICS or later.

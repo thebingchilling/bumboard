@@ -31,12 +31,12 @@
                 latin:backgroundType="functional" />
         </case>
         <!-- clobberSettingsKey="false" -->
-        <!-- BUMBOARD: Settings, then the shortcuts chosen in Settings > Preferences. -->
+        <!-- LYCHEE: Settings, then the shortcuts chosen in Settings > Preferences. -->
         <default>
             <key-style
                 latin:styleName="settingsMoreKeysStyle"
                 latin:keyLabelFlags="hasPopupHint"
-                latin:additionalMoreKeys="!text/bum_comma_more"
+                latin:additionalMoreKeys="!text/lychee_comma_more"
                 latin:backgroundType="functional" />
         </default>
     </switch>

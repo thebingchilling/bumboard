@@ -473,7 +473,7 @@ public class RichInputMethodManager {
     }
 
     public void setAdditionalInputMethodSubtypes(final InputMethodSubtype[] subtypes) {
-        // BUMBOARD: newer Android versions restrict this call; custom input styles are optional.
+        // LYCHEE: newer Android versions restrict this call; custom input styles are optional.
         try {
             setAdditionalInputMethodSubtypesInternal(subtypes);
         } catch (final RuntimeException e) {

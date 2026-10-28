@@ -19,6 +19,6 @@
 -->
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- Predefined subtypes (language:layout[:extraValue]) -->
-    <!-- BUMBOARD: none; BumBoard offers English and Chinese only. -->
+    <!-- LYCHEE: none; Lychee offers English and Chinese only. -->
     <string-array name="predefined_subtypes" translatable="false" />
 </resources>

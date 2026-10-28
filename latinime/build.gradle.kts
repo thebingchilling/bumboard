@@ -5,13 +5,13 @@ plugins {
 
 android {
     // LatinIME keeps its Java package (the native code registers JNI methods by
-    // class name); only the installed application id is BumBoard's.
+    // class name); only the installed application id is Lychee's.
     namespace = "com.android.inputmethod.latin"
     compileSdk = 37
     ndkVersion = "28.0.13004108"
 
     defaultConfig {
-        applicationId = "app.bumboard"
+        applicationId = "app.lychee"
         minSdk = 24
         targetSdk = 36
         versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
@@ -22,7 +22,7 @@ android {
         }
         externalNativeBuild {
             cmake {
-                arguments += "-DBUMBOARD_PREBUILT_DIR=${rootDir.path}/prebuilt"
+                arguments += "-DLYCHEE_PREBUILT_DIR=${rootDir.path}/prebuilt"
             }
         }
     }
@@ -33,13 +33,13 @@ android {
             java.srcDir("java/src")
             java.srcDir("common/src")
             res.srcDir("java/res")
-            // BumBoard's own code and resources, kept apart from LatinIME's.
-            kotlin.srcDir("bumboard/kotlin")
-            res.srcDir("bumboard/res")
-            // Rime data and readings, built by bumboard/data/build_data.py.
+            // Lychee's own code and resources, kept apart from LatinIME's.
+            kotlin.srcDir("lychee/kotlin")
+            res.srcDir("lychee/res")
+            // Rime data and readings, built by lychee/data/build_data.py.
             assets.srcDir("../data/out/assets")
-            // BumBoard's own assets (the pack catalogue)
-            assets.srcDir("bumboard/assets")
+            // Lychee's own assets (the pack catalogue)
+            assets.srcDir("lychee/assets")
         }
     }
 

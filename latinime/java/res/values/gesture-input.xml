@@ -18,6 +18,6 @@
 */
 -->
 <resources>
-    <!-- BUMBOARD: on; the paths are decoded by app.bumboard.glide. -->
+    <!-- LYCHEE: on; the paths are decoded by app.lychee.glide. -->
     <bool name="config_gesture_input_enabled_by_build_config">true</bool>
 </resources>

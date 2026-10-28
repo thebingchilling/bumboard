@@ -1,4 +1,4 @@
-name: Build BumBoard
+name: Build Lychee
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch: {}
 
 concurrency:
-  group: bumboard-${{ github.ref }}
+  group: lychee-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: data/.cache
-          key: bumboard-sources-${{ hashFiles('data/sources.json', 'data/emoji_sources.json') }}
+          key: lychee-sources-${{ hashFiles('data/sources.json', 'data/emoji_sources.json') }}
 
       - name: Build dictionary data
         run: python3 data/build_data.py --opencc prebuilt/opencc/data
@@ -70,12 +70,12 @@ jobs:
           perms=$("$ANDROID_HOME"/build-tools/36.1.0/aapt2 dump permissions "$apk")
           echo "$perms"
           if echo "$perms" | grep -E 'android.permission.(INTERNET|ACCESS_NETWORK_STATE|ACCESS_WIFI_STATE|CHANGE_NETWORK_STATE)'; then
-            echo "::error::BumBoard must never hold a network permission"
+            echo "::error::Lychee must never hold a network permission"
             exit 1
           fi
 
       - uses: actions/upload-artifact@v4
         with:
-          name: bumboard-${{ env.BUILD_VERSION_NAME }}
+          name: lychee-${{ env.BUILD_VERSION_NAME }}
           path: latinime/build/outputs/apk/debug/*.apk
           if-no-files-found: error

@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Lychee's Material 3 keyboard theme, built on LatinIME's LXX layout and metrics. It follows
+    the system light/dark mode and, on Android 12+, the wallpaper colours (lychee_m3_colors).
+    Two variants differ only in key shape: flat keys and raised keys with a shadow; the views'
+    styles pick the key drawables through the theme attributes lycheeKeyBackground and
+    lycheeFunctionalKeyBackground. Icons are tinted at draw time (KeyboardView, lycheeIconColor etc.).
+-->
+<resources>
+    <!--
+        Colour styles, applied over the keyboard theme (KeyboardSwitcher, LycheeColorStyle):
+        neutral grey functional keys like Gboard's (the default), or keys tinted from the wallpaper.
+    -->
+    <style name="LycheeColors.Neutral" parent="">
+        <item name="lycheeColorFunctional">@color/lychee_m3_key_functional_neutral</item>
+        <item name="lycheeColorFunctionalPressed">@color/lychee_m3_key_functional_pressed_neutral</item>
+        <item name="lycheeColorOnFunctional">@color/lychee_m3_on_key_functional_neutral</item>
+    </style>
+    <style name="LycheeColors.Wallpaper" parent="">
+        <item name="lycheeColorFunctional">@color/lychee_m3_key_functional</item>
+        <item name="lycheeColorFunctionalPressed">@color/lychee_m3_key_functional_pressed</item>
+        <item name="lycheeColorOnFunctional">@color/lychee_m3_on_key_functional</item>
+    </style>
+
+    <style name="KeyboardIcons.LycheeM3" parent="KeyboardIcons.LXX_Light">
+        <item name="iconShiftKey">@drawable/ic_sym_shift</item>
+        <item name="iconShiftKeyShifted">@drawable/ic_sym_shift_filled</item>
+        <item name="iconDeleteKey">@drawable/ic_sym_backspace</item>
+        <item name="iconLanguageSwitchKey">@drawable/ic_sym_language</item>
+        <item name="iconEmojiActionKey">@drawable/ic_sym_mood</item>
+        <item name="iconEmojiNormalKey">@drawable/ic_sym_mood</item>
+        <item name="iconSettingsKey">@drawable/ic_sym_settings</item>
+        <item name="iconShortcutKey">@drawable/ic_sym_mic</item>
+        <item name="iconOneHandedKey">@drawable/ic_sym_front_hand</item>
+    </style>
+
+    <style name="KeyboardTheme.LycheeM3" parent="KeyboardIcons.LycheeM3">
+        <item name="inputViewStyle">@style/InputView.LXX</item>
+        <item name="keyboardViewStyle">@style/KeyboardView.LycheeM3</item>
+        <item name="mainKeyboardViewStyle">@style/MainKeyboardView.LycheeM3</item>
+        <item name="emojiPalettesViewStyle">@style/MainKeyboardView.LycheeM3</item>
+        <item name="moreKeysKeyboardViewStyle">@style/MoreKeysKeyboardView.LycheeM3</item>
+        <item name="moreKeysKeyboardViewForActionStyle">@style/MoreKeysKeyboardView.LycheeM3.Action</item>
+        <item name="suggestionStripViewStyle">@style/SuggestionStripView.LycheeM3</item>
+        <item name="suggestionWordStyle">@style/SuggestionWord.LycheeM3</item>
+    </style>
+    <style name="KeyboardTheme.LycheeM3.Flat">
+        <item name="keyboardStyle">@style/Keyboard.LycheeM3.Flat</item>
+        <item name="moreKeysKeyboardStyle">@style/MoreKeysKeyboard.LycheeM3.Flat</item>
+        <item name="lycheeKeyBackground">@drawable/lychee_m3_key_flat</item>
+        <item name="lycheeFunctionalKeyBackground">@drawable/lychee_m3_key_functional_flat</item>
+        <item name="lycheePillKeyBackground">@drawable/lychee_m3_key_pill_flat</item>
+    </style>
+    <style name="KeyboardTheme.LycheeM3.Raised">
+        <item name="keyboardStyle">@style/Keyboard.LycheeM3.Raised</item>
+        <item name="moreKeysKeyboardStyle">@style/MoreKeysKeyboard.LycheeM3.Raised</item>
+        <item name="lycheeKeyBackground">@drawable/lychee_m3_key_raised</item>
+        <item name="lycheeFunctionalKeyBackground">@drawable/lychee_m3_key_functional_raised</item>
+        <item name="lycheePillKeyBackground">@drawable/lychee_m3_key_pill_raised</item>
+    </style>
+
+    <!-- themeId must match KeyboardTheme.THEME_ID_LYCHEE_* -->
+    <style name="Keyboard.LycheeM3.Flat" parent="Keyboard">
+        <item name="themeId">LycheeFlat</item>
+        <!-- Gboard's measurements (from a 1080px-wide phone): rows 3.5% apart, a margin of 2.2% above
+             the keys and 4% below, keys 1.6% apart with 0.6% more at the sides -->
+        <item name="keyboardTopPadding">2.2%p</item>
+        <item name="keyboardBottomPadding">4%p</item>
+        <item name="verticalGap">3.5%p</item>
+        <item name="horizontalGap">1.6%p</item>
+        <item name="keyboardLeftPadding">0.6%p</item>
+        <item name="keyboardRightPadding">0.6%p</item>
+    </style>
+    <style name="Keyboard.LycheeM3.Raised" parent="Keyboard">
+        <item name="themeId">LycheeRaised</item>
+        <!-- Gboard's measurements (from a 1080px-wide phone): rows 3.5% apart, a margin of 2.2% above
+             the keys and 4% below, keys 1.6% apart with 0.6% more at the sides -->
+        <item name="keyboardTopPadding">2.2%p</item>
+        <item name="keyboardBottomPadding">4%p</item>
+        <item name="verticalGap">3.5%p</item>
+        <item name="horizontalGap">1.6%p</item>
+        <item name="keyboardLeftPadding">0.6%p</item>
+        <item name="keyboardRightPadding">0.6%p</item>
+    </style>
+
+    <style name="KeyboardView.LycheeM3" parent="KeyboardView.LXX">
+        <item name="android:background">@color/lychee_m3_kb_background</item>
+        <item name="keyBackground">?attr/lycheeKeyBackground</item>
+        <item name="functionalKeyBackground">?attr/lycheeFunctionalKeyBackground</item>
+        <item name="spacebarBackground">?attr/lycheeKeyBackground</item>
+        <item name="keyTextColor">@color/lychee_m3_on_key</item>
+        <item name="keyTextInactivatedColor">@color/lychee_m3_on_key_variant</item>
+        <item name="functionalTextColor">?attr/lycheeColorOnFunctional</item>
+        <item name="keyHintLetterColor">@color/lychee_m3_on_key_variant</item>
+        <item name="keyHintLabelColor">@color/lychee_m3_on_key_variant</item>
+        <item name="keyShiftedLetterHintInactivatedColor">@color/lychee_m3_on_key_variant</item>
+        <item name="keyShiftedLetterHintActivatedColor">@color/lychee_m3_on_key</item>
+        <item name="keyPreviewTextColor">@color/lychee_m3_on_key</item>
+        <item name="keyPreviewTextRatio">52%</item>
+        <item name="lycheeIconColor">@color/lychee_m3_on_key</item>
+        <item name="lycheeFunctionalIconColor">?attr/lycheeColorOnFunctional</item>
+        <item name="lycheeActionColor">@color/lychee_m3_on_primary</item>
+        <item name="lycheeStickyOnColor">@color/lychee_m3_on_primary_container</item>
+    </style>
+    <style name="MainKeyboardView.LycheeM3" parent="KeyboardView.LycheeM3">
+        <item name="moreKeysKeyboardForActionLayout">@layout/more_keys_keyboard_for_action_lxx</item>
+        <item name="keyPreviewBackground">@drawable/lychee_m3_key_preview</item>
+        <item name="keyPreviewHeight">@dimen/lychee_key_preview_height</item>
+        <item name="keyPreviewOffset">@dimen/lychee_key_preview_offset</item>
+        <item name="keyPreviewShowUpAnimator">@anim/lychee_key_preview_show</item>
+        <item name="keyPreviewDismissAnimator">@anim/lychee_key_preview_dismiss</item>
+        <item name="gestureFloatingPreviewTextColor">@color/lychee_m3_on_key</item>
+        <item name="gestureFloatingPreviewColor">@color/lychee_m3_surface_high</item>
+        <item name="gestureTrailColor">@color/lychee_m3_primary</item>
+        <!-- Gboard's trail: thick, fading away from its tail -->
+        <item name="gestureTrailStartWidth">12dp</item>
+        <item name="gestureTrailEndWidth">3dp</item>
+        <item name="gestureTrailBodyRatio">90</item>
+        <item name="gestureTrailFadeoutStartDelay">100</item>
+        <item name="gestureTrailFadeoutDuration">300</item>
+        <item name="slidingKeyInputPreviewColor">@color/lychee_m3_sliding_preview</item>
+        <item name="languageOnSpacebarTextColor">@color/lychee_m3_on_key</item>
+        <item name="languageOnSpacebarTextShadowRadius">-1.0</item>
+        <!-- the language name stays fully dark, like Gboard's -->
+        <item name="languageOnSpacebarFinalAlpha">255</item>
+    </style>
+
+    <style name="MoreKeysKeyboard.LycheeM3.Flat" parent="Keyboard.LycheeM3.Flat">
+        <item name="keyboardTopPadding">0%p</item>
+        <item name="keyboardBottomPadding">0%p</item>
+        <item name="horizontalGap">0%p</item>
+        <item name="keyboardLeftPadding">0%p</item>
+        <item name="keyboardRightPadding">0%p</item>
+        <item name="touchPositionCorrectionData">@null</item>
+    </style>
+    <style name="MoreKeysKeyboard.LycheeM3.Raised" parent="Keyboard.LycheeM3.Raised">
+        <item name="keyboardTopPadding">0%p</item>
+        <item name="keyboardBottomPadding">0%p</item>
+        <item name="horizontalGap">0%p</item>
+        <item name="keyboardLeftPadding">0%p</item>
+        <item name="keyboardRightPadding">0%p</item>
+        <item name="touchPositionCorrectionData">@null</item>
+    </style>
+    <style name="MoreKeysKeyboardView.LycheeM3" parent="KeyboardView.LycheeM3">
+        <item name="android:background">@drawable/lychee_m3_popup_panel</item>
+        <item name="keyBackground">@drawable/lychee_m3_key_popup</item>
+        <item name="functionalKeyBackground">@drawable/lychee_m3_key_popup</item>
+        <item name="divider">@null</item>
+        <item name="keyTypeface">normal</item>
+        <!-- round keys: the selected one is a filled circle with its symbol in white -->
+        <item name="keyLabelFlags">keepBackgroundAspectRatio</item>
+        <item name="lycheePressedTextColor">@color/lychee_m3_on_primary</item>
+        <item name="verticalCorrection">@dimen/config_more_keys_keyboard_vertical_correction_holo</item>
+        <!-- popup keys have no functional fill, so their icons use the plain key colour -->
+        <item name="lycheeFunctionalIconColor">@color/lychee_m3_on_key</item>
+    </style>
+    <style name="MoreKeysKeyboardView.LycheeM3.Action">
+        <item name="android:background">@android:color/transparent</item>
+        <item name="keyBackground">@drawable/lychee_m3_key_popup_action</item>
+        <item name="functionalKeyBackground">@drawable/lychee_m3_key_popup_action</item>
+        <item name="keyLabelFlags">keepBackgroundAspectRatio</item>
+        <item name="keyTextColor">@color/lychee_m3_on_primary</item>
+        <item name="functionalTextColor">@color/lychee_m3_on_primary</item>
+        <item name="lycheeIconColor">@color/lychee_m3_on_primary</item>
+        <item name="lycheeFunctionalIconColor">@color/lychee_m3_on_primary</item>
+    </style>
+
+    <style name="SuggestionStripView.LycheeM3" parent="KeyboardView.LycheeM3">
+        <item name="suggestionsCountInStrip">@integer/config_suggestions_count_in_strip</item>
+        <item name="centerSuggestionPercentile">@fraction/config_center_suggestion_percentile</item>
+        <item name="maxMoreSuggestionsRow">@integer/config_max_more_suggestions_row</item>
+        <item name="minMoreSuggestionsWidth">@fraction/config_min_more_suggestions_width</item>
+        <item name="android:background">@color/lychee_m3_kb_background</item>
+        <item name="android:src">@drawable/lychee_m3_strip_divider</item>
+        <item name="suggestionStripOptions">autoCorrectBold|validTypedWordBold</item>
+        <item name="colorValidTypedWord">@color/lychee_m3_on_key</item>
+        <item name="colorTypedWord">@color/lychee_m3_on_key</item>
+        <!-- like Gboard's: plain dark words; the autocorrection is shown in bold -->
+        <item name="colorAutoCorrect">@color/lychee_m3_on_key</item>
+        <item name="colorSuggested">@color/lychee_m3_on_key</item>
+        <item name="alphaObsoleted">70%</item>
+    </style>
+    <style name="SuggestionWord.LycheeM3" parent="SuggestionWord">
+        <item name="android:background">@drawable/lychee_m3_suggestion</item>
+        <item name="android:textColor">@color/lychee_m3_on_key</item>
+    </style>
+</resources>

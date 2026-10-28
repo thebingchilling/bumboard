@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Theme attributes: the key drawables of the selected Material 3 key style. -->
+    <attr name="lycheeKeyBackground" format="reference" />
+    <attr name="lycheeFunctionalKeyBackground" format="reference" />
+    <!-- the pill-shaped ?123 and ABC keys -->
+    <attr name="lycheePillKeyBackground" format="reference" />
+    <!-- Theme attributes: the functional keys' colours in the chosen colour style (LycheeColors.*). -->
+    <attr name="lycheeColorFunctional" format="color|reference" />
+    <attr name="lycheeColorFunctionalPressed" format="color|reference" />
+    <attr name="lycheeColorOnFunctional" format="color|reference" />
+
+    <!-- Icon tints for KeyboardView; when lycheeIconColor is unset, icons are drawn as they are. -->
+    <declare-styleable name="LycheeKeyboardView">
+        <!-- icons on normal keys -->
+        <attr name="lycheeIconColor" format="color" />
+        <!-- icons on functional keys (shift, delete, emoji, ...) -->
+        <attr name="lycheeFunctionalIconColor" format="color" />
+        <!-- icons and labels on the action (Enter) key -->
+        <attr name="lycheeActionColor" format="color" />
+        <!-- labels and icons on a pressed key (the selected key of a long-press popup) -->
+        <attr name="lycheePressedTextColor" format="color" />
+        <!-- icons on a key that is switched on (shift lock) -->
+        <attr name="lycheeStickyOnColor" format="color" />
+    </declare-styleable>
+</resources>

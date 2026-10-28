@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Strings for Lychee's own screens. LatinIME's translated strings are reused where they fit. -->
+    <string name="lychee_setup_card_title">Finish setting up</string>
+    <string name="lychee_setup_done_title">Lychee is on</string>
+    <string name="lychee_setup_done_body">Type below to try it, or change how it works.</string>
+    <string name="lychee_try_it">Try it here</string>
+    <string name="lychee_section_keyboard">Keyboard</string>
+    <string name="lychee_section_app">App</string>
+    <string name="lychee_section_languages">Languages</string>
+    <string name="lychee_pref_spacebar">Spacebar</string>
+    <string name="lychee_pref_spacebar_summary">What the spacebar shows on Lychee\'s keyboards</string>
+    <string name="lychee_pref_spacebar_language">粵語 · Cantonese</string>
+    <string name="lychee_pref_spacebar_method">粵拼</string>
+    <string name="lychee_subtype_hw" translatable="false">手寫 Handwriting</string>
+    <string name="lychee_hw_write_here">在這裡手寫輸入文字 · Write here</string>
+    <string name="lychee_hw_symbols" translatable="false">?123</string>
+    <string name="lychee_hw_space_label" translatable="false">手寫</string>
+    <string name="lychee_section_typing">Typing</string>
+    <string name="lychee_section_look">Look</string>
+    <string name="lychee_section_more">More</string>
+    <string name="lychee_group_script">Characters</string>
+    <string name="lychee_group_candidates">Candidates</string>
+    <string name="lychee_group_typing">Typing</string>
+    <string name="lychee_group_keys">Keys</string>
+    <string name="lychee_group_feedback">Sound, vibration and voice</string>
+    <string name="lychee_group_key_style">Colours and keys</string>
+    <string name="lychee_group_size">Size and layout</string>
+    <string name="lychee_group_dictionary">Dictionary</string>
+    <string name="lychee_group_suggestions">Suggestions</string>
+    <string name="lychee_group_popups">Popups</string>
+    <string name="lychee_group_other">Other</string>
+    <string name="lychee_languages_summary">English, 粵語 Cantonese, 普通話 Mandarin</string>
+    <string name="lychee_preferences_summary">Capitals, sound, vibration, key popups</string>
+    <string name="lychee_theme_summary">Look of the keys</string>
+    <string name="lychee_correction_summary">Suggestions, auto-correct, personal dictionary</string>
+    <string name="lychee_gesture_summary">Glide over keys to type</string>
+    <string name="lychee_advanced_summary">Timings, volume and other details</string>
+    <string name="lychee_about">About</string>
+    <string name="lychee_about_summary">Version, licences</string>
+    <string name="lychee_version">Version %1$s</string>
+    <string name="lychee_theme_note">Material 3, following your light or dark mode. Pick the colours and how the keys look.</string>
+    <string name="lychee_language_settings">Language settings</string>
+    <string name="lychee_pref_colors">Colours</string>
+    <string name="lychee_pref_colors_neutral">Neutral</string>
+    <string name="lychee_pref_colors_wallpaper">Wallpaper</string>
+    <string name="lychee_about_base_title">Built on the Android keyboard</string>
+    <string name="lychee_about_base_body">Lychee is based on LatinIME from the Android Open Source Project, used under the Apache License 2.0.</string>
+    <string name="lychee_back">Back</string>
+    <string name="lychee_done">Done</string>
+    <string name="lychee_percent">%1$d%%</string>
+
+    <!-- Chinese -->
+    <string name="lychee_subtype_yue" translatable="false">粵語 Cantonese</string>
+    <string name="lychee_subtype_cmn" translatable="false">普通話 Mandarin</string>
+    <string name="lychee_subtype_ko" translatable="false">한국어 Korean</string>
+    <string name="lychee_subtype_ja" translatable="false">日本語 Japanese</string>
+    <string name="lychee_ja_needs_pack">Japanese needs its dictionary: get it in Lychee Settings &gt; Downloads.</string>
+    <string name="lychee_chinese">Chinese</string>
+    <string name="lychee_chinese_summary">Cantonese and Mandarin typing</string>
+    <string name="lychee_script">Characters</string>
+    <string name="lychee_script_traditional">Traditional 繁</string>
+    <string name="lychee_script_simplified">Simplified 简</string>
+    <string name="lychee_cantonese_input">Cantonese romanisation (typing and readings)</string>
+    <string name="lychee_jyutping">Jyutping</string>
+    <string name="lychee_yale">Yale</string>
+    <string name="lychee_chinese_how">Turn on 粵語 Cantonese or 普通話 Mandarin under Languages, then switch to it with the globe key or by sliding on the space bar.</string>
+    <string name="lychee_languages_hint">Keyboards you turn on here are the ones the globe key switches between.</string>
+    <string name="lychee_languages_enable_first">Turn on Lychee first (see the set-up card on the main page), then choose its languages here.</string>
+    <string name="lychee_under_candidates">Under each candidate</string>
+    <string name="lychee_show_readings">Readings and meanings</string>
+    <string name="lychee_show_readings_summary">Show how each candidate is read and what it means</string>
+    <string name="lychee_other_language">Also show the other language</string>
+    <string name="lychee_other_language_summary">Pinyin under Cantonese, %1$s under Mandarin</string>
+    <string name="lychee_show_meaning">English meaning</string>
+    <string name="lychee_show_meaning_summary">A short meaning under each candidate</string>
+
+    <!-- Dictionary panel -->
+    <string name="lychee_close">Close</string>
+    <string name="lychee_type_it">Type it</string>
+    <string name="lychee_card_parts">Parts</string>
+    <string name="lychee_card_cantonese">Cantonese</string>
+    <string name="lychee_card_mandarin">Mandarin</string>
+    <string name="lychee_card_character">Character</string>
+    <string name="lychee_card_measure_word">Measure word:</string>
+    <string name="lychee_card_written">Written:</string>
+    <string name="lychee_card_vernacular">Spoken:</string>
+
+    <string name="lychee_licences">Licences</string>
+    <string name="lychee_licences_summary">Open-source software and dictionary data</string>
+    <string name="lychee_licences_software">Software</string>
+    <string name="lychee_licences_data">Dictionary data</string>
+
+    <!-- Crash report -->
+    <string name="lychee_crash_title">Lychee crashed</string>
+    <string name="lychee_crash_body">Share or copy this report so the problem can be fixed. It stays on your phone unless you send it.</string>
+    <string name="lychee_crash_share">Share</string>
+    <string name="lychee_crash_copy">Copy</string>
+    <string name="lychee_crash_dismiss">Dismiss</string>
+
+    <!-- Emoji -->
+    <string name="lychee_emoji_search">Search emoji</string>
+    <string name="lychee_emoji_none">No emoji found</string>
+    <string name="lychee_emoji_abc">ABC</string>
+    <string name="lychee_emoji_delete">Delete</string>
+    <string name="lychee_emoji_recents">Recent</string>
+    <string name="lychee_emoji_smileys">Smileys and emotion</string>
+    <string name="lychee_emoji_people">People</string>
+    <string name="lychee_emoji_animals">Animals and nature</string>
+    <string name="lychee_emoji_food">Food and drink</string>
+    <string name="lychee_emoji_travel">Travel and places</string>
+    <string name="lychee_emoji_activities">Activities</string>
+    <string name="lychee_emoji_objects">Objects</string>
+    <string name="lychee_emoji_symbols">Symbols</string>
+    <string name="lychee_emoji_flags">Flags</string>
+
+    <!-- Key styles (Theme page) -->
+    <string name="lychee_key_style_flat">Flat keys</string>
+    <string name="lychee_key_style_raised">Raised keys with shadows</string>
+
+    <!-- Voice typing -->
+    <string name="lychee_voice_starting">Starting…</string>
+    <string name="lychee_voice_listening">Speak now</string>
+    <string name="lychee_voice_starting_offline">Starting on this phone…</string>
+    <string name="lychee_voice_listening_offline">Speak now · offline</string>
+    <string name="lychee_voice_offline_downloading">Android is getting this language for offline use. Speak now</string>
+    <string name="lychee_pref_voice_offline">Voice typing offline</string>
+    <string name="lychee_pref_voice_offline_summary">Recognise speech on this phone when it can (Android 12+), so nothing is sent anywhere</string>
+    <string name="lychee_voice_working">Working…</string>
+    <string name="lychee_voice_error">Voice typing isn’t available right now</string>
+    <string name="lychee_voice_stop">Stop listening</string>
+    <string name="lychee_voice_cancel">Cancel voice typing</string>
+    <string name="lychee_voice_permission_granted">Microphone allowed. Tap the mic again to speak.</string>
+</resources>

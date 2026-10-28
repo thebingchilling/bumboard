@@ -18,7 +18,7 @@
 */
 -->
 
-<!-- BUMBOARD: Gboard's symbols as hints and first popup key on rows 2 and 3. -->
+<!-- LYCHEE: Gboard's symbols as hints and first popup key on rows 2 and 3. -->
 <merge
     xmlns:latin="http://schemas.android.com/apk/res-auto"
 >

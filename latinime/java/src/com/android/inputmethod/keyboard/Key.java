@@ -317,41 +317,41 @@ public class Key implements Comparable<Key> {
         }
         mMoreKeysColumnAndFlags = moreKeysColumnAndFlags;
 
-        // BUMBOARD: Gboard's symbols on the letter keys: one in the corner and, at the start of
+        // LYCHEE: Gboard's symbols on the letter keys: one in the corner and, at the start of
         // the popup, that symbol and related ones (they replace the digit of the top row,
         // which they include when there is no number row)
-        String bumLetterHint = null;
-        String[] bumLetterMoreKeys = null;
-        app.bumboard.keys.LetterSymbols.Style bumLetterStyle =
-                app.bumboard.keys.LetterSymbols.Style.LATIN;
+        String lycheeLetterHint = null;
+        String[] lycheeLetterMoreKeys = null;
+        app.lychee.keys.LetterSymbols.Style lycheeLetterStyle =
+                app.lychee.keys.LetterSymbols.Style.LATIN;
         if (params.mId.isAlphabetKeyboard() && keySpec != null) {
             final String letter = KeySpecParser.getLabel(keySpec);
             if (letter != null && letter.length() == 1 && letter.charAt(0) < 0x80
                     && Character.isLetter(letter.charAt(0))) {
                 String currency = params.mTextsSet.getText("keyspec_currency");
                 if (currency == null || currency.isEmpty()) currency = "$";
-                final String engine = params.mId.mSubtype.getRawSubtype().getExtraValueOf("BumEngine");
-                bumLetterStyle = "cmn".equals(engine) ? app.bumboard.keys.LetterSymbols.Style.PINYIN
-                        : "yue".equals(engine) ? app.bumboard.keys.LetterSymbols.Style.CHINESE
-                        : app.bumboard.keys.LetterSymbols.Style.LATIN;
-                bumLetterHint = app.bumboard.keys.LetterSymbols.hint(
-                        letter.charAt(0), params.mId.mBumNumberRow, currency, bumLetterStyle);
-                bumLetterMoreKeys = app.bumboard.keys.LetterSymbols.moreKeys(
-                        letter.charAt(0), params.mId.mBumNumberRow, currency, bumLetterStyle);
+                final String engine = params.mId.mSubtype.getRawSubtype().getExtraValueOf("LycheeEngine");
+                lycheeLetterStyle = "cmn".equals(engine) ? app.lychee.keys.LetterSymbols.Style.PINYIN
+                        : "yue".equals(engine) ? app.lychee.keys.LetterSymbols.Style.CHINESE
+                        : app.lychee.keys.LetterSymbols.Style.LATIN;
+                lycheeLetterHint = app.lychee.keys.LetterSymbols.hint(
+                        letter.charAt(0), params.mId.mLycheeNumberRow, currency, lycheeLetterStyle);
+                lycheeLetterMoreKeys = app.lychee.keys.LetterSymbols.moreKeys(
+                        letter.charAt(0), params.mId.mLycheeNumberRow, currency, lycheeLetterStyle);
             }
         }
         // the Chinese keyboards' popups are exactly the symbol, the letter and its capital (and
         // tones): no locale accents, and nothing upcased
-        final boolean bumChinesePopup = bumLetterMoreKeys != null
-                && bumLetterStyle != app.bumboard.keys.LetterSymbols.Style.LATIN;
-        if (bumChinesePopup) {
+        final boolean lycheeChinesePopup = lycheeLetterMoreKeys != null
+                && lycheeLetterStyle != app.lychee.keys.LetterSymbols.Style.LATIN;
+        if (lycheeChinesePopup) {
             moreKeys = null;
         }
         final String[] additionalMoreKeys;
         if ((mLabelFlags & LABEL_FLAGS_DISABLE_ADDITIONAL_MORE_KEYS) != 0) {
             additionalMoreKeys = null;
-        } else if (bumLetterMoreKeys != null) {
-            additionalMoreKeys = bumLetterMoreKeys;
+        } else if (lycheeLetterMoreKeys != null) {
+            additionalMoreKeys = lycheeLetterMoreKeys;
         } else {
             additionalMoreKeys = style.getStringArray(keyAttr,
                     R.styleable.Keyboard_Key_additionalMoreKeys);
@@ -361,7 +361,7 @@ public class Key implements Comparable<Key> {
             actionFlags |= ACTION_FLAGS_ENABLE_LONG_PRESS;
             mMoreKeys = new MoreKeySpec[moreKeys.length];
             for (int i = 0; i < moreKeys.length; i++) {
-                mMoreKeys[i] = new MoreKeySpec(moreKeys[i], needsToUpcase && !bumChinesePopup,
+                mMoreKeys[i] = new MoreKeySpec(moreKeys[i], needsToUpcase && !lycheeChinesePopup,
                         localeForUpcasing);
             }
         } else {
@@ -392,10 +392,10 @@ public class Key implements Comparable<Key> {
         } else {
             String hintLabel = style.getString(
                     keyAttr, R.styleable.Keyboard_Key_keyHintLabel);
-            // BUMBOARD: the letter's symbol (or, without the number row, its digit)
-            if (bumLetterHint != null) {
-                hintLabel = bumLetterHint;
-            } else if (params.mId.mBumNumberRow && hintLabel != null && hintLabel.length() == 1
+            // LYCHEE: the letter's symbol (or, without the number row, its digit)
+            if (lycheeLetterHint != null) {
+                hintLabel = lycheeLetterHint;
+            } else if (params.mId.mLycheeNumberRow && hintLabel != null && hintLabel.length() == 1
                     && Character.isDigit(hintLabel.charAt(0))) {
                 hintLabel = null;
             }
@@ -642,7 +642,7 @@ public class Key implements Comparable<Key> {
         return mBackgroundType == BACKGROUND_TYPE_ACTION;
     }
 
-    // BUMBOARD: lets KeyboardView tint a key's icon to suit the key's fill.
+    // LYCHEE: lets KeyboardView tint a key's icon to suit the key's fill.
     public final boolean hasFunctionalBackground() {
         return mBackgroundType == BACKGROUND_TYPE_FUNCTIONAL
                 || mBackgroundType == BACKGROUND_TYPE_STICKY_OFF;
@@ -956,7 +956,7 @@ public class Key implements Comparable<Key> {
         mPressed = false;
     }
 
-    /** BUMBOARD: whether the key is being pressed (drawn selected). */
+    /** LYCHEE: whether the key is being pressed (drawn selected). */
     public final boolean isPressed() {
         return mPressed;
     }

@@ -141,7 +141,7 @@ public class MoreKeysKeyboardView extends KeyboardView implements MoreKeysPanel 
         mOriginX = x + container.getPaddingLeft();
         mOriginY = y + container.getPaddingTop();
         controller.onShowMoreKeysPanel(this);
-        // BUMBOARD: the popup grows up out of the key and fades in, like Gboard's.
+        // LYCHEE: the popup grows up out of the key and fades in, like Gboard's.
         container.setPivotX(Math.max(0, Math.min(container.getMeasuredWidth(),
                 pointX + CoordinateUtils.x(mCoordinates) - panelX)));
         container.setPivotY(container.getMeasuredHeight());

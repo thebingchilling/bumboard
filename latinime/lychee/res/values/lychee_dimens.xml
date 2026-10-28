@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Emoji search: the results row above the search pill. -->
+    <dimen name="lychee_emoji_search_height">100dp</dimen>
+    <!-- The Traditional/Simplified chip on the strip's left edge. -->
+    <dimen name="lychee_script_key_width">44dp</dimen>
+    <!-- Right of the candidates: the ⌄ (36dp) and the 繁/简 button (44dp). -->
+    <dimen name="lychee_candidate_bar_end">80dp</dimen>
+    <!-- The line above the candidates showing what is being typed. -->
+    <dimen name="lychee_preedit_height">16dp</dimen>
+    <!-- The key preview: a round bubble over the pressed key (sized from the key in code). -->
+    <dimen name="lychee_key_preview_height">52dp</dimen>
+    <dimen name="lychee_key_preview_offset">0dp</dimen>
+</resources>

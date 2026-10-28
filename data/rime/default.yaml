@@ -1,13 +1,13 @@
-# BumBoard Rime configuration (shared data). Users may override it with default.custom.yaml.
-config_version: "bumboard.1"
+# Lychee Rime configuration (shared data). Users may override it with default.custom.yaml.
+config_version: "lychee.1"
 
 schema_list:
-  - schema: bum_yue
-  - schema: bum_yue_yale
-  - schema: bum_cmn
-  - schema: bum_en_yue
-  - schema: bum_en_cmn
-  - schema: bum_ko
+  - schema: lychee_yue
+  - schema: lychee_yue_yale
+  - schema: lychee_cmn
+  - schema: lychee_en_yue
+  - schema: lychee_en_cmn
+  - schema: lychee_ko
 
 switcher:
   caption: 〔方案〕

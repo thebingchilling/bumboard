@@ -27,11 +27,11 @@
         <Key
             latin:keyStyle="toSymbolKeyStyle"
             latin:keyWidth="15%p" />
-        <!-- BUMBOARD: emoji, next language or no key beside the comma (Settings >
+        <!-- LYCHEE: emoji, next language or no key beside the comma (Settings >
              Preferences); without one the space bar takes its room. -->
         <switch>
             <case
-                latin:bumSideKey="false"
+                latin:lycheeSideKey="false"
             >
                 <include
                     latin:keyboardLayout="@xml/key_comma" />
@@ -40,7 +40,7 @@
                     latin:keyWidth="50%p" />
             </case>
             <case
-                latin:bumEmojiKey="true"
+                latin:lycheeEmojiKey="true"
             >
                 <Key
                     latin:keyStyle="emojiKeyStyle"

@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-    The bubble above a pressed key: a white circle a little wider than the key, overlapping its
-    top, like Gboard's. KeyPreviewChoreographer sizes and places it.
--->
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
-    <solid android:color="@color/bum_m3_key" />
-    <padding android:left="0dp" android:top="0dp" android:right="0dp" android:bottom="0dp" />
-</shape>

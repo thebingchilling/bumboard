@@ -286,18 +286,18 @@ public final class Suggest {
 
     // Retrieves suggestions for the batch input
     // and calls the callback function with the suggestions.
-    // BUMBOARD: the glide decoder's words as suggestion results, best first.
-    private static SuggestionResults bumGlideResults(final WordComposer wordComposer,
+    // LYCHEE: the glide decoder's words as suggestion results, best first.
+    private static SuggestionResults lycheeGlideResults(final WordComposer wordComposer,
             final Keyboard keyboard, final NgramContext ngramContext) {
         final SuggestionResults results = new SuggestionResults(SuggestedWords.MAX_SUGGESTIONS,
                 ngramContext.isBeginningOfSentenceContext(), false);
         if (keyboard == null) {
             return results;
         }
-        final java.util.List<app.bumboard.glide.GlideMatch> matches =
-                app.bumboard.glide.GlideTyping.decode(wordComposer.getInputPointers(), keyboard);
+        final java.util.List<app.lychee.glide.GlideMatch> matches =
+                app.lychee.glide.GlideTyping.decode(wordComposer.getInputPointers(), keyboard);
         int rank = 0;
-        for (final app.bumboard.glide.GlideMatch match : matches) {
+        for (final app.lychee.glide.GlideMatch match : matches) {
             // strictly falling scores keep the decoder's order
             final int score = SuggestedWordInfo.MAX_SCORE / 2 - rank * 1000;
             results.add(new SuggestedWordInfo(match.getWord(), "" /* prevWordsContext */, score,
@@ -315,9 +315,9 @@ public final class Suggest {
             final SettingsValuesForSuggestion settingsValuesForSuggestion,
             final int inputStyle, final int sequenceNumber,
             final OnGetSuggestedWordsCallback callback) {
-        // BUMBOARD: LatinIME's native gesture decoder was never open source (its policy is
-        // empty), so glides are decoded by app.bumboard.glide instead.
-        final SuggestionResults suggestionResults = bumGlideResults(wordComposer, keyboard,
+        // LYCHEE: LatinIME's native gesture decoder was never open source (its policy is
+        // empty), so glides are decoded by app.lychee.glide instead.
+        final SuggestionResults suggestionResults = lycheeGlideResults(wordComposer, keyboard,
                 ngramContext);
         // For transforming words that don't come from a dictionary, because it's our best bet
         final Locale locale = mDictionaryFacilitator.getLocale();

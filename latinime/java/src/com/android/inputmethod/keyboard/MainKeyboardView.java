@@ -665,16 +665,16 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         invalidate();
     }
 
-    // BUMBOARD: the keys fade behind a long-press popup, like Gboard's
-    private final Paint mBumScrimPaint = new Paint();
+    // LYCHEE: the keys fade behind a long-press popup, like Gboard's
+    private final Paint mLycheeScrimPaint = new Paint();
 
     @Override
     protected void onDraw(final Canvas canvas) {
         super.onDraw(canvas);
         if (isShowingMoreKeysPanel()) {
-            final int background = getContext().getColor(R.color.bum_m3_kb_background);
-            mBumScrimPaint.setColor((background & 0x00FFFFFF) | 0xB3000000);
-            canvas.drawRect(0, 0, getWidth(), getHeight(), mBumScrimPaint);
+            final int background = getContext().getColor(R.color.lychee_m3_kb_background);
+            mLycheeScrimPaint.setColor((background & 0x00FFFFFF) | 0xB3000000);
+            canvas.drawRect(0, 0, getWidth(), getHeight(), mLycheeScrimPaint);
         }
     }
 
@@ -855,22 +855,22 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         return TypefaceUtils.getStringWidth(text, paint) < maxTextWidth;
     }
 
-    /** BUMBOARD: what the spacebar shows: "language" (default) or "method". */
-    public static final String PREF_BUM_SPACEBAR = "bum_spacebar_label";
+    /** LYCHEE: what the spacebar shows: "language" (default) or "method". */
+    public static final String PREF_LYCHEE_SPACEBAR = "lychee_spacebar_label";
 
     // Layout language name on spacebar.
     private String layoutLanguageOnSpacebar(final Paint paint,
             final RichInputMethodSubtype subtype, final int width) {
-        // BUMBOARD: the input method's own name on BumBoard's engines, like Gboard's 拼音
-        // BUMBOARD: the language's name by default ("粵語 · Cantonese"); with the setting on, the
+        // LYCHEE: the input method's own name on Lychee's engines, like Gboard's 拼音
+        // LYCHEE: the language's name by default ("粵語 · Cantonese"); with the setting on, the
         // input method's, like Gboard's 拼音
         final boolean methodName = "method".equals(android.preference.PreferenceManager
-                .getDefaultSharedPreferences(getContext()).getString(PREF_BUM_SPACEBAR, "language"));
-        if (methodName && subtype.getRawSubtype().getExtraValueOf("BumHandwriting") != null
+                .getDefaultSharedPreferences(getContext()).getString(PREF_LYCHEE_SPACEBAR, "language"));
+        if (methodName && subtype.getRawSubtype().getExtraValueOf("LycheeHandwriting") != null
                 && fitsTextIntoWidth(width, "\u624B\u5BEB", paint)) {
             return "\u624B\u5BEB"; // 手寫
         }
-        final String engine = methodName ? subtype.getRawSubtype().getExtraValueOf("BumEngine") : null;
+        final String engine = methodName ? subtype.getRawSubtype().getExtraValueOf("LycheeEngine") : null;
         if (engine != null) {
             final String name;
             switch (engine) {
@@ -908,7 +908,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         final int width = key.getWidth();
         final int height = key.getHeight();
         paint.setTextAlign(Align.CENTER);
-        paint.setTypeface(app.bumboard.fonts.BumFonts.ui(getContext(), 400));
+        paint.setTypeface(app.lychee.fonts.LycheeFonts.ui(getContext(), 400));
         paint.setTextSize(mLanguageOnSpacebarTextSize);
         final String language = layoutLanguageOnSpacebar(paint, keyboard.mId.mSubtype, width);
         // Draw language text with shadow

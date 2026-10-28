@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Packs: optional downloads, fetched by the browser and imported from a file. -->
+    <string name="lychee_packs_title">Downloads</string>
+    <string name="lychee_packs_summary">Fonts, handwriting, dictionaries and offline voice</string>
+    <string name="lychee_packs_how">Tap Download: your browser saves the file. Then tap Open on the browser\'s download notice and Lychee installs it. (Lychee itself never connects to the internet.)</string>
+    <string name="lychee_packs_get">Download</string>
+    <string name="lychee_packs_update">Update</string>
+    <string name="lychee_packs_installed_short">Installed</string>
+    <string name="lychee_packs_pending_title">Finish installing %1$s</string>
+    <string name="lychee_packs_pending_body">Tap Open on your browser\'s download notice. Missed it? Choose the downloaded file instead.</string>
+    <string name="lychee_packs_choose_file">Choose the file</string>
+    <string name="lychee_packs_import">Import</string>
+    <string name="lychee_packs_remove">Remove</string>
+    <string name="lychee_packs_importing">Installing…</string>
+    <string name="lychee_import_title">Lychee download</string>
+    <string name="lychee_import_done">%1$s is installed and ready to use.</string>
+    <string name="lychee_import_open_with">Add to Lychee</string>
+    <string name="lychee_packs_imported">%1$s is ready.</string>
+    <string name="lychee_packs_installed">Installed %1$s · %2$s</string>
+    <string name="lychee_packs_storage">Storage</string>
+    <string name="lychee_packs_storage_used">Downloads use %1$s on this phone</string>
+    <string name="lychee_packs_import_any">Install a file you already have</string>
+    <string name="lychee_packs_import_any_summary">Lychee works out which pack it is</string>
+    <string name="lychee_packs_updates">Check for newer packs</string>
+    <string name="lychee_packs_updates_summary">Opens the packs page in your browser</string>
+    <string name="lychee_packs_fonts_zh">Chinese fonts</string>
+    <string name="lychee_packs_fonts_emoji">Emoji fonts</string>
+    <string name="lychee_packs_handwriting">Handwriting</string>
+    <string name="lychee_packs_dictionaries">Dictionaries</string>
+    <string name="lychee_packs_voice">Offline voice</string>
+    <string name="lychee_licences_packs">Packs</string>
+    <!-- Settings > Fonts -->
+    <string name="lychee_fonts_title">Fonts</string>
+    <string name="lychee_fonts_summary">Chinese font and emoji style</string>
+    <string name="lychee_fonts_note">These change how Lychee shows candidates, the dictionary and emoji. Apps show what you type in their own fonts.</string>
+    <string name="lychee_fonts_chinese">Chinese font</string>
+    <string name="lychee_fonts_emoji">Emoji</string>
+    <string name="lychee_fonts_preview_zh">你好，我哋去飲茶啦 你好，我们去喝茶吧</string>
+    <string name="lychee_fonts_preview_emoji">😀 😂 🥹 ❤️ 👍🏽 🐶 🍜 🎉 🇭🇰</string>
+    <string name="lychee_fonts_system">Phone\'s font</string>
+    <string name="lychee_fonts_system_summary">The system\'s Chinese font</string>
+    <string name="lychee_fonts_on_keys">Use on the keys too</string>
+    <string name="lychee_fonts_on_keys_summary">Key labels in the Chinese font as well</string>
+    <string name="lychee_fonts_noto">Noto Color Emoji</string>
+    <string name="lychee_fonts_noto_summary">Included with Lychee</string>
+    <!-- Handwriting -->
+    <string name="lychee_sc_handwriting">Handwriting</string>
+    <string name="lychee_hw_space">Space</string>
+    <string name="lychee_hw_enter">Enter</string>
+    <string name="lychee_hw_no_pack">Handwriting needs a handwriting pack. Tap here to get one in Settings &gt; Downloads.</string>
+    <string name="lychee_hw_bad_pack">This handwriting pack couldn\'t be opened. Tap here to import it again.</string>
+    <!-- 書面語: Cantonese to Standard Written Chinese -->
+    <string name="lychee_sc_written">書面語 Written Chinese</string>
+    <string name="lychee_written_title">書面語 · Standard Written Chinese</string>
+    <string name="lychee_written_replace">Replace</string>
+    <string name="lychee_written_undo">Undo</string>
+    <string name="lychee_written_nothing">Write or select some Cantonese first.</string>
+    <string name="lychee_written_same">This is already standard written Chinese.</string>
+</resources>

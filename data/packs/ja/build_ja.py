@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Builds BumBoard's Japanese dictionary pack from Mozc's open-source dictionary.
+"""Builds Lychee's Japanese dictionary pack from Mozc's open-source dictionary.
 
   build_ja.py --out DIR [--max 200000]
 
 Downloads src/data/dictionary_oss/dictionary0[0-9].txt from google/mozc (BSD-3-Clause; the
 entries come from IPAdic and other permissively licensed sources), turns each reading into
 romaji syllables (Hepburn; っ doubles the next consonant), keeps the most common entries,
-adds every reading in hiragana and katakana, compiles the bum_ja schema with rime_deployer
+adds every reading in hiragana and katakana, compiles the lychee_ja schema with rime_deployer
 and zips it as lychee-rime-ja.zip with pack.json. The app copies rime/ into Rime's data.
 """
 
@@ -125,7 +125,7 @@ def schema_with_kana_preedit() -> str:
         rules.append(f"xform/{rom}/{pairs[rom]}/")
     # a lone n last, so it doesn't eat the n of na, ni...
     rules += ["xform/n/ん/", "xform/-/ー/"]
-    text = (HERE / "bum_ja.schema.yaml").read_text(encoding="utf-8")
+    text = (HERE / "lychee_ja.schema.yaml").read_text(encoding="utf-8")
     quote = "'"
     block = "  preedit_format:\n" + "".join(f"    - {quote}{r.replace(quote, quote * 2)}{quote}\n" for r in rules)
     return text.replace("  spelling_hints: 0\n", "  spelling_hints: 0\n" + block, 1)
@@ -190,12 +190,12 @@ def main():
     shutil.rmtree(work, ignore_errors=True)
     shared = work / "shared"
     shared.mkdir(parents=True)
-    (shared / "bum_ja.schema.yaml").write_text(schema_with_kana_preedit(), encoding="utf-8")
-    shutil.copy(RIME / "bum_common.yaml", shared)
-    (shared / "default.yaml").write_text('config_version: "lychee.ja.1"\nschema_list:\n  - schema: bum_ja\n', encoding="utf-8")
-    with open(shared / "bum_ja.dict.yaml", "w", encoding="utf-8") as f:
+    (shared / "lychee_ja.schema.yaml").write_text(schema_with_kana_preedit(), encoding="utf-8")
+    shutil.copy(RIME / "lychee_common.yaml", shared)
+    (shared / "default.yaml").write_text('config_version: "lychee.ja.1"\nschema_list:\n  - schema: lychee_ja\n', encoding="utf-8")
+    with open(shared / "lychee_ja.dict.yaml", "w", encoding="utf-8") as f:
         f.write("# Rime dictionary: Japanese, from Mozc's open-source dictionary (BSD-3-Clause; IPAdic licence).\n")
-        f.write(f"---\nname: bum_ja\nversion: \"{PACK_VERSION}\"\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
+        f.write(f"---\nname: lychee_ja\nversion: \"{PACK_VERSION}\"\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
         f.write("\n".join(lines) + "\n")
     user = work / "user"
     user.mkdir()
@@ -208,10 +208,10 @@ def main():
     pack.unlink(missing_ok=True)
     with zipfile.ZipFile(pack, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("pack.json", json.dumps({"id": "rime_ja", "name": "Japanese dictionary", "version": PACK_VERSION}))
-        for name in ["bum_ja.schema.yaml", "bum_ja.dict.yaml"]:
+        for name in ["lychee_ja.schema.yaml", "lychee_ja.dict.yaml"]:
             z.write(shared / name, f"rime/{name}")
         for f in sorted(build.iterdir()):
-            if f.name.startswith("bum_ja."):
+            if f.name.startswith("lychee_ja."):
                 z.write(f, f"rime/build/{f.name}")
         z.writestr("LICENSE.txt", "Japanese dictionary from Mozc (https://github.com/google/mozc), "
                    "src/data/dictionary_oss: BSD-3-Clause, with entries from IPAdic (see Mozc's "

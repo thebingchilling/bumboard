@@ -441,13 +441,13 @@ public final class BinaryDictionary extends Dictionary {
                 getWordProperty(word, isBeginningOfSentence[0]), nextToken);
     }
 
-    /** BUMBOARD: receives each word of a dictionary with its probability. */
+    /** LYCHEE: receives each word of a dictionary with its probability. */
     public interface WordConsumer {
         void accept(String word, int probability);
     }
 
     /**
-     * BUMBOARD: every word of this dictionary with its probability (the glide decoder's word
+     * LYCHEE: every word of this dictionary with its probability (the glide decoder's word
      * list), without building full word properties.
      */
     public void forEachWord(final WordConsumer consumer) {

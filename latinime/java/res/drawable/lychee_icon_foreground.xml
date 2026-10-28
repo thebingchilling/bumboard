@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A keycap with a chunky "B". Kept inside the 66dp safe zone of adaptive icons. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- key shadow -->
+    <path android:fillColor="#33000000"
+        android:pathData="M38,33 h32 a10,10 0 0 1 10,10 v29 a10,10 0 0 1 -10,10 h-32 a10,10 0 0 1 -10,-10 v-29 a10,10 0 0 1 10,-10 z" />
+    <!-- key -->
+    <path android:fillColor="@color/lychee_icon_key"
+        android:pathData="M38,29 h32 a10,10 0 0 1 10,10 v29 a10,10 0 0 1 -10,10 h-32 a10,10 0 0 1 -10,-10 v-29 a10,10 0 0 1 10,-10 z" />
+    <!-- B -->
+    <path android:fillColor="@color/lychee_icon_glyph" android:fillType="evenOdd"
+        android:pathData="M43,37 L57,37 A8,8 0 0 1 61.5,51.5 A9,9 0 0 1 58,69 L43,69 Z M49,42.5 L55.5,42.5 A3.25,3.25 0 0 1 55.5,49 L49,49 Z M49,54.5 L57,54.5 A4,4 0 0 1 57,62.5 L49,62.5 Z" />
+</vector>

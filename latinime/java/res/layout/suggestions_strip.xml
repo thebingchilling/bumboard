@@ -52,31 +52,31 @@
             android:textSize="16sp"
             style="?attr/suggestionWordStyle" />
     </LinearLayout>
-    <!-- BUMBOARD: shortcuts, shown while there are no suggestions. -->
-    <app.bumboard.toolbar.ToolbarView
-        android:id="@+id/bum_toolbar"
+    <!-- LYCHEE: shortcuts, shown while there are no suggestions. -->
+    <app.lychee.toolbar.ToolbarView
+        android:id="@+id/lychee_toolbar"
         android:layout_width="match_parent"
         android:layout_height="@dimen/config_suggestions_strip_height"
         android:layout_alignParentBottom="true"
         android:layout_marginLeft="@dimen/config_suggestions_strip_horizontal_margin"
         android:layout_marginRight="@dimen/config_suggestions_strip_horizontal_margin" />
-    <!-- BUMBOARD: Traditional/Simplified, a round button locked on the right on the Chinese
+    <!-- LYCHEE: Traditional/Simplified, a round button locked on the right on the Chinese
          keyboards; the mic sits to its left while the bar is idle. Both keep the standard
          strip height on the bottom edge when the bar grows for Chinese candidates. -->
     <TextView
-        android:id="@+id/bum_script_key"
-        android:layout_width="@dimen/bum_script_key_width"
+        android:id="@+id/lychee_script_key"
+        android:layout_width="@dimen/lychee_script_key_width"
         android:layout_height="@dimen/config_suggestions_strip_height"
         android:layout_alignParentEnd="true"
         android:layout_alignParentRight="true"
         android:layout_alignParentBottom="true"
         android:gravity="center"
         android:visibility="gone" />
-    <!-- BUMBOARD: 中, pinned on the left on the Chinese keyboards (it stays while candidates
+    <!-- LYCHEE: 中, pinned on the left on the Chinese keyboards (it stays while candidates
          show): when on, English words typed come back as Chinese candidates. -->
     <TextView
-        android:id="@+id/bum_zhong_key"
-        android:layout_width="@dimen/bum_script_key_width"
+        android:id="@+id/lychee_zhong_key"
+        android:layout_width="@dimen/lychee_script_key_width"
         android:layout_height="@dimen/config_suggestions_strip_height"
         android:layout_alignParentStart="true"
         android:layout_alignParentLeft="true"
@@ -87,8 +87,8 @@
         android:id="@+id/suggestions_strip_voice_key"
         android:layout_width="@dimen/config_suggestions_strip_height"
         android:layout_height="@dimen/config_suggestions_strip_height"
-        android:layout_toStartOf="@id/bum_script_key"
-        android:layout_toLeftOf="@id/bum_script_key"
+        android:layout_toStartOf="@id/lychee_script_key"
+        android:layout_toLeftOf="@id/lychee_script_key"
         android:layout_alignWithParentIfMissing="true"
         android:layout_alignParentBottom="true"
         android:contentDescription="@string/spoken_description_mic"

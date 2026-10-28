@@ -18,7 +18,7 @@
 */
 -->
 
-<!-- BUMBOARD: a fixed-height top bar (strip, emoji search or Chinese candidates in one row),
+<!-- LYCHEE: a fixed-height top bar (strip, emoji search or Chinese candidates in one row),
      then the keys with one-handed side panels; a drag handle on top in floating mode. -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
@@ -27,15 +27,15 @@
     android:layout_gravity="bottom"
     android:orientation="vertical" >
 
-    <app.bumboard.layout.FloatHandleView
-        android:id="@+id/bum_float_handle"
+    <app.lychee.layout.FloatHandleView
+        android:id="@+id/lychee_float_handle"
         android:layout_width="match_parent"
         android:layout_height="40dp"
         android:visibility="gone" />
 
     <!-- wraps the strip; taller only while emoji search shows its results row -->
     <FrameLayout
-        android:id="@+id/bum_top_bar"
+        android:id="@+id/lychee_top_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
         <!-- To ensure that key preview popup is correctly placed when the current system locale is
@@ -48,17 +48,17 @@
             android:gravity="center_vertical"
             style="?attr/suggestionStripViewStyle" />
         <!-- Emoji search; shown over the strip while searching for an emoji. -->
-        <app.bumboard.emoji.EmojiSearchBar
-            android:id="@+id/bum_emoji_search"
+        <app.lychee.emoji.EmojiSearchBar
+            android:id="@+id/lychee_emoji_search"
             android:layout_width="match_parent"
-            android:layout_height="@dimen/bum_emoji_search_height"
+            android:layout_height="@dimen/lychee_emoji_search_height"
             android:visibility="gone" />
-        <!-- BUMBOARD: what is being typed (pinyin, romaji ...), small above the candidates,
+        <!-- LYCHEE: what is being typed (pinyin, romaji ...), small above the candidates,
              like Gboard's; the text field shows nothing until a candidate is picked. -->
         <TextView
-            android:id="@+id/bum_preedit"
+            android:id="@+id/lychee_preedit"
             android:layout_width="wrap_content"
-            android:layout_height="@dimen/bum_preedit_height"
+            android:layout_height="@dimen/lychee_preedit_height"
             android:layout_gravity="top|start"
             android:paddingStart="12dp"
             android:paddingEnd="12dp"
@@ -67,38 +67,38 @@
             android:singleLine="true"
             android:visibility="gone" />
         <!-- Chinese candidates, between the strip's locked edge keys while Rime is composing. -->
-        <app.bumboard.chinese.CandidateBarView
-            android:id="@+id/bum_candidate_bar"
+        <app.lychee.chinese.CandidateBarView
+            android:id="@+id/lychee_candidate_bar"
             android:layoutDirection="ltr"
             android:layout_width="match_parent"
             android:layout_height="@dimen/config_suggestions_strip_height"
-            android:layout_marginEnd="@dimen/bum_candidate_bar_end"
+            android:layout_marginEnd="@dimen/lychee_candidate_bar_end"
             android:visibility="gone" />
         <!-- Opens every candidate, with readings and meanings, over the keys. -->
         <ImageView
-            android:id="@+id/bum_candidate_more"
+            android:id="@+id/lychee_candidate_more"
             android:layout_width="@dimen/config_suggestions_strip_edge_key_width"
             android:layout_height="@dimen/config_suggestions_strip_height"
             android:layout_gravity="end|bottom"
-            android:layout_marginEnd="@dimen/bum_script_key_width"
+            android:layout_marginEnd="@dimen/lychee_script_key_width"
             android:scaleType="center"
             android:src="@drawable/ic_sym_keyboard_arrow_down"
-            android:contentDescription="@string/bum_candidates_all"
+            android:contentDescription="@string/lychee_candidates_all"
             android:visibility="gone" />
         <!-- Voice typing, in place of the strip like Gboard's. -->
-        <app.bumboard.voice.VoicePanelView
-            android:id="@+id/bum_voice_panel"
+        <app.lychee.voice.VoicePanelView
+            android:id="@+id/lychee_voice_panel"
             android:layout_width="match_parent"
             android:layout_height="@dimen/config_suggestions_strip_height" />
     </FrameLayout>
 
     <LinearLayout
-        android:id="@+id/bum_keyboard_row"
+        android:id="@+id/lychee_keyboard_row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
-        <app.bumboard.layout.OneHandedSideView
-            android:id="@+id/bum_one_hand_left"
+        <app.lychee.layout.OneHandedSideView
+            android:id="@+id/lychee_one_hand_left"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:visibility="gone" />
@@ -109,8 +109,8 @@
             android:layoutDirection="ltr"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
-        <app.bumboard.layout.OneHandedSideView
-            android:id="@+id/bum_one_hand_right"
+        <app.lychee.layout.OneHandedSideView
+            android:id="@+id/lychee_one_hand_right"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:visibility="gone" />

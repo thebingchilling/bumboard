@@ -1,6 +1,6 @@
 name: Build Lychee packs
 
-# The optional downloads the app's catalogue (latinime/bumboard/assets/bumboard/packs.json)
+# The optional downloads the app's catalogue (latinime/lychee/assets/lychee/packs.json)
 # links to: built (or, for fonts, mirrored) here and published on the public lychee repository's
 # "packs" release. The app has no network access: the browser downloads these, and opening the
 # downloaded file installs it.
@@ -11,13 +11,13 @@ on:
     paths:
       - 'data/packs/**'
       - '.github/workflows/packs.yml'
-      - 'latinime/bumboard/assets/bumboard/packs.json'
+      - 'latinime/lychee/assets/lychee/packs.json'
 
 permissions:
   contents: write
 
 concurrency:
-  group: bumboard-packs-${{ github.ref }}
+  group: lychee-packs-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -36,7 +36,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: data/packs/ja/.cache
-          key: bumboard-mozc-dict-v1
+          key: lychee-mozc-dict-v1
 
       - name: Japanese dictionary pack
         run: python3 data/packs/ja/build_ja.py --out out/packs

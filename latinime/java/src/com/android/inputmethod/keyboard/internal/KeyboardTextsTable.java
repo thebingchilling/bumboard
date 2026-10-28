@@ -4194,14 +4194,14 @@ public final class KeyboardTextsTable {
             sLocaleToTextsTableMap.put(locale, textsTable);
             sTextsTableToLocaleMap.put(textsTable, locale);
         }
-        putBumChinese();
-        putBumJapanese();
-        putBumEnglish();
+        putLycheeChinese();
+        putLycheeJapanese();
+        putLycheeEnglish();
     }
 
-    // BUMBOARD: Gboard's English popups: LatinIME's accents (the same as Gboard's), and the
+    // LYCHEE: Gboard's English popups: LatinIME's accents (the same as Gboard's), and the
     // full stop's punctuation in Gboard's order (a fixed order fills the bottom row first).
-    private static void putBumEnglish() {
+    private static void putLycheeEnglish() {
         final String[] en = java.util.Arrays.copyOf(TEXTS_en, NAMES.length);
         final String[][] texts = {
             { "morekeys_punctuation", "!fixedColumnOrder!8,;,/,\\(,\\),#,!,\\,,?,"
@@ -4215,9 +4215,9 @@ public final class KeyboardTextsTable {
         sTextsTableToLocaleMap.put(en, "en");
     }
 
-    // BUMBOARD: the Chinese keyboards (zh_HK, zh_CN) label their punctuation keys with the
-    // full-width Chinese marks that app.bumboard.chinese.ChineseInput types.
-    private static void putBumChinese() {
+    // LYCHEE: the Chinese keyboards (zh_HK, zh_CN) label their punctuation keys with the
+    // full-width Chinese marks that app.lychee.chinese.ChineseInput types.
+    private static void putLycheeChinese() {
         final String[] zh = new String[NAMES.length];
         final String[][] texts = {
             { "keyspec_comma", "，" },                      // ，
@@ -4252,9 +4252,9 @@ public final class KeyboardTextsTable {
         sTextsTableToLocaleMap.put(zh, "zh");
     }
 
-    // BUMBOARD: the Japanese keyboard labels its comma and period 、 and 。 (what Rime's bum_ja
+    // LYCHEE: the Japanese keyboard labels its comma and period 、 and 。 (what Rime's lychee_ja
     // schema types), with Japanese punctuation in the period's popup.
-    private static void putBumJapanese() {
+    private static void putLycheeJapanese() {
         final String[] ja = new String[NAMES.length];
         final String[][] texts = {
             { "keyspec_comma", "、" },

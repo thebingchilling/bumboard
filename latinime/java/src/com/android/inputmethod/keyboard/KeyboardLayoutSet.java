@@ -119,10 +119,10 @@ public final class KeyboardLayoutSet {
         boolean mVoiceInputKeyEnabled;
         boolean mNoSettingsKey;
         boolean mLanguageSwitchKeyEnabled;
-        // BUMBOARD
-        boolean mBumNumberRow;
-        boolean mBumEmojiKey = true;
-        boolean mBumSideKey = true;
+        // LYCHEE
+        boolean mLycheeNumberRow;
+        boolean mLycheeEmojiKey = true;
+        boolean mLycheeSideKey = true;
         RichInputMethodSubtype mSubtype;
         boolean mIsSpellChecker;
         int mKeyboardWidth;
@@ -326,12 +326,12 @@ public final class KeyboardLayoutSet {
             return this;
         }
 
-        // BUMBOARD: the number row and the key beside the comma.
-        public Builder setBumOptions(final boolean numberRow, final boolean emojiKey,
+        // LYCHEE: the number row and the key beside the comma.
+        public Builder setLycheeOptions(final boolean numberRow, final boolean emojiKey,
                 final boolean sideKey) {
-            mParams.mBumNumberRow = numberRow;
-            mParams.mBumEmojiKey = emojiKey;
-            mParams.mBumSideKey = sideKey;
+            mParams.mLycheeNumberRow = numberRow;
+            mParams.mLycheeEmojiKey = emojiKey;
+            mParams.mLycheeSideKey = sideKey;
             return this;
         }
 
