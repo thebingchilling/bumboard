@@ -7,3 +7,5 @@ local.properties
 prebuilt/
 data/out/
 data/.cache/
+data/packs/ja/.cache/
+out/

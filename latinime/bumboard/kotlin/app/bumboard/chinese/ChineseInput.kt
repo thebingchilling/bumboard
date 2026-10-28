@@ -21,7 +21,8 @@ import com.android.inputmethod.latin.suggestions.SuggestionStripView
  * `BumEngine=cmn`, LatinIME hands its key events here first; letters go to Rime and the
  * candidates replace the suggestion strip. Everything Rime does not want falls back to LatinIME.
  */
-class ChineseInput(private val ime: InputMethodService, private val prefs: SharedPreferences) {
+class ChineseInput(private val ime: InputMethodService, private val prefs: SharedPreferences) :
+    app.bumboard.japanese.FlickKeyboardView.FlickTarget {
     private var session = 0L
     private var engine: String? = null
     private var bar: CandidateBarView? = null
@@ -82,7 +83,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /** The background annotation for the current settings, or null when readings are off. */
     private fun annotation(): ((Candidate) -> Annotation?)? {
-        if (!Readings.showReadings(prefs)) return null
+        if (engine == "ja" || !Readings.showReadings(prefs)) return null
         val annotator = Readings.annotator ?: return null
         val mode = inputMode()
         val display = Readings.displayPrefs(prefs)
@@ -92,6 +93,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** The speech recogniser language for the current Chinese keyboard, or null when not Chinese. */
     fun voiceLanguage(): String? = when (engine) {
         null -> null
+        "ja" -> "ja-JP"
         "yue" -> "yue-Hant-HK"
         else -> if (prefs.getString(PREF_SCRIPT, "traditional") == "simplified") "cmn-Hans-CN" else "cmn-Hant-TW"
     }
@@ -102,8 +104,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         reset()
         engine = newEngine
         if (newEngine != null) {
-            RimeService.start(ime) { selectSchema() }
-            Readings.open(ime) { if (isComposing) show(shown) }
+            // imported Rime packs (the Japanese dictionary) join Rime's data first
+            RimeService.start(ime) { RimeService.refreshPacks(ime) { selectSchema() } }
+            if (newEngine != "ja") Readings.open(ime) { if (isComposing) show(shown) }
+            if (newEngine == "ja" && !app.bumboard.packs.Packs.isInstalled(ime, "rime_ja")) {
+                android.widget.Toast.makeText(ime, R.string.bum_ja_needs_pack, android.widget.Toast.LENGTH_LONG).show()
+            }
         }
         show(null)
     }
@@ -113,6 +119,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         get() = engine.let { it == "yue" || it == "cmn" } && prefs.getBoolean(PREF_ENGLISH_MODE + engine, false)
 
     private fun inputMode() = when {
+        engine == "ja" -> InputMode.Other
         engine == "yue" && englishMode -> InputMode.EnglishToCantonese
         engine == "yue" -> InputMode.Cantonese
         englishMode -> InputMode.EnglishToMandarin
@@ -137,6 +144,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private fun selectSchema() {
         val engine = engine ?: return
         if (session == 0L) session = Rime.createSession()
+        if (engine == "ja") {
+            Rime.selectSchema(session, "bum_ja")
+            return
+        }
         val schema = when {
             englishMode -> if (engine == "yue") "bum_en_yue" else "bum_en_cmn"
             engine == "yue" -> if (prefs.getString(PREF_CANTONESE_INPUT, "jyutping") == "yale") "bum_yue_yale" else "bum_yue"
@@ -165,8 +176,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             event.mKeyCode == Constants.CODE_DELETE -> isComposing && key(KEY_BACKSPACE)
             code == Constants.CODE_ENTER -> {
                 if (isComposing) {
-                    // Enter sends the typed letters as they are.
-                    val raw = Rime.input(session)
+                    // Enter sends the typed letters as they are (flicked kana as kana).
+                    val raw = if (flickKana.isNotEmpty()) flickKana.toString() else Rime.input(session)
+                    endFlickRun()
                     Rime.clearComposition(session)
                     ime.currentInputConnection?.commitText(raw, 1)
                     sync()
@@ -216,7 +228,63 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     fun pick(index: Int) {
         if (session == 0L) return
         Rime.selectCandidate(session, index)
+        endFlickRun()
         sync()
+    }
+
+    // ------------------------------------------------------------------ 12-key flick (Japanese)
+
+    /** The kana flicked since the last pick, and the romaji sent to Rime for them. */
+    private val flickKana = StringBuilder()
+    private var flickSent = ""
+
+    private fun endFlickRun() {
+        flickKana.setLength(0)
+        flickSent = ""
+    }
+
+    private val flickReady get() = engine == "ja" && RimeService.ready && session != 0L &&
+        app.bumboard.packs.Packs.isInstalled(ime, "rime_ja")
+
+    override fun flickType(text: String) {
+        val kana = text.firstOrNull()
+        val isKana = text.length == 1 && kana != null && (kana in 'ぁ'..'ゖ' || kana == 'ー')
+        if (!isKana || !flickReady) {
+            // marks (、。「」), or no dictionary: typed as they are
+            if (isComposing) commitFirst()
+            endFlickRun()
+            ime.currentInputConnection?.commitText(text, 1)
+            return
+        }
+        flickKana.append(text)
+        feedFlick()
+    }
+
+    override fun flickModify(): Boolean {
+        if (flickKana.isEmpty()) return false
+        val last = flickKana.last()
+        val changed = app.bumboard.japanese.Kana.modify(last) ?: return true
+        flickKana.setCharAt(flickKana.length - 1, changed)
+        feedFlick()
+        return true
+    }
+
+    override fun flickBackspace(): Boolean {
+        if (flickKana.isEmpty()) return false
+        flickKana.setLength(flickKana.length - 1)
+        feedFlick()
+        return true
+    }
+
+    /** Sends Rime only what changed: backspaces for the old romaji's tail, then the new tail. */
+    private fun feedFlick() {
+        val want = app.bumboard.japanese.Kana.romaji(flickKana)
+        val common = flickSent.commonPrefixWith(want).length
+        repeat(flickSent.length - common) { Rime.processKey(session, KEY_BACKSPACE) }
+        for (c in want.substring(common)) Rime.processKey(session, c.code)
+        flickSent = want
+        sync()
+        if (!isComposing) endFlickRun()
     }
 
     /** Whether the next " and ' open a quotation (they alternate, like Chinese IMEs). */
@@ -224,7 +292,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private var singleOpen = true
 
     /** The full-width Chinese form of an ASCII punctuation mark. */
-    private fun fullWidth(code: Int): String = when (code) {
+    private fun fullWidth(code: Int): String = when {
+        engine == "ja" && code in JA_PUNCTUATION -> JA_PUNCTUATION.getValue(code)
+        else -> chineseFullWidth(code)
+    }
+
+    private fun chineseFullWidth(code: Int): String = when (code) {
         '"'.code -> (if (doubleOpen) "“" else "”").also { doubleOpen = !doubleOpen }
         '\''.code -> (if (singleOpen) "‘" else "’").also { singleOpen = !singleOpen }
         else -> PUNCTUATION.getValue(code)
@@ -253,6 +326,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /** Drops any composition, e.g. when the text field changes. */
     fun reset() {
+        endFlickRun()
         popup?.dismiss()
         if (session != 0L) Rime.clearComposition(session)
         if (isComposing) ime.currentInputConnection?.finishComposingText()
@@ -261,6 +335,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     }
 
     private fun commitFirst() {
+        endFlickRun()
         Rime.commitComposition(session)
         sync()
     }
@@ -283,6 +358,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             ic?.finishComposingText()
             isComposing = false
         }
+        if (composition == null) endFlickRun()
         show(composition)
     }
 
@@ -346,7 +422,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** 繁 or 简 on the strip's left edge on the Chinese keyboards; a tap switches. */
     private fun updateScriptKey(stripView: SuggestionStripView?) {
         stripView ?: return
-        if (!isActive) {
+        if (!isActive || engine == "ja") {
             stripView.setBumScriptKey(null, null)
             stripView.setBumZhongKey(null, null)
             updateEdges(stripView)
@@ -386,7 +462,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /** What each candidate shows under its characters, so the bar can scale it to fit. */
     private fun annotationLines(): CandidateBarView.Lines {
-        if (!Readings.showReadings(prefs)) return CandidateBarView.Lines(0, false)
+        if (engine == "ja" || !Readings.showReadings(prefs)) return CandidateBarView.Lines(0, false)
         val display = Readings.displayPrefs(prefs)
         var lines = 1
         if (display.showOtherLanguage) lines++
@@ -402,8 +478,13 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             '<'.code to "《", '>'.code to "》", '\\'.code to "、", '~'.code to "～",
             '^'.code to "……", '_'.code to "——",
         )
+        /** Japanese punctuation (where it differs from Chinese). */
+        private val JA_PUNCTUATION = mapOf(
+            ','.code to "、", '.'.code to "。", '/'.code to "・", '~'.code to "〜",
+            '\\'.code to "＼", '^'.code to "＾", '_'.code to "＿",
+        )
         private val FULL_WIDTH: Set<Int> =
-            (PUNCTUATION.values.flatMap { it.codePoints().toArray().toList() } + "“”‘’".map { it.code }).toSet()
+            (PUNCTUATION.values.flatMap { it.codePoints().toArray().toList() } + "“”‘’・〜".map { it.code }).toSet()
         const val EXTRA_ENGINE = "BumEngine"
         const val PREF_SCRIPT = "bum_chinese_script"
         /** Candidate text size, 0.7 .. 1.6. */

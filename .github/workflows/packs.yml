@@ -1,0 +1,59 @@
+name: Build BumBoard packs
+
+# The optional downloads BumBoard's catalogue (latinime/bumboard/assets/bumboard/packs.json)
+# links to: built here and attached to this repository's "packs" release. BumBoard itself has
+# no network access; users download these in the browser and import them.
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'data/packs/**'
+      - '.github/workflows/packs.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bumboard-packs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  packs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install host tools
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends librime-bin zip zinnia-utils || \
+            sudo apt-get install -y -q --no-install-recommends librime-bin zip
+
+      - uses: actions/cache@v4
+        with:
+          path: data/packs/ja/.cache
+          key: bumboard-mozc-dict-v1
+
+      - name: Japanese dictionary pack
+        run: python3 data/packs/ja/build_ja.py --out out/packs
+
+      - name: Handwriting packs
+        run: data/packs/handwriting/build_hw.sh out/packs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bumboard-packs
+          path: out/packs/*.zip
+          if-no-files-found: error
+
+      - name: Publish to the "packs" release
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view packs >/dev/null 2>&1 || \
+            gh release create packs --title "BumBoard packs" \
+              --notes "Optional downloads for BumBoard: open these in your browser, then import them in BumBoard (Settings > Downloads)."
+          gh release upload packs out/packs/*.zip --clobber

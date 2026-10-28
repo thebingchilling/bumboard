@@ -4195,6 +4195,7 @@ public final class KeyboardTextsTable {
             sTextsTableToLocaleMap.put(textsTable, locale);
         }
         putBumChinese();
+        putBumJapanese();
         putBumEnglish();
     }
 
@@ -4249,5 +4250,23 @@ public final class KeyboardTextsTable {
             sLocaleToTextsTableMap.put(language, zh);
         }
         sTextsTableToLocaleMap.put(zh, "zh");
+    }
+
+    // BUMBOARD: the Japanese keyboard labels its comma and period 、 and 。 (what Rime's bum_ja
+    // schema types), with Japanese punctuation in the period's popup.
+    private static void putBumJapanese() {
+        final String[] ja = new String[NAMES.length];
+        final String[][] texts = {
+            { "keyspec_comma", "、" },
+            { "keyspec_period", "。" },
+            { "morekeys_punctuation", "!autoColumnOrder!8,？,！,・,：,；,「,」,『,』,（,）,〜,…" },
+            { "morekeys_period", "．,…" },
+        };
+        for (final String[] text : texts) {
+            final Integer index = sNameToIndexesMap.get(text[0]);
+            if (index != null) ja[index] = text[1];
+        }
+        sLocaleToTextsTableMap.put("ja", ja);
+        sTextsTableToLocaleMap.put(ja, "ja");
     }
 }

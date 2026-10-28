@@ -27,6 +27,9 @@
     <string name="bum_subtype_yue" translatable="false">粵語 Cantonese</string>
     <string name="bum_subtype_cmn" translatable="false">普通話 Mandarin</string>
     <string name="bum_subtype_ko" translatable="false">한국어 Korean</string>
+    <string name="bum_subtype_ja" translatable="false">日本語 Japanese</string>
+    <string name="bum_subtype_ja_flick" translatable="false">日本語 Japanese (flick)</string>
+    <string name="bum_ja_needs_pack">Japanese needs its dictionary: get it in BumBoard Settings &gt; Downloads.</string>
     <string name="bum_chinese">Chinese</string>
     <string name="bum_chinese_summary">Cantonese and Mandarin typing</string>
     <string name="bum_script">Characters</string>

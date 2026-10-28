@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import app.bumboard.packs.PackKind
+import app.bumboard.packs.Packs
 import java.io.File
 import java.util.concurrent.Executors
 
@@ -38,6 +40,7 @@ object RimeService {
                 val shared = File(root, "shared")
                 val user = File(root, "user").apply { mkdirs() }
                 val changed = installAssets(app, shared)
+                installPacks(app, shared)
                 Rime.start(shared.path, user.path, fullCheck = changed)
                 ready = true
             } catch (t: Throwable) {
@@ -51,6 +54,42 @@ object RimeService {
                 }
             }
         }
+    }
+
+    /**
+     * Copies imported Rime packs (e.g. the Japanese dictionary: schema, dictionary and its
+     * precompiled build/) into Rime's shared data, then runs [then] on the main thread.
+     */
+    fun refreshPacks(context: Context, then: () -> Unit = {}) {
+        val app = context.applicationContext
+        executor.execute {
+            try {
+                installPacks(app, File(File(app.filesDir, "rime"), "shared"))
+            } catch (t: Throwable) {
+                Log.e(TAG, "Rime packs failed to install", t)
+            }
+            main.post(then)
+        }
+    }
+
+    /** Copies the installed Rime packs into [shared] when they changed. Returns whether they did. */
+    private fun installPacks(context: Context, shared: File): Boolean {
+        val packs = Packs.ofKind(context, PackKind.RIME)
+            .filter { Packs.isInstalled(context, it.id) }
+        val stamp = packs.joinToString(",") {
+            val dir = Packs.dir(context, it.id)
+            "${it.id}:${Packs.installedVersion(context, it.id)}:${dir.lastModified()}"
+        }
+        val stampFile = File(shared, "PACKS_STAMP")
+        if (stampFile.exists() && stampFile.readText() == stamp) return false
+        shared.mkdirs()
+        for (pack in packs) {
+            val rime = File(Packs.dir(context, pack.id), "rime")
+            if (rime.isDirectory) rime.copyRecursively(shared, overwrite = true)
+        }
+        stampFile.writeText(stamp)
+        Log.i(TAG, "Installed Rime packs: $stamp")
+        return true
     }
 
     /** Copies assets/rime into [dest] when its stamp differs. Returns whether anything was copied. */

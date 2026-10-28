@@ -913,6 +913,17 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         }
     }
 
+    // BUMBOARD: the Japanese flick keyboard covers the keys on its subtype (BumFlick).
+    private void updateBumFlick() {
+        if (mInputView == null || mBumChinese == null) return;
+        final app.bumboard.japanese.FlickKeyboardView flick =
+                (app.bumboard.japanese.FlickKeyboardView) mInputView.findViewById(R.id.bum_flick_keyboard);
+        if (flick == null) return;
+        final InputMethodSubtype subtype = mRichImm.getCurrentSubtype().getRawSubtype();
+        flick.setEngine(mBumChinese.getChinese());
+        flick.setWanted(subtype != null && subtype.getExtraValueOf("BumFlick") != null);
+    }
+
     // BUMBOARD: the mic key starts voice typing in the current keyboard's language.
     private void startBumVoice() {
         if (mBumVoice == null) return;
@@ -1003,6 +1014,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         StatsUtils.onSubtypeChanged(oldSubtype, subtype);
         mRichImm.onSubtypeChanged(subtype);
         if (mBumChinese != null) mBumChinese.onSubtypeChanged(subtype);
+        updateBumFlick();
         mInputLogic.onSubtypeChanged(SubtypeLocaleUtils.getCombiningRulesExtraValue(subtype),
                 mSettings.getCurrent());
         loadKeyboard();
@@ -1031,6 +1043,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         mBumChinese.reset();
         mBumChinese.onSubtypeChanged(mRichImm.getCurrentSubtype().getRawSubtype());
         mBumChinese.onSettingsChanged();
+        updateBumFlick();
 
         mDictionaryFacilitator.onStartInput();
         // Switch to the null consumer to handle cases leading to early exit below, for which we
