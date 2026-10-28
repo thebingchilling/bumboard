@@ -55,6 +55,18 @@ android {
         noCompress += "dict"
     }
 
+    signingConfigs {
+        // A fixed debug key kept in the repository, so every CI build installs over the
+        // previous one (each runner would otherwise sign with a fresh random debug key).
+        // Test builds only: a release key must come from a secret.
+        getByName("debug") {
+            storeFile = file("lychee/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
