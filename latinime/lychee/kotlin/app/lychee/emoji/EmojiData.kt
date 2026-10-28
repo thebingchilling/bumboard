@@ -15,6 +15,9 @@ import java.util.concurrent.Executors
 class Emoji(val base: String, val name: String, val keywords: String, val tones: List<String>?) {
     /** Two people with a tone each: 25 variants, index (a - 1) * 5 + (b - 1). */
     val twoPeople: Boolean get() = tones?.size == 25
+
+    /** The keywords one by one, split once, for ranking search results. */
+    val tokens: List<String> by lazy { keywords.split(' ') }
 }
 
 class EmojiGroup(val id: String, val items: List<Emoji>)
@@ -95,17 +98,19 @@ object EmojiData {
         val words = query.lowercase().split(' ').filter { it.isNotBlank() }
         if (words.isEmpty()) return emptyList()
         val first = words.first()
-        return groups.asSequence().flatMap { it.items.asSequence() }
-            .filter { e -> words.all { e.keywords.contains(it) } }
-            .sortedBy { e ->
-                when {
-                    e.name.startsWith(first) -> 0
-                    e.keywords.split(' ').any { it.startsWith(first) } -> 1
-                    else -> 2
-                }
+        // ranked once per match (not per comparison): name first, then a keyword, then inside one
+        val ranked = ArrayList<Pair<Int, Emoji>>()
+        for (g in groups) for (e in g.items) {
+            if (!words.all { e.keywords.contains(it) }) continue
+            val rank = when {
+                e.name.startsWith(first) -> 0
+                e.tokens.any { it.startsWith(first) } -> 1
+                else -> 2
             }
-            .take(limit)
-            .toList()
+            ranked += rank to e
+        }
+        ranked.sortBy { it.first }
+        return ranked.asSequence().take(limit).map { it.second }.toList()
     }
 }
 

@@ -15,6 +15,7 @@ import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -108,7 +109,14 @@ class EmojiPanelView @JvmOverloads constructor(
                 }
         }
         // room around the emoji, like Gboard's: at the sides and above the bottom bar
-        addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply {
+        // delete floats over the grid's corner, so the categories get the whole bottom bar
+        addView(FrameLayout(context).apply {
+            addView(grid, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+            addView(deleteKey().apply { elevation = dp(3).toFloat() },
+                FrameLayout.LayoutParams(dp(56), dp(44), Gravity.BOTTOM or Gravity.END).apply {
+                    rightMargin = dp(4); bottomMargin = dp(4)
+                })
+        }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply {
             setMargins(dp(GRID_SIDE_DP), 0, dp(GRID_SIDE_DP), dp(6))
         })
         pinchToResize()
@@ -378,19 +386,20 @@ class EmojiPanelView @JvmOverloads constructor(
         }, LayoutParams(dp(50), dp(40)))
         tabs.gravity = Gravity.CENTER_VERTICAL
         addView(tabs, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(2); marginEnd = dp(2) })
-        addView(ImageView(context).apply {
-            setImageResource(R.drawable.ic_sym_backspace)
-            imageTintList = ColorStateList.valueOf(palette.onSecondaryContainer)
-            scaleType = ImageView.ScaleType.CENTER
-            background = functionalKey()
-            contentDescription = context.getString(R.string.lychee_emoji_delete)
-            setOnTouchListener { view, event ->
-                view.isPressed = event.actionMasked == MotionEvent.ACTION_DOWN ||
-                    event.actionMasked == MotionEvent.ACTION_MOVE
-                onDeleteTouch(event)
-                true
-            }
-        }, LayoutParams(dp(50), dp(40)))
+    }
+
+    private fun deleteKey() = ImageView(context).apply {
+        setImageResource(R.drawable.ic_sym_backspace)
+        imageTintList = ColorStateList.valueOf(palette.onSecondaryContainer)
+        scaleType = ImageView.ScaleType.CENTER
+        background = functionalKey()
+        contentDescription = context.getString(R.string.lychee_emoji_delete)
+        setOnTouchListener { view, event ->
+            view.isPressed = event.actionMasked == MotionEvent.ACTION_DOWN ||
+                event.actionMasked == MotionEvent.ACTION_MOVE
+            onDeleteTouch(event)
+            true
+        }
     }
 
     private fun onDeleteTouch(event: MotionEvent) {

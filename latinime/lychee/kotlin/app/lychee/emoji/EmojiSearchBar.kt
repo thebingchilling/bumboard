@@ -126,20 +126,21 @@ class EmojiSearchBar @JvmOverloads constructor(
     private fun refresh() {
         queryView.text = query.ifEmpty { context.getString(R.string.lychee_emoji_search) }
         queryView.setTextColor(if (query.isEmpty()) palette.onSurfaceVariant else palette.onSurface)
-        val found = if (query.isBlank()) store.recents() else EmojiData.search(query.toString()).map { store.shown(it) }
+        val found = if (query.isBlank()) store.recents() else EmojiData.search(query.toString(), RESULTS).map { store.shown(it) }
         shown = found
-        results.removeAllViews()
-        found.forEach { emoji ->
-            results.addView(TextView(context).apply {
-                text = emoji
-                typeface = app.lychee.fonts.LycheeFonts.emoji(context)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 30f)
-                gravity = Gravity.CENTER
-                includeFontPadding = false
-                background = context.getDrawable(R.drawable.lychee_m3_suggestion)
-                setOnClickListener { type(emoji) }
-            }, LayoutParams(dp(50), LayoutParams.MATCH_PARENT))
+        // the result views are kept and reused: building them afresh on every key was the slow part
+        while (results.childCount > 0 && results.getChildAt(results.childCount - 1) !is EmojiCell) {
+            results.removeViewAt(results.childCount - 1)
         }
+        found.forEachIndexed { i, emoji ->
+            val cell = (results.getChildAt(i) as? EmojiCell) ?: EmojiCell().also {
+                results.addView(it, LayoutParams(dp(50), LayoutParams.MATCH_PARENT))
+            }
+            cell.text = emoji
+            cell.visibility = VISIBLE
+            cell.setOnClickListener { type(emoji) }
+        }
+        for (i in found.size until results.childCount) results.getChildAt(i).visibility = GONE
         if (found.isEmpty() && query.isNotBlank()) {
             results.addView(TextView(context).apply {
                 text = context.getString(R.string.lychee_emoji_none)
@@ -158,4 +159,20 @@ class EmojiSearchBar @JvmOverloads constructor(
     }
 
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
+
+    /** One result. */
+    private inner class EmojiCell : TextView(context) {
+        init {
+            typeface = app.lychee.fonts.LycheeFonts.emoji(context)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 30f)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            background = context.getDrawable(R.drawable.lychee_m3_suggestion)
+        }
+    }
+
+    private companion object {
+        /** Results shown at most: a bar's worth and some to scroll. */
+        const val RESULTS = 40
+    }
 }
