@@ -16,6 +16,7 @@ enum class Shortcut(val id: String, @DrawableRes val icon: Int, @StringRes val l
     UNDO("undo", R.drawable.ic_sym_undo, R.string.bum_sc_undo),
     REDO("redo", R.drawable.ic_sym_redo, R.string.bum_sc_redo),
     HANDWRITING("handwriting", R.drawable.ic_sym_edit, R.string.bum_sc_handwriting),
+    WRITTEN_CHINESE("written_chinese", R.drawable.ic_sym_translate, R.string.bum_sc_written),
     SETTINGS("settings", R.drawable.ic_sym_settings, R.string.bum_sc_settings);
 
     companion object {

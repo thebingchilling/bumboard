@@ -2204,6 +2204,17 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         case HANDWRITING:
             showBumPanel(R.id.bum_handwriting_panel);
             break;
+        case WRITTEN_CHINESE:
+            if (app.bumboard.Features.isEnabled(app.bumboard.Feature.WRITTEN_CHINESE)) {
+                mBumChinese.reset();
+                final InputConnection connection = getCurrentInputConnection();
+                final View frame = mInputView == null ? null
+                        : mInputView.findViewById(R.id.main_keyboard_frame);
+                if (connection != null && frame != null) {
+                    app.bumboard.written.WrittenChinesePopup.INSTANCE.show(this, connection, frame);
+                }
+            }
+            break;
         }
     }
 

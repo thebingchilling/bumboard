@@ -43,4 +43,11 @@
     <string name="bum_hw_enter">Enter</string>
     <string name="bum_hw_no_pack">Handwriting needs a handwriting pack. Tap here to get one in Settings &gt; Downloads.</string>
     <string name="bum_hw_bad_pack">This handwriting pack couldn\'t be opened. Tap here to import it again.</string>
+    <!-- 書面語: Cantonese to Standard Written Chinese -->
+    <string name="bum_sc_written">書面語 Written Chinese</string>
+    <string name="bum_written_title">書面語 · Standard Written Chinese</string>
+    <string name="bum_written_replace">Replace</string>
+    <string name="bum_written_undo">Undo</string>
+    <string name="bum_written_nothing">Write or select some Cantonese first.</string>
+    <string name="bum_written_same">This is already standard written Chinese.</string>
 </resources>
