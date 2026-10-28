@@ -8,5 +8,6 @@ prebuilt/
 data/out/
 data/.cache/
 data/packs/ja/.cache/
+data/packs/dict/.cache/
 out/
 __pycache__/

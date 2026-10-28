@@ -95,11 +95,13 @@
     <string name="lychee_card_listen">Listen</string>
     <string name="lychee_card_level">Level</string>
     <string name="lychee_card_examples">Examples</string>
+    <string name="lychee_card_romanisation">Romanisation</string>
+    <string name="lychee_card_reading">Reading</string>
+    <string name="lychee_card_pos">Part of speech</string>
     <string name="lychee_card_strokes">Stroke order</string>
     <string name="lychee_card_breakdown">Parts</string>
     <string name="lychee_card_radical">Radical</string>
     <string name="lychee_card_replay">Replay</string>
-    <string name="lychee_group_typing">Typing</string>
     <string name="lychee_fuzzy_pinyin">Fuzzy pinyin</string>
     <string name="lychee_fuzzy_pinyin_summary">zh = z, ch = c, sh = s, n = l, en = eng, in = ing, an = ang, f = h. Tone numbers (ni3hao3) always narrow the candidates</string>
     <string name="lychee_fuzzy_jyutping">Lazy Jyutping</string>

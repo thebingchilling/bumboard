@@ -8,12 +8,18 @@ entries come from IPAdic and other permissively licensed sources), turns each re
 romaji syllables (Hepburn; っ doubles the next consonant), keeps the most common entries,
 adds every reading in hiragana and katakana, compiles the lychee_ja schema with rime_deployer
 and zips it as lychee-rime-ja.zip with pack.json. The app copies rime/ into Rime's data.
+
+The pack also carries data/ja.db: meanings, part of speech and kana readings for each word
+from JMdict (EDRDG, CC BY-SA 4.0), shown under the candidates and in the word card.
 """
 
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
+import sqlite3
+import xml.etree.ElementTree as ET
 import math
 import shutil
 import subprocess
@@ -25,7 +31,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 RIME = HERE.parent.parent / "rime"
 MOZC = "https://raw.githubusercontent.com/google/mozc/master/src/data/dictionary_oss/dictionary{:02d}.txt"
-PACK_VERSION = "1"
+JMDICT = "http://ftp.edrdg.org/pub/Nihongo/JMdict_e.gz"
+PACK_VERSION = "2"
 
 # hiragana -> Hepburn romaji
 BASE = {
@@ -131,6 +138,68 @@ def schema_with_kana_preedit() -> str:
     return text.replace("  spelling_hints: 0\n", "  spelling_hints: 0\n" + block, 1)
 
 
+def build_meanings(cache: Path, path: Path) -> int:
+    """data/ja.db from JMdict: every kanji and kana form of an entry -> its meanings."""
+    src = cache / "JMdict_e.gz"
+    if not src.exists():
+        urllib.request.urlretrieve(JMDICT, src)
+    path.unlink(missing_ok=True)
+    db = sqlite3.connect(path)
+    db.executescript("""
+        PRAGMA page_size=4096;
+        CREATE TABLE word(form TEXT NOT NULL, lemma TEXT NOT NULL, reading TEXT, hanja TEXT, pos TEXT,
+                          gloss TEXT NOT NULL, rank INTEGER NOT NULL);
+    """)
+    rows = []
+    rank = 0
+    with gzip.open(src) as f:
+        for _, e in ET.iterparse(f, events=("end",)):
+            if e.tag != "entry":
+                continue
+            kanji = [k.findtext("keb") for k in e.findall("k_ele")]
+            kana = [r.findtext("reb") for r in e.findall("r_ele")]
+            # common words (news, ichi, spec lists) rank first
+            common = any(p.text and p.text[:4] in ("news", "ichi", "spec")
+                         for p in e.iter() if p.tag in ("ke_pri", "re_pri"))
+            senses, pos = [], None
+            for s in e.findall("sense"):
+                gl = [g.text for g in s.findall("gloss") if g.text][:3]
+                if gl:
+                    senses.append("; ".join(gl))
+                if pos is None and s.find("pos") is not None:
+                    pos = short_pos(s.findtext("pos") or "")
+            e.clear()
+            if not senses or not kana:
+                continue
+            rank += 1
+            r = rank if common else rank + 1_000_000
+            gloss = "\n".join(senses[:8])
+            lemma = kanji[0] if kanji else kana[0]
+            for form in dict.fromkeys(kanji + kana):
+                rows.append((form, lemma, kana[0], None, pos, gloss, r))
+    db.executemany("INSERT INTO word VALUES(?,?,?,?,?,?,?)", rows)
+    db.execute("CREATE INDEX word_form ON word(form)")
+    db.commit()
+    db.execute("VACUUM")
+    db.close()
+    return len(rows)
+
+
+def short_pos(p: str) -> str:
+    """JMdict's part-of-speech text ("noun (common) (futsuumeishi)") in a word or two."""
+    p = p.lower()
+    for key, short in (("noun", "noun"), ("godan verb", "verb"), ("ichidan verb", "verb"),
+                       ("suru verb", "verb"), ("kuru verb", "verb"), ("verb", "verb"),
+                       ("adjective (keiyoushi)", "i-adjective"), ("adjectival noun", "na-adjective"),
+                       ("adjective", "adjective"), ("adverb", "adverb"), ("pronoun", "pronoun"),
+                       ("particle", "particle"), ("conjunction", "conjunction"),
+                       ("interjection", "interjection"), ("counter", "counter"),
+                       ("expression", "expression"), ("prefix", "prefix"), ("suffix", "suffix")):
+        if key in p:
+            return short
+    return p.split("(")[0].strip()
+
+
 def download(n: int, cache: Path) -> Path:
     f = cache / f"dictionary{n:02d}.txt"
     if not f.exists():
@@ -204,6 +273,10 @@ def main():
     for p in build.glob("*.userdb*"):
         shutil.rmtree(p, ignore_errors=True) if p.is_dir() else p.unlink()
 
+    meanings = work / "ja.db"
+    n = build_meanings(args.cache, meanings)
+    print(f"ja.db: {n} forms", file=sys.stderr)
+
     pack = args.out / "lychee-rime-ja.zip"
     pack.unlink(missing_ok=True)
     with zipfile.ZipFile(pack, "w", zipfile.ZIP_DEFLATED) as z:
@@ -213,9 +286,15 @@ def main():
         for f in sorted(build.iterdir()):
             if f.name.startswith("lychee_ja."):
                 z.write(f, f"rime/build/{f.name}")
+        z.write(meanings, "data/ja.db")
         z.writestr("LICENSE.txt", "Japanese dictionary from Mozc (https://github.com/google/mozc), "
                    "src/data/dictionary_oss: BSD-3-Clause, with entries from IPAdic (see Mozc's "
-                   "dictionary_oss/README.txt for the full terms).\n")
+                   "dictionary_oss/README.txt for the full terms).\n"
+                   "Meanings, parts of speech and readings (data/ja.db) from JMdict, the property of "
+                   "the Electronic Dictionary Research and Development Group "
+                   "(https://www.edrdg.org/edrdg/licence.html), used under CC BY-SA 4.0; this file "
+                   "is shared under the same licence. Changes: reduced to the first glosses of each "
+                   "sense and converted to SQLite.\n")
     print(f"{pack}: {len(lines)} entries, {pack.stat().st_size >> 20} MB", file=sys.stderr)
 
 

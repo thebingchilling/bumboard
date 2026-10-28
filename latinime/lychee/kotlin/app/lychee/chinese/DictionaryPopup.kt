@@ -50,6 +50,38 @@ class DictionaryPopup(private val ctx: Context) {
         keyboard: View, text: String, resolved: Resolved, prefs: DisplayPrefs, peek: Boolean,
         onSpeak: ((String) -> Unit)? = null, onType: () -> Unit,
     ) {
+        present(keyboard, peek, onType) { c, body -> Content(ctx, c, prefs, body, onSpeak).fill(text, resolved) }
+    }
+
+    /**
+     * A Japanese or Korean word's card: its reading (kana, or romanisation and Hanja), part of
+     * speech, meanings and examples, from the installed dictionary packs.
+     */
+    fun showWord(
+        keyboard: View, text: String, romanisation: String?, entries: List<app.lychee.dict.WordEntry>,
+        examples: List<Pair<String, String>>, peek: Boolean, onSpeak: ((String) -> Unit)?, onType: () -> Unit,
+    ) {
+        present(keyboard, peek, onType) { c, body ->
+            val content = Content(ctx, c, DisplayPrefs(), body, onSpeak)
+            content.heading(text, null)
+            romanisation?.let { body.addView(content.labelled(ctx.getString(R.string.lychee_card_romanisation), it)) }
+            entries.forEachIndexed { i, e ->
+                if (i > 0 || e.lemma != text) {
+                    if (i > 0) body.addView(content.divider())
+                    body.addView(content.textView(e.lemma, 22f, c.onSurface))
+                }
+                e.reading?.takeIf { it != e.lemma && it != romanisation }?.let {
+                    body.addView(content.labelled(ctx.getString(R.string.lychee_card_reading), it))
+                }
+                e.hanja?.let { body.addView(content.labelled("Hanja", it)) }
+                e.partOfSpeech?.let { body.addView(content.labelled(ctx.getString(R.string.lychee_card_pos), it)) }
+                e.senses.take(Content.MAX_SENSES).forEachIndexed { n, s -> content.plainSense(n + 1, s) }
+            }
+            content.examples(examples)
+        }
+    }
+
+    private fun present(keyboard: View, peek: Boolean, onType: () -> Unit, fill: (M3Colors, LinearLayout) -> Unit) {
         dismiss()
         val location = IntArray(2).also { keyboard.getLocationInWindow(it) }
         // the room above the keyboard, below the status bar
@@ -60,7 +92,7 @@ class DictionaryPopup(private val ctx: Context) {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(14), dp(18), dp(4))
         }
-        Content(ctx, c, prefs, body, onSpeak).fill(text, resolved)
+        fill(c, body)
 
         val actions = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -142,17 +174,13 @@ class DictionaryPopup(private val ctx: Context) {
             // headword: Traditional · Simplified, and tap to hear it
             val forms = if (main != null && !r.composed && main.traditional != main.simplified)
                 "${main.traditional} · ${main.simplified}" else text
-            val head = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-            }
-            head.addView(textView(forms, 34f, c.onSurface).apply {
-                app.lychee.fonts.LycheeFonts.chinese(ctx)?.let { typeface = it }
-            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            onSpeak?.let { speak -> head.addView(speaker { speak(text) }) }
-            body.addView(head)
+            heading(forms, text)
             readings(r, main).forEach { (label, value) -> body.addView(labelled(label, value)) }
             if (main != null && !r.composed) facts(main, r.lang)
+            strokes(text)
+            val lang = if (r.lang == Lang.Cantonese) "yue" else "cmn"
+            val forms2 = listOfNotNull(text, main?.traditional, main?.simplified)
+            examples(app.lychee.dict.PackData.examples(ctx, lang, forms2))
 
             if (r.composed) {
                 section(ctx.getString(R.string.lychee_card_parts))
@@ -199,6 +227,80 @@ class DictionaryPopup(private val ctx: Context) {
                 }
             }
             return out
+        }
+
+        /** The word, large, with a button to hear [spoken]. */
+        fun heading(shown: String, spoken: String?) {
+            val head = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            head.addView(textView(shown, 34f, c.onSurface).apply {
+                app.lychee.fonts.LycheeFonts.chinese(ctx)?.let { typeface = it }
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            onSpeak?.let { speak -> head.addView(speaker { speak(spoken ?: shown) }) }
+            body.addView(head)
+        }
+
+        /** Stroke order and breakdown of each character (up to four), when the pack is installed. */
+        private fun strokes(text: String) {
+            val chars = text.codePoints().toArray().filter { Annotator.isHan(it) }
+                .map { String(Character.toChars(it)) }.distinct().take(4)
+            val found = chars.mapNotNull { app.lychee.dict.PackData.strokes(ctx, it) }
+            if (found.isEmpty()) return
+            section(ctx.getString(R.string.lychee_card_strokes))
+            val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+            found.forEach { ch ->
+                row.addView(app.lychee.dict.StrokeOrderView(ctx, ch, c.onSurface,
+                    androidx.core.graphics.ColorUtils.setAlphaComponent(c.onSurface, 0x30),
+                    androidx.core.graphics.ColorUtils.setAlphaComponent(c.outline, 0x80)),
+                    LinearLayout.LayoutParams(dp(76), dp(76)).apply { marginEnd = dp(8) })
+            }
+            body.addView(row)
+            section(ctx.getString(R.string.lychee_card_breakdown))
+            found.forEach { ch ->
+                val parts = listOfNotNull(
+                    ch.decomposition?.takeIf { it.isNotBlank() && it != "？" },
+                    ch.radical?.let { "${ctx.getString(R.string.lychee_card_radical)} $it" },
+                ).joinToString("  ·  ")
+                val sb = SpannableStringBuilder()
+                sb.append(ch.char, StyleSpan(Typeface.BOLD), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                if (parts.isNotEmpty()) sb.append("   ").append(parts)
+                body.addView(textView(sb, 16f, c.onSurface).apply { setPadding(0, dp(4), 0, 0) })
+                (ch.hint ?: ch.definition)?.let { body.addView(note(it)) }
+            }
+        }
+
+        fun examples(list: List<Pair<String, String>>) {
+            if (list.isEmpty()) return
+            section(ctx.getString(R.string.lychee_card_examples))
+            list.forEach { (sentence, english) ->
+                val row = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+                val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+                col.addView(textView(sentence, 16f, c.onSurface).apply {
+                    app.lychee.fonts.LycheeFonts.chinese(ctx)?.let { typeface = it }
+                    setPadding(0, dp(6), 0, 0)
+                })
+                col.addView(textView(english, 13f, c.onSurfaceVariant))
+                row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                onSpeak?.let { speak ->
+                    row.addView(speaker { speak(sentence) }.apply {
+                        layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
+                        setPadding(dp(8), dp(8), dp(8), dp(8))
+                    })
+                }
+                body.addView(row)
+            }
+        }
+
+        fun plainSense(n: Int, gloss: String) {
+            val sb = SpannableStringBuilder()
+            sb.append("$n  ", ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            sb.append(gloss)
+            body.addView(textView(sb, 15f, c.onSurface).apply { setPadding(0, dp(4), 0, dp(2)) })
         }
 
         /** Level, register and part of speech on one line; then the measure words. */
@@ -303,7 +405,7 @@ class DictionaryPopup(private val ctx: Context) {
             })
         }
 
-        private fun labelled(label: String, value: String): TextView {
+        fun labelled(label: String, value: String): TextView {
             val sb = SpannableStringBuilder()
             sb.append(label, ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             sb.append("   ")
@@ -317,7 +419,7 @@ class DictionaryPopup(private val ctx: Context) {
             setPadding(dp(20), 0, 0, dp(2))
         }
 
-        private fun divider() = View(ctx).apply {
+        fun divider() = View(ctx).apply {
             setBackgroundColor(c.outline)
             alpha = 0.4f
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
@@ -325,7 +427,7 @@ class DictionaryPopup(private val ctx: Context) {
             }
         }
 
-        private fun textView(t: CharSequence, sp: Float, color: Int) = TextView(ctx).apply {
+        fun textView(t: CharSequence, sp: Float, color: Int) = TextView(ctx).apply {
             text = t
             setTextSize(TypedValue.COMPLEX_UNIT_SP, sp)
             setTextColor(color)

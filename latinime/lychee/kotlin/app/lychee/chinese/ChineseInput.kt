@@ -77,6 +77,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** Long-press on a candidate: its full dictionary entry in a popup from the candidate. */
     private fun showDictionary(index: Int, anchor: View) {
         val candidate = shown?.candidates?.getOrNull(index) ?: return
+        if (!isChinese) {
+            showWordCard(index, candidate)
+            return
+        }
         val annotator = Readings.annotator ?: return
         val mode = inputMode()
         val resolved = annotator.resolve(candidate.text, candidate.comment, mode) ?: return
@@ -88,6 +92,39 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             onSpeak = { text -> app.lychee.speech.Speech.speak(ime, text, locales) }) {
             pick(index)
         }
+    }
+
+    /** Japanese and Korean: the word's entry from the installed dictionary pack. */
+    private fun showWordCard(index: Int, candidate: Candidate) {
+        val entries = app.lychee.dict.PackData.words(ime, engine, candidate.text)
+        if (entries.isEmpty()) return
+        val frame = keyboardFrame?.takeIf { it.height > 0 } ?: return
+        val peek = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
+        val lang = if (engine == "ja") "ja" else "ko"
+        val forms = listOf(candidate.text) + entries.map { it.lemma }.take(1)
+        val examples = app.lychee.dict.PackData.examples(ime, lang, forms)
+        val locales = app.lychee.speech.Speech.localesFor(engine, false)
+        popup?.showWord(frame, candidate.text, candidate.comment.trim().takeIf { it.isNotEmpty() }, entries,
+            examples, peek, onSpeak = { text -> app.lychee.speech.Speech.speak(ime, text, locales) }) {
+            pick(index)
+        }
+    }
+
+    /**
+     * A Japanese or Korean candidate's reading and meaning: the kana reading (furigana) of words
+     * with kanji, else the romanisation Rime typed; Hanja beside Korean words.
+     */
+    private fun wordAnnotation(candidate: Candidate, showMeaning: Boolean): Annotation? {
+        val romanisation = candidate.comment.trim().takeIf { it.isNotEmpty() }
+        val entry = app.lychee.dict.PackData.words(ime, engine, candidate.text, limit = 1).firstOrNull()
+        val hasKanji = candidate.text.codePoints().anyMatch { app.lychee.core.Annotator.isHan(it) }
+        val reading = when {
+            engine == "ja" && hasKanji && entry?.reading != null -> entry.reading
+            else -> romanisation
+        }
+        val meaning = entry?.senses?.firstOrNull()?.takeIf { showMeaning }?.let { app.lychee.core.Annotator.shorten(it) }
+        if (reading == null && meaning == null) return null
+        return Annotation(listOfNotNull(reading), meaning, null, otherScript = entry?.hanja?.takeIf { engine == "ko" })
     }
 
     /** The preedit line: what is typed, then the first candidate with its reading. */
@@ -107,8 +144,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private fun annotation(): ((Candidate) -> Annotation?)? {
         if (!Readings.showReadings(prefs)) return null
         // Japanese and Korean: each candidate's romanisation (Rime's spelling hint) as its reading
-        if (!isChinese) return { candidate ->
-            candidate.comment.trim().takeIf { it.isNotEmpty() }?.let { Annotation(listOf(it), null, null) }
+        if (!isChinese) {
+            val meaning = prefs.getBoolean(Readings.PREF_MEANING, true)
+            return { candidate -> wordAnnotation(candidate, meaning) }
         }
         val annotator = Readings.annotator ?: return null
         val mode = inputMode()
@@ -459,7 +497,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** What each candidate shows under its characters, so the bar can scale it to fit. */
     private fun annotationLines(): CandidateBarView.Lines {
         if (!Readings.showReadings(prefs)) return CandidateBarView.Lines(0, false)
-        if (!isChinese) return CandidateBarView.Lines(1, false)
+        if (!isChinese) {
+            return CandidateBarView.Lines(1, prefs.getBoolean(Readings.PREF_MEANING, true) && app.lychee.dict.PackData.hasWords(ime, engine))
+        }
         val display = Readings.displayPrefs(prefs)
         var lines = 1
         if (display.showOtherLanguage) lines++

@@ -15,6 +15,8 @@ enum class PackKind(val id: String) {
     FONT_EMOJI("font_emoji"),
     HANDWRITING("handwriting"),
     RIME("rime"),
+    /** SQLite data read in place: dictionaries, stroke order, example sentences */
+    DATA("data"),
     VOICE("voice");
 
     val isFont get() = this == FONT_ZH || this == FONT_EMOJI
