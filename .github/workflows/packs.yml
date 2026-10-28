@@ -129,10 +129,9 @@ jobs:
           gh release upload packs out/site/manifest.json --repo "$REPO" --clobber
 
       # The packs page (index.html, manifest.json, its font) on the lychee repository's gh-pages
-      # branch, which GitHub Pages serves at https://lychee-keyboard.github.io/lychee/. Off until
-      # the LYCHEE_PAGE repository variable is "on".
+      # branch, which GitHub Pages serves at https://lychee-keyboard.github.io/lychee/.
       - name: Publish the packs page
-        if: github.ref == 'refs/heads/main' && vars.LYCHEE_PAGE == 'on'
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.PACKS_TOKEN }}
         run: |

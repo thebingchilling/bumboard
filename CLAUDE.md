@@ -26,8 +26,8 @@ Public facing, so be careful:
   rebuilds every pack from its sources' newest data and uploads only the packs whose contents
   changed, with a date version (`data/packs/publish.py`). It uses a token of the
   lychee-keyboard account (`PACKS_TOKEN` secret), so uploads appear as lychee-keyboard's.
-- The packs page (https://lychee-keyboard.github.io/lychee/) is only pushed when the
-  `LYCHEE_PAGE` repository variable is `on`; the owner turns it on.
+- The packs page (https://lychee-keyboard.github.io/lychee/) is pushed to the `gh-pages`
+  branch by the same runs; GitHub Pages serves it from there.
 - Release notes and file names say Lychee, never BumBoard or Claude.
 
 ## Product constraints
