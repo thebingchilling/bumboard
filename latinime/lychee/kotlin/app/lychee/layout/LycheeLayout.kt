@@ -54,7 +54,7 @@ class LycheeLayout private constructor(private val prefs: SharedPreferences) {
     val emojiKey: Boolean get() = commaKey != "language"
 
     /** Whether there is a key beside the comma at all. */
-    val sideKey: Boolean get() = commaKey != "none" && commaKey != "combined"
+    val sideKey: Boolean get() = commaKey == "emoji" || commaKey == "language"
 
     /**
      * The shortcuts in the comma's popup, after Settings (which is always first). By default

@@ -21,6 +21,7 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -708,19 +709,34 @@ private fun PreferencesPage() {
                 stringResource(R.string.lychee_pref_number_row_summary), numberRow.value, numberRow::set,
             )
         }
-        row {
-            ChoiceRow(
-                it, stringResource(R.string.lychee_pref_comma_key), stringResource(R.string.lychee_pref_comma_key_summary),
-                listOf(
-                    "combined" to stringResource(R.string.lychee_pref_comma_key_combined),
-                    "emoji" to stringResource(R.string.lychee_pref_comma_key_emoji),
-                    "language" to stringResource(R.string.lychee_pref_comma_key_language),
-                    "none" to stringResource(R.string.lychee_pref_comma_key_none),
-                ),
-                commaKey.value,
-                icons = listOf(R.drawable.ic_sym_mood, R.drawable.ic_sym_mood, R.drawable.ic_sym_language, R.drawable.ic_sym_close),
-                onSelect = commaKey::set,
-            )
+    }
+    // the key next to the comma: which one, then whether it is folded into the comma or beside it
+    val extra = when (commaKey.value) { "combined", "emoji" -> "emoji"; "language", "language_comma" -> "language"; else -> "none" }
+    val besides = commaKey.value == "emoji" || commaKey.value == "language"
+    Group(stringResource(R.string.lychee_pref_comma_key)) {
+        listOf(
+            Triple("emoji", R.string.lychee_pref_comma_key_emoji, R.drawable.ic_sym_mood),
+            Triple("language", R.string.lychee_pref_comma_key_language, R.drawable.ic_sym_language),
+            Triple("none", R.string.lychee_pref_comma_key_none, R.drawable.ic_sym_close),
+        ).forEach { (id, label, icon) ->
+            row { shape ->
+                IconRadioRow(shape, icon, stringResource(label), extra == id) {
+                    commaKey.set(commaKeyValue(id, besides))
+                }
+            }
+        }
+        if (extra != "none") {
+            row {
+                ChoiceRow(
+                    it, stringResource(R.string.lychee_pref_comma_place), null,
+                    listOf(
+                        "in" to stringResource(R.string.lychee_pref_comma_place_in),
+                        "beside" to stringResource(R.string.lychee_pref_comma_place_beside),
+                    ),
+                    if (besides) "beside" else "in",
+                    onSelect = { place -> commaKey.set(commaKeyValue(extra, place == "beside")) },
+                )
+            }
         }
     }
     val spacebar = prefs.stringPref(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR) {
@@ -1155,5 +1171,31 @@ private fun <T> RadioChoice(shape: androidx.compose.ui.graphics.Shape, title: St
     Column(Modifier.padding(top = 12.dp)) {
         Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 16.dp))
         options.forEach { (value, label) -> RadioRow(shape, label, value == selected) { onSelect(value) } }
+    }
+}
+
+/**
+ * The comma key setting from its two choices: emoji in the comma ("combined") or beside it,
+ * next language beside it or in the comma's popup ("language_comma"), or nothing.
+ */
+private fun commaKeyValue(extra: String, beside: Boolean) = when (extra) {
+    "emoji" -> if (beside) "emoji" else "combined"
+    "language" -> if (beside) "language" else "language_comma"
+    else -> "none"
+}
+
+/** A radio choice with an icon before its name. */
+@Composable
+private fun IconRadioRow(shape: androidx.compose.ui.graphics.Shape, icon: Int, title: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        shape = shape,
+        color = androidx.compose.ui.graphics.Color.Transparent,
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    ) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = selected, onClick = onClick)
+            Icon(painterResource(icon), contentDescription = null, modifier = Modifier.padding(start = 4.dp, end = 12.dp))
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+        }
     }
 }
