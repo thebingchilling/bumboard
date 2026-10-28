@@ -25,9 +25,9 @@ import com.android.inputmethod.latin.R
 import com.android.inputmethod.latin.common.Constants
 
 /**
- * Text editing over the keys, laid out like Gboard's: arrows around a Select toggle (with
- * Select on, the arrows extend the selection), start/end of line, then select all, copy,
- * paste and delete. Arrows and delete repeat while held.
+ * Text editing over the keys, laid out like Gboard's: tall ◀ and ▶ either side of ▲, a Select
+ * toggle and ▼ (with Select on, the arrows extend the selection), start/end of line and cut
+ * underneath, then select all, copy, paste and delete. Arrows and delete repeat while held.
  */
 class TextEditPanelView @JvmOverloads constructor(
     context: Context,
@@ -44,31 +44,24 @@ class TextEditPanelView @JvmOverloads constructor(
         isClickable = true
         setBackgroundColor(palette.surface)
         setPadding(dp(4), dp(4), dp(4), dp(4))
-        // left, as Gboard lays it out: up on top, left / Select / right across the middle,
-        // down below, then cut and start and end of line
-        val left = LinearLayout(context).apply { orientation = VERTICAL }
+        // left, as Gboard lays it out: tall ◀ and ▶ either side of ▲ / Select / ▼, with start of
+        // line, cut and end of line underneath
+        val left = LinearLayout(context).apply { orientation = HORIZONTAL }
         selectKey = label(R.string.bum_edit_select) { toggleSelect() }
-        left.addView(row(
-            View(context),
-            icon(R.drawable.ic_sym_keyboard_arrow_up, R.string.bum_edit_up, repeats = true) { move(KeyEvent.KEYCODE_DPAD_UP) },
-            View(context),
-        ), rowParams())
-        left.addView(row(
-            icon(R.drawable.ic_sym_keyboard_arrow_left, R.string.bum_edit_left, repeats = true) { move(KeyEvent.KEYCODE_DPAD_LEFT) },
-            selectKey,
-            icon(R.drawable.ic_sym_keyboard_arrow_right, R.string.bum_edit_right, repeats = true) { move(KeyEvent.KEYCODE_DPAD_RIGHT) },
-        ), rowParams())
-        left.addView(row(
-            View(context),
-            icon(R.drawable.ic_sym_keyboard_arrow_down, R.string.bum_edit_down, repeats = true) { move(KeyEvent.KEYCODE_DPAD_DOWN) },
-            View(context),
-        ), rowParams())
-        // Back is on the bar above, with the panel's name (see show())
-        left.addView(row(
-            icon(R.drawable.ic_sym_content_cut, R.string.bum_edit_cut) { menu(android.R.id.cut); setSelecting(false) },
-            icon(R.drawable.ic_sym_first_page, R.string.bum_edit_line_start) { move(KeyEvent.KEYCODE_MOVE_HOME) },
-            icon(R.drawable.ic_sym_last_page, R.string.bum_edit_line_end) { move(KeyEvent.KEYCODE_MOVE_END) },
-        ), rowParams())
+        left.addView(column(
+            3 to icon(R.drawable.ic_sym_keyboard_arrow_left, R.string.bum_edit_left, repeats = true) { move(KeyEvent.KEYCODE_DPAD_LEFT) },
+            1 to icon(R.drawable.ic_sym_first_page, R.string.bum_edit_line_start) { move(KeyEvent.KEYCODE_MOVE_HOME) },
+        ), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        left.addView(column(
+            1 to icon(R.drawable.ic_sym_keyboard_arrow_up, R.string.bum_edit_up, repeats = true) { move(KeyEvent.KEYCODE_DPAD_UP) },
+            1 to selectKey,
+            1 to icon(R.drawable.ic_sym_keyboard_arrow_down, R.string.bum_edit_down, repeats = true) { move(KeyEvent.KEYCODE_DPAD_DOWN) },
+            1 to icon(R.drawable.ic_sym_content_cut, R.string.bum_edit_cut) { menu(android.R.id.cut); setSelecting(false) },
+        ), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        left.addView(column(
+            3 to icon(R.drawable.ic_sym_keyboard_arrow_right, R.string.bum_edit_right, repeats = true) { move(KeyEvent.KEYCODE_DPAD_RIGHT) },
+            1 to icon(R.drawable.ic_sym_last_page, R.string.bum_edit_line_end) { move(KeyEvent.KEYCODE_MOVE_END) },
+        ), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         addView(left, LayoutParams(0, LayoutParams.MATCH_PARENT, 3f))
         // right: select all, copy, paste and delete
         val right = LinearLayout(context).apply { orientation = VERTICAL }
@@ -194,13 +187,13 @@ class TextEditPanelView @JvmOverloads constructor(
         bumHost()?.bumInputConnection()?.performContextMenuAction(id)
     }
 
-    private fun row(vararg keys: View) = LinearLayout(context).apply {
-        orientation = HORIZONTAL
-        keys.forEach { addView(it, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) }) }
+    /** A column of the left grid: each key with how many rows it spans. */
+    private fun column(vararg keys: Pair<Int, View>) = LinearLayout(context).apply {
+        orientation = VERTICAL
+        keys.forEach { (rows, key) ->
+            addView(key, LayoutParams(LayoutParams.MATCH_PARENT, 0, rows.toFloat()).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
+        }
     }
-
-    /** A row of the left grid; its keys carry their own margins. */
-    private fun rowParams() = LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f)
 
     /** A single key in the right column. */
     private fun keyParams() = LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) }

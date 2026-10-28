@@ -17,6 +17,7 @@
     <string name="bum_about_summary">Version, licences</string>
     <string name="bum_version">Version %1$s</string>
     <string name="bum_theme_note">Material 3, following your light or dark mode. Pick the colours and how the keys look.</string>
+    <string name="bum_language_settings">Language settings</string>
     <string name="bum_pref_colors">Colours</string>
     <string name="bum_pref_colors_neutral">Neutral</string>
     <string name="bum_pref_colors_wallpaper">Wallpaper</string>

@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
@@ -21,9 +22,10 @@ import com.android.inputmethod.latin.R
 import com.android.inputmethod.latin.common.Constants
 
 /**
- * A number pad over the keys: digits in a phone-style 3 x 3 grid with 0 below, operators on
- * the left, backspace, space and Enter on the right, and ABC (bottom left) back to the letters.
- * It opens from the "1234" key on the symbols page, like Gboard's.
+ * A number pad over the keys, laid out like Gboard's: a scrolling column of operators on the
+ * left, big digits in a phone-style 3 x 3 grid, %, space and backspace on the right, and
+ * ABC , !?# 0 = . Enter along the bottom. It opens from the "12/34" key on the symbols page;
+ * ABC goes back to the letters and !?# to the symbols.
  */
 class NumpadPanelView @JvmOverloads constructor(
     context: Context,
@@ -38,17 +40,70 @@ class NumpadPanelView @JvmOverloads constructor(
         isClickable = true
         setBackgroundColor(palette.surface)
         setPadding(dp(3), dp(4), dp(3), dp(4))
-        // operators down the left, digits like a phone keypad, ABC back to the letters
-        addRow(text("+"), digit("1"), digit("2"), digit("3"),
-            icon(R.drawable.ic_sym_backspace, R.string.bum_emoji_delete, repeats = true) { send(Constants.CODE_DELETE) })
-        addRow(text("-"), digit("4"), digit("5"), digit("6"), spaceKey())
-        addRow(text("*"), digit("7"), digit("8"), digit("9"), enterKey())
-        addRow(key(context.getString(R.string.bum_emoji_abc), letter = false, size = 15f) {
+        val top = LinearLayout(context).apply { orientation = HORIZONTAL }
+        // operators: a column that scrolls, the first three showing
+        val operators = LinearLayout(context).apply { orientation = VERTICAL }
+        val scroll = android.widget.ScrollView(context).apply {
+            isVerticalScrollBarEnabled = false
+            addView(operators)
+        }
+        top.addView(scroll, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        scroll.addOnLayoutChangeListener { _, _, t, _, b, _, ot, _, ob ->
+            if (b - t != ob - ot) {
+                val keyHeight = (b - t) / 3
+                for (i in 0 until operators.childCount) {
+                    val lp = operators.getChildAt(i).layoutParams as LayoutParams
+                    if (lp.height != keyHeight - dp(6)) {
+                        lp.height = keyHeight - dp(6)
+                        operators.getChildAt(i).layoutParams = lp
+                    }
+                }
+            }
+        }
+        for (op in OPERATORS) {
+            operators.addView(text(op), LayoutParams(LayoutParams.MATCH_PARENT, dp(48)).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
+        }
+        val digits = LinearLayout(context).apply { orientation = VERTICAL }
+        for (row in listOf("123", "456", "789")) {
+            digits.addView(LinearLayout(context).apply {
+                orientation = HORIZONTAL
+                row.forEach { d -> addView(digit(d.toString()), keyParams(1f)) }
+            }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        }
+        top.addView(digits, LayoutParams(0, LayoutParams.MATCH_PARENT, 3.6f))
+        val right = LinearLayout(context).apply { orientation = VERTICAL }
+        right.addView(text("%"), keyParams(1f, vertical = true))
+        right.addView(spaceKey(), keyParams(1f, vertical = true))
+        right.addView(icon(R.drawable.ic_sym_backspace, R.string.bum_emoji_delete, repeats = true) { send(Constants.CODE_DELETE) },
+            keyParams(1f, vertical = true))
+        top.addView(right, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.2f))
+        addView(top, LayoutParams(LayoutParams.MATCH_PARENT, 0, 3f))
+        addView(LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            addView(abcKey(), keyParams(1.3f))
+            addView(text(","), keyParams(0.8f))
+            addView(key("!?#", letter = false, size = 15f) {
+                // the symbols page is underneath
                 visibility = GONE
-                bumHost()?.bumSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
-            },
-            text("/"), digit("0"), text("."), text(","))
+            }, keyParams(1f))
+            addView(digit("0"), keyParams(1.6f))
+            addView(text("="), keyParams(0.8f))
+            addView(text("."), keyParams(0.8f))
+            addView(enterKey(), keyParams(1.3f))
+        }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         visibility = GONE
+    }
+
+    private fun keyParams(weight: Float, vertical: Boolean = false) =
+        (if (vertical) LayoutParams(LayoutParams.MATCH_PARENT, 0, weight) else LayoutParams(0, LayoutParams.MATCH_PARENT, weight))
+            .apply { setMargins(dp(3), dp(3), dp(3), dp(3)) }
+
+    /** ABC back to the letters: a pill, like the ?123 key. */
+    private fun abcKey() = key(context.getString(R.string.bum_emoji_abc), letter = false, size = 15f) {
+        visibility = GONE
+        bumHost()?.bumSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
+    }.apply {
+        background = app.bumboard.ui.BumColorStyle.themed(context).getDrawable(R.drawable.bum_m3_key_pill_flat)
     }
 
     override fun setVisibility(visibility: Int) {
@@ -56,18 +111,7 @@ class NumpadPanelView @JvmOverloads constructor(
         super.setVisibility(visibility)
     }
 
-    private fun addRow(vararg keys: View) {
-        addView(LinearLayout(context).apply {
-            orientation = HORIZONTAL
-            keys.forEachIndexed { i, key ->
-                // the digit columns are a little wider, like a phone keypad
-                val weight = if (i in 1..3) 1.2f else 1f
-                addView(key, LayoutParams(0, LayoutParams.MATCH_PARENT, weight).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
-            }
-        }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-    }
-
-    private fun digit(d: String) = key(d, letter = true) { bumHost()?.bumSendCode(d[0].code) }
+    private fun digit(d: String) = key(d, letter = true, size = 26f) { bumHost()?.bumSendCode(d[0].code) }
 
     private fun text(t: String) = key(t, letter = false) { bumHost()?.bumSendCode(t[0].code) }
 
@@ -79,7 +123,11 @@ class NumpadPanelView @JvmOverloads constructor(
         imageTintList = ColorStateList.valueOf(palette.onPrimary)
         scaleType = ImageView.ScaleType.CENTER
         contentDescription = context.getString(R.string.bum_numpad_enter)
-        background = context.getDrawable(R.drawable.bum_m3_key_popup_action)
+        // a pill in the accent colour, like the keyboard's Enter
+        background = GradientDrawable().apply {
+            cornerRadius = dp(100).toFloat()
+            setColor(palette.primary)
+        }
         setOnClickListener { send(Constants.CODE_ENTER) }
     }
 
@@ -126,4 +174,8 @@ class NumpadPanelView @JvmOverloads constructor(
     private fun send(code: Int) = bumHost()?.bumSendCode(code)
 
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
+
+    private companion object {
+        val OPERATORS = listOf("+", "-", "*", "/", "(", ")", ":", ";", "#", "@", "~", "^")
+    }
 }

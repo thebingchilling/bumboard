@@ -24,12 +24,11 @@ import com.android.inputmethod.latin.R
 /**
  * The shortcuts row in the strip while there are no suggestions.
  *
- * - Normal: the shortcuts button, then the shortcuts on the bar (by default next language and
- *   text editing).
- * - Gallery open: the shortcuts button (highlighted, it closes the gallery), the title and an
- *   edit button.
- * - Editing: the shortcuts on the bar, which take shortcuts dragged up from the gallery and can
- *   be dragged back down into it or along the bar; a tick ends editing.
+ * - Normal: the menu button, then the shortcuts on the bar spread across it like Gboard's (by
+ *   default next language, text editing and undo).
+ * - Menu open: the menu button turns into ✕ in a circle (it closes the menu); the shortcuts stay.
+ * - Editing: ✓ in a circle ends it; the shortcuts on the bar sit in an outlined pill, take
+ *   shortcuts dragged up from the menu and can be dragged back down into it or along the bar.
  * - Title: a panel over the keys (text editing) is open; Back and the panel's name, like the
  *   gallery's title, in place of the suggestions.
  */
@@ -107,33 +106,46 @@ class ToolbarView @JvmOverloads constructor(
             row.addView(titleText(title), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
             return
         }
-        row.addView(button(R.drawable.ic_sym_grid_view, R.string.bum_sc_gallery, highlighted = mode != Mode.NORMAL) { onGallery() })
         when (mode) {
-            Mode.NORMAL -> store.toolbar().forEach { sc ->
-                row.addView(button(sc.icon, sc.label) { bumHost()?.bumRunShortcut(sc) })
-            }
-            Mode.GALLERY -> {
-                row.addView(titleText(R.string.bum_gallery_title),
-                    LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
-                row.addView(button(R.drawable.ic_sym_edit, R.string.bum_gallery_edit) { onEditToggle() })
-            }
+            Mode.NORMAL -> row.addView(button(R.drawable.ic_sym_apps_filled, R.string.bum_sc_gallery) { onGallery() })
+            Mode.GALLERY -> row.addView(button(R.drawable.ic_sym_close, R.string.bum_gallery_close, highlighted = true) { onGallery() })
+            Mode.EDIT -> row.addView(button(R.drawable.ic_sym_check, R.string.bum_resize_done, highlighted = true) { onEditToggle() })
             Mode.TITLE -> Unit
-            Mode.EDIT -> {
-                store.toolbar().forEach { sc ->
-                    row.addView(button(sc.icon, sc.label) {}.apply {
-                        tag = sc
-                        // drag it along the bar, or down into the gallery to take it off
-                        setOnLongClickListener { v ->
-                            v.startDragAndDrop(ClipData.newPlainText("shortcut", sc.id), DragShadowBuilder(v),
-                                DragSource(sc, fromBar = true), 0)
-                            v.alpha = 0.3f
-                            true
-                        }
-                    })
+        }
+        val shortcuts = store.toolbar()
+        // spread across the bar like Gboard's; a long list scrolls instead
+        val spread = shortcuts.size <= SPREAD_MAX
+        fun shortcutParams() = if (spread) LinearLayout.LayoutParams(0, dp(40), 1f).apply { gravity = Gravity.CENTER_VERTICAL }
+            else LinearLayout.LayoutParams(dp(48), dp(40)).apply { gravity = Gravity.CENTER_VERTICAL }
+        if (mode == Mode.EDIT) {
+            // the bar's shortcuts in an outlined pill: drag them along it, or down into the menu
+            val pill = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(20).toFloat()
+                    setStroke(dp(1), palette.outline)
                 }
-                row.addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
-                row.addView(button(R.drawable.ic_sym_check, R.string.bum_resize_done) { onEditToggle() })
             }
+            shortcuts.forEach { sc ->
+                pill.addView(button(sc.icon, sc.label) {}.apply {
+                    tag = sc
+                    setOnLongClickListener { v ->
+                        v.startDragAndDrop(ClipData.newPlainText("shortcut", sc.id), DragShadowBuilder(v),
+                            DragSource(sc, fromBar = true), 0)
+                        v.alpha = 0.3f
+                        true
+                    }
+                }, shortcutParams())
+            }
+            row.addView(pill, LinearLayout.LayoutParams(0, dp(44), 1f).apply {
+                gravity = Gravity.CENTER_VERTICAL
+                setMargins(dp(4), 0, dp(4), 0)
+            })
+            return
+        }
+        shortcuts.forEach { sc ->
+            row.addView(button(sc.icon, sc.label) { bumHost()?.bumRunShortcut(sc) }, shortcutParams())
         }
     }
 
@@ -172,24 +184,35 @@ class ToolbarView @JvmOverloads constructor(
         var index = 0
         for (i in 0 until row.childCount) {
             val child = row.getChildAt(i)
-            if (child.tag !is Shortcut) continue
-            if (x < child.left + child.width / 2f) return index
-            index++
+            // the shortcuts sit in the outlined pill while editing
+            val group = child as? LinearLayout ?: continue
+            for (j in 0 until group.childCount) {
+                val button = group.getChildAt(j)
+                if (button.tag !is Shortcut) continue
+                if (x < group.left + button.left + button.width / 2f) return index
+                index++
+            }
         }
         return index
     }
 
+    /** A bar button; [highlighted]: a light accent circle behind it (✕ and ✓, like Gboard's). */
     private fun button(icon: Int, label: Int, highlighted: Boolean = false, onClick: () -> Unit) = ImageView(context).apply {
         setImageResource(icon)
-        imageTintList = ColorStateList.valueOf(if (highlighted) palette.onPrimaryContainer else palette.onSurfaceVariant)
+        imageTintList = ColorStateList.valueOf(if (highlighted) palette.onPrimaryContainer else palette.onSurface)
         scaleType = ImageView.ScaleType.CENTER
         contentDescription = context.getString(label)
-        background = if (highlighted) GradientDrawable().apply {
-            cornerRadius = dp(18).toFloat()
+        background = if (highlighted) android.graphics.drawable.InsetDrawable(GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
             setColor(palette.primaryContainer)
-        } else context.getDrawable(R.drawable.bum_m3_suggestion)
+        }, dp(6), dp(2), dp(6), dp(2)) else context.getDrawable(R.drawable.bum_m3_suggestion)
         setOnClickListener { onClick() }
-        layoutParams = LinearLayout.LayoutParams(dp(48), dp(36)).apply { gravity = Gravity.CENTER_VERTICAL }
+        layoutParams = LinearLayout.LayoutParams(dp(48), dp(40)).apply { gravity = Gravity.CENTER_VERTICAL }
+    }
+
+    private companion object {
+        /** Up to this many shortcuts spread across the bar; more scroll. */
+        const val SPREAD_MAX = 6
     }
 
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()

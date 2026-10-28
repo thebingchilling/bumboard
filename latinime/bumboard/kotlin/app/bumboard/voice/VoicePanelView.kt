@@ -78,6 +78,15 @@ class VoicePanelView @JvmOverloads constructor(
         words.addView(status, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         words.addView(heard, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         row.addView(words, LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(8) })
+        // ⌄ back to the keys, like Gboard's
+        row.addView(ImageView(context).apply {
+            setImageResource(R.drawable.ic_sym_keyboard_arrow_down)
+            imageTintList = ColorStateList.valueOf(palette.onSurface)
+            scaleType = ImageView.ScaleType.CENTER
+            contentDescription = context.getString(R.string.bum_back)
+            background = context.getDrawable(R.drawable.bum_m3_suggestion)
+            setOnClickListener { cancel() }
+        }, LinearLayout.LayoutParams(dp(48), LayoutParams.MATCH_PARENT))
         val micBox = FrameLayout(context)
         micHalo.background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
@@ -94,9 +103,9 @@ class VoicePanelView @JvmOverloads constructor(
             contentDescription = context.getString(R.string.bum_voice_stop)
             setOnClickListener { recognizer?.stopListening() }
         }
-        micBox.addView(micHalo, LayoutParams(dp(34), dp(34), Gravity.CENTER))
-        micBox.addView(mic, LayoutParams(dp(32), dp(32), Gravity.CENTER))
-        row.addView(micBox, LinearLayout.LayoutParams(dp(48), LayoutParams.MATCH_PARENT))
+        micBox.addView(micHalo, LayoutParams(dp(42), dp(42), Gravity.CENTER))
+        micBox.addView(mic, LayoutParams(dp(40), dp(40), Gravity.CENTER))
+        row.addView(micBox, LinearLayout.LayoutParams(dp(56), LayoutParams.MATCH_PARENT))
         addView(row, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         visibility = GONE
     }

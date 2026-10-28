@@ -169,12 +169,13 @@
         <item name="suggestionStripOptions">autoCorrectBold|validTypedWordBold</item>
         <item name="colorValidTypedWord">@color/bum_m3_on_key</item>
         <item name="colorTypedWord">@color/bum_m3_on_key</item>
-        <item name="colorAutoCorrect">@color/bum_m3_primary</item>
+        <!-- like Gboard's: plain dark words; the autocorrection is shown in bold -->
+        <item name="colorAutoCorrect">@color/bum_m3_on_key</item>
         <item name="colorSuggested">@color/bum_m3_on_key</item>
         <item name="alphaObsoleted">70%</item>
     </style>
     <style name="SuggestionWord.BumM3" parent="SuggestionWord">
         <item name="android:background">@drawable/bum_m3_suggestion</item>
-        <item name="android:textColor">@color/bum_m3_primary</item>
+        <item name="android:textColor">@color/bum_m3_on_key</item>
     </style>
 </resources>

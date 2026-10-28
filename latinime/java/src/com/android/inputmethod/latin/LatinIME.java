@@ -1629,24 +1629,23 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             launchBumSettingsPage("Languages");
             return;
         }
-        final CharSequence[] names = new CharSequence[subtypes.size()];
+        final List<CharSequence> names = new ArrayList<>();
         final InputMethodSubtype current = mRichImm.getCurrentSubtype().getRawSubtype();
         int checked = -1;
-        for (int i = 0; i < names.length; i++) {
-            names[i] = new RichInputMethodSubtype(subtypes.get(i)).getFullDisplayName();
+        for (int i = 0; i < subtypes.size(); i++) {
+            names.add(new RichInputMethodSubtype(subtypes.get(i)).getFullDisplayName());
             if (subtypes.get(i).equals(current)) checked = i;
         }
-        final AlertDialog.Builder builder = new AlertDialog.Builder(
-                DialogUtils.getPlatformDialogThemeContext(this))
-                .setTitle(R.string.language_selection_title)
-                .setSingleChoiceItems(names, checked, (di, position) -> {
-                    di.dismiss();
-                    switchToBumSubtype(subtypes.get(position));
-                })
-                .setPositiveButton(R.string.english_ime_settings, (di, position) -> {
-                    launchSettings(null);
-                });
-        showOptionDialog(builder.create());
+        // a card over the faded keys, like Gboard's
+        final View keys = mKeyboardSwitcher.getMainKeyboardView();
+        if (keys == null || keys.getWidth() == 0) return;
+        app.bumboard.layout.LanguageCard.show(keys, names, checked, position -> {
+            switchToBumSubtype(subtypes.get(position));
+            return kotlin.Unit.INSTANCE;
+        }, () -> {
+            launchBumSettingsPage("Languages");
+            return kotlin.Unit.INSTANCE;
+        });
     }
 
     // TODO: Instead of checking for alphabetic keyboard here, separate keycodes for

@@ -56,6 +56,7 @@ class ShortcutStore(private val prefs: SharedPreferences) {
     companion object {
         const val PREF_ORDER = "bum_shortcuts_order"
         const val PREF_PINNED = "bum_shortcuts_pinned"
-        const val DEFAULT_PINNED = "language,text_edit"
+        /** Like Gboard's bar: next language, text editing and undo. */
+        const val DEFAULT_PINNED = "language,text_edit,undo"
     }
 }

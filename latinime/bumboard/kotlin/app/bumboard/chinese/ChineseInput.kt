@@ -388,16 +388,16 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         } else {
             stripView.setBumZhongKey(null, null)
         }
-        updateEdges(stripView)
         val simplified = prefs.getString(PREF_SCRIPT, "traditional") == "simplified"
         stripView.setBumScriptKey(simplified) {
             prefs.edit().putString(PREF_SCRIPT, if (simplified) "traditional" else "simplified").apply()
             if (RimeService.ready && session != 0L) selectSchema()
             if (isComposing) sync() else show(shown)
         }
+        updateEdges(stripView)
     }
 
-    /** Keeps the candidates and their ⌄ clear of the locked keys on the right (中, 繁/简). */
+    /** Keeps the candidates and their ⌄ clear of the pinned keys: 中 on the left, 繁/简 on the right. */
     private fun updateEdges(stripView: SuggestionStripView) {
         val edge = stripView.bumEdgeWidth
         val more = ime.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width)
@@ -407,9 +407,11 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                 moreButton?.layoutParams = lp
             }
         }
+        val start = stripView.bumStartWidth
         (bar?.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
-            if (lp.marginEnd != edge + more) {
+            if (lp.marginEnd != edge + more || lp.marginStart != start) {
                 lp.marginEnd = edge + more
+                lp.marginStart = start
                 bar?.layoutParams = lp
             }
         }

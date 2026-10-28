@@ -201,9 +201,16 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         keyboardAttr.recycle();
         mVoiceKey.setImageDrawable(iconVoice);
         mVoiceKey.setOnClickListener(this);
-        // BUMBOARD: the mic icon is a white Material Symbol, tinted to suit the strip.
+        // BUMBOARD: the mic icon is a white Material Symbol, tinted to suit the strip, on a white
+        // circle like Gboard's.
         mVoiceKey.setImageTintList(android.content.res.ColorStateList.valueOf(
-                context.getColor(R.color.bum_m3_on_key_variant)));
+                context.getColor(R.color.bum_m3_on_key)));
+        final android.graphics.drawable.GradientDrawable micCircle =
+                new android.graphics.drawable.GradientDrawable();
+        micCircle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        micCircle.setColor(context.getColor(R.color.bum_m3_key));
+        final int micInset = (int) (getResources().getDisplayMetrics().density * 6);
+        mVoiceKey.setBackground(new android.graphics.drawable.InsetDrawable(micCircle, micInset));
         setBumScriptKey(null, null);
     }
 
@@ -263,10 +270,16 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         updateBumMiddle();
     }
 
-    /** How much of the strip's right edge the locked keys (中, 繁/简) take. */
+    /** How much of the strip's right edge the locked 繁/简 key takes. */
     public int getBumEdgeWidth() {
         final int key = getResources().getDimensionPixelSize(R.dimen.bum_script_key_width);
-        return (mBumScriptShown ? key : 0) + (mBumZhongShown ? key : 0);
+        return mBumScriptShown ? key : 0;
+    }
+
+    /** How much of the strip's left edge the pinned 中 key takes. */
+    public int getBumStartWidth() {
+        final int key = getResources().getDimensionPixelSize(R.dimen.bum_script_key_width);
+        return mBumZhongShown ? key : 0;
     }
 
     /** A round key with a soft shadow under it, like the raised keys. */
@@ -319,18 +332,20 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         final boolean panel = mBumToolbar.getMode() != app.bumboard.toolbar.ToolbarView.Mode.NORMAL;
         final boolean idle = panel || (!mBumHasSuggestions && !mBumCandidatesShowing && !notice);
         mBumToolbar.setVisibility(idle ? VISIBLE : INVISIBLE);
-        final boolean voice = idle && !panel && mBumVoiceEnabled;
+        // like Gboard's, the mic stays on the right while suggestions show (not over candidates)
+        final boolean voice = !panel && !mBumCandidatesShowing && !notice && mBumVoiceEnabled;
         mVoiceKey.setVisibility(voice ? VISIBLE : GONE);
         if (!notice) {
             mSuggestionsStrip.setVisibility(mBumHasSuggestions && !mBumCandidatesShowing && !panel
                     ? VISIBLE : INVISIBLE);
         }
-        // the right edge: the 繁/简 button (Chinese keyboards), and the mic while idle
+        // the edges: 中 on the left and 繁/简 on the right (Chinese keyboards), and the mic
+        final int start = getBumStartWidth();
         final int script = getBumEdgeWidth();
         final int mic = getResources().getDimensionPixelSize(
-                R.dimen.config_suggestions_strip_edge_key_width);
-        setBumMargins(mBumToolbar, 0, script + (voice ? mic : 0));
-        setBumMargins(mSuggestionsStrip, 0, script);
+                R.dimen.config_suggestions_strip_height);
+        setBumMargins(mBumToolbar, start, script + (voice ? mic : 0));
+        setBumMargins(mSuggestionsStrip, start, script + (voice ? mic : 0));
     }
 
     /**
