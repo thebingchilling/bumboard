@@ -146,6 +146,22 @@ class CandidateBarView @JvmOverloads constructor(
         return super.onInterceptTouchEvent(ev)
     }
 
+    /** The notch: a small pill at the bottom of the row; swipe down on the row to open it out. */
+    private val notch = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val notchRect = android.graphics.RectF()
+
+    override fun dispatchDraw(canvas: android.graphics.Canvas) {
+        super.dispatchDraw(canvas)
+        if (row.childCount == 0) return
+        notch.color = ColorUtils.setAlphaComponent(textColor, 0x40)
+        val w = dp(28).toFloat()
+        val h = dp(3).toFloat()
+        val cx = scrollX + width / 2f
+        val bottom = height - dp(2).toFloat()
+        notchRect.set(cx - w / 2, bottom - h, cx + w / 2, bottom)
+        canvas.drawRoundRect(notchRect, h / 2, h / 2, notch)
+    }
+
     /** The word with, beside it, the other script on top and its badges below. */
     private fun cell(index: Int, candidate: Candidate, first: Boolean) = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL

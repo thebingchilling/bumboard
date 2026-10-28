@@ -4,6 +4,13 @@ Everything below is built together and pushed to `main` as it goes, each push bu
 green. Packs stay private until a publish is started by hand; nothing goes public, and the
 app is not released, without the owner's say.
 
+**Status (2026-10-28):** everything in Data, Candidates, Long-press card, Typing and Look is
+on `main`. The new packs (Korean dictionary, stroke order, example sentences, and the
+Japanese dictionary's JMdict meanings, version 2) are built by `packs.yml` but not
+published: start the workflow by hand on `main` after reviewing its "List the packs'
+contents" step. Still to check on a phone: TTS voices per language, the forced light/dark
+theme, key sounds, and the handwriting bar.
+
 ## Data
 
 - **Chinese dictionary** (built in) gains, per word:
