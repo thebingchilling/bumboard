@@ -656,6 +656,21 @@ private fun PreferencesPage() {
             )
         }
     }
+    val spacebar = prefs.stringPref(com.android.inputmethod.keyboard.MainKeyboardView.PREF_BUM_SPACEBAR) {
+        prefs.getString(com.android.inputmethod.keyboard.MainKeyboardView.PREF_BUM_SPACEBAR, null) ?: "language"
+    }
+    Group(stringResource(R.string.bum_pref_spacebar)) {
+        row {
+            ChoiceRow(
+                it, stringResource(R.string.bum_pref_spacebar), stringResource(R.string.bum_pref_spacebar_summary),
+                listOf(
+                    "language" to stringResource(R.string.bum_pref_spacebar_language),
+                    "method" to stringResource(R.string.bum_pref_spacebar_method),
+                ),
+                spacebar.value, onSelect = spacebar::set,
+            )
+        }
+    }
     CommaMenuGroup(commaKey.value)
     Group(stringResource(R.string.bum_group_feedback)) {
         if (hasVibrator) {

@@ -855,15 +855,22 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         return TypefaceUtils.getStringWidth(text, paint) < maxTextWidth;
     }
 
+    /** BUMBOARD: what the spacebar shows: "language" (default) or "method". */
+    public static final String PREF_BUM_SPACEBAR = "bum_spacebar_label";
+
     // Layout language name on spacebar.
     private String layoutLanguageOnSpacebar(final Paint paint,
             final RichInputMethodSubtype subtype, final int width) {
         // BUMBOARD: the input method's own name on BumBoard's engines, like Gboard's 拼音
-        if (subtype.getRawSubtype().getExtraValueOf("BumHandwriting") != null
+        // BUMBOARD: the language's name by default ("粵語 · Cantonese"); with the setting on, the
+        // input method's, like Gboard's 拼音
+        final boolean methodName = "method".equals(android.preference.PreferenceManager
+                .getDefaultSharedPreferences(getContext()).getString(PREF_BUM_SPACEBAR, "language"));
+        if (methodName && subtype.getRawSubtype().getExtraValueOf("BumHandwriting") != null
                 && fitsTextIntoWidth(width, "\u624B\u5BEB", paint)) {
             return "\u624B\u5BEB"; // 手寫
         }
-        final String engine = subtype.getRawSubtype().getExtraValueOf("BumEngine");
+        final String engine = methodName ? subtype.getRawSubtype().getExtraValueOf("BumEngine") : null;
         if (engine != null) {
             final String name;
             switch (engine) {

@@ -8,6 +8,10 @@
     <string name="bum_section_keyboard">Keyboard</string>
     <string name="bum_section_app">App</string>
     <string name="bum_section_languages">Languages</string>
+    <string name="bum_pref_spacebar">Spacebar</string>
+    <string name="bum_pref_spacebar_summary">What the spacebar shows on BumBoard\'s keyboards</string>
+    <string name="bum_pref_spacebar_language">粵語 · Cantonese</string>
+    <string name="bum_pref_spacebar_method">粵拼</string>
     <string name="bum_subtype_hw" translatable="false">手寫 Handwriting</string>
     <string name="bum_hw_write_here">在這裡手寫輸入文字 · Write here</string>
     <string name="bum_hw_symbols" translatable="false">?123</string>

@@ -130,20 +130,28 @@ public class RichInputMethodSubtype {
         return SubtypeLocaleUtils.getSubtypeLanguageDisplayName(mSubtype.getLocale());
     }
 
-    // BUMBOARD: BumBoard's Chinese keyboards are named in Chinese and English on the spacebar.
+    // BUMBOARD: BumBoard's own keyboards are named in their language and English on the spacebar.
     public boolean isBumChinese() {
         return mSubtype.containsExtraValueKey("BumEngine");
     }
 
     private String bumDisplayName(final boolean full) {
-        if (!isBumChinese()) {
+        final String native_;
+        final String english;
+        if (mSubtype.containsExtraValueKey("BumHandwriting")) {
+            native_ = "手寫";
+            english = "Handwriting";
+        } else if (isBumChinese()) {
+            switch (String.valueOf(mSubtype.getExtraValueOf("BumEngine"))) {
+                case "yue": native_ = "粵語"; english = "Cantonese"; break;
+                case "ja": native_ = "日本語"; english = "Japanese"; break;
+                case "ko": native_ = "한국어"; english = "Korean"; break;
+                default: native_ = "普通話"; english = "Mandarin"; break;
+            }
+        } else {
             return null;
         }
-        final boolean cantonese = "yue".equals(mSubtype.getExtraValueOf("BumEngine"));
-        if (full) {
-            return cantonese ? "粵語 · Cantonese" : "普通話 · Mandarin";
-        }
-        return cantonese ? "粵語" : "普通話";
+        return full ? native_ + " · " + english : native_;
     }
 
     @Override
