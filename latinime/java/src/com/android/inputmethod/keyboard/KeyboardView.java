@@ -616,7 +616,8 @@ public class KeyboardView extends View {
 
     /** The comma key of a letters keyboard, when it carries the emoji face. */
     private boolean isLycheeEmojiComma(@Nonnull final Key key) {
-        if (!sLycheeEmojiOnComma) return false;
+        // not in popups (the period's popup has a comma too)
+        if (!sLycheeEmojiOnComma || this instanceof MoreKeysKeyboardView) return false;
         final Keyboard keyboard = getKeyboard();
         if (keyboard == null || !keyboard.mId.isAlphabetKeyboard()) return false;
         final int code = key.getCode();

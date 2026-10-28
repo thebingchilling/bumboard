@@ -103,10 +103,6 @@ public final class KeyPreviewChoreographer {
         showKeyPreview(key, keyPreviewView, withAnimation);
     }
 
-    /** LYCHEE: the bubble's size against its key, and how far it reaches down over the key. */
-    private static final float LYCHEE_BUBBLE_SCALE = 1.3f;
-    private static final float LYCHEE_BUBBLE_OVERLAP = 0.2f;
-
     private void placeKeyPreview(final Key key, final KeyPreviewView keyPreviewView,
             final KeyboardIconsSet iconsSet, final KeyDrawParams drawParams,
             final int keyboardViewWidth, final int[] originCoords) {
@@ -115,11 +111,9 @@ public final class KeyPreviewChoreographer {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         mParams.setGeometry(keyPreviewView);
         final int keyDrawWidth = key.getDrawWidth();
-        // LYCHEE: Gboard's round bubble, a little wider than its key, overlapping the key's top
-        final int bubble = Math.max(Math.round(keyDrawWidth * LYCHEE_BUBBLE_SCALE),
-                keyPreviewView.getMeasuredWidth());
-        final int previewWidth = bubble;
-        final int previewHeight = bubble;
+        // LYCHEE: a card at least as wide as its key, just above it
+        final int previewWidth = Math.max(keyPreviewView.getMeasuredWidth(), keyDrawWidth);
+        final int previewHeight = mParams.mPreviewHeight;
         // The key preview is horizontally aligned with the center of the visible part of the
         // parent key. If it doesn't fit in this {@link KeyboardView}, it is moved inward to fit and
         // the left/right background is used if such background is specified.
@@ -140,7 +134,6 @@ public final class KeyPreviewChoreographer {
         // The key preview is placed vertically above the top edge of the parent key with an
         // arbitrary offset.
         final int previewY = key.getY() - previewHeight + mParams.mPreviewOffset
-                + Math.round(key.getHeight() * LYCHEE_BUBBLE_OVERLAP)
                 + CoordinateUtils.y(originCoords);
 
         ViewLayoutUtils.placeViewAt(

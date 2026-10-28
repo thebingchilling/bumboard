@@ -67,19 +67,7 @@ public class KeyPreviewView extends TextView {
         setTypeface(app.lychee.fonts.LycheeFonts.uiLike(getContext(), key.selectPreviewTypeface(drawParams)));
         // TODO Should take care of temporaryShiftLabel here.
         setTextAndScaleX(key.getPreviewLabel());
-        // LYCHEE: Gboard's "…" under the letter when the key has a long-press popup
-        final String label = key.getPreviewLabel();
-        if (key.getMoreKeys() != null && label != null && label.length() <= 2) {
-            final android.text.SpannableString text = new android.text.SpannableString(label + "\n\u2026");
-            text.setSpan(new android.text.style.RelativeSizeSpan(0.45f), label.length(),
-                    text.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            setMaxLines(2);
-            setLineSpacing(0, 0.8f);
-            setText(text);
-        } else {
-            setMaxLines(1);
-            setLineSpacing(0, 1f);
-        }
+        setMaxLines(1);
     }
 
     private void setTextAndScaleX(final String text) {

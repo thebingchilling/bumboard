@@ -18,35 +18,38 @@
 */
 -->
 
-<!-- LYCHEE: the digits, with Gboard's popups (fractions on 1-5 and 7, ⁿ ∅ on 0). -->
+<!-- LYCHEE: the digits, each with its superscript and fractions in its popup. -->
 <merge
     xmlns:latin="http://schemas.android.com/apk/res-auto"
 >
     <Key
         latin:keySpec="1"
-        latin:moreKeys="1,½,⅓,¼,⅕,⅐,⅛,⅑,⅒" />
+        latin:moreKeys="¹,½,⅓,¼,⅕,⅐,⅛,⅑,⅒" />
     <Key
         latin:keySpec="2"
-        latin:moreKeys="2,⅔,⅖" />
+        latin:moreKeys="²,⅔,⅖" />
     <Key
         latin:keySpec="3"
-        latin:moreKeys="3,¾,⅜,⅗" />
+        latin:moreKeys="³,¾,⅜,⅗" />
     <Key
         latin:keySpec="4"
-        latin:moreKeys="4,⅘" />
+        latin:moreKeys="⁴,⅘" />
     <Key
         latin:keySpec="5"
-        latin:moreKeys="5,⅝,⅚" />
+        latin:moreKeys="⁵,⅝,⅚" />
     <Key
-        latin:keySpec="6" />
+        latin:keySpec="6"
+        latin:moreKeys="⁶,⅙" />
     <Key
         latin:keySpec="7"
-        latin:moreKeys="7,⅞" />
+        latin:moreKeys="⁷,⅞" />
     <Key
-        latin:keySpec="8" />
+        latin:keySpec="8"
+        latin:moreKeys="⁸,∞" />
     <Key
-        latin:keySpec="9" />
+        latin:keySpec="9"
+        latin:moreKeys="⁹" />
     <Key
         latin:keySpec="0"
-        latin:moreKeys="0,ⁿ,∅" />
+        latin:moreKeys="⁰,ⁿ,∅" />
 </merge>

@@ -7,7 +7,7 @@
     <!-- Right of the candidates: the ⌄ (36dp) and the 繁/简 button (44dp). -->
     <dimen name="lychee_candidate_bar_end">80dp</dimen>
     <!-- The line above the candidates showing what is being typed. -->
-    <!-- The key preview: a round bubble over the pressed key (sized from the key in code). -->
+    <!-- The key preview: a compact card just above the pressed key. -->
     <dimen name="lychee_key_preview_height">52dp</dimen>
-    <dimen name="lychee_key_preview_offset">0dp</dimen>
+    <dimen name="lychee_key_preview_offset">2dp</dimen>
 </resources>
