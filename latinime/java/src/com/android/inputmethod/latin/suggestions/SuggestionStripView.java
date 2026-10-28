@@ -71,6 +71,7 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
     // BUMBOARD: shortcuts while there are no suggestions; Traditional/Simplified on the left.
     private final app.bumboard.toolbar.ToolbarView mBumToolbar;
     private final TextView mBumScriptKey;
+    private final TextView mBumZhongKey;
     private boolean mBumHasSuggestions;
     private boolean mBumCandidatesShowing;
     private boolean mBumVoiceEnabled;
@@ -148,12 +149,19 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mVoiceKey = (ImageButton)findViewById(R.id.suggestions_strip_voice_key);
         mBumToolbar = (app.bumboard.toolbar.ToolbarView)findViewById(R.id.bum_toolbar);
         mBumScriptKey = (TextView)findViewById(R.id.bum_script_key);
-        mBumScriptKey.setBackground(bumRoundRaisedButton(context));
+        mBumScriptKey.setBackground(bumRoundRaisedButton(context,
+                context.getColor(R.color.bum_m3_primary_container)));
         mBumScriptKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
         mBumScriptKey.setTextColor(context.getColor(R.color.bum_m3_on_primary_container));
         mBumScriptKey.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         mBumScriptKey.setIncludeFontPadding(false);
         mBumScriptKey.setPadding(0, 0, 0, (int) (getResources().getDisplayMetrics().density * 2));
+        mBumZhongKey = (TextView)findViewById(R.id.bum_zhong_key);
+        mBumZhongKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
+        mBumZhongKey.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        mBumZhongKey.setIncludeFontPadding(false);
+        mBumZhongKey.setText("\u4E2D");
+        mBumZhongKey.setPadding(0, 0, 0, (int) (getResources().getDisplayMetrics().density * 2));
         mImportantNoticeStrip = findViewById(R.id.important_notice_strip);
         mStripVisibilityGroup = new StripVisibilityGroup(this, mSuggestionsStrip,
                 mImportantNoticeStrip);
@@ -231,9 +239,38 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
     }
 
     private boolean mBumScriptShown;
+    private boolean mBumZhongShown;
+
+    /**
+     * The 中 key left of 繁/简 (null hides it): when [active], English words typed are looked
+     * up and come back as Chinese candidates; it is then filled in the accent colour.
+     */
+    public void setBumZhongKey(final Boolean active, final OnClickListener onClick) {
+        final boolean shown = active != null;
+        mBumZhongKey.setVisibility(shown ? VISIBLE : GONE);
+        mBumZhongKey.setOnClickListener(onClick);
+        if (shown) {
+            final Context context = getContext();
+            mBumZhongKey.setBackground(bumRoundRaisedButton(context, context.getColor(active
+                    ? R.color.bum_m3_primary : R.color.bum_m3_key)));
+            mBumZhongKey.setTextColor(context.getColor(active
+                    ? R.color.bum_m3_on_primary : R.color.bum_m3_on_key));
+            mBumZhongKey.setContentDescription(context.getString(active
+                    ? R.string.bum_zhong_key_on : R.string.bum_zhong_key_off));
+        }
+        mBumZhongShown = shown;
+        updateBumMiddle();
+    }
+
+    /** How much of the strip's right edge the locked keys (中, 繁/简) take. */
+    public int getBumEdgeWidth() {
+        final int key = getResources().getDimensionPixelSize(R.dimen.bum_script_key_width);
+        return (mBumScriptShown ? key : 0) + (mBumZhongShown ? key : 0);
+    }
 
     /** A round key with a soft shadow under it, like the raised keys. */
-    private static android.graphics.drawable.Drawable bumRoundRaisedButton(final Context context) {
+    private static android.graphics.drawable.Drawable bumRoundRaisedButton(final Context context,
+            final int color) {
         final float density = context.getResources().getDisplayMetrics().density;
         final android.graphics.drawable.GradientDrawable shadow =
                 new android.graphics.drawable.GradientDrawable();
@@ -242,7 +279,7 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         final android.graphics.drawable.GradientDrawable face =
                 new android.graphics.drawable.GradientDrawable();
         face.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-        face.setColor(context.getColor(R.color.bum_m3_primary_container));
+        face.setColor(color);
         final android.graphics.drawable.LayerDrawable button =
                 new android.graphics.drawable.LayerDrawable(
                         new android.graphics.drawable.Drawable[] { shadow, face });
@@ -288,8 +325,7 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
                     ? VISIBLE : INVISIBLE);
         }
         // the right edge: the 繁/简 button (Chinese keyboards), and the mic while idle
-        final int script = mBumScriptShown
-                ? getResources().getDimensionPixelSize(R.dimen.bum_script_key_width) : 0;
+        final int script = getBumEdgeWidth();
         final int mic = getResources().getDimensionPixelSize(
                 R.dimen.config_suggestions_strip_edge_key_width);
         setBumMargins(mBumToolbar, 0, script + (voice ? mic : 0));

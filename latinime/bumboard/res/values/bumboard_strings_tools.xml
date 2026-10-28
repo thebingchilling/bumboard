@@ -74,6 +74,8 @@
     <!-- Chinese -->
     <string name="bum_script_key_traditional">Traditional Chinese. Tap for Simplified.</string>
     <string name="bum_script_key_simplified">Simplified Chinese. Tap for Traditional.</string>
+    <string name="bum_zhong_key_off">English to Chinese: off. Tap to type English words and get Chinese.</string>
+    <string name="bum_zhong_key_on">English to Chinese: on. Tap to type pinyin or Jyutping again.</string>
     <string name="bum_pref_candidate_size">Candidate size</string>
     <string name="bum_pref_dictionary_hold">Dictionary on long-press</string>
     <string name="bum_pref_dictionary_hold_summary">Peek shows the entry while you hold a candidate; pin keeps it open until you close it</string>

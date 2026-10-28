@@ -160,8 +160,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
     // TODO: Move these {@link View}s to {@link KeyboardSwitcher}.
     private View mInputView;
-    // BUMBOARD: Chinese input through Rime.
-    private app.bumboard.chinese.ChineseInput mBumChinese;
+    // BUMBOARD: Chinese and Japanese input through Rime, and Korean (app.bumboard.engine).
+    private app.bumboard.engine.Engines mBumChinese;
     // BUMBOARD: emoji search above the letter keys.
     private app.bumboard.emoji.EmojiSearchBar mBumEmojiSearch;
     // BUMBOARD: voice typing over the keys.
@@ -626,7 +626,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // {@link #resetDictionaryFacilitatorIfNecessary()}.
         loadSettings();
         resetDictionaryFacilitatorIfNecessary();
-        mBumChinese = new app.bumboard.chinese.ChineseInput(this,
+        mBumChinese = new app.bumboard.engine.Engines(this,
                 PreferenceManager.getDefaultSharedPreferences(this));
 
         // Register to receive ringer mode change.
@@ -1257,9 +1257,16 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             final int composingSpanStart, final int composingSpanEnd) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
                 composingSpanStart, composingSpanEnd);
-        // BUMBOARD: the composing text belongs to Rime; LatinIME would otherwise reset it.
+        // BUMBOARD: the composing text belongs to Rime or the Korean composer; LatinIME would
+        // otherwise reset it. A tap outside it (the cursor moved away) ends the composition.
         if (mBumChinese.isComposing()) {
-            return;
+            final boolean outside = composingSpanStart >= 0
+                    && (newSelStart != newSelEnd || newSelEnd < composingSpanStart
+                            || newSelEnd > composingSpanEnd);
+            if (!outside) {
+                return;
+            }
+            mBumChinese.reset();
         }
         if (DebugFlags.DEBUG_ENABLED) {
             Log.i(TAG, "onUpdateSelection: oss=" + oldSelStart + ", ose=" + oldSelEnd

@@ -116,7 +116,8 @@
         android:settingsActivity="app.bumboard.settings.SettingsActivity"
         android:isDefault="@bool/im_is_default"
         android:supportsSwitchingToNextInputMethod="true">
-    <!-- BUMBOARD: English plus Chinese through Rime (BumEngine=yue|cmn, see app.bumboard.chinese). -->
+    <!-- BUMBOARD: English plus Chinese through Rime (BumEngine=yue|cmn, see app.bumboard.chinese)
+         and Korean (BumEngine=ko, app.bumboard.korean). -->
     <subtype android:icon="@drawable/ic_ime_switcher_dark"
             android:label="@string/subtype_en_US"
             android:subtypeId="0xc9194f98"
@@ -152,5 +153,14 @@
             android:imeSubtypeMode="keyboard"
             android:imeSubtypeExtraValue="KeyboardLayoutSet=qwerty,AsciiCapable,EmojiCapable,BumEngine=cmn"
             android:isAsciiCapable="true"
+    />
+    <subtype android:icon="@drawable/ic_ime_switcher_dark"
+            android:label="@string/bum_subtype_ko"
+            android:subtypeId="0x42756d03"
+            android:imeSubtypeLocale="ko"
+            android:languageTag="ko"
+            android:imeSubtypeMode="keyboard"
+            android:imeSubtypeExtraValue="KeyboardLayoutSet=korean,EmojiCapable,BumEngine=ko"
+            android:isAsciiCapable="false"
     />
 </input-method>

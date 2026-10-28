@@ -66,7 +66,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private fun showDictionary(index: Int, anchor: View) {
         val candidate = shown?.candidates?.getOrNull(index) ?: return
         val annotator = Readings.annotator ?: return
-        val mode = if (engine == "yue") InputMode.Cantonese else InputMode.Mandarin
+        val mode = inputMode()
         val resolved = annotator.resolve(candidate.text, candidate.comment, mode) ?: return
         if (resolved.headwords.isEmpty() && resolved.reading == null) return
         val frame = keyboardFrame?.takeIf { it.height > 0 } ?: return
@@ -80,7 +80,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private fun annotation(): ((Candidate) -> Annotation?)? {
         if (!Readings.showReadings(prefs)) return null
         val annotator = Readings.annotator ?: return null
-        val mode = if (engine == "yue") InputMode.Cantonese else InputMode.Mandarin
+        val mode = inputMode()
         val display = Readings.displayPrefs(prefs)
         return { candidate -> annotator.annotate(candidate.text, candidate.comment, mode, display) }
     }
@@ -104,6 +104,26 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         show(null)
     }
 
+    /** Whether 中 is on: English words typed come back as Chinese candidates. */
+    private val englishMode: Boolean
+        get() = engine.let { it == "yue" || it == "cmn" } && prefs.getBoolean(PREF_ENGLISH_MODE + engine, false)
+
+    private fun inputMode() = when {
+        engine == "yue" && englishMode -> InputMode.EnglishToCantonese
+        engine == "yue" -> InputMode.Cantonese
+        englishMode -> InputMode.EnglishToMandarin
+        else -> InputMode.Mandarin
+    }
+
+    /** 中: switches between pinyin/Jyutping and English-to-Chinese on this keyboard. */
+    private fun toggleEnglishMode() {
+        val engine = engine ?: return
+        if (isComposing) commitFirst()
+        prefs.edit().putBoolean(PREF_ENGLISH_MODE + engine, !englishMode).apply()
+        if (RimeService.ready && session != 0L) selectSchema()
+        show(shown)
+    }
+
     /** Re-reads schema and Traditional/Simplified settings, e.g. after the settings changed. */
     fun onSettingsChanged() {
         if (isActive && RimeService.ready) selectSchema()
@@ -113,8 +133,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private fun selectSchema() {
         val engine = engine ?: return
         if (session == 0L) session = Rime.createSession()
-        val schema = when (engine) {
-            "yue" -> if (prefs.getString(PREF_CANTONESE_INPUT, "jyutping") == "yale") "bum_yue_yale" else "bum_yue"
+        val schema = when {
+            englishMode -> if (engine == "yue") "bum_en_yue" else "bum_en_cmn"
+            engine == "yue" -> if (prefs.getString(PREF_CANTONESE_INPUT, "jyutping") == "yale") "bum_yue_yale" else "bum_yue"
             else -> "bum_cmn"
         }
         Rime.selectSchema(session, schema)
@@ -149,6 +170,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                 } else {
                     false
                 }
+            }
+            // English to Chinese: space takes the first Chinese word (spaces are not part of a lookup)
+            code == Constants.CODE_SPACE && englishMode -> {
+                val composing = isComposing
+                if (composing) pick(0)
+                composing
             }
             code == Constants.CODE_SPACE -> isComposing && key(code)
             code in 'a'.code..'z'.code -> key(code)
@@ -317,13 +344,39 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         stripView ?: return
         if (!isActive) {
             stripView.setBumScriptKey(null, null)
+            stripView.setBumZhongKey(null, null)
+            updateEdges(stripView)
             return
         }
+        if ((engine == "yue" || engine == "cmn") && app.bumboard.Features.isEnabled(app.bumboard.Feature.ENGLISH_TO_CHINESE)) {
+            stripView.setBumZhongKey(englishMode) { toggleEnglishMode() }
+        } else {
+            stripView.setBumZhongKey(null, null)
+        }
+        updateEdges(stripView)
         val simplified = prefs.getString(PREF_SCRIPT, "traditional") == "simplified"
         stripView.setBumScriptKey(simplified) {
             prefs.edit().putString(PREF_SCRIPT, if (simplified) "traditional" else "simplified").apply()
             if (RimeService.ready && session != 0L) selectSchema()
             if (isComposing) sync() else show(shown)
+        }
+    }
+
+    /** Keeps the candidates and their ⌄ clear of the locked keys on the right (中, 繁/简). */
+    private fun updateEdges(stripView: SuggestionStripView) {
+        val edge = stripView.bumEdgeWidth
+        val more = ime.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width)
+        (moreButton?.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
+            if (lp.marginEnd != edge) {
+                lp.marginEnd = edge
+                moreButton?.layoutParams = lp
+            }
+        }
+        (bar?.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
+            if (lp.marginEnd != edge + more) {
+                lp.marginEnd = edge + more
+                bar?.layoutParams = lp
+            }
         }
     }
 
@@ -354,6 +407,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         /** Long-press on a candidate: "peek" (while held) or "pin" (until closed). */
         const val PREF_DICTIONARY_HOLD = "bum_dictionary_hold"
         const val PREF_CANTONESE_INPUT = "bum_cantonese_input"
+        /** Per keyboard ("…yue", "…cmn"): 中 is on. */
+        const val PREF_ENGLISH_MODE = "bum_english_mode_"
         private const val KEY_BACKSPACE = 0xff08
         /** Candidates fetched per keystroke; the bar scrolls through these. */
         private const val CANDIDATE_LIMIT = 40

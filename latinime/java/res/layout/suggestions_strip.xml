@@ -72,12 +72,23 @@
         android:layout_alignParentBottom="true"
         android:gravity="center"
         android:visibility="gone" />
+    <!-- BUMBOARD: 中, left of 繁/简 on the Chinese keyboards: when on, English words typed
+         come back as Chinese candidates. -->
+    <TextView
+        android:id="@+id/bum_zhong_key"
+        android:layout_width="@dimen/bum_script_key_width"
+        android:layout_height="@dimen/config_suggestions_strip_height"
+        android:layout_toStartOf="@id/bum_script_key"
+        android:layout_toLeftOf="@id/bum_script_key"
+        android:layout_alignParentBottom="true"
+        android:gravity="center"
+        android:visibility="gone" />
     <ImageButton
         android:id="@+id/suggestions_strip_voice_key"
         android:layout_width="@dimen/config_suggestions_strip_edge_key_width"
         android:layout_height="@dimen/config_suggestions_strip_height"
-        android:layout_toStartOf="@id/bum_script_key"
-        android:layout_toLeftOf="@id/bum_script_key"
+        android:layout_toStartOf="@id/bum_zhong_key"
+        android:layout_toLeftOf="@id/bum_zhong_key"
         android:layout_alignWithParentIfMissing="true"
         android:layout_alignParentBottom="true"
         android:contentDescription="@string/spoken_description_mic"

@@ -26,6 +26,7 @@
     <!-- Chinese -->
     <string name="bum_subtype_yue" translatable="false">粵語 Cantonese</string>
     <string name="bum_subtype_cmn" translatable="false">普通話 Mandarin</string>
+    <string name="bum_subtype_ko" translatable="false">한국어 Korean</string>
     <string name="bum_chinese">Chinese</string>
     <string name="bum_chinese_summary">Cantonese and Mandarin typing</string>
     <string name="bum_script">Characters</string>
