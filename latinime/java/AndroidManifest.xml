@@ -146,7 +146,6 @@
         <activity android:name="app.lychee.voice.MicPermissionActivity"
              android:theme="@android:style/Theme.Translucent.NoTitleBar"
              android:excludeFromRecents="true"
-             android:noHistory="true"
              android:exported="false"/>
         <!-- LYCHEE: Material 3 settings app; the launcher entry and the IME's settings screen. -->
         <activity android:name="app.lychee.settings.SettingsActivity"

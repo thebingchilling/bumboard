@@ -184,9 +184,15 @@
     <string name="lychee_voice_listening">Speak now</string>
     <string name="lychee_voice_starting_offline">Starting on this phone…</string>
     <string name="lychee_voice_listening_offline">Speak now · offline</string>
-    <string name="lychee_voice_offline_downloading">Android is getting this language for offline use. Speak now</string>
     <string name="lychee_pref_voice_offline">Voice typing offline</string>
     <string name="lychee_pref_voice_offline_summary">Recognise speech on this phone when it can (Android 12+), so nothing is sent anywhere</string>
+    <string name="lychee_voice_offline_missing">%1$s isn\'t on this phone for offline voice typing</string>
+    <string name="lychee_voice_download">Download</string>
+    <string name="lychee_voice_online_once">Online this time</string>
+    <string name="lychee_voice_downloading">Downloading %1$s… %2$d%%</string>
+    <string name="lychee_voice_downloaded">%1$s downloaded. Tap the mic to speak</string>
+    <string name="lychee_voice_download_scheduled">Android will download %1$s (see its notification)</string>
+    <string name="lychee_voice_download_failed">The download didn\'t work. Try again later</string>
     <string name="lychee_voice_working">Working…</string>
     <string name="lychee_voice_error">Voice typing isn’t available right now</string>
     <string name="lychee_voice_stop">Stop listening</string>

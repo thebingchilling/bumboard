@@ -176,7 +176,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         "ja" -> "ja-JP"
         "ko" -> "ko-KR"
         "yue" -> "yue-Hant-HK"
-        else -> if (prefs.getString(PREF_SCRIPT, "traditional") == "simplified") "cmn-Hans-CN" else "cmn-Hant-TW"
+        // Mandarin is mainland Mandarin, whichever script is typed
+        else -> "cmn-Hans-CN"
     }
 
     fun onSubtypeChanged(subtype: InputMethodSubtype?) {
