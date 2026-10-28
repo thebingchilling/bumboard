@@ -1,5 +1,5 @@
 {
-  "_comment": "BumBoard's pack catalogue. BumBoard has no network access: 'url' opens in the browser (Custom Tab), which downloads the file; the user then imports it. 'sha256' (optional) pins an exact file; 'pick' chooses the font inside a zip; 'prefer' breaks ties between matches. Packs built by BumBoard (zip with pack.json) live on this repo's 'packs' release.",
+  "_comment": "BumBoard's pack catalogue. BumBoard has no network access: 'download' (a direct link to a file on this repo's 'packs' release, where the packs workflow builds or mirrors every pack) opens in the browser, which saves the file; opening it installs it in BumBoard. 'url' is the pack's source, for credit and updates. 'sha256' (optional) pins an exact file; 'pick' chooses the font inside a zip; 'prefer' breaks ties between matches.",
   "release": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
   "packs": [
     {
@@ -13,7 +13,8 @@
       "pick": "(?i)LXGWWenKai-Regular\\.ttf$",
       "size": "25 MB",
       "license": "SIL Open Font License 1.1",
-      "credit": "LXGW WenKai by LXGW"
+      "credit": "LXGW WenKai by LXGW",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-font-zh-wenkai.zip"
     },
     {
       "id": "font_zh_wenkai_tc",
@@ -26,7 +27,8 @@
       "pick": "(?i)LXGWWenKaiTC-Regular\\.ttf$",
       "size": "20 MB",
       "license": "SIL Open Font License 1.1",
-      "credit": "LXGW WenKai TC by LXGW"
+      "credit": "LXGW WenKai TC by LXGW",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-font-zh-wenkai-tc.zip"
     },
     {
       "id": "font_zh_chiron_hei",
@@ -40,7 +42,8 @@
       "prefer": "(?i)-R(egular)?\\.|VF",
       "size": "15 MB",
       "license": "SIL Open Font License 1.1",
-      "credit": "Chiron Hei HK by Tamcy"
+      "credit": "Chiron Hei HK by Tamcy",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-font-zh-chiron-hei.zip"
     },
     {
       "id": "font_zh_chiron_sung",
@@ -54,7 +57,8 @@
       "prefer": "(?i)-R(egular)?\\.|VF",
       "size": "20 MB",
       "license": "SIL Open Font License 1.1",
-      "credit": "Chiron Sung HK by Tamcy"
+      "credit": "Chiron Sung HK by Tamcy",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-font-zh-chiron-sung.zip"
     },
     {
       "id": "font_zh_zhuque",
@@ -68,7 +72,8 @@
       "prefer": "(?i)Regular",
       "size": "10 MB",
       "license": "SIL Open Font License 1.1",
-      "credit": "Zhuque Fangsong by TrionesType"
+      "credit": "Zhuque Fangsong by TrionesType",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-font-zh-zhuque.zip"
     },
     {
       "id": "font_zh_gensen",
@@ -82,7 +87,8 @@
       "prefer": "(?i)-R\\.|Regular",
       "size": "12 MB",
       "license": "SIL Open Font License 1.1",
-      "credit": "GenSen Rounded by ButTaiwan"
+      "credit": "GenSen Rounded by ButTaiwan",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-font-zh-gensen.zip"
     },
     {
       "id": "font_zh_custom",
@@ -107,7 +113,8 @@
       "pick": "(?i)NotoColorEmoji\\.ttf$",
       "size": "10 MB",
       "license": "SIL Open Font License 1.1",
-      "credit": "Noto Color Emoji by Google"
+      "credit": "Noto Color Emoji by Google",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-emoji-noto-latest.zip"
     },
     {
       "id": "emoji_twemoji",
@@ -120,7 +127,8 @@
       "pick": "(?i)Twemoji.*\\.ttf$",
       "size": "1.5 MB",
       "license": "Graphics CC BY 4.0; font build MPL/Apache",
-      "credit": "Twemoji by Twitter, Inc and other contributors (CC BY 4.0); font by Mozilla"
+      "credit": "Twemoji by Twitter, Inc and other contributors (CC BY 4.0); font by Mozilla",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-emoji-twemoji.zip"
     },
     {
       "id": "emoji_openmoji",
@@ -134,7 +142,8 @@
       "prefer": "(?i)cbdt",
       "size": "10 MB",
       "license": "CC BY-SA 4.0",
-      "credit": "OpenMoji, the open-source emoji project (CC BY-SA 4.0)"
+      "credit": "OpenMoji, the open-source emoji project (CC BY-SA 4.0)",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-emoji-openmoji.zip"
     },
     {
       "id": "emoji_blobmoji",
@@ -147,7 +156,8 @@
       "pick": "(?i)Blobmoji.*\\.ttf$",
       "size": "10 MB",
       "license": "Apache License 2.0",
-      "credit": "Blobmoji by C1710, based on Noto Emoji by Google"
+      "credit": "Blobmoji by C1710, based on Noto Emoji by Google",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-emoji-blobmoji.zip"
     },
     {
       "id": "emoji_serenity",
@@ -160,7 +170,8 @@
       "pick": "(?i)\\.ttf$",
       "size": "1 MB",
       "license": "BSD 2-Clause",
-      "credit": "SerenityOS emoji by the SerenityOS contributors"
+      "credit": "SerenityOS emoji by the SerenityOS contributors",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-emoji-serenity.zip"
     },
     {
       "id": "emoji_custom",
@@ -185,7 +196,8 @@
       "file": "bumboard-hw-zh-hant.zip",
       "size": "33 MB",
       "license": "LGPL 2.1 (Tegaki/Tomoe models); Zinnia engine BSD",
-      "credit": "Handwriting models from the Tegaki and Tomoe projects"
+      "credit": "Handwriting models from the Tegaki and Tomoe projects",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-hw-zh-hant.zip"
     },
     {
       "id": "hw_zh_hans",
@@ -198,7 +210,8 @@
       "file": "bumboard-hw-zh-hans.zip",
       "size": "17 MB",
       "license": "LGPL 2.1 (Tegaki/Tomoe models); Zinnia engine BSD",
-      "credit": "Handwriting models from the Tegaki and Tomoe projects"
+      "credit": "Handwriting models from the Tegaki and Tomoe projects",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-hw-zh-hans.zip"
     },
     {
       "id": "hw_ja",
@@ -211,7 +224,8 @@
       "file": "bumboard-hw-ja.zip",
       "size": "17 MB",
       "license": "LGPL 2.1 (Tomoe model); Zinnia engine BSD",
-      "credit": "Handwriting model from the Tomoe project"
+      "credit": "Handwriting model from the Tomoe project",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-hw-ja.zip"
     },
     {
       "id": "rime_ja",
@@ -224,7 +238,8 @@
       "file": "bumboard-rime-ja.zip",
       "size": "10 MB",
       "license": "Mozc dictionary (BSD-3-Clause, IPAdic licence)",
-      "credit": "Japanese dictionary from Mozc (Google) and IPAdic"
+      "credit": "Japanese dictionary from Mozc (Google) and IPAdic",
+      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-rime-ja.zip"
     }
   ]
 }

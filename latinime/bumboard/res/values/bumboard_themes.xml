@@ -2,4 +2,10 @@
 <resources>
     <!-- Window theme for the Compose settings; colours come from BumTheme. -->
     <style name="Theme.BumBoard" parent="@android:style/Theme.Material.Light.NoActionBar" />
+    <!-- The install dialog shown over whatever opened a pack (the browser). -->
+    <style name="Theme.BumBoard.Translucent" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
 </resources>

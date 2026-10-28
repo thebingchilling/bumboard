@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -32,12 +33,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
-/** Rows inside a [Group]: the first and last get large corners, the middle ones small (M3 Expressive lists). */
+/**
+ * Rows inside a [Group]: a compact list, full width, with thin dividers between the rows (the
+ * shape each row is given is kept for callers but no longer drawn).
+ */
 class GroupScope internal constructor(private val rows: MutableList<@Composable (Shape) -> Unit>) {
     fun row(content: @Composable (Shape) -> Unit) {
         rows += content
@@ -48,61 +53,46 @@ class GroupScope internal constructor(private val rows: MutableList<@Composable 
 fun Group(title: String? = null, build: GroupScope.() -> Unit) {
     val rows = mutableListOf<@Composable (Shape) -> Unit>()
     GroupScope(rows).build()
-    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Column(Modifier.padding(top = if (title != null) 16.dp else 8.dp, bottom = 4.dp)) {
         if (title != null) {
             Text(
                 title,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 8.dp),
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 4.dp),
             )
         }
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            rows.forEachIndexed { i, row ->
-                val big = 24.dp
-                val small = 4.dp
-                val shape = RoundedCornerShape(
-                    topStart = if (i == 0) big else small,
-                    topEnd = if (i == 0) big else small,
-                    bottomStart = if (i == rows.lastIndex) big else small,
-                    bottomEnd = if (i == rows.lastIndex) big else small,
+        rows.forEachIndexed { i, row ->
+            if (i > 0) {
+                HorizontalDivider(
+                    Modifier.padding(horizontal = 20.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant,
                 )
-                row(shape)
             }
+            row(RectangleShape)
         }
     }
 }
 
 @Composable
 private fun RowSurface(shape: Shape, onClick: (() -> Unit)?, content: @Composable () -> Unit) {
-    Surface(
-        shape = shape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier
+    Box(
+        Modifier
             .fillMaxWidth()
-            .clip(shape)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 4.dp),
     ) { content() }
 }
 
 @Composable
 fun IconBadge(@DrawableRes icon: Int) {
-    Box(
-        Modifier
-            .size(40.dp)
-            .clip(CircleShape),
-        contentAlignment = Alignment.Center,
-    ) {
-        Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = CircleShape, modifier = Modifier.size(40.dp)) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    painterResource(icon), contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-        }
-    }
+    // a plain icon: compact, like the system settings' lists
+    Icon(
+        painterResource(icon), contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.size(24.dp),
+    )
 }
 
 @Composable
@@ -116,7 +106,7 @@ fun NavRow(shape: Shape, title: String, summary: String? = null, @DrawableRes ic
             leadingContent = if (icon != null) {
                 { IconBadge(icon) }
             } else null,
-            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         )
     }
 }
@@ -141,7 +131,7 @@ fun IconSwitchRow(
                 { IconBadge(icon) }
             } else null,
             trailingContent = { Switch(checked = checked, onCheckedChange = onChange) },
-            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         )
     }
 }

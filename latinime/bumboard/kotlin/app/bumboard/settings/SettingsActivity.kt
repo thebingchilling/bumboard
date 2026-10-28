@@ -129,6 +129,8 @@ class SettingsActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         refreshStatus()
+        // back from the browser (a download) or the install dialog: re-read the packs
+        PackRefresh.tick++
     }
 
     // The input method picker is a dialog over this activity, so a choice there only changes focus.
@@ -278,7 +280,8 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
     )
 
     val showGesture = Settings.readFromBuildConfigIfGestureInputEnabled(context.resources)
-    Group(stringResource(R.string.bum_section_keyboard)) {
+    // grouped by what people look for: languages, how typing works, how it looks, downloads
+    Group(stringResource(R.string.bum_section_languages)) {
         row {
             NavRow(
                 it, stringResource(R.string.language_selection_title),
@@ -291,23 +294,13 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
                 stringResource(R.string.bum_chinese_summary), R.drawable.ic_sym_translate,
             ) { open(Page.Chinese) }
         }
+    }
+    Group(stringResource(R.string.bum_section_typing)) {
         row {
             NavRow(
                 it, stringResource(R.string.settings_screen_preferences),
-                stringResource(R.string.bum_preferences_summary), R.drawable.ic_sym_tune,
+                stringResource(R.string.bum_preferences_summary), R.drawable.ic_sym_keyboard,
             ) { open(Page.Preferences) }
-        }
-        row {
-            NavRow(
-                it, stringResource(R.string.settings_screen_theme),
-                stringResource(R.string.bum_theme_summary), R.drawable.ic_sym_palette,
-            ) { open(Page.Theme) }
-        }
-        row {
-            NavRow(
-                it, stringResource(R.string.bum_fonts_title),
-                stringResource(R.string.bum_fonts_summary), R.drawable.ic_sym_text_fields,
-            ) { open(Page.Fonts) }
         }
         row {
             NavRow(
@@ -323,19 +316,33 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
                 ) { open(Page.Gesture) }
             }
         }
+    }
+    Group(stringResource(R.string.bum_section_look)) {
         row {
             NavRow(
-                it, stringResource(R.string.settings_screen_advanced),
-                stringResource(R.string.bum_advanced_summary), R.drawable.ic_sym_build,
-            ) { open(Page.Advanced) }
+                it, stringResource(R.string.settings_screen_theme),
+                stringResource(R.string.bum_theme_summary), R.drawable.ic_sym_palette,
+            ) { open(Page.Theme) }
+        }
+        row {
+            NavRow(
+                it, stringResource(R.string.bum_fonts_title),
+                stringResource(R.string.bum_fonts_summary), R.drawable.ic_sym_text_fields,
+            ) { open(Page.Fonts) }
         }
     }
-    Group(stringResource(R.string.bum_section_app)) {
+    Group(stringResource(R.string.bum_section_more)) {
         row {
             NavRow(
                 it, stringResource(R.string.bum_packs_title),
                 stringResource(R.string.bum_packs_summary), R.drawable.ic_sym_download,
             ) { open(Page.Packs) }
+        }
+        row {
+            NavRow(
+                it, stringResource(R.string.settings_screen_advanced),
+                stringResource(R.string.bum_advanced_summary), R.drawable.ic_sym_build,
+            ) { open(Page.Advanced) }
         }
         row {
             NavRow(
@@ -524,7 +531,7 @@ private fun ChinesePage() {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
     )
-    Group {
+    Group(stringResource(R.string.bum_group_script)) {
         row {
             ChoiceRow(
                 it, stringResource(R.string.bum_script),
@@ -575,7 +582,7 @@ private fun ChinesePage() {
     val dictionaryHold = prefs.stringPref(ChineseInput.PREF_DICTIONARY_HOLD) {
         prefs.getString(ChineseInput.PREF_DICTIONARY_HOLD, null) ?: "pin"
     }
-    Group {
+    Group(stringResource(R.string.bum_group_candidates)) {
         row {
             SliderRow(
                 it, stringResource(R.string.bum_pref_candidate_size), (candidateSize.value * 100).roundToInt(),
@@ -616,7 +623,7 @@ private fun PreferencesPage() {
     val commaKey = prefs.stringPref(BumLayout.PREF_COMMA_KEY) { prefs.getString(BumLayout.PREF_COMMA_KEY, null) ?: "combined" }
     val hasVibrator = AudioAndHapticFeedbackManager.getInstance().hasVibrator()
 
-    Group {
+    Group(stringResource(R.string.bum_group_typing)) {
         row {
             SwitchRow(it, stringResource(R.string.auto_cap), stringResource(R.string.auto_cap_summary), autoCap.value, autoCap::set)
         }
@@ -627,7 +634,7 @@ private fun PreferencesPage() {
             )
         }
     }
-    Group {
+    Group(stringResource(R.string.bum_group_keys)) {
         row {
             SwitchRow(
                 it, stringResource(R.string.bum_pref_number_row),
@@ -650,7 +657,7 @@ private fun PreferencesPage() {
         }
     }
     CommaMenuGroup(commaKey.value)
-    Group {
+    Group(stringResource(R.string.bum_group_feedback)) {
         if (hasVibrator) {
             row { SwitchRow(it, stringResource(R.string.vibrate_on_keypress), null, vibrate.value, vibrate::set) }
         }
@@ -706,7 +713,7 @@ private fun ThemePage() {
     val colors = prefs.stringPref(app.bumboard.ui.BumColorStyle.PREF) {
         prefs.getString(app.bumboard.ui.BumColorStyle.PREF, null) ?: app.bumboard.ui.BumColorStyle.NEUTRAL
     }
-    Group {
+    Group(stringResource(R.string.bum_group_key_style)) {
         row {
             ChoiceRow(
                 it, stringResource(R.string.bum_pref_colors), null,
@@ -729,7 +736,7 @@ private fun ThemePage() {
     val mode = prefs.stringPref(BumLayout.PREF_MODE) { prefs.getString(BumLayout.PREF_MODE, null) ?: "normal" }
     val height = prefs.floatPref(BumLayout.PREF_HEIGHT_SCALE) { prefs.getFloat(BumLayout.PREF_HEIGHT_SCALE, 1f) }
     val columns = prefs.intPref(EmojiPanelView.PREF_COLUMNS) { prefs.getInt(EmojiPanelView.PREF_COLUMNS, 0) }
-    Group {
+    Group(stringResource(R.string.bum_group_size)) {
         row {
             ChoiceRow(
                 it, stringResource(R.string.bum_pref_layout), null,
@@ -768,14 +775,14 @@ private fun ThemePage() {
 private fun RadioRow(shape: androidx.compose.ui.graphics.Shape, title: String, selected: Boolean, onClick: () -> Unit) {
     Surface(
         shape = shape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = androidx.compose.ui.graphics.Color.Transparent,
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
     ) {
         ListItem(
             headlineContent = { Text(title) },
             leadingContent = { RadioButton(selected = selected, onClick = onClick) },
-            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         )
     }
 }
@@ -806,7 +813,7 @@ private fun CorrectionPage() {
     }
 
     if (dictionaryIntent != null) {
-        Group {
+        Group(stringResource(R.string.bum_group_dictionary)) {
             row {
                 NavRow(it, stringResource(R.string.edit_personal_dictionary)) {
                     context.startActivity(dictionaryIntent)
@@ -814,7 +821,7 @@ private fun CorrectionPage() {
             }
         }
     }
-    Group {
+    Group(stringResource(R.string.bum_group_suggestions)) {
         row {
             SwitchRow(
                 it, stringResource(R.string.prefs_show_suggestions),
@@ -904,7 +911,7 @@ private fun AdvancedPage() {
         prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY, true)
     }
 
-    Group {
+    Group(stringResource(R.string.bum_group_popups)) {
         if (Settings.readFromBuildConfigIfToShowKeyPreviewPopupOption(res)) {
             row {
                 ChoiceRow(
@@ -930,7 +937,7 @@ private fun AdvancedPage() {
             )
         }
     }
-    Group {
+    Group(stringResource(R.string.bum_group_feedback)) {
         if (feedback.hasVibrator()) {
             row {
                 // -1 means "system default"; the slider starts at 0 and stores real durations.
@@ -958,7 +965,7 @@ private fun AdvancedPage() {
             }
         }
     }
-    Group {
+    Group(stringResource(R.string.bum_group_other)) {
         row {
             SwitchRow(it, stringResource(R.string.enable_split_keyboard), null, split.value, split::set)
         }

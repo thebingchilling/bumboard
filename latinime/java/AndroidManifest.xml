@@ -107,6 +107,38 @@
 
         <!-- Activities -->
         <!-- BUMBOARD: asks for the microphone on the voice key's first use. -->
+        <!-- BUMBOARD: opening a downloaded pack (the browser's "Open", or sharing it) installs it. -->
+        <activity android:name="app.bumboard.packs.PackImportActivity"
+             android:theme="@style/Theme.BumBoard.Translucent"
+             android:label="@string/bum_import_open_with"
+             android:icon="@mipmap/ic_launcher"
+             android:excludeFromRecents="true"
+             android:taskAffinity=""
+             android:exported="true">
+            <intent-filter android:label="@string/bum_import_open_with">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:scheme="content"/>
+                <data android:scheme="file"/>
+                <data android:mimeType="application/zip"/>
+                <data android:mimeType="application/x-zip-compressed"/>
+                <data android:mimeType="application/octet-stream"/>
+                <data android:mimeType="font/ttf"/>
+                <data android:mimeType="font/otf"/>
+                <data android:mimeType="font/sfnt"/>
+                <data android:mimeType="application/x-font-ttf"/>
+                <data android:mimeType="application/x-font-otf"/>
+            </intent-filter>
+            <intent-filter android:label="@string/bum_import_open_with">
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="application/zip"/>
+                <data android:mimeType="application/x-zip-compressed"/>
+                <data android:mimeType="application/octet-stream"/>
+                <data android:mimeType="font/*"/>
+                <data android:mimeType="application/x-font-ttf"/>
+            </intent-filter>
+        </activity>
         <activity android:name="app.bumboard.voice.MicPermissionActivity"
              android:theme="@android:style/Theme.Translucent.NoTitleBar"
              android:excludeFromRecents="true"

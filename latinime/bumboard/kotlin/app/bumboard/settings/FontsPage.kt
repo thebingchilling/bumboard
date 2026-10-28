@@ -81,7 +81,7 @@ fun FontsPage() {
 private fun ChoiceItem(shape: Shape, title: String, summary: String?, selected: Boolean, onSelect: () -> Unit) {
     Surface(
         shape = shape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        color = androidx.compose.ui.graphics.Color.Transparent,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onSelect),
     ) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {

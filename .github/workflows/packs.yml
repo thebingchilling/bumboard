@@ -1,8 +1,9 @@
 name: Build BumBoard packs
 
 # The optional downloads BumBoard's catalogue (latinime/bumboard/assets/bumboard/packs.json)
-# links to: built here and attached to this repository's "packs" release. BumBoard itself has
-# no network access; users download these in the browser and import them.
+# links to: built (or, for fonts, mirrored) here and attached to this repository's "packs"
+# release. BumBoard itself has no network access: the browser downloads these, and opening the
+# downloaded file installs it in BumBoard.
 on:
   workflow_dispatch: {}
   push:
@@ -10,6 +11,7 @@ on:
     paths:
       - 'data/packs/**'
       - '.github/workflows/packs.yml'
+      - 'latinime/bumboard/assets/bumboard/packs.json'
 
 permissions:
   contents: write
@@ -42,6 +44,11 @@ jobs:
       - name: Handwriting packs
         run: data/packs/handwriting/build_hw.sh out/packs
 
+      - name: Font and emoji packs (one-tap mirrors of the fonts' latest releases)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 data/packs/fonts/mirror_fonts.py --out out/packs
+
       - uses: actions/upload-artifact@v4
         with:
           name: bumboard-packs
@@ -55,5 +62,5 @@ jobs:
         run: |
           gh release view packs >/dev/null 2>&1 || \
             gh release create packs --title "BumBoard packs" \
-              --notes "Optional downloads for BumBoard: open these in your browser, then import them in BumBoard (Settings > Downloads)."
+              --notes "Optional downloads for BumBoard. Tap Download in BumBoard (Settings > Downloads), then Open when your browser has saved the file."
           gh release upload packs out/packs/*.zip --clobber

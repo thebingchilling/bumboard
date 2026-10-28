@@ -46,6 +46,8 @@ object PackImporter {
             val pack = expected
                 ?: catalog.firstOrNull { it.sha256 == sha }
                 ?: info?.optString("id")?.let { id -> catalog.firstOrNull { it.id == id } }
+                // the pack whose Download was tapped last
+                ?: Packs.pending(context)
                 ?: return Result.Error("BumBoard doesn't know this file. To use your own font, choose \"Your own font\" instead.")
             if (pack.sha256 != null && pack.sha256 != sha) {
                 return Result.Error("This isn't the file for ${pack.name} (it doesn't match). Download it again from its page.")

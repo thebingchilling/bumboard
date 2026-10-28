@@ -31,8 +31,10 @@ data class Pack(
     val name: String,
     val summary: String,
     val version: String,
-    /** Opened in the browser to download the file; empty for "your own file" entries. */
+    /** The pack's source (its release page), for credit and updates; empty for "your own file". */
     val url: String,
+    /** A direct link to the file (on BumBoard's packs release): the browser saves it at once. */
+    val download: String,
     /** The file to download, as shown to the user. */
     val file: String,
     /** Pins the exact file when set. */
@@ -76,6 +78,7 @@ object Packs {
                 summary = o.optString("summary"),
                 version = o.optString("version"),
                 url = o.optString("url"),
+                download = o.optString("download"),
                 file = o.optString("file"),
                 sha256 = o.optString("sha256").takeIf { it.isNotEmpty() }?.lowercase(),
                 pick = o.optString("pick").takeIf { it.isNotEmpty() }?.let { Regex(it) },
@@ -93,6 +96,32 @@ object Packs {
     }
 
     fun byId(context: Context, id: String) = catalog(context).firstOrNull { it.id == id }
+
+    private const val PREF_PENDING = "bum_pack_pending"
+
+    /**
+     * Starts downloading [pack]: its file opens in the browser, which saves it. BumBoard
+     * remembers the pack, so the file opened afterwards (or chosen) is known to be it.
+     */
+    fun download(context: Context, pack: Pack) {
+        @Suppress("DEPRECATION")
+        android.preference.PreferenceManager.getDefaultSharedPreferences(context).edit()
+            .putString(PREF_PENDING, pack.id).apply()
+        openPage(context, pack.download.ifEmpty { pack.url })
+    }
+
+    /** The pack last downloaded and not yet installed, if any. */
+    fun pending(context: Context): Pack? {
+        @Suppress("DEPRECATION")
+        val id = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            .getString(PREF_PENDING, null) ?: return null
+        return byId(context, id)?.takeIf { !isInstalled(context, it.id) }
+    }
+
+    fun clearPending(context: Context) {
+        @Suppress("DEPRECATION")
+        android.preference.PreferenceManager.getDefaultSharedPreferences(context).edit().remove(PREF_PENDING).apply()
+    }
 
     fun ofKind(context: Context, kind: PackKind) = catalog(context).filter { it.kind == kind }
 

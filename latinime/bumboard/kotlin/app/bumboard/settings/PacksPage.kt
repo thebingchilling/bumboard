@@ -80,10 +80,13 @@ fun rememberPackActions(): PackActions {
         version = version,
         message = message,
         busy = busy,
-        get = { pack -> if (pack.url.isNotEmpty()) Packs.openPage(context, pack.url) },
+        get = { pack ->
+            Packs.download(context, pack)
+            version++
+        },
         import = { pack ->
             target = pack
-            launcher.launch(arrayOf("*/*"))
+            launcher.launch(arrayOf("application/zip", "application/octet-stream", "font/*", "application/x-font-ttf", "*/*"))
         },
         remove = { pack ->
             Packs.remove(context, pack.id)
@@ -116,12 +119,13 @@ fun PackMessage(actions: PackActions) {
 }
 
 /**
- * One pack: its name, what it is, size and licence, whether it is installed, and Get / Import /
- * Remove. With [selected] and [onSelect] it is also a choice (fonts), selectable once installed.
+ * One pack, compact: its name, what it is and its size (or that it is installed), and one
+ * button: Download (Update once installed). Installed packs can be removed. With [selected] and
+ * [onSelect] it is also a choice (fonts), selectable once installed.
  */
 @Composable
 fun PackRow(
-    shape: Shape,
+    @Suppress("UNUSED_PARAMETER") shape: Shape,
     pack: Pack,
     actions: PackActions,
     selected: Boolean? = null,
@@ -131,53 +135,80 @@ fun PackRow(
     @Suppress("UNUSED_VARIABLE") val refresh = actions.version
     val installed = Packs.isInstalled(context, pack.id)
     val canSelect = onSelect != null && installed
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .then(if (canSelect) Modifier.clickable { onSelect?.invoke() } else Modifier)
+            .padding(start = 8.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (selected != null) {
+            RadioButton(selected = selected, onClick = { if (canSelect) onSelect?.invoke() }, enabled = canSelect)
+        } else {
+            androidx.compose.foundation.layout.Spacer(Modifier.padding(start = 12.dp))
+        }
+        Column(Modifier.weight(1f)) {
+            Text(pack.name, style = MaterialTheme.typography.bodyLarge)
+            val detail = listOf(
+                pack.summary,
+                if (installed) stringResource(R.string.bum_packs_installed_short) + " · " +
+                    Packs.formatSize(Packs.sizeOnDisk(context, pack.id)) else pack.size,
+            ).filter { it.isNotEmpty() }.joinToString(" · ")
+            Text(
+                detail, style = MaterialTheme.typography.bodyMedium,
+                color = if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (installed) {
+                TextButton(
+                    onClick = { actions.remove(pack) },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
+                ) { Text(stringResource(R.string.bum_packs_remove)) }
+            }
+        }
+        if (pack.download.isNotEmpty() || pack.url.isNotEmpty()) {
+            if (installed) {
+                OutlinedButton(onClick = { actions.get(pack) }) { Text(stringResource(R.string.bum_packs_update)) }
+            } else {
+                FilledTonalButton(onClick = { actions.get(pack) }) { Text(stringResource(R.string.bum_packs_get)) }
+            }
+        }
+    }
+}
+
+/**
+ * After a Download: until the pack is installed, a reminder to tap Open on the browser's
+ * notice, with a way to choose the downloaded file instead.
+ */
+@Composable
+fun PackPending(actions: PackActions) {
+    val context = LocalContext.current
+    @Suppress("UNUSED_VARIABLE") val refresh = actions.version + PackRefresh.tick
+    val pack = Packs.pending(context) ?: return
     Surface(
-        shape = shape,
-        color = MaterialTheme.colorScheme.surfaceContainer,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (canSelect) Modifier.clickable { onSelect?.invoke() } else Modifier),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (selected != null) {
-                    RadioButton(selected = selected, onClick = { if (canSelect) onSelect?.invoke() }, enabled = canSelect)
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(stringResource(R.string.bum_packs_pending_title, pack.name), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.bum_packs_pending_body), style = MaterialTheme.typography.bodyMedium)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalButton(onClick = { actions.import(pack) }, enabled = !actions.busy) {
+                    Text(stringResource(R.string.bum_packs_choose_file))
                 }
-                Column(Modifier.weight(1f)) {
-                    Text(pack.name, style = MaterialTheme.typography.bodyLarge)
-                    if (pack.summary.isNotEmpty()) {
-                        Text(pack.summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-            }
-            val status = if (installed) {
-                stringResource(
-                    R.string.bum_packs_installed,
-                    Packs.installedVersion(context, pack.id).orEmpty(),
-                    Packs.formatSize(Packs.sizeOnDisk(context, pack.id)),
-                )
-            } else listOf(pack.size, pack.file).filter { it.isNotEmpty() }.joinToString(" · ")
-            if (status.isNotEmpty()) {
-                Text(status, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
-            }
-            if (pack.license.isNotEmpty()) {
-                Text(pack.license, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
-                if (pack.url.isNotEmpty()) {
-                    FilledTonalButton(onClick = { actions.get(pack) }) {
-                        Text(stringResource(if (installed) R.string.bum_packs_update else R.string.bum_packs_get))
-                    }
-                }
-                OutlinedButton(onClick = { actions.import(pack) }, enabled = !actions.busy) {
-                    Text(stringResource(R.string.bum_packs_import))
-                }
-                if (installed) {
-                    TextButton(onClick = { actions.remove(pack) }) { Text(stringResource(R.string.bum_packs_remove)) }
+                TextButton(onClick = { Packs.clearPending(context); actions.refresh() }) {
+                    Text(stringResource(R.string.bum_close))
                 }
             }
         }
     }
+}
+
+/** Bumped when the settings come back to the front (e.g. from the browser), so pages re-read packs. */
+object PackRefresh {
+    var tick by androidx.compose.runtime.mutableIntStateOf(0)
 }
 
 /** Every pack of [kinds], under [title]. */
@@ -191,41 +222,36 @@ fun PackGroup(title: String, kinds: Set<PackKind>, actions: PackActions) {
     }
 }
 
-/** Settings > Packs: everything BumBoard can use but doesn't include, in one place. */
+/** Settings > Downloads: everything BumBoard can use but doesn't include, in one place. */
 @Composable
 fun PacksPage() {
     val context = LocalContext.current
     val actions = rememberPackActions()
-    @Suppress("UNUSED_VARIABLE") val refresh = actions.version
+    @Suppress("UNUSED_VARIABLE") val refresh = actions.version + PackRefresh.tick
     Text(
         stringResource(R.string.bum_packs_how),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
     )
+    PackPending(actions)
     PackMessage(actions)
-    Group {
-        row {
-            TextRow(
-                it, stringResource(R.string.bum_packs_storage),
-                stringResource(R.string.bum_packs_storage_used, Packs.formatSize(Packs.totalSize(context))),
-            )
-        }
+    PackGroup(stringResource(R.string.bum_packs_handwriting), setOf(PackKind.HANDWRITING), actions)
+    PackGroup(stringResource(R.string.bum_packs_dictionaries), setOf(PackKind.RIME), actions)
+    PackGroup(stringResource(R.string.bum_packs_fonts_zh), setOf(PackKind.FONT_ZH), actions)
+    PackGroup(stringResource(R.string.bum_packs_fonts_emoji), setOf(PackKind.FONT_EMOJI), actions)
+    PackGroup(stringResource(R.string.bum_packs_voice), setOf(PackKind.VOICE), actions)
+    Group(stringResource(R.string.bum_section_more)) {
         row {
             NavRow(it, stringResource(R.string.bum_packs_import_any), stringResource(R.string.bum_packs_import_any_summary)) {
                 actions.import(null)
             }
         }
         row {
-            NavRow(it, stringResource(R.string.bum_packs_updates), stringResource(R.string.bum_packs_updates_summary)) {
-                Packs.catalog(context)
-                Packs.openPage(context, Packs.releasePage)
-            }
+            TextRow(
+                it, stringResource(R.string.bum_packs_storage),
+                stringResource(R.string.bum_packs_storage_used, Packs.formatSize(Packs.totalSize(context))),
+            )
         }
     }
-    PackGroup(stringResource(R.string.bum_packs_fonts_zh), setOf(PackKind.FONT_ZH), actions)
-    PackGroup(stringResource(R.string.bum_packs_fonts_emoji), setOf(PackKind.FONT_EMOJI), actions)
-    PackGroup(stringResource(R.string.bum_packs_handwriting), setOf(PackKind.HANDWRITING), actions)
-    PackGroup(stringResource(R.string.bum_packs_dictionaries), setOf(PackKind.RIME), actions)
-    PackGroup(stringResource(R.string.bum_packs_voice), setOf(PackKind.VOICE), actions)
 }
