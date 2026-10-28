@@ -241,9 +241,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val engine = engine ?: return
         if (session == 0L) session = Rime.createSession()
         if (engine == "ja" || engine == "ko") {
-            Rime.selectSchema(session, "lychee_$engine")
+            // without its schema (the Japanese pack missing or unreadable) the letters type as
+            // they are rather than vanishing into Rime
+            schemaMissing = !Rime.selectSchema(session, "lychee_$engine")
             return
         }
+        schemaMissing = false
         // fuzzy spellings (zh/z, n/l, ng ...) have schemas of their own
         val fuzzy = if (prefs.getBoolean(PREF_FUZZY + engine, false)) "_fuzzy" else ""
         val schema = when {
@@ -257,9 +260,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         Rime.setOption(session, "traditionalization", !simplified)
     }
 
+    /** The keyboard's Rime schema couldn't be selected: keys go to LatinIME. */
+    private var schemaMissing = false
+
     /** Returns true when the event was used for Chinese input. */
     fun onEvent(event: Event): Boolean {
-        if (!isActive) return false
+        if (!isActive || schemaMissing) return false
         val code = event.mCodePoint
         if (!RimeService.ready || session == 0L) {
             // Rime is still loading: letters go to LatinIME, but punctuation is Chinese already
@@ -424,8 +430,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         updateScriptKey(stripView, hidden = showing)
         updateBarHeight(stripView, showing)
         val typed = if (isActive) composition?.preedit.orEmpty() else ""
-        val anchor = bar
-        if (typed.isNotEmpty() && anchor != null && showing) {
+        // over the candidates, or over the strip while nothing is found for the letters yet
+        val anchor: View? = if (showing) bar else stripView
+        if (typed.isNotEmpty() && anchor != null) {
             // after the bar has its new height and place
             anchor.post { if (shown === composition) preedit?.show(anchor, typed) }
         } else {

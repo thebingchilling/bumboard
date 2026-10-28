@@ -42,6 +42,7 @@ object RimeService {
                 val changed = installAssets(app, shared)
                 installPacks(app, shared)
                 Rime.start(shared.path, user.path, fullCheck = changed)
+                stagePackBuilds(app, user)
                 ready = true
             } catch (t: Throwable) {
                 Log.e(TAG, "Rime failed to start", t)
@@ -64,11 +65,33 @@ object RimeService {
         val app = context.applicationContext
         executor.execute {
             try {
-                installPacks(app, File(File(app.filesDir, "rime"), "shared"))
+                val root = File(app.filesDir, "rime")
+                installPacks(app, File(root, "shared"))
+                stagePackBuilds(app, File(root, "user"))
             } catch (t: Throwable) {
                 Log.e(TAG, "Rime packs failed to install", t)
             }
             main.post(then)
+        }
+    }
+
+    /**
+     * Rime finds compiled dictionaries in the user folder's build/ (where its maintenance puts
+     * the schemas in default.yaml's list); a pack's schema isn't in that list, so its compiled
+     * files are copied there too, or the schema loads without a dictionary (letters typed,
+     * nothing found).
+     */
+    private fun stagePackBuilds(context: Context, user: File) {
+        val staging = File(user, "build").apply { mkdirs() }
+        for (pack in Packs.ofKind(context, PackKind.RIME)) {
+            if (!Packs.isInstalled(context, pack.id)) continue
+            val build = File(File(Packs.dir(context, pack.id), "rime"), "build")
+            build.listFiles()?.forEach { f ->
+                val dest = File(staging, f.name)
+                if (!dest.exists() || dest.length() != f.length() || dest.lastModified() < f.lastModified()) {
+                    f.copyTo(dest, overwrite = true)
+                }
+            }
         }
     }
 
