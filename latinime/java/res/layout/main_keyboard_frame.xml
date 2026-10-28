@@ -53,19 +53,6 @@
             android:layout_width="match_parent"
             android:layout_height="@dimen/lychee_emoji_search_height"
             android:visibility="gone" />
-        <!-- LYCHEE: what is being typed (pinyin, romaji ...), small above the candidates,
-             like Gboard's; the text field shows nothing until a candidate is picked. -->
-        <TextView
-            android:id="@+id/lychee_preedit"
-            android:layout_width="wrap_content"
-            android:layout_height="@dimen/lychee_preedit_height"
-            android:layout_gravity="top|start"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:gravity="center_vertical"
-            android:textSize="12sp"
-            android:singleLine="true"
-            android:visibility="gone" />
         <!-- Chinese candidates, between the strip's locked edge keys while Rime is composing. -->
         <app.lychee.chinese.CandidateBarView
             android:id="@+id/lychee_candidate_bar"

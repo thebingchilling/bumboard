@@ -534,8 +534,6 @@ private fun ChinesePage() {
     }
     val meaning = prefs.boolPref(Readings.PREF_MEANING) { prefs.getBoolean(Readings.PREF_MEANING, true) }
     val toneColours = prefs.boolPref(Readings.PREF_TONE_COLOURS) { prefs.getBoolean(Readings.PREF_TONE_COLOURS, true) }
-    val otherScript = prefs.boolPref(Readings.PREF_OTHER_SCRIPT) { prefs.getBoolean(Readings.PREF_OTHER_SCRIPT, true) }
-    val badges = prefs.boolPref(Readings.PREF_BADGES) { prefs.getBoolean(Readings.PREF_BADGES, true) }
     Text(
         stringResource(R.string.lychee_chinese_how),
         style = MaterialTheme.typography.bodyMedium,
@@ -609,18 +607,6 @@ private fun ChinesePage() {
                     toneColours.value, toneColours::set,
                 )
             }
-        }
-        row {
-            SwitchRow(
-                it, stringResource(R.string.lychee_other_script), stringResource(R.string.lychee_other_script_summary),
-                otherScript.value, otherScript::set,
-            )
-        }
-        row {
-            SwitchRow(
-                it, stringResource(R.string.lychee_badges), stringResource(R.string.lychee_badges_summary),
-                badges.value, badges::set,
-            )
         }
     }
     val baseSize = prefs.getFloat(ChineseInput.PREF_CANDIDATE_SIZE, 1f)

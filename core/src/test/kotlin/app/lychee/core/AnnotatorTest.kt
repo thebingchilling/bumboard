@@ -66,7 +66,8 @@ class AnnotatorTest {
     fun composedFromPieces() {
         val a = annotator.annotate("我你好", "ngo5 nei5 hou2", InputMode.Cantonese, DisplayPrefs())
         assertEquals(listOf("ngo5 nei5 hou2"), a.lines)
-        assertNull(a.meaning)
+        // every phrase has a meaning: its pieces'
+        assertEquals("I + hello", a.meaning)
         assertTrue(a.resolved!!.composed)
     }
 

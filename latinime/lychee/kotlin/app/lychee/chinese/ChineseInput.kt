@@ -32,7 +32,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private var popup: DictionaryPopup? = null
     private var keyboardFrame: View? = null
     private var shown: Composition? = null
-    private var preedit: android.widget.TextView? = null
+    private var preedit: PreeditPopup? = null
 
     /** True while Rime holds a composition, so LatinIME must leave the composing text alone. */
     var isComposing = false
@@ -51,10 +51,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         popup?.dismiss()
         popup = DictionaryPopup(inputView.context)
         keyboardFrame = inputView.findViewById(R.id.main_keyboard_frame)
-        preedit = inputView.findViewById<android.widget.TextView>(R.id.lychee_preedit)?.also {
-            it.setTextColor(inputView.context.getColor(R.color.lychee_m3_on_key_variant))
-            it.typeface = app.lychee.fonts.LycheeFonts.ui(ime, 400)
-        }
+        preedit?.dismiss()
+        preedit = PreeditPopup(inputView.context)
         this.inputView = inputView
         panel = inputView.findViewById<CandidatePanelView>(R.id.lychee_candidate_panel)?.also { p ->
             p.onPick = { index -> pick(index); updateMoreButton() }
@@ -68,7 +66,6 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         bar?.onLongPick = { index, anchor -> showDictionary(index, anchor) }
         // the notch: a swipe down on the candidates opens them all, with more room
         bar?.onExpand = { if (panel?.visibility != View.VISIBLE) togglePanel() }
-        bar?.onAnnotated = { index, annotation -> if (index == 0) showPreeditReading(annotation) }
         // hold to peek: the card goes when the finger lifts
         bar?.onRelease = { if (prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek") popup?.dismiss() }
         show(null)
@@ -149,18 +146,6 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         return Annotation(listOfNotNull(reading), meaning, null, otherScript = entry?.hanja?.takeIf { engine == "ko" })
     }
 
-    /** The preedit line: what is typed, then the first candidate with its reading. */
-    private fun showPreeditReading(annotation: Annotation) {
-        val p = preedit ?: return
-        val composition = shown ?: return
-        val first = composition.candidates.firstOrNull() ?: return
-        val line = annotation.lines.firstOrNull() ?: return
-        val reading = if (prefs.getBoolean(Readings.PREF_TONE_COLOURS, true)) {
-            ToneColours.apply(line, annotation.tones.firstOrNull(), p.currentTextColor)
-        } else line
-        p.text = android.text.SpannableStringBuilder(composition.preedit)
-            .append("   ").append(first.text).append("  ").append(reading)
-    }
 
     /** Readings for handwriting guesses: Cantonese readings, or Mandarin when typing Simplified. */
     private fun guessAnnotation(): ((Candidate) -> Annotation?)? {
@@ -421,16 +406,20 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         shown = composition
         popup?.dismiss()
         val stripView = strip as? SuggestionStripView
-        updateScriptKey(stripView)
         val guessing = composition == null && guesses.isNotEmpty()
         val candidates = if (guessing) guesses.map { Candidate(it, "") } else composition?.candidates.orEmpty()
-        preedit?.let { p ->
-            val typed = composition?.preedit.orEmpty()
-            p.text = typed
-            p.visibility = if (isActive && typed.isNotEmpty()) View.VISIBLE else View.GONE
-            if (p.visibility == View.VISIBLE) p.bringToFront()
+        val showing = (isActive || guessing) && candidates.isNotEmpty()
+        // the candidates get the whole bar: 中 and 繁/简 wait until nothing is typed
+        updateScriptKey(stripView, hidden = showing)
+        updateBarHeight(stripView, showing)
+        val typed = if (isActive) composition?.preedit.orEmpty() else ""
+        val anchor = bar
+        if (typed.isNotEmpty() && anchor != null && showing) {
+            // after the bar has its new height and place
+            anchor.post { if (shown === composition) preedit?.show(anchor, typed) }
+        } else {
+            preedit?.dismiss()
         }
-        updateBarHeight(stripView, (isActive || guessing) && candidates.isNotEmpty())
         val bar = bar ?: return
         if ((!isActive && !guessing) || candidates.isEmpty()) {
             bar.setCandidates(emptyList(), null)
@@ -467,13 +456,11 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val res = ime.resources
         val standard = res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
         val bar = bar
-        val line = res.getDimensionPixelSize(R.dimen.lychee_preedit_height)
         val height = if (!candidates || bar == null) standard
         else {
             bar.setScale(candidateScale())
-            maxOf(standard, bar.heightFor(annotationLines())) + line
+            maxOf(standard, bar.heightFor(annotationLines()))
         }
-        bar?.setPadding(0, if (candidates) line else 0, 0, 0)
         for (view in listOfNotNull(stripView, bar)) {
             val lp = view.layoutParams ?: continue
             if (lp.height != height) {
@@ -484,9 +471,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     }
 
     /** 繁 or 简 on the strip's left edge on the Chinese keyboards; a tap switches. */
-    private fun updateScriptKey(stripView: SuggestionStripView?) {
+    private fun updateScriptKey(stripView: SuggestionStripView?, hidden: Boolean = false) {
         stripView ?: return
-        if (!isActive || !isChinese) {
+        if (!isActive || !isChinese || hidden) {
             stripView.setLycheeScriptKey(null, null)
             stripView.setLycheeZhongKey(null, null)
             updateEdges(stripView)

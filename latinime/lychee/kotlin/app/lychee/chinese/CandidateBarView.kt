@@ -40,12 +40,10 @@ class CandidateBarView @JvmOverloads constructor(
     /** A candidate's readings arrived (the first one's go in the preedit line). */
     var onAnnotated: (Int, Annotation) -> Unit = { _, _ -> }
 
-    /** What shows around each candidate, from the Chinese settings. */
+    /** What shows under each candidate, from the Chinese settings. Levels and the other script
+     *  are in the word card only, never on the bar. */
     data class Style(
         val toneColours: Boolean = true,
-        val otherScript: Boolean = true,
-        val badges: Boolean = true,
-        /** whose level badge: HSK for Mandarin, frequency band and register for Cantonese */
         val lang: app.lychee.core.Lang? = null,
     )
 
@@ -162,11 +160,13 @@ class CandidateBarView @JvmOverloads constructor(
         canvas.drawRoundRect(notchRect, h / 2, h / 2, notch)
     }
 
-    /** The word with, beside it, the other script on top and its badges below. */
+    /** The word, with its readings and meaning added under it by [fill]. */
     private fun cell(index: Int, candidate: Candidate, first: Boolean) = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
-        setPadding(dp(10), dp(2), dp(10), dp(2))
+        // like Gboard's: as wide as the characters (with their side room), never wider; the
+        // readings and meaning below shrink to fit that width
+        setPadding(0, dp(2), 0, dp(2))
         minimumWidth = dp(44)
         tag = if (first) firstColor else textColor
         background = selectableBackground()
@@ -183,72 +183,26 @@ class CandidateBarView @JvmOverloads constructor(
         }
         word.addView(text(candidate.text, CHAR_SP * scale, tag as Int).apply {
             includeFontPadding = false
+            setPadding(dp(10), 0, dp(10), 0)
             app.lychee.fonts.LycheeFonts.chinese(context)?.let { typeface = it }
         }, wrap())
         addView(word, wrap())
     }
 
-    /** The small column beside the word: the other script, then the badges. */
-    private fun side(annotation: Annotation, color: Int): LinearLayout? {
-        val other = annotation.otherScript?.takeIf { style.otherScript }
-        val badges = if (style.badges) badges(annotation) else emptyList()
-        if (other == null && badges.isEmpty()) return null
-        return LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(3), 0, 0, 0)
-            other?.let {
-                addView(text(it, SIDE_SP * scale, ColorUtils.setAlphaComponent(color, 0xB0)).apply {
-                    includeFontPadding = false
-                    gravity = Gravity.START
-                    app.lychee.fonts.LycheeFonts.chinese(context)?.let { f -> typeface = f }
-                })
-            }
-            if (badges.isNotEmpty()) {
-                addView(text(badges.joinToString(" "), BADGE_SP * scale, ColorUtils.setAlphaComponent(color, 0xB0)).apply {
-                    includeFontPadding = false
-                    gravity = Gravity.START
-                    typeface = app.lychee.fonts.LycheeFonts.ui(context, 600)
-                })
-            }
-        }
-    }
-
-    /** HSK 1-6 under Mandarin; colloquial or written, then the frequency band, under Cantonese. */
-    private fun badges(annotation: Annotation): List<String> {
-        val info = annotation.info ?: return emptyList()
-        return when (style.lang) {
-            app.lychee.core.Lang.Mandarin -> listOfNotNull(info.hsk?.let { "HSK$it" })
-            app.lychee.core.Lang.Cantonese -> listOfNotNull(
-                when (info.register) {
-                    "col" -> context.getString(R.string.lychee_badge_colloquial)
-                    "wri" -> context.getString(R.string.lychee_badge_written)
-                    else -> null
-                },
-                when (info.band) {
-                    1 -> context.getString(R.string.lychee_badge_common)
-                    2 -> context.getString(R.string.lychee_badge_everyday)
-                    3 -> context.getString(R.string.lychee_badge_advanced)
-                    else -> null
-                },
-            )
-            else -> emptyList()
-        }
-    }
-
     private fun fill(cell: LinearLayout, annotation: Annotation) {
         val color = cell.tag as Int
         while (cell.childCount > 1) cell.removeViewAt(1)
-        (cell.getChildAt(0) as? LinearLayout)?.let { word ->
-            while (word.childCount > 1) word.removeViewAt(1)
-            side(annotation, color)?.let { word.addView(it, wrap()) }
-        }
         val readingColor = ColorUtils.setAlphaComponent(color, 0xD0)
         annotation.lines.forEachIndexed { i, line ->
             val shown = if (style.toneColours) ToneColours.apply(line, annotation.tones.getOrNull(i), color) else line
-            cell.addView(text(shown, READING_SP * scale, readingColor).apply {
+            cell.addView(ShrinkToFitView(context, READING_SP * scale).apply {
+                text = shown
+                setTextColor(readingColor)
                 typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
                 includeFontPadding = false
-            }, wrap())
+                gravity = Gravity.CENTER
+                setPadding(dp(2), 0, dp(2), 0)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         annotation.meaning?.let { meaning ->
             // as wide as the characters and readings above it, never wider
@@ -289,6 +243,32 @@ class CandidateBarView @JvmOverloads constructor(
     }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
+
+    /**
+     * One line that never widens its cell: the text shrinks (down to 70%) to fit the cell's
+     * width, and past that is cut short.
+     */
+    private class ShrinkToFitView(context: Context, private val sp: Float) : TextView(context) {
+        init {
+            isSingleLine = true
+            ellipsize = TextUtils.TruncateAt.END
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, sp)
+        }
+
+        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+            val available = MeasureSpec.getSize(widthMeasureSpec) - paddingLeft - paddingRight
+            val base = sp * resources.displayMetrics.scaledDensity
+            if (MeasureSpec.getMode(widthMeasureSpec) != MeasureSpec.UNSPECIFIED && available > 0) {
+                paint.textSize = base
+                val wanted = paint.measureText(text.toString())
+                val size = if (wanted <= available) base else maxOf(base * 0.7f, base * available / wanted)
+                if (textSize != size) setTextSize(TypedValue.COMPLEX_UNIT_PX, size)
+            } else if (textSize != base) {
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, base)
+            }
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        }
+    }
 
     /**
      * One line holding as many whole words of [fullText] as fit its width (the width comes from
@@ -335,8 +315,6 @@ class CandidateBarView @JvmOverloads constructor(
         const val CHAR_SP = 20f
         const val READING_SP = 11.5f
         const val MEANING_SP = 10.5f
-        const val SIDE_SP = 9.5f
-        const val BADGE_SP = 7.5f
 
         /**
          * Whether the phone's fonts can draw [text] (no empty boxes). Paint.hasGlyph takes one

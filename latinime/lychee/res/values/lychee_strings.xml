@@ -140,10 +140,6 @@
     <string name="lychee_key_sound_bubble">Bubble</string>
     <string name="lychee_tone_colours">Tone colours</string>
     <string name="lychee_tone_colours_summary">Each syllable in the colour of its tone</string>
-    <string name="lychee_other_script">Other script beside the word</string>
-    <string name="lychee_other_script_summary">学校 beside 學校, 學校 beside 学校</string>
-    <string name="lychee_badges">Level badges</string>
-    <string name="lychee_badges_summary">HSK level for Mandarin; common, everyday or advanced, and colloquial (口語) or written (書面), for Cantonese</string>
     <string name="lychee_candidate_size_for">Candidate size: %1$s</string>
     <string name="lychee_language_cantonese">Cantonese</string>
     <string name="lychee_language_mandarin">Mandarin</string>

@@ -160,7 +160,10 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
         }
         val reading = readings.takeIf { it.all { r -> r != null } }?.joinToString(" ")
         val other = others.takeIf { it.all { r -> r != null } }?.joinToString(" ")
-        return Resolved(lang, reading, other, null, headwords, composed = true)
+        // a phrase read piece by piece: the pieces' meanings, so every candidate has one
+        val meaning = headwords.mapNotNull { meaning(listOf(it), lang, null)?.let { m -> shorten(m, 16) } }
+            .takeIf { it.isNotEmpty() }?.joinToString(" + ")
+        return Resolved(lang, reading, other, meaning, headwords, composed = true)
     }
 
     private fun matches(reading: String, hint: String, lang: Lang): Boolean = when (lang) {
