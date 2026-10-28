@@ -87,6 +87,8 @@ class HandwritingPanelView @JvmOverloads constructor(
         }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { setMargins(dp(8), dp(6), dp(8), dp(4)) })
         addView(bottom, LayoutParams(LayoutParams.MATCH_PARENT, dp(52)).apply { setMargins(dp(4), 0, dp(4), dp(4)) })
         buildBottomRow()
+        // the keyboard's own bottom row (space, ?123, comma, Enter) stays below the pad
+        bottom.visibility = GONE
         visibility = GONE
     }
 
@@ -151,11 +153,32 @@ class HandwritingPanelView @JvmOverloads constructor(
             if (visibility == VISIBLE) visibility = GONE
             return
         }
-        LycheePanels.cover(this, root)
+        leaveBottomRow()
         if (visibility != VISIBLE) show()
     }
 
+    /** Shrinks the pad (already covering the keys) to the rows above the space bar. */
+    fun leaveBottomRow() {
+        val root = parent as? View ?: return
+        val keys = root.findViewById<com.android.inputmethod.keyboard.MainKeyboardView>(R.id.keyboard_view) ?: return
+        val space = keys.keyboard?.sortedKeys?.firstOrNull { it.code == Constants.CODE_SPACE } ?: return
+        // from the keys' full area each time, so it never shrinks twice
+        LycheePanels.cover(this, root)
+        val lp = layoutParams as? FrameLayout.LayoutParams ?: return
+        val below = keys.height - space.y
+        if (below <= 0 || lp.height <= below) return
+        lp.height = keys.height - below
+        lp.bottomMargin += below
+        layoutParams = lp
+    }
+
+    /** Types the character still on the pad, before a key of the keyboard does anything. */
+    fun flush() {
+        if (visibility == VISIBLE) commitPending()
+    }
+
     fun show() {
+        leaveBottomRow()
         visibility = VISIBLE
         pad.clear()
         updateHint()

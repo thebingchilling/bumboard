@@ -1704,6 +1704,13 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                 endLycheeEmojiSearch();
             }
         }
+        // LYCHEE: a character still on the handwriting pad goes in before the key's
+        if (mInputView != null) {
+            final View pad = mInputView.findViewById(R.id.lychee_handwriting_panel);
+            if (pad instanceof app.lychee.handwriting.HandwritingPanelView) {
+                ((app.lychee.handwriting.HandwritingPanelView) pad).flush();
+            }
+        }
         // LYCHEE: Chinese subtypes send keys to Rime first.
         if (mLycheeChinese.onEvent(event)) {
             mKeyboardSwitcher.onEvent(event, getCurrentAutoCapsState(),
@@ -2200,9 +2207,17 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         case SETTINGS:
             launchSettings(null);
             break;
-        case HANDWRITING:
-            showLycheePanel(R.id.lychee_handwriting_panel);
+        case HANDWRITING: {
+            // the shortcut opens and closes it
+            final View pad = mInputView == null ? null
+                    : mInputView.findViewById(R.id.lychee_handwriting_panel);
+            if (pad != null && pad.getVisibility() == View.VISIBLE) {
+                pad.setVisibility(View.GONE);
+            } else {
+                showLycheePanel(R.id.lychee_handwriting_panel);
+            }
             break;
+        }
         }
     }
 

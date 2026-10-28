@@ -53,9 +53,13 @@ class Zinnia private constructor(private var handle: Long) {
                 // hans.model / hant.model: the script being typed first
                 return files.sortedBy { if (it.name.startsWith(if (simplified) "hans" else "hant")) 0 else 1 }
             }
-            val chinese = models("hw_zh").ifEmpty {
-                (if (simplified) listOf("hw_zh_hans", "hw_zh_hant") else listOf("hw_zh_hant", "hw_zh_hans")).flatMap(::models)
-            }
+            // the keyboard's own language only: Cantonese writes Traditional, Mandarin the script
+            // being typed, Japanese Japanese
+            val traditional = engine == "yue" || (engine != "ja" && !simplified)
+            val zh = models("hw_zh")
+            val chinese = zh.filter { it.name.startsWith(if (traditional) "hant" else "hans") }.ifEmpty {
+                models(if (traditional) "hw_zh_hant" else "hw_zh_hans")
+            }.ifEmpty { zh }
             val japanese = models("hw_ja")
             return if (engine == "ja") japanese.ifEmpty { chinese } else chinese.ifEmpty { japanese }
         }

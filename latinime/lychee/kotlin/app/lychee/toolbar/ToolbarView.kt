@@ -145,8 +145,32 @@ class ToolbarView @JvmOverloads constructor(
             return
         }
         shortcuts.forEach { sc ->
-            row.addView(button(sc.icon, sc.label) { lycheeHost()?.lycheeRunShortcut(sc) }, shortcutParams())
+            val label = if (sc == Shortcut.HANDWRITING) handwritingLabel(lycheeHost()?.lycheeEngine()) else null
+            val view = if (label != null) textButton(label) { lycheeHost()?.lycheeRunShortcut(sc) }
+                else button(sc.icon, sc.label) { lycheeHost()?.lycheeRunShortcut(sc) }
+            row.addView(view, if (label != null) LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(40))
+                .apply { gravity = Gravity.CENTER_VERTICAL } else shortcutParams())
         }
+    }
+
+    /** Handwriting writes the keyboard's own language, and says so: 手寫, 手写, 手書き. */
+    private fun handwritingLabel(engine: String?): String? = when (engine) {
+        "yue" -> "手寫"
+        "cmn" -> if (prefs.getString(app.lychee.chinese.ChineseInput.PREF_SCRIPT, "traditional") == "simplified") "手写" else "手寫"
+        "ja" -> "手書き"
+        else -> null
+    }
+
+    private fun textButton(label: String, onClick: () -> Unit) = TextView(context).apply {
+        text = label
+        setTextColor(palette.onSurface)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+        app.lychee.fonts.LycheeFonts.chinese(context)?.let { typeface = it }
+        gravity = Gravity.CENTER
+        setPadding(dp(10), 0, dp(10), 0)
+        background = context.getDrawable(R.drawable.lychee_m3_suggestion)
+        contentDescription = context.getString(R.string.lychee_sc_handwriting)
+        setOnClickListener { onClick() }
     }
 
     private fun titleText(text: Int) = TextView(context).apply {

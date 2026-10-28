@@ -56,7 +56,8 @@ class ShortcutStore(private val prefs: SharedPreferences) {
         const val PREF_ORDER = "lychee_shortcuts_order"
         const val PREF_PINNED = "lychee_shortcuts_pinned"
         /** Like Gboard's bar: next language, text editing and undo. */
-        const val DEFAULT_PINNED = "language,text_edit,undo"
+        // handwriting first: on the Chinese and Japanese keyboards it writes their language
+        const val DEFAULT_PINNED = "handwriting,language,text_edit,undo"
     }
 }
 
