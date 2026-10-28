@@ -34,6 +34,11 @@ import java.util.concurrent.Executors
  * characters can be written one after another. The guesses stay above the pad: tap one to
  * replace what was typed. ⌫ takes back the last stroke while writing, otherwise deletes.
  *
+ * Two ways in: the Handwriting shortcut opens it over any keyboard (with Back), and the
+ * 手寫 Handwriting keyboard ([keyboardMode], subtype extra `BumHandwriting`) is this pad in place
+ * of the letters, with Gboard's bottom row: ?123, emoji, space, ⌫ and Enter. ?123 shows the
+ * symbols underneath; ABC there brings the pad back.
+ *
  * Recognition is Zinnia with a handwriting pack's model, opened only while the pane is open.
  */
 class HandwritingPanelView @JvmOverloads constructor(
@@ -45,6 +50,19 @@ class HandwritingPanelView @JvmOverloads constructor(
     private val main = Handler(Looper.getMainLooper())
     private val pad = Pad()
     private val candidates = LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+    }
+    /** "Write here", faint in the middle of the empty pad. */
+    private val hint = TextView(context).apply {
+        setText(R.string.bum_hw_write_here)
+        setTextColor(palette.onSurfaceVariant)
+        alpha = 0.7f
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        gravity = Gravity.CENTER
+        visibility = GONE
+    }
+    private val bottom = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
     }
@@ -72,30 +90,91 @@ class HandwritingPanelView @JvmOverloads constructor(
                 cornerRadius = dp(16).toFloat()
                 setColor(palette.surfaceContainer)
             }
+            addView(hint, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(pad, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(message, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { setMargins(dp(8), 0, dp(8), dp(4)) })
-        addView(LinearLayout(context).apply {
-            orientation = HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(BumPanels.backButton(context) { this@HandwritingPanelView.visibility = GONE }, LayoutParams(dp(56), LayoutParams.MATCH_PARENT))
-            addView(key(null, R.string.bum_hw_space, isSpace = true) { space() }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
-            addView(key(R.drawable.ic_sym_backspace, R.string.bum_emoji_delete) { backspace() }, LayoutParams(dp(72), LayoutParams.MATCH_PARENT))
-            addView(key(R.drawable.ic_sym_keyboard_return, R.string.bum_hw_enter) { commitPending(); bumHost()?.bumSendCode(Constants.CODE_ENTER) },
-                LayoutParams(dp(72), LayoutParams.MATCH_PARENT))
-        }, LayoutParams(LayoutParams.MATCH_PARENT, dp(52)).apply { setMargins(dp(4), 0, dp(4), dp(4)) })
+        addView(bottom, LayoutParams(LayoutParams.MATCH_PARENT, dp(52)).apply { setMargins(dp(4), 0, dp(4), dp(4)) })
+        buildBottomRow()
         visibility = GONE
+    }
+
+    /** True on the 手寫 Handwriting keyboard: the pad stands in for the letters. */
+    var keyboardMode = false
+        set(value) {
+            if (field == value) return
+            field = value
+            buildBottomRow()
+            if (!value && visibility == VISIBLE) visibility = GONE
+            follow()
+        }
+
+    private fun buildBottomRow() {
+        bottom.removeAllViews()
+        if (keyboardMode) {
+            // Gboard's handwriting row: ?123, emoji, space, ⌫, Enter
+            bottom.addView(key(null, R.string.bum_hw_symbols, pill = true) {
+                commitPending()
+                bumHost()?.bumSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
+            }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.5f))
+            bottom.addView(key(R.drawable.ic_sym_mood, R.string.bum_sc_emoji) {
+                commitPending()
+                bumHost()?.bumSendCode(Constants.CODE_EMOJI)
+            }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+            bottom.addView(key(null, R.string.bum_hw_space_label, isSpace = true) { space() }, LayoutParams(0, LayoutParams.MATCH_PARENT, 4f))
+        } else {
+            bottom.addView(BumPanels.backButton(context) { this@HandwritingPanelView.visibility = GONE }, LayoutParams(dp(56), LayoutParams.MATCH_PARENT))
+            bottom.addView(key(null, R.string.bum_hw_space, isSpace = true) { space() }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        }
+        val weight = if (keyboardMode) 1.25f else 0f
+        bottom.addView(key(R.drawable.ic_sym_backspace, R.string.bum_emoji_delete) { backspace() },
+            if (keyboardMode) LayoutParams(0, LayoutParams.MATCH_PARENT, weight) else LayoutParams(dp(72), LayoutParams.MATCH_PARENT))
+        bottom.addView(key(R.drawable.ic_sym_keyboard_return, R.string.bum_hw_enter, enter = true) {
+            commitPending(); bumHost()?.bumSendCode(Constants.CODE_ENTER)
+        }, if (keyboardMode) LayoutParams(0, LayoutParams.MATCH_PARENT, weight) else LayoutParams(dp(72), LayoutParams.MATCH_PARENT))
+    }
+
+    private val layoutListener = android.view.ViewTreeObserver.OnGlobalLayoutListener { follow() }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
+    }
+
+    override fun onDetachedFromWindow() {
+        viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
+        super.onDetachedFromWindow()
+    }
+
+    /**
+     * On the Handwriting keyboard: covers the letters exactly while they show (not the symbols,
+     * the emoji panel or another panel).
+     */
+    private fun follow() {
+        if (!keyboardMode) return
+        val root = parent as? View ?: return
+        val keys = root.findViewById<View>(R.id.keyboard_view)
+        val letters = com.android.inputmethod.keyboard.KeyboardSwitcher.getInstance().keyboard?.mId?.isAlphabetKeyboard == true
+        val show = keys != null && keys.isShown && keys.height > 0 && letters && !BumPanels.anyOtherShown(root, this)
+        if (!show) {
+            if (visibility == VISIBLE) visibility = GONE
+            return
+        }
+        BumPanels.cover(this, root)
+        if (visibility != VISIBLE) show()
     }
 
     fun show() {
         visibility = VISIBLE
         pad.clear()
+        updateHint()
         lastTyped = null
         showGuesses(emptyList())
         release()
         val model = Zinnia.modelFor(context, bumHost()?.bumEngine())
         zinnia = model?.let { Zinnia.open(it) }
         message.visibility = if (zinnia == null) VISIBLE else GONE
+        updateHint()
         message.text = context.getString(if (model == null) R.string.bum_hw_no_pack else R.string.bum_hw_bad_pack)
         message.setOnClickListener { bumHost()?.bumOpenSettings("Packs") }
     }
@@ -176,6 +255,11 @@ class HandwritingPanelView @JvmOverloads constructor(
         bumHost()?.bumSendCode(Constants.CODE_DELETE)
     }
 
+    /** "Write here" while the pad is empty and ready. */
+    private fun updateHint() {
+        hint.visibility = if (zinnia != null && !pad.hasInk) VISIBLE else GONE
+    }
+
     private fun showGuesses(list: List<String>) {
         guesses = list
         candidates.removeAllViews()
@@ -196,20 +280,32 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     // ------------------------------------------------------------------ views
 
-    private fun key(icon: Int?, label: Int, isSpace: Boolean = false, onClick: () -> Unit): View {
+    private fun key(
+        icon: Int?, label: Int, isSpace: Boolean = false, pill: Boolean = false, enter: Boolean = false,
+        onClick: () -> Unit,
+    ): View {
         val view: View = if (icon != null) ImageView(context).apply {
             setImageResource(icon)
-            imageTintList = ColorStateList.valueOf(palette.onSecondaryContainer)
+            imageTintList = ColorStateList.valueOf(if (enter) palette.onPrimary else palette.onSecondaryContainer)
             scaleType = ImageView.ScaleType.CENTER
         } else TextView(context).apply {
             setText(label)
-            setTextColor(palette.onSurface)
+            setTextColor(if (isSpace) palette.onSurface else palette.onSecondaryContainer)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
+            typeface = app.bumboard.fonts.BumFonts.ui(context, if (pill) 600 else 500)
             gravity = Gravity.CENTER
         }
         view.contentDescription = context.getString(label)
-        view.background = if (isSpace) BumPanels.letterKey(context) else BumPanels.functionalKey(context)
+        view.background = when {
+            // Enter and ?123 are pills, like the keyboard's
+            enter -> GradientDrawable().apply {
+                cornerRadius = dp(100).toFloat()
+                setColor(palette.primary)
+            }
+            pill -> app.bumboard.ui.BumColorStyle.themed(context).getDrawable(R.drawable.bum_m3_key_pill_flat)
+            isSpace -> BumPanels.letterKey(context)
+            else -> BumPanels.functionalKey(context)
+        }
         view.setOnClickListener { onClick() }
         return FrameLayout(context).apply {
             setPadding(dp(3), dp(3), dp(3), dp(3))
@@ -222,7 +318,8 @@ class HandwritingPanelView @JvmOverloads constructor(
         private val ink = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = palette.onSurface
             style = Paint.Style.STROKE
-            strokeWidth = dp(5).toFloat()
+            // a thin pen, like Gboard's
+            strokeWidth = resources.displayMetrics.density * 3.5f
             strokeCap = Paint.Cap.ROUND
             strokeJoin = Paint.Join.ROUND
         }
@@ -237,6 +334,7 @@ class HandwritingPanelView @JvmOverloads constructor(
             points.clear()
             current = null
             invalidate()
+            updateHint()
         }
 
         fun undo() {
@@ -264,6 +362,7 @@ class HandwritingPanelView @JvmOverloads constructor(
             if (zinnia == null) return false
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
+                    hint.visibility = GONE
                     main.removeCallbacks(autoCommit)
                     current = arrayListOf(event.x, event.y)
                     paths += Path().apply { moveTo(event.x, event.y) }

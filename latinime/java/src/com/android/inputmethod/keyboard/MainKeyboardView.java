@@ -859,6 +859,10 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     private String layoutLanguageOnSpacebar(final Paint paint,
             final RichInputMethodSubtype subtype, final int width) {
         // BUMBOARD: the input method's own name on BumBoard's engines, like Gboard's 拼音
+        if (subtype.getRawSubtype().getExtraValueOf("BumHandwriting") != null
+                && fitsTextIntoWidth(width, "\u624B\u5BEB", paint)) {
+            return "\u624B\u5BEB"; // 手寫
+        }
         final String engine = subtype.getRawSubtype().getExtraValueOf("BumEngine");
         if (engine != null) {
             final String name;

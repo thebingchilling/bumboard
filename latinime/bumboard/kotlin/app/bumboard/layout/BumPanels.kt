@@ -41,6 +41,10 @@ object BumPanels {
     fun anyShown(inputView: View): Boolean =
         PANELS.any { inputView.findViewById<View>(it)?.visibility == View.VISIBLE }
 
+    /** Whether a panel other than [except] is open over the keys. */
+    fun anyOtherShown(inputView: View, except: View): Boolean =
+        PANELS.any { id -> inputView.findViewById<View>(id)?.let { it !== except && it.visibility == View.VISIBLE } == true }
+
     private val PANELS = intArrayOf(
         R.id.bum_voice_panel, R.id.bum_gallery_panel, R.id.bum_text_edit_panel,
         R.id.bum_resize_panel, R.id.bum_numpad_panel, R.id.bum_candidate_panel,

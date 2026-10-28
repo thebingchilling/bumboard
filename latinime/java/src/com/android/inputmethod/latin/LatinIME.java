@@ -904,6 +904,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                 bumWindow.setNavigationBarContrastEnforced(false);
             }
         }
+        updateBumHandwriting();
         mBumVoice =(app.bumboard.voice.VoicePanelView) view.findViewById(R.id.bum_voice_panel);
         if (mBumVoice != null) {
             mBumVoice.setOnText(text -> {
@@ -911,6 +912,16 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                 return kotlin.Unit.INSTANCE;
             });
         }
+    }
+
+    // BUMBOARD: on the Handwriting keyboard (BumHandwriting) the pad stands in for the letters.
+    private void updateBumHandwriting() {
+        if (mInputView == null) return;
+        final app.bumboard.handwriting.HandwritingPanelView pad =
+                (app.bumboard.handwriting.HandwritingPanelView) mInputView.findViewById(R.id.bum_handwriting_panel);
+        if (pad == null) return;
+        final InputMethodSubtype subtype = mRichImm.getCurrentSubtype().getRawSubtype();
+        pad.setKeyboardMode(subtype != null && subtype.getExtraValueOf("BumHandwriting") != null);
     }
 
     // BUMBOARD: the mic key starts voice typing in the current keyboard's language.
@@ -1003,6 +1014,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         StatsUtils.onSubtypeChanged(oldSubtype, subtype);
         mRichImm.onSubtypeChanged(subtype);
         if (mBumChinese != null) mBumChinese.onSubtypeChanged(subtype);
+        updateBumHandwriting();
         mInputLogic.onSubtypeChanged(SubtypeLocaleUtils.getCombiningRulesExtraValue(subtype),
                 mSettings.getCurrent());
         loadKeyboard();
@@ -1030,6 +1042,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         super.onStartInputView(editorInfo, restarting);
         mBumChinese.reset();
         mBumChinese.onSubtypeChanged(mRichImm.getCurrentSubtype().getRawSubtype());
+        updateBumHandwriting();
         mBumChinese.onSettingsChanged();
 
         mDictionaryFacilitator.onStartInput();

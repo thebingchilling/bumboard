@@ -8,6 +8,10 @@
     <string name="bum_section_keyboard">Keyboard</string>
     <string name="bum_section_app">App</string>
     <string name="bum_section_languages">Languages</string>
+    <string name="bum_subtype_hw" translatable="false">手寫 Handwriting</string>
+    <string name="bum_hw_write_here">在這裡手寫輸入文字 · Write here</string>
+    <string name="bum_hw_symbols" translatable="false">?123</string>
+    <string name="bum_hw_space_label" translatable="false">手寫</string>
     <string name="bum_section_typing">Typing</string>
     <string name="bum_section_look">Look</string>
     <string name="bum_section_more">More</string>
