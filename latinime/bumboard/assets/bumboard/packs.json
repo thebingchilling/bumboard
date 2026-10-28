@@ -1,6 +1,6 @@
 {
-  "_comment": "BumBoard's pack catalogue. BumBoard has no network access: 'download' (a direct link to a file on this repo's 'packs' release, where the packs workflow builds or mirrors every pack) opens in the browser, which saves the file; opening it installs it in BumBoard. 'url' is the pack's source, for credit and updates. 'sha256' (optional) pins an exact file; 'pick' chooses the font inside a zip; 'prefer' breaks ties between matches.",
-  "release": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
+  "_comment": "BumBoard's pack catalogue. BumBoard has no network access: 'download' (a direct link to a file on the public 'packs' release of thebingchilling/lychee, where the packs workflow builds or mirrors every pack) opens in the browser, which saves the file; opening it installs it in BumBoard. 'url' is the pack's source, for credit and updates. 'sha256' (optional) pins an exact file; 'pick' chooses the font inside a zip; 'prefer' breaks ties between matches.",
+  "release": "https://github.com/thebingchilling/lychee/releases/tag/packs",
   "packs": [
     {
       "id": "font_zh_wenkai",
@@ -14,7 +14,7 @@
       "size": "25 MB",
       "license": "SIL Open Font License 1.1",
       "credit": "LXGW WenKai by LXGW",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-font-zh-wenkai.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-font-zh-wenkai.zip"
     },
     {
       "id": "font_zh_wenkai_tc",
@@ -28,7 +28,7 @@
       "size": "20 MB",
       "license": "SIL Open Font License 1.1",
       "credit": "LXGW WenKai TC by LXGW",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-font-zh-wenkai-tc.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-font-zh-wenkai-tc.zip"
     },
     {
       "id": "font_zh_chiron_hei",
@@ -43,7 +43,7 @@
       "size": "15 MB",
       "license": "SIL Open Font License 1.1",
       "credit": "Chiron Hei HK by Tamcy",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-font-zh-chiron-hei.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-font-zh-chiron-hei.zip"
     },
     {
       "id": "font_zh_chiron_sung",
@@ -58,7 +58,7 @@
       "size": "20 MB",
       "license": "SIL Open Font License 1.1",
       "credit": "Chiron Sung HK by Tamcy",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-font-zh-chiron-sung.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-font-zh-chiron-sung.zip"
     },
     {
       "id": "font_zh_zhuque",
@@ -73,7 +73,7 @@
       "size": "10 MB",
       "license": "SIL Open Font License 1.1",
       "credit": "Zhuque Fangsong by TrionesType",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-font-zh-zhuque.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-font-zh-zhuque.zip"
     },
     {
       "id": "font_zh_gensen",
@@ -88,7 +88,7 @@
       "size": "12 MB",
       "license": "SIL Open Font License 1.1",
       "credit": "GenSen Rounded by ButTaiwan",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-font-zh-gensen.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-font-zh-gensen.zip"
     },
     {
       "id": "font_zh_custom",
@@ -114,7 +114,7 @@
       "size": "10 MB",
       "license": "SIL Open Font License 1.1",
       "credit": "Noto Color Emoji by Google",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-emoji-noto-latest.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-noto-latest.zip"
     },
     {
       "id": "emoji_twemoji",
@@ -128,7 +128,7 @@
       "size": "1.5 MB",
       "license": "Graphics CC BY 4.0; font build MPL/Apache",
       "credit": "Twemoji by Twitter, Inc and other contributors (CC BY 4.0); font by Mozilla",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-emoji-twemoji.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-twemoji.zip"
     },
     {
       "id": "emoji_openmoji",
@@ -143,7 +143,7 @@
       "size": "10 MB",
       "license": "CC BY-SA 4.0",
       "credit": "OpenMoji, the open-source emoji project (CC BY-SA 4.0)",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-emoji-openmoji.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-openmoji.zip"
     },
     {
       "id": "emoji_blobmoji",
@@ -157,7 +157,7 @@
       "size": "10 MB",
       "license": "Apache License 2.0",
       "credit": "Blobmoji by C1710, based on Noto Emoji by Google",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-emoji-blobmoji.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-blobmoji.zip"
     },
     {
       "id": "emoji_serenity",
@@ -171,7 +171,7 @@
       "size": "1 MB",
       "license": "BSD 2-Clause",
       "credit": "SerenityOS emoji by the SerenityOS contributors",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-emoji-serenity.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-serenity.zip"
     },
     {
       "id": "emoji_custom",
@@ -192,12 +192,12 @@
       "summary": "Write 繁體 characters, including Cantonese ones",
       "version": "1",
       "built": true,
-      "url": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
-      "file": "bumboard-hw-zh-hant.zip",
+      "url": "https://github.com/thebingchilling/lychee/releases/tag/packs",
+      "file": "lychee-hw-zh-hant.zip",
       "size": "33 MB",
       "license": "LGPL 2.1 (Tegaki/Tomoe models); Zinnia engine BSD",
       "credit": "Handwriting models from the Tegaki and Tomoe projects",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-hw-zh-hant.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-hw-zh-hant.zip"
     },
     {
       "id": "hw_zh_hans",
@@ -206,12 +206,12 @@
       "summary": "Write 简体 characters",
       "version": "1",
       "built": true,
-      "url": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
-      "file": "bumboard-hw-zh-hans.zip",
+      "url": "https://github.com/thebingchilling/lychee/releases/tag/packs",
+      "file": "lychee-hw-zh-hans.zip",
       "size": "17 MB",
       "license": "LGPL 2.1 (Tegaki/Tomoe models); Zinnia engine BSD",
       "credit": "Handwriting models from the Tegaki and Tomoe projects",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-hw-zh-hans.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-hw-zh-hans.zip"
     },
     {
       "id": "hw_ja",
@@ -220,12 +220,12 @@
       "summary": "Write kana and kanji",
       "version": "1",
       "built": true,
-      "url": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
-      "file": "bumboard-hw-ja.zip",
+      "url": "https://github.com/thebingchilling/lychee/releases/tag/packs",
+      "file": "lychee-hw-ja.zip",
       "size": "17 MB",
       "license": "LGPL 2.1 (Tomoe model); Zinnia engine BSD",
       "credit": "Handwriting model from the Tomoe project",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-hw-ja.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-hw-ja.zip"
     },
     {
       "id": "rime_ja",
@@ -234,12 +234,12 @@
       "summary": "Kana to kanji conversion for the Japanese keyboards",
       "version": "1",
       "built": true,
-      "url": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
-      "file": "bumboard-rime-ja.zip",
+      "url": "https://github.com/thebingchilling/lychee/releases/tag/packs",
+      "file": "lychee-rime-ja.zip",
       "size": "10 MB",
       "license": "Mozc dictionary (BSD-3-Clause, IPAdic licence)",
       "credit": "Japanese dictionary from Mozc (Google) and IPAdic",
-      "download": "https://github.com/thebingchilling/bumboard/releases/download/packs/bumboard-rime-ja.zip"
+      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-rime-ja.zip"
     }
   ]
 }

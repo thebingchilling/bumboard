@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds BumBoard's handwriting packs (Zinnia models) into $1:
-#   bumboard-hw-ja.zip, bumboard-hw-zh-hans.zip, bumboard-hw-zh-hant.zip
+#   lychee-hw-ja.zip, lychee-hw-zh-hans.zip, lychee-hw-zh-hant.zip
 # Models come from Ubuntu's tegaki-zinnia-* packages (LGPL-2.1, from the Tegaki project), or
 # else from zinnia-tomoe (LGPL-2.1, Tomoe project) converted with zinnia_convert. A pack whose
 # model can't be found is skipped with a warning.
@@ -48,6 +48,6 @@ for lang in ja zh-hans zh-hant; do
   cp "$model" "$dir/handwriting.model"
   printf '{"id": "%s", "name": "%s", "version": "1"}' "${IDS[$lang]}" "${NAMES[$lang]}" > "$dir/pack.json"
   printf 'Zinnia handwriting model from the Tegaki / Tomoe projects, LGPL-2.1.\nSource: https://github.com/tegaki and https://taku910.github.io/zinnia/\n' > "$dir/LICENSE.txt"
-  (cd "$dir" && zip -q -X -r "$OUT/bumboard-hw-$lang.zip" pack.json handwriting.model LICENSE.txt)
-  echo "built bumboard-hw-$lang.zip ($(du -h "$OUT/bumboard-hw-$lang.zip" | cut -f1))"
+  (cd "$dir" && zip -q -X -r "$OUT/lychee-hw-$lang.zip" pack.json handwriting.model LICENSE.txt)
+  echo "built lychee-hw-$lang.zip ($(du -h "$OUT/lychee-hw-$lang.zip" | cut -f1))"
 done

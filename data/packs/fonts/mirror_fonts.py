@@ -3,7 +3,7 @@
 
 The fonts' own release pages list many files, which is hard to pick from on a phone. This
 fetches each font named in latinime/bumboard/assets/bumboard/packs.json (its latest release,
-the file matching 'pick', ties broken by 'prefer') and writes bumboard-<id>.zip: the font, its
+the file matching 'pick', ties broken by 'prefer') and writes lychee-<id>.zip: the font, its
 licence when the release has one, and a pack.json so BumBoard knows which pack it is. The
 packs workflow attaches these to the "packs" release; the catalogue's 'download' links point
 there. Uses GH_TOKEN for the GitHub API when set.
@@ -28,7 +28,7 @@ LICENCE = re.compile(r"(?i)(^|/)(OFL|LICEN[CS]E)[^/]*$")
 
 
 def get(url: str, api: bool = False) -> bytes:
-    headers = {"User-Agent": "bumboard-packs"}
+    headers = {"User-Agent": "lychee-packs"}
     token = os.environ.get("GH_TOKEN")
     if api:
         headers["Accept"] = "application/vnd.github+json"
@@ -100,7 +100,11 @@ def main():
         if pack["kind"] not in ("font_zh", "font_emoji") or pack.get("custom"):
             continue
         name, font, licence, version = fetch(pack)
-        dest = args.out / f"bumboard-{pack['id'].replace('_', '-')}.zip"
+        if not licence:
+            # every published zip carries its licence: the catalogue's when the release has no file
+            licence = (f"{pack['name']}\n{pack.get('credit', '')}\nLicence: {pack.get('license', '')}\n"
+                       f"Source: {pack['url']}\n").encode()
+        dest = args.out / f"lychee-{pack['id'].replace('_', '-')}.zip"
         with zipfile.ZipFile(dest, "w", zipfile.ZIP_DEFLATED) as z:
             z.writestr("pack.json", json.dumps({"id": pack["id"], "name": pack["name"], "version": version}, ensure_ascii=False))
             z.writestr(name, font)

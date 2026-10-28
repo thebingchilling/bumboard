@@ -1,9 +1,9 @@
-name: Build BumBoard packs
+name: Build Lychee packs
 
-# The optional downloads BumBoard's catalogue (latinime/bumboard/assets/bumboard/packs.json)
-# links to: built (or, for fonts, mirrored) here and attached to this repository's "packs"
-# release. BumBoard itself has no network access: the browser downloads these, and opening the
-# downloaded file installs it in BumBoard.
+# The optional downloads the app's catalogue (latinime/bumboard/assets/bumboard/packs.json)
+# links to: built (or, for fonts, mirrored) here and published on the public lychee repository's
+# "packs" release. The app has no network access: the browser downloads these, and opening the
+# downloaded file installs it.
 on:
   workflow_dispatch: {}
   push:
@@ -51,16 +51,27 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: bumboard-packs
-          path: out/packs/*.zip
+          name: lychee-packs
+          path: out/packs/lychee-*.zip
           if-no-files-found: error
 
-      - name: Publish to the "packs" release
+      # Public: the packs go to the "packs" release of thebingchilling/lychee (a pre-release,
+      # so it never shows as the app's latest release), uploaded with the owner's token
+      # (the PACKS_TOKEN secret), so they appear as the owner's. Only the pack zips go there.
+      - name: Publish to lychee's "packs" release
         if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.PACKS_TOKEN }}
+          REPO: thebingchilling/lychee
         run: |
-          gh release view packs >/dev/null 2>&1 || \
-            gh release create packs --title "BumBoard packs" \
-              --notes "Optional downloads for BumBoard. Tap Download in BumBoard (Settings > Downloads), then Open when your browser has saved the file."
-          gh release upload packs out/packs/*.zip --clobber
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::PACKS_TOKEN is not set; the packs were built but not published"
+            exit 0
+          fi
+          # nothing but the pack zips is ever uploaded
+          ls out/packs/lychee-*.zip
+          if ! gh release view packs --repo "$REPO" >/dev/null 2>&1; then
+            gh release create packs --repo "$REPO" --prerelease --title "Lychee packs" \
+              --notes "Optional downloads for the Lychee keyboard: handwriting, dictionaries and fonts. In Lychee, open Settings > Downloads and tap Download; when your browser has saved the file, tap Open. All packs are free and openly licensed; each zip includes its licence."
+          fi
+          gh release upload packs out/packs/lychee-*.zip --repo "$REPO" --clobber

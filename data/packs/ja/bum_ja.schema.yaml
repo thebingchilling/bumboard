@@ -1,5 +1,5 @@
 # Japanese, typed in romaji (Hepburn or Kunrei spellings). Dictionary: Mozc's open-source
-# dictionary (BSD-3-Clause; IPAdic licence), shipped as BumBoard's "Japanese dictionary" pack.
+# dictionary (BSD-3-Clause; IPAdic licence), shipped as Lychee's "Japanese dictionary" pack.
 schema:
   schema_id: bum_ja
   name: 日本語

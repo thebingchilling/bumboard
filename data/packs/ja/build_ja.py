@@ -7,7 +7,7 @@ Downloads src/data/dictionary_oss/dictionary0[0-9].txt from google/mozc (BSD-3-C
 entries come from IPAdic and other permissively licensed sources), turns each reading into
 romaji syllables (Hepburn; っ doubles the next consonant), keeps the most common entries,
 adds every reading in hiragana and katakana, compiles the bum_ja schema with rime_deployer
-and zips it as bumboard-rime-ja.zip with pack.json. The app copies rime/ into Rime's data.
+and zips it as lychee-rime-ja.zip with pack.json. The app copies rime/ into Rime's data.
 """
 
 from __future__ import annotations
@@ -192,7 +192,7 @@ def main():
     shared.mkdir(parents=True)
     (shared / "bum_ja.schema.yaml").write_text(schema_with_kana_preedit(), encoding="utf-8")
     shutil.copy(RIME / "bum_common.yaml", shared)
-    (shared / "default.yaml").write_text('config_version: "bumboard.ja.1"\nschema_list:\n  - schema: bum_ja\n', encoding="utf-8")
+    (shared / "default.yaml").write_text('config_version: "lychee.ja.1"\nschema_list:\n  - schema: bum_ja\n', encoding="utf-8")
     with open(shared / "bum_ja.dict.yaml", "w", encoding="utf-8") as f:
         f.write("# Rime dictionary: Japanese, from Mozc's open-source dictionary (BSD-3-Clause; IPAdic licence).\n")
         f.write(f"---\nname: bum_ja\nversion: \"{PACK_VERSION}\"\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
@@ -204,7 +204,7 @@ def main():
     for p in build.glob("*.userdb*"):
         shutil.rmtree(p, ignore_errors=True) if p.is_dir() else p.unlink()
 
-    pack = args.out / "bumboard-rime-ja.zip"
+    pack = args.out / "lychee-rime-ja.zip"
     pack.unlink(missing_ok=True)
     with zipfile.ZipFile(pack, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("pack.json", json.dumps({"id": "rime_ja", "name": "Japanese dictionary", "version": PACK_VERSION}))
