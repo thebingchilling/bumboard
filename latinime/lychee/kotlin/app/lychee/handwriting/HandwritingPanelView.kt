@@ -69,7 +69,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         gravity = Gravity.CENTER
         setPadding(dp(24), 0, dp(24), 0)
     }
-    private var zinnia: Zinnia? = null
+    private var zinnia: ZinniaSet? = null
     /** What the last automatic commit typed, so a tapped candidate can replace it. */
     private var lastTyped: String? = null
     private var guesses: List<String> = emptyList()
@@ -163,11 +163,11 @@ class HandwritingPanelView @JvmOverloads constructor(
         showGuesses(emptyList())
         release()
         app.lychee.chinese.Readings.open(context)
-        val model = Zinnia.modelFor(context, lycheeHost()?.lycheeEngine())
-        zinnia = model?.let { Zinnia.open(it) }
+        val models = Zinnia.modelsFor(context, lycheeHost()?.lycheeEngine())
+        zinnia = Zinnia.openAll(models)
         message.visibility = if (zinnia == null) VISIBLE else GONE
         updateHint()
-        message.text = context.getString(if (model == null) R.string.lychee_hw_no_pack else R.string.lychee_hw_bad_pack)
+        message.text = context.getString(if (models.isEmpty()) R.string.lychee_hw_no_pack else R.string.lychee_hw_bad_pack)
         message.setOnClickListener { lycheeHost()?.lycheeOpenSettings("Packs") }
     }
 

@@ -38,6 +38,8 @@
     <string name="lychee_fonts_emoji">Emoji</string>
     <string name="lychee_fonts_preview_zh">你好，我哋去飲茶啦 你好，我们去喝茶吧</string>
     <string name="lychee_fonts_preview_emoji">😀 😂 🥹 ❤️ 👍🏽 🐶 🍜 🎉 🇭🇰</string>
+    <string name="lychee_fonts_wenkai">LXGW WenKai</string>
+    <string name="lychee_fonts_wenkai_summary">Built in · Kai style, Traditional and Simplified, kana and Hangul</string>
     <string name="lychee_fonts_system">Phone\'s font</string>
     <string name="lychee_fonts_system_summary">The system\'s Chinese font</string>
     <string name="lychee_fonts_on_keys">Use on the keys too</string>

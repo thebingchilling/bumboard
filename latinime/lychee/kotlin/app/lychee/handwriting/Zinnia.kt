@@ -39,27 +39,45 @@ class Zinnia private constructor(private var handle: Long) {
         }
 
         /**
-         * The handwriting pack for the current keyboard ([engine]: "yue", "cmn", "ja" or null):
-         * Traditional or Simplified Chinese (following 繁/简), Japanese; otherwise any installed.
+         * The handwriting models for the current keyboard ([engine]: "yue", "cmn", "ja" or null):
+         * the Chinese pack's Traditional and Simplified models (the script typed first), or
+         * the Japanese one; otherwise whatever is installed. Older single-script packs count too.
          */
-        fun modelFor(context: Context, engine: String?): File? {
+        fun modelsFor(context: Context, engine: String?): List<File> {
             @Suppress("DEPRECATION")
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
             val simplified = prefs.getString(ChineseInput.PREF_SCRIPT, "traditional") == "simplified"
-            val wanted = when (engine) {
-                "ja" -> listOf("hw_ja", "hw_zh_hant", "hw_zh_hans")
-                else -> if (simplified) listOf("hw_zh_hans", "hw_zh_hant", "hw_ja") else listOf("hw_zh_hant", "hw_zh_hans", "hw_ja")
+            fun models(id: String): List<File> {
+                if (!Packs.isInstalled(context, id)) return emptyList()
+                val files = Packs.dir(context, id).walkTopDown().filter { it.isFile && it.name.endsWith(".model") }.toList()
+                // hans.model / hant.model: the script being typed first
+                return files.sortedBy { if (it.name.startsWith(if (simplified) "hans" else "hant")) 0 else 1 }
             }
-            for (id in wanted) {
-                if (!Packs.isInstalled(context, id)) continue
-                val dir = Packs.dir(context, id)
-                dir.walkTopDown().firstOrNull { it.isFile && it.name.endsWith(".model") }?.let { return it }
+            val chinese = models("hw_zh").ifEmpty {
+                (if (simplified) listOf("hw_zh_hans", "hw_zh_hant") else listOf("hw_zh_hant", "hw_zh_hans")).flatMap(::models)
             }
-            return null
+            val japanese = models("hw_ja")
+            return if (engine == "ja") japanese.ifEmpty { chinese } else chinese.ifEmpty { japanese }
         }
+
+        /** Opens [models] together; null when none can be read. */
+        fun openAll(models: List<File>): ZinniaSet? =
+            models.mapNotNull { open(it) }.takeIf { it.isNotEmpty() }?.let { ZinniaSet(it) }
 
         @JvmStatic private external fun nativeOpen(path: String): Long
         @JvmStatic private external fun nativeClose(handle: Long)
         @JvmStatic private external fun nativeClassify(handle: Long, width: Int, height: Int, strokes: FloatArray, nbest: Int): Array<String?>
     }
+}
+
+/** Several models asked together (Traditional and Simplified): their guesses interleaved, best first. */
+class ZinniaSet(private val models: List<Zinnia>) {
+    fun classify(width: Int, height: Int, strokes: FloatArray, count: Int = 10): List<String> {
+        val lists = models.map { it.classify(width, height, strokes, count) }
+        val out = LinkedHashSet<String>()
+        for (i in 0 until count) for (list in lists) list.getOrNull(i)?.let { out += it }
+        return out.take(count)
+    }
+
+    fun close() = models.forEach { it.close() }
 }

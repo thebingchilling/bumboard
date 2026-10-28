@@ -431,8 +431,10 @@ public class KeyboardView extends View {
         float labelBaseline = centerY;
         final String label = key.getLabel();
         if (label != null) {
-            // LYCHEE: the Chinese font from Settings > Fonts, when it is used on the keys too.
-            final Typeface lycheeKeysFace = app.lychee.fonts.LycheeFonts.keys(getContext());
+            // LYCHEE: the Chinese font from Settings > Fonts, when it is used on the keys too,
+            // and only on keys showing Chinese, Japanese or Korean (letters keep their font)
+            final Typeface lycheeKeysFace = app.lychee.fonts.LycheeFonts.isCjk(label)
+                    ? app.lychee.fonts.LycheeFonts.keys(getContext()) : null;
             paint.setTypeface(lycheeKeysFace != null ? lycheeKeysFace
                     : app.lychee.fonts.LycheeFonts.uiLike(getContext(), key.selectTypeface(params)));
             paint.setTextSize(key.selectTextSize(params));

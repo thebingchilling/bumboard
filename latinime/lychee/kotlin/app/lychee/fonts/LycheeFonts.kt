@@ -26,6 +26,9 @@ object LycheeFonts {
     const val PREF_CHINESE_KEYS = "lychee_font_zh_keys"
     const val PREF_EMOJI = "lychee_font_emoji"
     private const val BUNDLED_EMOJI = "lychee/NotoColorEmoji.ttf"
+    private const val BUNDLED_CHINESE = "lychee/LXGWWenKai-Regular.ttf"
+    /** [PREF_CHINESE] value for the system's own font. */
+    const val SYSTEM = "system"
     /** Google Sans Flex, the interface font (fetched at build time; see scripts/fetch-fonts.sh). */
     const val UI_FONT = "lychee/GoogleSansFlex.ttf"
 
@@ -47,17 +50,44 @@ object LycheeFonts {
     /** Cache key: the file and when it last changed (a re-import replaces it). */
     private fun keyOf(file: File?) = file?.let { "${it.path}:${it.lastModified()}" } ?: ""
 
-    /** The chosen Chinese font, or null for the system's. */
+    /**
+     * The chosen Chinese font: LXGW WenKai (in the APK) by default, a downloaded font, or null
+     * for the system's. It also covers Japanese kana and Korean Hangul.
+     */
+    @Synchronized
     @JvmStatic
     fun chinese(context: Context): Typeface? {
-        if (!Features.isEnabled(Feature.CUSTOM_FONTS)) return null
-        val file = chosenFile(context, PREF_CHINESE)
-        val key = keyOf(file)
+        val choice = prefs(context).getString(PREF_CHINESE, null).orEmpty()
+        if (choice == SYSTEM) return null
+        val file = if (Features.isEnabled(Feature.CUSTOM_FONTS) && choice.isNotEmpty()) chosenFile(context, PREF_CHINESE) else null
+        val key = keyOf(file).ifEmpty { BUNDLED_CHINESE }
         if (key != chineseKey) {
             chineseKey = key
-            chineseFace = file?.let { PackImporter.loadFont(it) }
+            chineseFace = file?.let { PackImporter.loadFont(it) } ?: bundledChinese(context)
         }
         return chineseFace
+    }
+
+    /** LXGW WenKai from the APK (fetched at build time; see scripts/fetch-fonts.sh), if there. */
+    @JvmStatic
+    fun bundledChinese(context: Context): Typeface? =
+        runCatching { Typeface.createFromAsset(context.applicationContext.assets, BUNDLED_CHINESE) }.getOrNull()
+
+    /** Whether [text] has Chinese, Japanese or Korean characters (the Chinese font is for those). */
+    @JvmStatic
+    fun isCjk(text: CharSequence): Boolean {
+        var i = 0
+        while (i < text.length) {
+            val cp = Character.codePointAt(text, i)
+            when (Character.UnicodeScript.of(cp)) {
+                Character.UnicodeScript.HAN, Character.UnicodeScript.HIRAGANA,
+                Character.UnicodeScript.KATAKANA, Character.UnicodeScript.HANGUL,
+                Character.UnicodeScript.BOPOMOFO -> return true
+                else -> {}
+            }
+            i += Character.charCount(cp)
+        }
+        return false
     }
 
     /** The Chinese font for key labels, when "Use on the keys" is on; otherwise null. */

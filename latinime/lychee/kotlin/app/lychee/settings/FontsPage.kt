@@ -51,8 +51,12 @@ fun FontsPage() {
             Preview(it, stringResource(R.string.lychee_fonts_preview_zh), chinese.value, actions.version)
         }
         row {
-            ChoiceItem(it, stringResource(R.string.lychee_fonts_system), stringResource(R.string.lychee_fonts_system_summary),
+            ChoiceItem(it, stringResource(R.string.lychee_fonts_wenkai), stringResource(R.string.lychee_fonts_wenkai_summary),
                 chinese.value.isEmpty()) { chinese.set("") }
+        }
+        row {
+            ChoiceItem(it, stringResource(R.string.lychee_fonts_system), stringResource(R.string.lychee_fonts_system_summary),
+                chinese.value == LycheeFonts.SYSTEM) { chinese.set(LycheeFonts.SYSTEM) }
         }
         zhPacks.forEach { pack ->
             row { PackRow(it, pack, actions, selected = chinese.value == pack.id) { chinese.set(pack.id) } }
@@ -101,9 +105,13 @@ private fun ChoiceItem(shape: Shape, title: String, summary: String?, selected: 
 private fun Preview(shape: Shape, sample: String, id: String, version: Int, emojiFont: Boolean = false) {
     val context = LocalContext.current
     val family = remember(id, version) {
-        val file = id.takeIf { it.isNotEmpty() }?.let { Packs.mainFile(context, it) }
+        val file = id.takeIf { it.isNotEmpty() && it != LycheeFonts.SYSTEM }?.let { Packs.mainFile(context, it) }
         val face = file?.let { PackImporter.loadFont(it) }
-            ?: if (emojiFont) LycheeFonts.bundledEmoji(context) else null
+            ?: when {
+                emojiFont -> LycheeFonts.bundledEmoji(context)
+                id.isEmpty() -> LycheeFonts.bundledChinese(context)
+                else -> null
+            }
         face?.let { FontFamily(it) }
     }
     Surface(shape = shape, color = MaterialTheme.colorScheme.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {

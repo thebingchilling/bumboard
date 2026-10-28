@@ -149,6 +149,20 @@ fun PackRow(
         }
         Column(Modifier.weight(1f)) {
             Text(pack.name, style = MaterialTheme.typography.bodyLarge)
+            // an installed font shows itself
+            if (installed && pack.kind.isFont) {
+                val family = androidx.compose.runtime.remember(pack.id, actions.version) {
+                    Packs.mainFile(context, pack.id)?.let { app.lychee.packs.PackImporter.loadFont(it) }
+                        ?.let { androidx.compose.ui.text.font.FontFamily(it) }
+                }
+                if (family != null) {
+                    Text(
+                        if (pack.kind == app.lychee.packs.PackKind.FONT_EMOJI) "😀 🐱 🍜 🎉 ❤️" else "永 漢字 汉字 かな 한글",
+                        fontFamily = family,
+                        fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp),
+                    )
+                }
+            }
             val detail = listOf(
                 pack.summary,
                 if (installed) stringResource(R.string.lychee_packs_installed_short) + " · " +
