@@ -123,9 +123,25 @@ object Romanization {
             Style.YaleNumbers -> syllables.map(::jyutpingToYaleNumbered)
             Style.PinyinMarks -> syllables.map(::pinyinToMarked)
             Style.PinyinNumbers -> syllables.map { it.replace("u:", "ü").replace("v", "ü") }
+            Style.JyutpingSuperscript -> syllables.map(::superscriptTone)
+            Style.YaleSuperscript -> syllables.map { superscriptTone(jyutpingToYaleNumbered(it)) }
+            // the neutral tone (5) has no number
+            Style.PinyinSuperscript -> syllables.map {
+                superscriptTone(it.replace("u:", "ü").replace("v", "ü").removeSuffix("5"))
+            }
         }
         return parts.joinToString(" ")
     }
 
-    enum class Style { JyutpingNumbers, YaleMarks, YaleNumbers, PinyinMarks, PinyinNumbers }
+    /** "nei5" -> "nei⁵". */
+    fun superscriptTone(syllable: String): String {
+        val last = syllable.lastOrNull() ?: return syllable
+        val i = "0123456789".indexOf(last)
+        return if (i < 0) syllable else syllable.dropLast(1) + "⁰¹²³⁴⁵⁶⁷⁸⁹"[i]
+    }
+
+    enum class Style {
+        JyutpingNumbers, JyutpingSuperscript, YaleMarks, YaleNumbers, YaleSuperscript,
+        PinyinMarks, PinyinNumbers, PinyinSuperscript,
+    }
 }

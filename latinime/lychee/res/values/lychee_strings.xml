@@ -138,6 +138,12 @@
     <string name="lychee_key_sound_click">Click</string>
     <string name="lychee_key_sound_typewriter">Typewriter</string>
     <string name="lychee_key_sound_bubble">Bubble</string>
+    <string name="lychee_group_tones">How tones are written</string>
+    <string name="lychee_tones_jyutping">Jyutping</string>
+    <string name="lychee_tones_yale">Yale</string>
+    <string name="lychee_tones_pinyin">Pinyin</string>
+    <string name="lychee_card_yue">YUE</string>
+    <string name="lychee_card_pu">PU</string>
     <string name="lychee_tone_colours">Tone colours</string>
     <string name="lychee_tone_colours_summary">Each syllable in the colour of its tone</string>
     <string name="lychee_candidate_size_for">Candidate size: %1$s</string>

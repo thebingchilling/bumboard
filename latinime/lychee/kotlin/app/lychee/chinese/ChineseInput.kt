@@ -109,7 +109,16 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val voice = if (guessing) (if (guessMode() == InputMode.Cantonese) "yue" else "cmn") else engine
         val locales = app.lychee.speech.Speech.localesFor(voice, prefs.getString(PREF_SCRIPT, "traditional") == "simplified")
         popup?.show(frame, candidate.text, resolved, Readings.displayPrefs(prefs), peek,
-            onSpeak = { text -> app.lychee.speech.Speech.speak(ime, text, locales) }) {
+            onSpeak = { text, lang ->
+                // YUE and PU: the word in Cantonese or in Mandarin, whichever keyboard this is
+                val voices = when (lang) {
+                    app.lychee.core.Lang.Cantonese -> app.lychee.speech.Speech.localesFor("yue", false)
+                    app.lychee.core.Lang.Mandarin -> app.lychee.speech.Speech.localesFor("cmn",
+                        prefs.getString(PREF_SCRIPT, "traditional") == "simplified")
+                    else -> locales
+                }
+                app.lychee.speech.Speech.speak(ime, text, voices)
+            }) {
             if (guessing) onGuess(index) else pick(index)
         }
     }
@@ -125,7 +134,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val examples = app.lychee.dict.PackData.examples(ime, lang, forms)
         val locales = app.lychee.speech.Speech.localesFor(engine, false)
         popup?.showWord(frame, candidate.text, candidate.comment.trim().takeIf { it.isNotEmpty() }, entries,
-            examples, peek, onSpeak = { text -> app.lychee.speech.Speech.speak(ime, text, locales) }) {
+            examples, peek, onSpeak = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }) {
             pick(index)
         }
     }

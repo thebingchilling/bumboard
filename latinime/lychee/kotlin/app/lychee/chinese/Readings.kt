@@ -81,7 +81,18 @@ object Readings {
         showOtherLanguage = prefs.getBoolean(PREF_OTHER_LANGUAGE, false),
         showMeaning = prefs.getBoolean(PREF_MEANING, true),
         simplified = prefs.getString(ChineseInput.PREF_SCRIPT, "traditional") == "simplified",
+        jyutpingTones = tones(prefs, PREF_JYUTPING_TONES, app.lychee.core.ToneStyle.Numbers),
+        yaleTones = tones(prefs, PREF_YALE_TONES, app.lychee.core.ToneStyle.Marks),
+        pinyinTones = tones(prefs, PREF_PINYIN_TONES, app.lychee.core.ToneStyle.Marks),
     )
+
+    private fun tones(prefs: SharedPreferences, key: String, default: app.lychee.core.ToneStyle) =
+        runCatching { app.lychee.core.ToneStyle.valueOf(prefs.getString(key, null) ?: default.name) }.getOrDefault(default)
+
+    /** How tones are written ([app.lychee.core.ToneStyle] names). */
+    const val PREF_JYUTPING_TONES = "lychee_tones_jyutping"
+    const val PREF_YALE_TONES = "lychee_tones_yale"
+    const val PREF_PINYIN_TONES = "lychee_tones_pinyin"
 
     /** Readings under candidates are off when both the romanisation and the meaning are off. */
     fun showReadings(prefs: SharedPreferences) = prefs.getBoolean(PREF_SHOW_READINGS, true)

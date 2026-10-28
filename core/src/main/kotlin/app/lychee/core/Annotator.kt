@@ -11,11 +11,19 @@ enum class InputMode(val lang: Lang?, val englishLookup: Boolean) {
 
 enum class CantoneseRomanization { Jyutping, Yale, Both }
 
+/** How tones are written: marks (nǐ, néih; not for Jyutping), numbers (ni3) or superscript (ni³). */
+enum class ToneStyle { Marks, Numbers, Superscript }
+
 /** What to show under each candidate. Defaults match the settings screen. */
 data class DisplayPrefs(
     val cantonese: CantoneseRomanization = CantoneseRomanization.Jyutping,
     val yaleToneMarks: Boolean = true,
     val pinyinToneMarks: Boolean = true,
+    /** Jyutping's tones (numbers or superscript; marks mean numbers) */
+    val jyutpingTones: ToneStyle = ToneStyle.Numbers,
+    /** Yale's and pinyin's tones; when set, these win over yaleToneMarks / pinyinToneMarks */
+    val yaleTones: ToneStyle? = null,
+    val pinyinTones: ToneStyle? = null,
     /** pinyin under Cantonese candidates, Jyutping/Yale under Mandarin ones */
     val showOtherLanguage: Boolean = false,
     val showMeaning: Boolean = true,
@@ -287,11 +295,11 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
                 source = reading
                 when (prefs.cantonese) {
                     CantoneseRomanization.Jyutping ->
-                        emit(Romanization.format(reading, Romanization.Style.JyutpingNumbers))
+                        emit(Romanization.format(reading, jyutpingStyle(prefs)))
                     CantoneseRomanization.Yale -> emit(yale(reading, prefs))
                     CantoneseRomanization.Both -> {
                         emit(yale(reading, prefs))
-                        emit(Romanization.format(reading, Romanization.Style.JyutpingNumbers))
+                        emit(Romanization.format(reading, jyutpingStyle(prefs)))
                     }
                 }
             }
@@ -300,7 +308,7 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
                 source = reading
                 emit(Romanization.format(
                     reading,
-                    if (prefs.pinyinToneMarks) Romanization.Style.PinyinMarks else Romanization.Style.PinyinNumbers
+                    pinyinStyle(prefs)
                 ))
             }
             when (r.lang) {
@@ -321,9 +329,29 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
             return out
         }
 
-        fun yale(reading: String, prefs: DisplayPrefs) = Romanization.format(
-            reading,
-            if (prefs.yaleToneMarks) Romanization.Style.YaleMarks else Romanization.Style.YaleNumbers
-        )
+        fun yale(reading: String, prefs: DisplayPrefs) = Romanization.format(reading, yaleStyle(prefs))
+
+        fun jyutpingStyle(prefs: DisplayPrefs) =
+            if (prefs.jyutpingTones == ToneStyle.Superscript) Romanization.Style.JyutpingSuperscript
+            else Romanization.Style.JyutpingNumbers
+
+        fun yaleStyle(prefs: DisplayPrefs) = when (prefs.yaleTones ?: if (prefs.yaleToneMarks) ToneStyle.Marks else ToneStyle.Numbers) {
+            ToneStyle.Marks -> Romanization.Style.YaleMarks
+            ToneStyle.Numbers -> Romanization.Style.YaleNumbers
+            ToneStyle.Superscript -> Romanization.Style.YaleSuperscript
+        }
+
+        fun pinyinStyle(prefs: DisplayPrefs) = when (prefs.pinyinTones ?: if (prefs.pinyinToneMarks) ToneStyle.Marks else ToneStyle.Numbers) {
+            ToneStyle.Marks -> Romanization.Style.PinyinMarks
+            ToneStyle.Numbers -> Romanization.Style.PinyinNumbers
+            ToneStyle.Superscript -> Romanization.Style.PinyinSuperscript
+        }
+
+        /** [reading] (numbered syllables) in [lang]'s romanisation as chosen in [prefs]. */
+        fun format(reading: String, lang: Lang, prefs: DisplayPrefs): String = when (lang) {
+            Lang.Cantonese -> if (prefs.cantonese == CantoneseRomanization.Yale) yale(reading, prefs)
+                else Romanization.format(reading, jyutpingStyle(prefs))
+            else -> Romanization.format(reading, pinyinStyle(prefs))
+        }
     }
 }

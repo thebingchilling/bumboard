@@ -580,6 +580,29 @@ private fun ChinesePage() {
             )
         }
     }
+    val jyutpingTones = prefs.stringPref(Readings.PREF_JYUTPING_TONES) { prefs.getString(Readings.PREF_JYUTPING_TONES, null) ?: "Numbers" }
+    val yaleTones = prefs.stringPref(Readings.PREF_YALE_TONES) { prefs.getString(Readings.PREF_YALE_TONES, null) ?: "Marks" }
+    val pinyinTones = prefs.stringPref(Readings.PREF_PINYIN_TONES) { prefs.getString(Readings.PREF_PINYIN_TONES, null) ?: "Marks" }
+    Group(stringResource(R.string.lychee_group_tones)) {
+        if (cantonese.value == "yale") {
+            row {
+                ChoiceRow(it, stringResource(R.string.lychee_tones_yale), null, listOf(
+                    "Marks" to "néih", "Numbers" to "nei5", "Superscript" to "nei⁵",
+                ), yaleTones.value, onSelect = yaleTones::set)
+            }
+        } else {
+            row {
+                ChoiceRow(it, stringResource(R.string.lychee_tones_jyutping), null, listOf(
+                    "Numbers" to "nei5", "Superscript" to "nei⁵",
+                ), jyutpingTones.value, onSelect = jyutpingTones::set)
+            }
+        }
+        row {
+            ChoiceRow(it, stringResource(R.string.lychee_tones_pinyin), null, listOf(
+                "Marks" to "nǐ", "Numbers" to "ni3", "Superscript" to "ni³",
+            ), pinyinTones.value, onSelect = pinyinTones::set)
+        }
+    }
     Group(stringResource(R.string.lychee_under_candidates)) {
         row {
             SwitchRow(

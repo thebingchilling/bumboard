@@ -72,4 +72,11 @@ class RomanizationTest {
         assertEquals("nǐ hǎo", Romanization.format("ni3 hao3", Romanization.Style.PinyinMarks))
         assertEquals("nei5 hou2", Romanization.format("nei5 hou2", Romanization.Style.JyutpingNumbers))
     }
+
+    @Test
+    fun superscriptTones() {
+        assertEquals("nei⁵ hou²", Romanization.format("nei5 hou2", Romanization.Style.JyutpingSuperscript))
+        assertEquals("ni³ hao³ ma", Romanization.format("ni3 hao3 ma5", Romanization.Style.PinyinSuperscript))
+        assertEquals("nei⁵ hou²", Romanization.format("nei5 hou2", Romanization.Style.YaleSuperscript))
+    }
 }
