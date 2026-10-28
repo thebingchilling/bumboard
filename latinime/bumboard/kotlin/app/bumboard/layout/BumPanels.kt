@@ -73,12 +73,12 @@ object BumPanels {
     }
 
     /** The background of a functional key in the selected key style (flat or raised). */
-    fun functionalKey(context: Context): Drawable? = context.getDrawable(
+    fun functionalKey(context: Context): Drawable? = app.bumboard.ui.BumColorStyle.themed(context).getDrawable(
         if (raised(context)) R.drawable.bum_m3_key_functional_raised else R.drawable.bum_m3_key_functional_flat
     )
 
     /** The background of a letter key in the selected key style. */
-    fun letterKey(context: Context): Drawable? = context.getDrawable(
+    fun letterKey(context: Context): Drawable? = app.bumboard.ui.BumColorStyle.themed(context).getDrawable(
         if (raised(context)) R.drawable.bum_m3_key_raised else R.drawable.bum_m3_key_flat
     )
 

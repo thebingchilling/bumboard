@@ -22,7 +22,6 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import app.bumboard.ui.M3Colors
 import com.android.inputmethod.keyboard.KeyboardActionListener
-import com.android.inputmethod.keyboard.KeyboardTheme
 import com.android.inputmethod.keyboard.internal.KeyVisualAttributes
 import com.android.inputmethod.keyboard.internal.KeyboardIconsSet
 import com.android.inputmethod.latin.R
@@ -356,7 +355,7 @@ class EmojiPanelView @JvmOverloads constructor(
             text = context.getString(R.string.bum_emoji_abc)
             setTextColor(palette.onSecondaryContainer)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
             gravity = Gravity.CENTER
             background = functionalKey()
             setOnClickListener { sendCode(Constants.CODE_ALPHA_FROM_EMOJI) }
@@ -403,11 +402,7 @@ class EmojiPanelView @JvmOverloads constructor(
     }
 
     /** The keyboard's functional key background in the selected key style. */
-    private fun functionalKey() = context.getDrawable(
-        if (KeyboardTheme.getKeyboardTheme(context).mThemeId == KeyboardTheme.THEME_ID_BUM_RAISED)
-            R.drawable.bum_m3_key_functional_raised
-        else R.drawable.bum_m3_key_functional_flat
-    )
+    private fun functionalKey() = app.bumboard.layout.BumPanels.functionalKey(context)
 
     private fun pill(color: Int, radiusDp: Int) = GradientDrawable().apply {
         setColor(color)
@@ -430,7 +425,7 @@ class EmojiPanelView @JvmOverloads constructor(
                 if (viewType == 0) {
                     setTextColor(palette.onSurfaceVariant)
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                    typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                    typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
                     setPadding(dp(14), dp(10), dp(14), dp(4))
                     layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 } else {

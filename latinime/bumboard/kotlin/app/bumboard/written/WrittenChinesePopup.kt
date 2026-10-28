@@ -61,7 +61,7 @@ object WrittenChinesePopup {
             elevation = dp(context, 8).toFloat()
         }
         card.addView(text(context, context.getString(R.string.bum_written_title), 14f, c.primary).apply {
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
         })
         val body = text(context, when {
             source.isBlank() -> context.getString(R.string.bum_written_nothing)
@@ -149,7 +149,7 @@ object WrittenChinesePopup {
         TextView(context).apply {
             text = label
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
             setTextColor(if (filled) c.onPrimary else c.primary)
             gravity = Gravity.CENTER
             setPadding(dp(context, 18), dp(context, 8), dp(context, 18), dp(context, 8))

@@ -6,7 +6,7 @@ import com.android.inputmethod.latin.R
 /**
  * Material 3 colour roles for BumBoard's View-based keyboard UI (emoji panel, emoji search,
  * dictionary popup). They come from the same resources as the keyboard theme
- * (bumboard_m3_colors.xml): the wallpaper-based system palette on Android 12+, BumBoard's teal
+ * (bumboard_m3_colors.xml), with the functional keys in the chosen [BumColorStyle]: the wallpaper-based system palette on Android 12+, BumBoard's teal
  * palette before, light or dark with the system. Compose screens use BumTheme instead.
  */
 data class M3Colors(
@@ -33,6 +33,7 @@ data class M3Colors(
     companion object {
         fun of(ctx: Context): M3Colors {
             fun c(id: Int) = ctx.getColor(id)
+            val neutral = BumColorStyle.isNeutral(ctx)
             return M3Colors(
                 surface = c(R.color.bum_m3_kb_background),
                 surfaceContainer = c(R.color.bum_m3_key),
@@ -44,9 +45,11 @@ data class M3Colors(
                 onPrimary = c(R.color.bum_m3_on_primary),
                 primaryContainer = c(R.color.bum_m3_primary_container),
                 onPrimaryContainer = c(R.color.bum_m3_on_primary_container),
-                secondaryContainer = c(R.color.bum_m3_key_functional),
-                secondaryContainerPressed = c(R.color.bum_m3_key_functional_pressed),
-                onSecondaryContainer = c(R.color.bum_m3_on_key_functional),
+                secondaryContainer = c(if (neutral) R.color.bum_m3_key_functional_neutral else R.color.bum_m3_key_functional),
+                secondaryContainerPressed = c(
+                    if (neutral) R.color.bum_m3_key_functional_pressed_neutral else R.color.bum_m3_key_functional_pressed
+                ),
+                onSecondaryContainer = c(if (neutral) R.color.bum_m3_on_key_functional_neutral else R.color.bum_m3_on_key_functional),
                 outline = c(R.color.bum_m3_outline),
                 outlineVariant = c(R.color.bum_m3_outline_variant),
             )

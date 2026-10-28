@@ -645,6 +645,7 @@ final class SuggestionStripLayoutHelper {
     }
 
     private static Typeface getTextTypeface(@Nullable final CharSequence text) {
-        return hasStyleSpan(text, BOLD_SPAN) ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT;
+        return app.bumboard.fonts.BumFonts.uiLike(null,
+                hasStyleSpan(text, BOLD_SPAN) ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
     }
 }

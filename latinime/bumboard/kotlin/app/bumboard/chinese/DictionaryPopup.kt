@@ -113,7 +113,7 @@ class DictionaryPopup(private val ctx: Context) {
     private fun button(label: String, c: M3Colors, filled: Boolean, onClick: () -> Unit) = TextView(ctx).apply {
         text = label
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
         setTextColor(if (filled) c.onPrimary else c.primary)
         setPadding(dp(24), dp(10), dp(24), dp(10))
         background = GradientDrawable().apply {
@@ -244,7 +244,7 @@ class DictionaryPopup(private val ctx: Context) {
 
         private fun section(title: String) {
             body.addView(textView(title, 14f, c.primary).apply {
-                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
                 setPadding(0, dp(16), 0, dp(4))
             })
         }

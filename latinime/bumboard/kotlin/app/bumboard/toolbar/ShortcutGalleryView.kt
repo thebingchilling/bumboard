@@ -166,7 +166,7 @@ class ShortcutGalleryView @JvmOverloads constructor(
                     id = LABEL
                     setTextColor(palette.onSurface)
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                    typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.NORMAL)
+                    typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
                     gravity = Gravity.CENTER
                     maxLines = 2
                     ellipsize = TextUtils.TruncateAt.END

@@ -3,6 +3,10 @@
     <!-- Theme attributes: the key drawables of the selected Material 3 key style. -->
     <attr name="bumKeyBackground" format="reference" />
     <attr name="bumFunctionalKeyBackground" format="reference" />
+    <!-- Theme attributes: the functional keys' colours in the chosen colour style (BumColors.*). -->
+    <attr name="bumColorFunctional" format="color|reference" />
+    <attr name="bumColorFunctionalPressed" format="color|reference" />
+    <attr name="bumColorOnFunctional" format="color|reference" />
 
     <!-- Icon tints for KeyboardView; when bumIconColor is unset, icons are drawn as they are. -->
     <declare-styleable name="BumKeyboardView">

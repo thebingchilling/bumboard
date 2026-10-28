@@ -136,7 +136,7 @@ class CandidateBarView @JvmOverloads constructor(
         while (cell.childCount > 1) cell.removeViewAt(1)
         annotation.lines.forEach { line ->
             cell.addView(text(line, READING_SP * scale, ColorUtils.setAlphaComponent(color, 0xD0)).apply {
-                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
                 includeFontPadding = false
             }, wrap())
         }

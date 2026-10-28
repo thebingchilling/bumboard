@@ -168,6 +168,7 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
 
         for (int pos = 0; pos < SuggestedWords.MAX_SUGGESTIONS; pos++) {
             final TextView word = new TextView(context, null, R.attr.suggestionWordStyle);
+            word.setTypeface(app.bumboard.fonts.BumFonts.ui(context, 400));
             word.setContentDescription(getResources().getString(R.string.spoken_empty_suggestion));
             word.setOnClickListener(this);
             word.setOnLongClickListener(this);

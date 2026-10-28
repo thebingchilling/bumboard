@@ -87,7 +87,7 @@ class NumpadPanelView @JvmOverloads constructor(
         text = label
         setTextColor(if (letter) palette.onSurface else palette.onSecondaryContainer)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, size)
-        typeface = if (letter) Typeface.DEFAULT else Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        typeface = app.bumboard.fonts.BumFonts.ui(context, if (letter) 400 else 500)
         gravity = Gravity.CENTER
         background = if (letter) BumPanels.letterKey(context) else BumPanels.functionalKey(context)
         setOnClickListener { action() }

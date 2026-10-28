@@ -415,7 +415,8 @@ public class KeyboardView extends View {
         if (label != null) {
             // BUMBOARD: the Chinese font from Settings > Fonts, when it is used on the keys too.
             final Typeface bumKeysFace = app.bumboard.fonts.BumFonts.keys(getContext());
-            paint.setTypeface(bumKeysFace != null ? bumKeysFace : key.selectTypeface(params));
+            paint.setTypeface(bumKeysFace != null ? bumKeysFace
+                    : app.bumboard.fonts.BumFonts.uiLike(getContext(), key.selectTypeface(params)));
             paint.setTextSize(key.selectTextSize(params));
             final float labelCharHeight = TypefaceUtils.getReferenceCharHeight(paint);
             final float labelCharWidth = TypefaceUtils.getReferenceCharWidth(paint);
@@ -482,8 +483,8 @@ public class KeyboardView extends View {
         if (hintLabel != null) {
             paint.setTextSize(key.selectHintTextSize(params));
             paint.setColor(key.selectHintTextColor(params));
-            // TODO: Should add a way to specify type face for hint letters
-            paint.setTypeface(Typeface.DEFAULT_BOLD);
+            // BUMBOARD: hint symbols in the interface font's regular weight, like Gboard's
+            paint.setTypeface(app.bumboard.fonts.BumFonts.ui(getContext(), 400));
             blendAlpha(paint, params.mAnimAlpha);
             final float labelCharHeight = TypefaceUtils.getReferenceCharHeight(paint);
             final float labelCharWidth = TypefaceUtils.getReferenceCharWidth(paint);
@@ -556,7 +557,7 @@ public class KeyboardView extends View {
         final int keyWidth = key.getDrawWidth();
         final int keyHeight = key.getHeight();
 
-        paint.setTypeface(params.mTypeface);
+        paint.setTypeface(app.bumboard.fonts.BumFonts.uiLike(getContext(), params.mTypeface));
         paint.setTextSize(params.mHintLetterSize);
         paint.setColor(params.mHintLabelColor);
         paint.setTextAlign(Align.CENTER);
@@ -602,11 +603,11 @@ public class KeyboardView extends View {
         final Paint paint = new Paint();
         paint.setAntiAlias(true);
         if (key == null) {
-            paint.setTypeface(mKeyDrawParams.mTypeface);
+            paint.setTypeface(app.bumboard.fonts.BumFonts.uiLike(getContext(), mKeyDrawParams.mTypeface));
             paint.setTextSize(mKeyDrawParams.mLabelSize);
         } else {
             paint.setColor(key.selectTextColor(mKeyDrawParams));
-            paint.setTypeface(key.selectTypeface(mKeyDrawParams));
+            paint.setTypeface(app.bumboard.fonts.BumFonts.uiLike(getContext(), key.selectTypeface(mKeyDrawParams)));
             paint.setTextSize(key.selectTextSize(mKeyDrawParams));
         }
         return paint;

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Generated: BumBoard Material 3 keys. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="@color/bum_m3_key_functional_pressed" /><corners android:radius="8dp" /></shape></item>
-    <item><shape android:shape="rectangle"><solid android:color="@color/bum_m3_key_functional" /><corners android:radius="8dp" /></shape></item>
+    <item android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="?attr/bumColorFunctionalPressed" /><corners android:radius="8dp" /></shape></item>
+    <item><shape android:shape="rectangle"><solid android:color="?attr/bumColorFunctional" /><corners android:radius="8dp" /></shape></item>
 </selector>

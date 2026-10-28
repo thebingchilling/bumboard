@@ -260,7 +260,7 @@ class VoicePanelView @JvmOverloads constructor(
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 
     init {
-        status.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        status.typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
     }
 
     companion object {

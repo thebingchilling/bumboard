@@ -67,6 +67,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
 
     private KeyboardTheme mKeyboardTheme;
     private Context mThemeContext;
+    // BUMBOARD: the colour style (neutral or wallpaper) applied over the keyboard theme
+    private int mBumColorOverlay;
 
     private static final KeyboardSwitcher sInstance = new KeyboardSwitcher();
 
@@ -101,10 +103,14 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
 
     private boolean updateKeyboardThemeAndContextThemeWrapper(final Context context,
             final KeyboardTheme keyboardTheme) {
+        final int colorOverlay = app.bumboard.ui.BumColorStyle.overlay(context);
         if (mThemeContext == null || !keyboardTheme.equals(mKeyboardTheme)
+                || colorOverlay != mBumColorOverlay
                 || !mThemeContext.getResources().equals(context.getResources())) {
             mKeyboardTheme = keyboardTheme;
+            mBumColorOverlay = colorOverlay;
             mThemeContext = new ContextThemeWrapper(context, keyboardTheme.mStyleId);
+            mThemeContext.getTheme().applyStyle(colorOverlay, true);
             KeyboardLayoutSet.onKeyboardThemeChanged();
             return true;
         }

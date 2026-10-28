@@ -220,7 +220,7 @@ class TextEditPanelView @JvmOverloads constructor(
         setText(text)
         setTextColor(palette.onSecondaryContainer)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
         gravity = Gravity.CENTER
         background = BumPanels.functionalKey(context)
         press(this, false, action)

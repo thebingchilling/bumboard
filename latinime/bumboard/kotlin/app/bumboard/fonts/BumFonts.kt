@@ -26,6 +26,8 @@ object BumFonts {
     const val PREF_CHINESE_KEYS = "bum_font_zh_keys"
     const val PREF_EMOJI = "bum_font_emoji"
     private const val BUNDLED_EMOJI = "bumboard/NotoColorEmoji.ttf"
+    /** Google Sans Flex, the interface font (fetched at build time; see scripts/fetch-fonts.sh). */
+    const val UI_FONT = "bumboard/GoogleSansFlex.ttf"
 
     private var chineseKey: String? = null
     private var chineseFace: Typeface? = null
@@ -62,6 +64,47 @@ object BumFonts {
     @JvmStatic
     fun keys(context: Context): Typeface? =
         if (prefs(context).getBoolean(PREF_CHINESE_KEYS, false)) chinese(context) else null
+
+    private val uiFaces = HashMap<Int, Typeface>()
+    private var uiMissing = false
+    private var appContext: Context? = null
+
+    /**
+     * Google Sans Flex at [weight] (400 regular, 500 medium, ...): the font of the keys, the
+     * bar and every BumBoard panel. The system sans-serif when the font is not in the APK.
+     */
+    @Synchronized
+    @JvmStatic
+    fun ui(context: Context, weight: Int = 400): Typeface {
+        if (appContext == null) appContext = context.applicationContext
+        uiFaces[weight]?.let { return it }
+        val face = if (uiMissing) null else runCatching {
+            val assets = context.applicationContext.assets
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Typeface.Builder(assets, UI_FONT).setFontVariationSettings("'wght' $weight").build()
+            } else {
+                Typeface.createFromAsset(assets, UI_FONT)
+            }
+        }.onFailure {
+            uiMissing = true
+            Log.w(TAG, "interface font unavailable", it)
+        }.getOrNull()
+        val result = face ?: Typeface.create(if (weight >= 500) "sans-serif-medium" else "sans-serif", Typeface.NORMAL)
+        uiFaces[weight] = result
+        return result
+    }
+
+    /** The interface font in place of [face]: medium for bold, regular otherwise. */
+    @JvmStatic
+    fun uiLike(context: Context?, face: Typeface?): Typeface? {
+        val ctx = context ?: appContext ?: return face
+        return ui(ctx, if (face != null && face.isBold) 500 else 400)
+    }
+
+    /** Whether the interface font is in the APK (Compose checks before using it). */
+    @JvmStatic
+    fun hasUiFont(context: Context): Boolean =
+        runCatching { context.assets.open(UI_FONT).close(); true }.getOrDefault(false)
 
     /** BumBoard's own copy of Noto Color Emoji. */
     @Synchronized

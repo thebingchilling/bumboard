@@ -18,6 +18,7 @@ BumBoard software — open-source components and licences
   * AndroidX and Jetpack Compose, including Material 3 — Apache License 2.0. (c) Google LLC.
   * Material Symbols — Apache License 2.0. (c) Google LLC.
   * Noto Color Emoji — SIL Open Font License 1.1. (c) Google LLC.
+  * Google Sans Flex (interface font) — SIL Open Font License 1.1. (c) The Google Sans Flex Project Authors.
   * Kotlin standard library — Apache License 2.0. (c) JetBrains s.r.o.
 
 Full licence texts:

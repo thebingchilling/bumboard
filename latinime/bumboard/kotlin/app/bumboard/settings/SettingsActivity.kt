@@ -702,7 +702,20 @@ private fun ThemePage() {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
     )
+    val colors = prefs.stringPref(app.bumboard.ui.BumColorStyle.PREF) {
+        prefs.getString(app.bumboard.ui.BumColorStyle.PREF, null) ?: app.bumboard.ui.BumColorStyle.NEUTRAL
+    }
     Group {
+        row {
+            ChoiceRow(
+                it, stringResource(R.string.bum_pref_colors), null,
+                listOf(
+                    app.bumboard.ui.BumColorStyle.NEUTRAL to stringResource(R.string.bum_pref_colors_neutral),
+                    app.bumboard.ui.BumColorStyle.WALLPAPER to stringResource(R.string.bum_pref_colors_wallpaper),
+                ),
+                colors.value, onSelect = colors::set,
+            )
+        }
         names.indices.forEach { i ->
             row { shape ->
                 RadioRow(shape, names[i], selected == ids[i]) {

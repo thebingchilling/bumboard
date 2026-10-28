@@ -18,4 +18,8 @@
     <color name="bum_m3_surface_high">@android:color/system_neutral2_100</color>
     <color name="bum_m3_outline">@android:color/system_neutral2_500</color>
     <color name="bum_m3_outline_variant">@android:color/system_neutral2_200</color>
+    <!-- The neutral colour style (like Gboard's): grey functional keys, no wallpaper tint. -->
+    <color name="bum_m3_key_functional_neutral">@android:color/system_neutral2_200</color>
+    <color name="bum_m3_key_functional_pressed_neutral">@android:color/system_neutral2_300</color>
+    <color name="bum_m3_on_key_functional_neutral">@android:color/system_neutral1_900</color>
 </resources>

@@ -21,4 +21,8 @@
     <color name="bum_m3_shadow">#59000000</color>
     <color name="bum_m3_shadow_soft">#33000000</color>
     <color name="bum_m3_shadow_ambient">#1A000000</color>
+    <!-- The neutral colour style (like Gboard's): grey functional keys, no wallpaper tint. -->
+    <color name="bum_m3_key_functional_neutral">#444A51</color>
+    <color name="bum_m3_key_functional_pressed_neutral">#5A6169</color>
+    <color name="bum_m3_on_key_functional_neutral">#E2E6EB</color>
 </resources>

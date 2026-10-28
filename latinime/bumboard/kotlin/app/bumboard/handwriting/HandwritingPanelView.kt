@@ -205,7 +205,7 @@ class HandwritingPanelView @JvmOverloads constructor(
             setText(label)
             setTextColor(palette.onSurface)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
             gravity = Gravity.CENTER
         }
         view.contentDescription = context.getString(label)

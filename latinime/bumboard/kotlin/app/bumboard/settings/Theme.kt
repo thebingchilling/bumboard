@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalTextApi::class)
 
 package app.bumboard.settings
 
@@ -8,11 +8,20 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.font.FontWeight
+import app.bumboard.fonts.BumFonts
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
@@ -83,11 +92,43 @@ fun bumColorScheme(dark: Boolean): ColorScheme {
     }
 }
 
+/** Google Sans Flex in the weights the settings use; null when the font is not in the APK. */
+@Composable
+private fun googleSansFlex(): FontFamily? {
+    val context = LocalContext.current
+    return remember {
+        if (!BumFonts.hasUiFont(context)) return@remember null
+        val assets = context.applicationContext.assets
+        FontFamily(listOf(400, 500, 600, 700).map { w ->
+            Font(
+                BumFonts.UI_FONT, assets, FontWeight(w),
+                variationSettings = FontVariation.Settings(FontVariation.weight(w)),
+            )
+        })
+    }
+}
+
+/** Material 3's type scale in [family]. */
+private fun typography(family: FontFamily?): Typography {
+    val base = Typography()
+    if (family == null) return base
+    fun TextStyle.f() = copy(fontFamily = family)
+    return base.copy(
+        displayLarge = base.displayLarge.f(), displayMedium = base.displayMedium.f(), displaySmall = base.displaySmall.f(),
+        headlineLarge = base.headlineLarge.f(), headlineMedium = base.headlineMedium.f(), headlineSmall = base.headlineSmall.f(),
+        titleLarge = base.titleLarge.f(), titleMedium = base.titleMedium.f(), titleSmall = base.titleSmall.f(),
+        bodyLarge = base.bodyLarge.f(), bodyMedium = base.bodyMedium.f(), bodySmall = base.bodySmall.f(),
+        labelLarge = base.labelLarge.f(), labelMedium = base.labelMedium.f(), labelSmall = base.labelSmall.f(),
+    )
+}
+
 @Composable
 fun BumTheme(content: @Composable () -> Unit) {
+    val family = googleSansFlex()
     MaterialExpressiveTheme(
         colorScheme = bumColorScheme(isSystemInDarkTheme()),
         motionScheme = MotionScheme.expressive(),
+        typography = remember(family) { typography(family) },
         content = content,
     )
 }

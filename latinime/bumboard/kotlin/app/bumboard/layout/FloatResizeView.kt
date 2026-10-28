@@ -51,7 +51,7 @@ class FloatResizeView @JvmOverloads constructor(
     /** The keyboard's exact size in pixels, updated while dragging. */
     private val sizeLabel = TextView(context).apply {
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
         setTextColor(palette.onPrimaryContainer)
         gravity = Gravity.CENTER
         setPadding(dp(12), dp(4), dp(12), dp(4))
@@ -69,7 +69,7 @@ class FloatResizeView @JvmOverloads constructor(
         buttons.addView(TextView(context).apply {
             setText(R.string.bum_resize_done)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
             setTextColor(palette.onPrimary)
             gravity = Gravity.CENTER
             setPadding(dp(24), dp(10), dp(24), dp(10))

@@ -141,7 +141,7 @@ class ToolbarView @JvmOverloads constructor(
         setText(text)
         setTextColor(palette.onSurface)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
         gravity = Gravity.CENTER_VERTICAL
         setPadding(dp(8), 0, 0, 0)
     }

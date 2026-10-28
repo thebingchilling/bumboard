@@ -41,6 +41,9 @@ jobs:
       - name: Build emoji data
         run: python3 data/build_emoji.py
 
+      - name: Fetch Google Sans Flex (interface font)
+        run: scripts/fetch-fonts.sh
+
       - name: Rime schema tests (host librime)
         run: data/test/run.sh
 

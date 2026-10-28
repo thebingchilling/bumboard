@@ -7,6 +7,21 @@
     bumFunctionalKeyBackground. Icons are tinted at draw time (KeyboardView, bumIconColor etc.).
 -->
 <resources>
+    <!--
+        Colour styles, applied over the keyboard theme (KeyboardSwitcher, BumColorStyle):
+        neutral grey functional keys like Gboard's (the default), or keys tinted from the wallpaper.
+    -->
+    <style name="BumColors.Neutral" parent="">
+        <item name="bumColorFunctional">@color/bum_m3_key_functional_neutral</item>
+        <item name="bumColorFunctionalPressed">@color/bum_m3_key_functional_pressed_neutral</item>
+        <item name="bumColorOnFunctional">@color/bum_m3_on_key_functional_neutral</item>
+    </style>
+    <style name="BumColors.Wallpaper" parent="">
+        <item name="bumColorFunctional">@color/bum_m3_key_functional</item>
+        <item name="bumColorFunctionalPressed">@color/bum_m3_key_functional_pressed</item>
+        <item name="bumColorOnFunctional">@color/bum_m3_on_key_functional</item>
+    </style>
+
     <style name="KeyboardIcons.BumM3" parent="KeyboardIcons.LXX_Light">
         <item name="iconShiftKey">@drawable/ic_sym_shift</item>
         <item name="iconShiftKeyShifted">@drawable/ic_sym_shift_filled</item>
@@ -69,7 +84,7 @@
         <item name="spacebarBackground">?attr/bumKeyBackground</item>
         <item name="keyTextColor">@color/bum_m3_on_key</item>
         <item name="keyTextInactivatedColor">@color/bum_m3_on_key_variant</item>
-        <item name="functionalTextColor">@color/bum_m3_on_key_functional</item>
+        <item name="functionalTextColor">?attr/bumColorOnFunctional</item>
         <item name="keyHintLetterColor">@color/bum_m3_on_key_variant</item>
         <item name="keyHintLabelColor">@color/bum_m3_on_key_variant</item>
         <item name="keyShiftedLetterHintInactivatedColor">@color/bum_m3_on_key_variant</item>
@@ -77,7 +92,7 @@
         <item name="keyPreviewTextColor">@color/bum_m3_on_key</item>
         <item name="keyPreviewTextRatio">52%</item>
         <item name="bumIconColor">@color/bum_m3_on_key</item>
-        <item name="bumFunctionalIconColor">@color/bum_m3_on_key_functional</item>
+        <item name="bumFunctionalIconColor">?attr/bumColorOnFunctional</item>
         <item name="bumActionColor">@color/bum_m3_on_primary</item>
         <item name="bumStickyOnColor">@color/bum_m3_on_primary_container</item>
     </style>

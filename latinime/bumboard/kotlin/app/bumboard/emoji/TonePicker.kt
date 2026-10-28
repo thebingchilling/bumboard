@@ -80,7 +80,7 @@ class TonePicker(private val ctx: Context) {
                     setText(if (person == 0) R.string.bum_tone_person1 else R.string.bum_tone_person2)
                     setTextColor(c.onSurfaceVariant)
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                    typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                    typeface = app.bumboard.fonts.BumFonts.ui(context, 500)
                 }, LinearLayout.LayoutParams(dp(48), LinearLayout.LayoutParams.WRAP_CONTENT))
                 for (t in 0 until 5) {
                     row.addView(View(ctx).apply {
