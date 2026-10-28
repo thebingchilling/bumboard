@@ -956,6 +956,11 @@ public class Key implements Comparable<Key> {
         mPressed = false;
     }
 
+    /** BUMBOARD: whether the key is being pressed (drawn selected). */
+    public final boolean isPressed() {
+        return mPressed;
+    }
+
     public final boolean isEnabled() {
         return mEnabled;
     }

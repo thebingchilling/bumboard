@@ -662,6 +662,20 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         mSlidingKeyInputDrawingPreview.dismissSlidingKeyInputPreview();
         panel.showInParent(mDrawingPreviewPlacerView);
         mMoreKeysPanel = panel;
+        invalidate();
+    }
+
+    // BUMBOARD: the keys fade behind a long-press popup, like Gboard's
+    private final Paint mBumScrimPaint = new Paint();
+
+    @Override
+    protected void onDraw(final Canvas canvas) {
+        super.onDraw(canvas);
+        if (isShowingMoreKeysPanel()) {
+            final int background = getContext().getColor(R.color.bum_m3_kb_background);
+            mBumScrimPaint.setColor((background & 0x00FFFFFF) | 0xB3000000);
+            canvas.drawRect(0, 0, getWidth(), getHeight(), mBumScrimPaint);
+        }
     }
 
     public boolean isShowingMoreKeysPanel() {
@@ -678,6 +692,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         if (isShowingMoreKeysPanel()) {
             mMoreKeysPanel.removeFromParent();
             mMoreKeysPanel = null;
+            invalidate();
         }
     }
 

@@ -141,6 +141,9 @@
         <item name="functionalKeyBackground">@drawable/bum_m3_key_popup</item>
         <item name="divider">@null</item>
         <item name="keyTypeface">normal</item>
+        <!-- round keys: the selected one is a filled circle with its symbol in white -->
+        <item name="keyLabelFlags">keepBackgroundAspectRatio</item>
+        <item name="bumPressedTextColor">@color/bum_m3_on_primary</item>
         <item name="verticalCorrection">@dimen/config_more_keys_keyboard_vertical_correction_holo</item>
         <!-- popup keys have no functional fill, so their icons use the plain key colour -->
         <item name="bumFunctionalIconColor">@color/bum_m3_on_key</item>

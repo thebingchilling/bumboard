@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A key inside the long-press popup: highlighted only while selected. -->
+<!-- A key inside the long-press popup: a filled circle in the accent colour while selected,
+     like Gboard's (the popup keeps its aspect ratio, so it stays round). -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
-        <shape android:shape="rectangle">
-            <solid android:color="@color/bum_m3_primary_container" />
-            <corners android:radius="12dp" />
+        <shape android:shape="oval">
+            <solid android:color="@color/bum_m3_primary" />
+            <size android:width="44dp" android:height="44dp" />
         </shape>
     </item>
-    <item android:drawable="@android:color/transparent" />
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@android:color/transparent" />
+            <size android:width="44dp" android:height="44dp" />
+        </shape>
+    </item>
 </selector>

@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The bubble above a pressed key: a compact rounded card the width of the key, sitting just
-    above it (Gboard style). KeyPreviewChoreographer widens it to the key; its height is
-    bum_key_preview_height and LatinIME places it from keyPreviewOffset.
+    The bubble above a pressed key: a white circle a little wider than the key, overlapping its
+    top, like Gboard's. KeyPreviewChoreographer sizes and places it.
 -->
-<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="@color/bum_m3_surface_high" />
-    <corners android:radius="12dp" />
-    <size android:width="40dp" android:height="52dp" />
-    <padding android:left="2dp" android:top="0dp" android:right="2dp" android:bottom="0dp" />
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@color/bum_m3_key" />
+    <padding android:left="0dp" android:top="0dp" android:right="0dp" android:bottom="0dp" />
 </shape>

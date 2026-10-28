@@ -100,6 +100,7 @@ public class KeyboardView extends View {
     private final int mBumFunctionalIconColor;
     private final int mBumActionColor;
     private final int mBumStickyOnColor;
+    private final int mBumPressedTextColor;
     private static final float KET_TEXT_SHADOW_RADIUS_DISABLED = -1.0f;
 
     // The maximum key label width in the proportion to the key width.
@@ -175,6 +176,7 @@ public class KeyboardView extends View {
         mBumActionColor = bumAttr.getColor(R.styleable.BumKeyboardView_bumActionColor, 0);
         mBumStickyOnColor = bumAttr.getColor(
                 R.styleable.BumKeyboardView_bumStickyOnColor, mBumIconColor);
+        mBumPressedTextColor = bumAttr.getColor(R.styleable.BumKeyboardView_bumPressedTextColor, 0);
         bumAttr.recycle();
 
         final TypedArray keyAttr = context.obtainStyledAttributes(attrs,
@@ -465,6 +467,10 @@ public class KeyboardView extends View {
                 if (key.isActionKey() && mBumActionColor != 0) {
                     paint.setColor(mBumActionColor);
                 }
+                // BUMBOARD: the selected key of a popup is white on its accent circle
+                if (key.isPressed() && mBumPressedTextColor != 0) {
+                    paint.setColor(mBumPressedTextColor);
+                }
                 // Set a drop shadow for the text if the shadow radius is positive value.
                 if (mKeyTextShadowRadius > 0.0f) {
                     paint.setShadowLayer(mKeyTextShadowRadius, 0.0f, 0.0f, params.mTextShadowColor);
@@ -640,6 +646,9 @@ public class KeyboardView extends View {
     private int bumIconTint(@Nonnull final Key key) {
         if (mBumIconColor == 0) {
             return 0;
+        }
+        if (key.isPressed() && mBumPressedTextColor != 0) {
+            return mBumPressedTextColor;
         }
         if (key.isActionKey() && mBumActionColor != 0) {
             return mBumActionColor;

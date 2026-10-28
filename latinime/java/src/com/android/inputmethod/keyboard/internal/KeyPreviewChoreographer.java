@@ -103,6 +103,10 @@ public final class KeyPreviewChoreographer {
         showKeyPreview(key, keyPreviewView, withAnimation);
     }
 
+    /** BUMBOARD: the bubble's size against its key, and how far it reaches down over the key. */
+    private static final float BUM_BUBBLE_SCALE = 1.3f;
+    private static final float BUM_BUBBLE_OVERLAP = 0.2f;
+
     private void placeKeyPreview(final Key key, final KeyPreviewView keyPreviewView,
             final KeyboardIconsSet iconsSet, final KeyDrawParams drawParams,
             final int keyboardViewWidth, final int[] originCoords) {
@@ -111,9 +115,11 @@ public final class KeyPreviewChoreographer {
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         mParams.setGeometry(keyPreviewView);
         final int keyDrawWidth = key.getDrawWidth();
-        // BUMBOARD: the preview is at least as wide as its key, like Gboard's.
-        final int previewWidth = Math.max(keyPreviewView.getMeasuredWidth(), keyDrawWidth);
-        final int previewHeight = mParams.mPreviewHeight;
+        // BUMBOARD: Gboard's round bubble, a little wider than its key, overlapping the key's top
+        final int bubble = Math.max(Math.round(keyDrawWidth * BUM_BUBBLE_SCALE),
+                keyPreviewView.getMeasuredWidth());
+        final int previewWidth = bubble;
+        final int previewHeight = bubble;
         // The key preview is horizontally aligned with the center of the visible part of the
         // parent key. If it doesn't fit in this {@link KeyboardView}, it is moved inward to fit and
         // the left/right background is used if such background is specified.
@@ -134,12 +140,15 @@ public final class KeyPreviewChoreographer {
         // The key preview is placed vertically above the top edge of the parent key with an
         // arbitrary offset.
         final int previewY = key.getY() - previewHeight + mParams.mPreviewOffset
+                + Math.round(key.getHeight() * BUM_BUBBLE_OVERLAP)
                 + CoordinateUtils.y(originCoords);
 
         ViewLayoutUtils.placeViewAt(
                 keyPreviewView, previewX, previewY, previewWidth, previewHeight);
         keyPreviewView.setPivotX(previewWidth / 2.0f);
         keyPreviewView.setPivotY(previewHeight);
+        // BUMBOARD: a soft shadow under the bubble
+        keyPreviewView.setElevation(keyPreviewView.getResources().getDisplayMetrics().density * 2);
     }
 
     void showKeyPreview(final Key key, final KeyPreviewView keyPreviewView,

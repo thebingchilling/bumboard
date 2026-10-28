@@ -6,7 +6,7 @@
     <dimen name="bum_script_key_width">44dp</dimen>
     <!-- Right of the candidates: the ⌄ (36dp) and the 繁/简 button (44dp). -->
     <dimen name="bum_candidate_bar_end">80dp</dimen>
-    <!-- The key preview: a compact bubble just above the pressed key. -->
+    <!-- The key preview: a round bubble over the pressed key (sized from the key in code). -->
     <dimen name="bum_key_preview_height">52dp</dimen>
-    <dimen name="bum_key_preview_offset">2dp</dimen>
+    <dimen name="bum_key_preview_offset">0dp</dimen>
 </resources>
