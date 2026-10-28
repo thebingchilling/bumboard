@@ -89,6 +89,7 @@ enum class Page(@StringRes val title: Int) {
     Correction(R.string.settings_screen_correction),
     Gesture(R.string.settings_screen_gesture),
     Advanced(R.string.settings_screen_advanced),
+    Packs(R.string.bum_packs_title),
     About(R.string.bum_about),
     Licences(R.string.bum_licences),
 }
@@ -195,6 +196,7 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                     Page.Correction -> CorrectionPage()
                     Page.Gesture -> GesturePage()
                     Page.Advanced -> AdvancedPage()
+                    Page.Packs -> PacksPage()
                     Page.About -> AboutPage { page = Page.Licences }
                     Page.Licences -> LicencesPage()
                 }
@@ -321,6 +323,12 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
         }
     }
     Group(stringResource(R.string.bum_section_app)) {
+        row {
+            NavRow(
+                it, stringResource(R.string.bum_packs_title),
+                stringResource(R.string.bum_packs_summary), R.drawable.ic_sym_download,
+            ) { open(Page.Packs) }
+        }
         row {
             NavRow(
                 it, stringResource(R.string.bum_about),
@@ -967,5 +975,10 @@ private fun LicencesPage() {
         if (data.isNotEmpty()) {
             row { TextRow(it, stringResource(R.string.bum_licences_data), data) }
         }
+        val packs = remember {
+            app.bumboard.packs.Packs.catalog(context).filter { it.credit.isNotEmpty() }
+                .joinToString("\n\n") { "${it.name}\n${it.credit}\n${it.license}" }
+        }
+        row { TextRow(it, stringResource(R.string.bum_licences_packs), packs) }
     }
 }

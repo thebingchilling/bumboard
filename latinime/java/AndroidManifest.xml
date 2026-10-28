@@ -15,6 +15,7 @@
 -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+     xmlns:tools="http://schemas.android.com/tools"
      coreApp="true">
     <!-- BUMBOARD: package, versions and SDK levels come from build.gradle.kts.
          Network, contacts, accounts, sync and storage permissions are dropped. -->
@@ -25,9 +26,22 @@
     <uses-permission android:name="android.permission.WRITE_USER_DICTIONARY"/>
     <!-- BUMBOARD: voice typing through the phone's speech recogniser (Google's when present). -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- BUMBOARD: never on the network. Packs (fonts, models, dictionaries) are downloaded by
+         the browser and imported from a file; CI fails if any of these ever reappear. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove"/>
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" tools:node="remove"/>
     <queries>
         <intent>
             <action android:name="android.speech.RecognitionService"/>
+        </intent>
+        <!-- the browser that opens pack pages (Custom Tabs) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService"/>
         </intent>
     </queries>
 

@@ -58,6 +58,16 @@ jobs:
       - name: Build debug APK
         run: ./gradlew --no-daemon :latinime:assembleDebug
 
+      - name: No network permissions
+        run: |
+          apk=$(ls latinime/build/outputs/apk/debug/*.apk | head -1)
+          perms=$("$ANDROID_HOME"/build-tools/36.1.0/aapt2 dump permissions "$apk")
+          echo "$perms"
+          if echo "$perms" | grep -E 'android.permission.(INTERNET|ACCESS_NETWORK_STATE|ACCESS_WIFI_STATE|CHANGE_NETWORK_STATE)'; then
+            echo "::error::BumBoard must never hold a network permission"
+            exit 1
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
           name: bumboard-${{ env.BUILD_VERSION_NAME }}

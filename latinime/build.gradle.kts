@@ -38,6 +38,8 @@ android {
             res.srcDir("bumboard/res")
             // Rime data and readings, built by bumboard/data/build_data.py.
             assets.srcDir("../data/out/assets")
+            // BumBoard's own assets (the pack catalogue)
+            assets.srcDir("bumboard/assets")
         }
     }
 
@@ -80,6 +82,8 @@ dependencies {
     implementation(libs.androidx.core)
     implementation(libs.androidx.viewpager)
     implementation(libs.androidx.recyclerview)
+    // Custom Tabs: pack pages open in the browser, which does the downloading
+    implementation(libs.androidx.browser)
     implementation(libs.androidx.annotation)
     compileOnly(libs.jsr305)
 

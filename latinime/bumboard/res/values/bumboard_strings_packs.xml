@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Packs: optional downloads, fetched by the browser and imported from a file. -->
+    <string name="bum_packs_title">Downloads</string>
+    <string name="bum_packs_summary">Fonts, handwriting, dictionaries and offline voice</string>
+    <string name="bum_packs_how">BumBoard never connects to the internet. Tap Get to open a pack\'s page in your browser and download it, then tap Import and choose the downloaded file.</string>
+    <string name="bum_packs_get">Get</string>
+    <string name="bum_packs_update">Get newer</string>
+    <string name="bum_packs_import">Import</string>
+    <string name="bum_packs_remove">Remove</string>
+    <string name="bum_packs_importing">Importing…</string>
+    <string name="bum_packs_imported">%1$s is ready.</string>
+    <string name="bum_packs_installed">Installed %1$s · %2$s</string>
+    <string name="bum_packs_storage">Storage</string>
+    <string name="bum_packs_storage_used">Downloads use %1$s on this phone</string>
+    <string name="bum_packs_import_any">Import a downloaded file</string>
+    <string name="bum_packs_import_any_summary">BumBoard works out which pack it is</string>
+    <string name="bum_packs_updates">Check for newer packs</string>
+    <string name="bum_packs_updates_summary">Opens the packs page in your browser</string>
+    <string name="bum_packs_fonts_zh">Chinese fonts</string>
+    <string name="bum_packs_fonts_emoji">Emoji fonts</string>
+    <string name="bum_packs_handwriting">Handwriting</string>
+    <string name="bum_packs_dictionaries">Dictionaries</string>
+    <string name="bum_packs_voice">Offline voice</string>
+    <string name="bum_licences_packs">Packs</string>
+</resources>

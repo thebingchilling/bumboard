@@ -1,0 +1,149 @@
+{
+  "_comment": "BumBoard's pack catalogue. BumBoard has no network access: 'url' opens in the browser (Custom Tab), which downloads the file; the user then imports it. 'sha256' (optional) pins an exact file; 'pick' chooses the font inside a zip; 'prefer' breaks ties between matches. Packs built by BumBoard (zip with pack.json) live on this repo's 'packs' release.",
+  "release": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
+  "packs": [
+    {
+      "id": "font_zh_wenkai", "kind": "font_zh", "name": "LXGW WenKai 霞鹜文楷",
+      "summary": "Kai style, Simplified forms", "version": "latest",
+      "url": "https://github.com/lxgw/LxgwWenKai/releases/latest",
+      "file": "LXGWWenKai-Regular.ttf", "pick": "(?i)LXGWWenKai-Regular\\.ttf$",
+      "size": "25 MB", "license": "SIL Open Font License 1.1", "credit": "LXGW WenKai by LXGW"
+    },
+    {
+      "id": "font_zh_wenkai_tc", "kind": "font_zh", "name": "LXGW WenKai TC 霞鶩文楷",
+      "summary": "Kai style, Traditional forms", "version": "latest",
+      "url": "https://github.com/lxgw/LxgwWenkaiTC/releases/latest",
+      "file": "LXGWWenKaiTC-Regular.ttf", "pick": "(?i)LXGWWenKaiTC-Regular\\.ttf$",
+      "size": "20 MB", "license": "SIL Open Font License 1.1", "credit": "LXGW WenKai TC by LXGW"
+    },
+    {
+      "id": "font_zh_chiron_hei", "kind": "font_zh", "name": "Chiron Hei HK 昭源黑體",
+      "summary": "Hei style, Hong Kong glyph standard", "version": "latest",
+      "url": "https://github.com/chiron-fonts/chiron-hei-hk/releases/latest",
+      "file": "ChironHeiHK (zip or .otf)", "pick": "(?i)\\.(otf|ttf)$", "prefer": "(?i)-R(egular)?\\.|VF",
+      "size": "15 MB", "license": "SIL Open Font License 1.1", "credit": "Chiron Hei HK by Tamcy"
+    },
+    {
+      "id": "font_zh_chiron_sung", "kind": "font_zh", "name": "Chiron Sung HK 昭源宋體",
+      "summary": "Song style, Hong Kong glyph standard", "version": "latest",
+      "url": "https://github.com/chiron-fonts/chiron-sung-hk/releases/latest",
+      "file": "ChironSungHK (zip or .otf)", "pick": "(?i)\\.(otf|ttf)$", "prefer": "(?i)-R(egular)?\\.|VF",
+      "size": "20 MB", "license": "SIL Open Font License 1.1", "credit": "Chiron Sung HK by Tamcy"
+    },
+    {
+      "id": "font_zh_zhuque", "kind": "font_zh", "name": "Zhuque Fangsong 朱雀仿宋",
+      "summary": "Fangsong style", "version": "latest",
+      "url": "https://github.com/TrionesType/zhuque/releases/latest",
+      "file": "ZhuqueFangsong-Regular.ttf", "pick": "(?i)Zhuque.*\\.(ttf|otf)$", "prefer": "(?i)Regular",
+      "size": "10 MB", "license": "SIL Open Font License 1.1", "credit": "Zhuque Fangsong by TrionesType"
+    },
+    {
+      "id": "font_zh_gensen", "kind": "font_zh", "name": "GenSen Rounded 源泉圓體",
+      "summary": "Rounded, Traditional forms", "version": "latest",
+      "url": "https://github.com/ButTaiwan/gensen-font/releases/latest",
+      "file": "GenSenRounded TW (zip)", "pick": "(?i)GenSenRounded2?TW.*\\.(ttf|otf)$", "prefer": "(?i)-R\\.|Regular",
+      "size": "12 MB", "license": "SIL Open Font License 1.1", "credit": "GenSen Rounded by ButTaiwan"
+    },
+    {
+      "id": "font_zh_custom", "kind": "font_zh", "custom": true, "name": "Your own font",
+      "summary": "Any .ttf or .otf with Chinese characters", "version": "",
+      "url": "", "size": "", "license": "Your font's own licence", "credit": ""
+    },
+    {
+      "id": "emoji_noto_latest", "kind": "font_emoji", "name": "Noto Color Emoji (newest)",
+      "summary": "Google's emoji; BumBoard already includes a copy", "version": "latest",
+      "url": "https://github.com/googlefonts/noto-emoji/raw/main/fonts/NotoColorEmoji.ttf",
+      "file": "NotoColorEmoji.ttf", "pick": "(?i)NotoColorEmoji\\.ttf$",
+      "size": "10 MB", "license": "SIL Open Font License 1.1", "credit": "Noto Color Emoji by Google"
+    },
+    {
+      "id": "emoji_twemoji", "kind": "font_emoji", "name": "Twemoji",
+      "summary": "Twitter/X style (Mozilla's font build)", "version": "latest",
+      "url": "https://github.com/mozilla/twemoji-colr/releases/latest",
+      "file": "Twemoji.Mozilla.ttf", "pick": "(?i)Twemoji.*\\.ttf$",
+      "size": "1.5 MB", "license": "Graphics CC BY 4.0; font build MPL/Apache", "credit": "Twemoji by Twitter, Inc and other contributors (CC BY 4.0); font by Mozilla"
+    },
+    {
+      "id": "emoji_openmoji", "kind": "font_emoji", "name": "OpenMoji",
+      "summary": "Open-source hand-drawn style", "version": "latest",
+      "url": "https://github.com/hfg-gmuend/openmoji/releases/latest",
+      "file": "openmoji-font.zip", "pick": "(?i)OpenMoji-color.*\\.ttf$", "prefer": "(?i)cbdt",
+      "size": "10 MB", "license": "CC BY-SA 4.0", "credit": "OpenMoji, the open-source emoji project (CC BY-SA 4.0)"
+    },
+    {
+      "id": "emoji_blobmoji", "kind": "font_emoji", "name": "Blobmoji",
+      "summary": "Google's classic blobs, kept up to date", "version": "latest",
+      "url": "https://github.com/C1710/blobmoji/releases/latest",
+      "file": "Blobmoji.ttf", "pick": "(?i)Blobmoji.*\\.ttf$",
+      "size": "10 MB", "license": "Apache License 2.0", "credit": "Blobmoji by C1710, based on Noto Emoji by Google"
+    },
+    {
+      "id": "emoji_serenity", "kind": "font_emoji", "name": "SerenityOS Emoji",
+      "summary": "Pixel-art style", "version": "latest",
+      "url": "https://github.com/linusg/serenityos-emoji-font/releases/latest",
+      "file": "SerenityOS-Emoji.ttf", "pick": "(?i)\\.ttf$",
+      "size": "1 MB", "license": "BSD 2-Clause", "credit": "SerenityOS emoji by the SerenityOS contributors"
+    },
+    {
+      "id": "emoji_custom", "kind": "font_emoji", "custom": true, "name": "Your own emoji font",
+      "summary": "Any colour emoji .ttf this phone can draw", "version": "",
+      "url": "", "size": "", "license": "Your font's own licence", "credit": ""
+    },
+    {
+      "id": "hw_zh_hant", "kind": "handwriting", "name": "Handwriting: Traditional Chinese",
+      "summary": "Write 繁體 characters, including Cantonese ones", "version": "1", "built": true,
+      "url": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
+      "file": "bumboard-hw-zh-hant.zip",
+      "size": "4 MB", "license": "LGPL 2.1 (Tegaki/Tomoe models); Zinnia engine BSD", "credit": "Handwriting models from the Tegaki and Tomoe projects"
+    },
+    {
+      "id": "hw_zh_hans", "kind": "handwriting", "name": "Handwriting: Simplified Chinese",
+      "summary": "Write 简体 characters", "version": "1", "built": true,
+      "url": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
+      "file": "bumboard-hw-zh-hans.zip",
+      "size": "4 MB", "license": "LGPL 2.1 (Tegaki/Tomoe models); Zinnia engine BSD", "credit": "Handwriting models from the Tegaki and Tomoe projects"
+    },
+    {
+      "id": "hw_ja", "kind": "handwriting", "name": "Handwriting: Japanese",
+      "summary": "Write kana and kanji", "version": "1", "built": true,
+      "url": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
+      "file": "bumboard-hw-ja.zip",
+      "size": "4 MB", "license": "LGPL 2.1 (Tomoe model); Zinnia engine BSD", "credit": "Handwriting model from the Tomoe project"
+    },
+    {
+      "id": "rime_ja", "kind": "rime", "name": "Japanese dictionary",
+      "summary": "Kana to kanji conversion for the Japanese keyboards", "version": "1", "built": true,
+      "url": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
+      "file": "bumboard-rime-ja.zip",
+      "size": "12 MB", "license": "Mozc dictionary (BSD-3-Clause, IPAdic licence)", "credit": "Japanese dictionary from Mozc (Google) and IPAdic"
+    },
+    {
+      "id": "voice_en", "kind": "voice", "lang": "en", "name": "Offline voice: English",
+      "summary": "Vosk small model; only loaded while the mic is on", "version": "0.15",
+      "url": "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip",
+      "file": "vosk-model-small-en-us-0.15.zip",
+      "size": "40 MB", "license": "Apache License 2.0", "credit": "Vosk speech models by Alpha Cephei"
+    },
+    {
+      "id": "voice_cmn", "kind": "voice", "lang": "cmn", "name": "Offline voice: Mandarin",
+      "summary": "Vosk small model; only loaded while the mic is on", "version": "0.22",
+      "url": "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip",
+      "file": "vosk-model-small-cn-0.22.zip",
+      "size": "42 MB", "license": "Apache License 2.0", "credit": "Vosk speech models by Alpha Cephei"
+    },
+    {
+      "id": "voice_ja", "kind": "voice", "lang": "ja", "name": "Offline voice: Japanese",
+      "summary": "Vosk small model; only loaded while the mic is on", "version": "0.22",
+      "url": "https://alphacephei.com/vosk/models/vosk-model-small-ja-0.22.zip",
+      "file": "vosk-model-small-ja-0.22.zip",
+      "size": "48 MB", "license": "Apache License 2.0", "credit": "Vosk speech models by Alpha Cephei"
+    },
+    {
+      "id": "voice_ko", "kind": "voice", "lang": "ko", "name": "Offline voice: Korean",
+      "summary": "Vosk small model; only loaded while the mic is on", "version": "0.22",
+      "url": "https://alphacephei.com/vosk/models/vosk-model-small-ko-0.22.zip",
+      "file": "vosk-model-small-ko-0.22.zip",
+      "size": "82 MB", "license": "Apache License 2.0", "credit": "Vosk speech models by Alpha Cephei"
+    }
+  ]
+}
