@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A kaomoji face, ( ^ ^ ), for the emoji panel's tab -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000"
+        android:pathData="M5,4Q1.5,12 5,20M19,4Q22.5,12 19,20M7.5,12L9.5,9L11.5,12M12.5,12L14.5,9L16.5,12M10,16Q12,17.5 14,16" />
+</vector>

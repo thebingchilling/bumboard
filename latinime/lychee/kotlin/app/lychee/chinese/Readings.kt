@@ -27,6 +27,11 @@ object Readings {
     @Volatile
     var annotator: Annotator? = null
         private set
+
+    /** The database itself, for lookups beyond annotation (next characters ...). */
+    @Volatile
+    var db: ReadingsDb? = null
+        private set
     private var opening = false
 
     /** Opens the database in the background; [then] runs on the main thread once it is ready. */
@@ -38,7 +43,9 @@ object Readings {
             try {
                 val file = install(app)
                 val db = SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY)
-                annotator = Annotator(ReadingsDb(AndroidSql(db)))
+                val readings = ReadingsDb(AndroidSql(db))
+                this.db = readings
+                annotator = Annotator(readings)
             } catch (t: Throwable) {
                 Log.e(TAG, "readings.db unavailable", t)
             }

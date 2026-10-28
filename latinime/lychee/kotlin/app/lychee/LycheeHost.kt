@@ -22,6 +22,12 @@ interface LycheeHost {
     /** The current keyboard's engine ("yue", "cmn", "ja", "ko"), or null for English. */
     fun lycheeEngine(): String?
 
+    /**
+     * Shows handwriting guesses (or next-character suggestions) in the candidate bar; [onPick]
+     * gets the index of the one tapped. An empty list clears them.
+     */
+    fun lycheeShowGuesses(guesses: List<String>, onPick: (Int) -> Unit)
+
     /** Opens one page of Lychee's settings (a [app.lychee.settings.Page] name). */
     fun lycheeOpenSettings(page: String)
 }

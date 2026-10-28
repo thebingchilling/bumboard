@@ -82,7 +82,9 @@ class EmojiPanelView @JvmOverloads constructor(
     private class Section(val id: String, val title: Int, val icon: Int, val emoji: List<Emoji>, val forms: List<String>?)
     private sealed class Row {
         class Header(val title: Int) : Row()
-        class Cell(val emoji: Emoji, val form: String?, val section: Int) : Row()
+        class Cell(val emoji: Emoji, val form: String?, val section: Int) : Row() {
+            val kaomoji get() = emoji.keywords == KAOMOJI
+        }
     }
 
     init {
@@ -98,7 +100,12 @@ class EmojiPanelView @JvmOverloads constructor(
         })
         layoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
             override fun getSpanSize(position: Int) =
-                if (adapter.rows.getOrNull(position) is Row.Header) layoutManager.spanCount else 1
+                when (val row = adapter.rows.getOrNull(position)) {
+                    is Row.Header -> layoutManager.spanCount
+                    // kaomoji are wide: three to a row
+                    is Row.Cell -> if (row.kaomoji) (layoutManager.spanCount / 3).coerceAtLeast(1) else 1
+                    else -> 1
+                }
         }
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         pinchToResize()
@@ -255,6 +262,8 @@ class EmojiPanelView @JvmOverloads constructor(
                 val (title, icon) = GROUP_INFO[g.id] ?: return@forEach
                 add(Section(g.id, title, icon, g.items, null))
             }
+            add(Section(KAOMOJI, R.string.lychee_emoji_kaomoji, R.drawable.lychee_ic_kaomoji,
+                Kaomoji.all.map { Emoji(it, it, KAOMOJI, null) }, Kaomoji.all))
         }
         val rows = mutableListOf<Row>()
         sections.forEachIndexed { s, section ->
@@ -417,7 +426,10 @@ class EmojiPanelView @JvmOverloads constructor(
         var rows: List<Row> = emptyList()
 
         override fun getItemCount() = rows.size
-        override fun getItemViewType(position: Int) = if (rows[position] is Row.Header) 0 else 1
+        override fun getItemViewType(position: Int) = when (val row = rows[position]) {
+            is Row.Header -> 0
+            is Row.Cell -> if (row.kaomoji) 2 else 1
+        }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val view = EmojiCell(context).apply {
@@ -428,6 +440,12 @@ class EmojiPanelView @JvmOverloads constructor(
                     typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
                     setPadding(dp(14), dp(10), dp(14), dp(4))
                     layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                } else if (viewType == 2) {
+                    setTextColor(palette.onSurface)
+                    isSingleLine = true
+                    includeFontPadding = false
+                    background = selectable()
+                    layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50))
                 } else {
                     typeface = app.lychee.fonts.LycheeFonts.emoji(context)
                     includeFontPadding = false
@@ -448,7 +466,8 @@ class EmojiPanelView @JvmOverloads constructor(
                 is Row.Cell -> {
                     // the emoji fills its cell
                     val size = if (cellSize > 0) cellSize else dp(46)
-                    view.setTextSize(TypedValue.COMPLEX_UNIT_PX, size * EMOJI_FILL)
+                    if (row.kaomoji) view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                    else view.setTextSize(TypedValue.COMPLEX_UNIT_PX, size * EMOJI_FILL)
                     val lp = view.layoutParams
                     if (lp.height != size) {
                         lp.height = size
@@ -513,6 +532,8 @@ class EmojiPanelView @JvmOverloads constructor(
         const val MAX_COLUMNS = 12
         /** Emoji glyph size as a share of its cell. */
         private const val EMOJI_FILL = 0.74f
+        /** The kaomoji section's id, and the keywords that mark its cells. */
+        private const val KAOMOJI = "kaomoji"
 
         private val GROUP_INFO = mapOf(
             "smileys" to (R.string.lychee_emoji_smileys to R.drawable.ic_sym_mood),

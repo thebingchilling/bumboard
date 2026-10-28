@@ -64,7 +64,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             b.background = ime.getDrawable(R.drawable.lychee_m3_suggestion)
             b.setOnClickListener { togglePanel() }
         }
-        bar?.onPick = { index -> pick(index) }
+        bar?.onPick = { index -> if (showingGuesses) onGuess(index) else pick(index) }
         bar?.onLongPick = { index, anchor -> showDictionary(index, anchor) }
         // the notch: a swipe down on the candidates opens them all, with more room
         bar?.onExpand = { if (panel?.visibility != View.VISIBLE) togglePanel() }
@@ -74,23 +74,45 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         show(null)
     }
 
+    /** Handwriting guesses or next characters, shown in the bar while nothing is composed. */
+    private var guesses: List<String> = emptyList()
+    private var onGuess: (Int) -> Unit = {}
+    private val showingGuesses: Boolean
+        get() = shown == null && guesses.isNotEmpty()
+
+    fun showGuesses(list: List<String>, onPick: (Int) -> Unit) {
+        guesses = list
+        onGuess = onPick
+        if (list.isNotEmpty()) Readings.open(ime) { if (showingGuesses) show(null) }
+        if (!isComposing) show(null)
+    }
+
+    /** Handwriting reads Cantonese, or Mandarin when typing Simplified. */
+    private fun guessMode() =
+        if (prefs.getString(PREF_SCRIPT, "traditional") == "simplified") InputMode.Mandarin else InputMode.Cantonese
+
+    /** What the bar shows: the keyboard's own candidates, or handwriting guesses. */
+    private fun barMode() = if (showingGuesses) guessMode() else inputMode()
+
     /** Long-press on a candidate: its full dictionary entry in a popup from the candidate. */
     private fun showDictionary(index: Int, anchor: View) {
-        val candidate = shown?.candidates?.getOrNull(index) ?: return
-        if (!isChinese) {
+        val candidate = (if (showingGuesses) guesses.getOrNull(index)?.let { Candidate(it, "") }
+            else shown?.candidates?.getOrNull(index)) ?: return
+        val guessing = showingGuesses
+        if (!isChinese && !guessing) {
             showWordCard(index, candidate)
             return
         }
         val annotator = Readings.annotator ?: return
-        val mode = inputMode()
-        val resolved = annotator.resolve(candidate.text, candidate.comment, mode) ?: return
+        val resolved = annotator.resolve(candidate.text, candidate.comment, barMode()) ?: return
         if (resolved.headwords.isEmpty() && resolved.reading == null) return
         val frame = keyboardFrame?.takeIf { it.height > 0 } ?: return
         val peek = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
-        val locales = app.lychee.speech.Speech.localesFor(engine, prefs.getString(PREF_SCRIPT, "traditional") == "simplified")
+        val voice = if (guessing) (if (guessMode() == InputMode.Cantonese) "yue" else "cmn") else engine
+        val locales = app.lychee.speech.Speech.localesFor(voice, prefs.getString(PREF_SCRIPT, "traditional") == "simplified")
         popup?.show(frame, candidate.text, resolved, Readings.displayPrefs(prefs), peek,
             onSpeak = { text -> app.lychee.speech.Speech.speak(ime, text, locales) }) {
-            pick(index)
+            if (guessing) onGuess(index) else pick(index)
         }
     }
 
@@ -138,6 +160,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         } else line
         p.text = android.text.SpannableStringBuilder(composition.preedit)
             .append("   ").append(first.text).append("  ").append(reading)
+    }
+
+    /** Readings for handwriting guesses: Cantonese readings, or Mandarin when typing Simplified. */
+    private fun guessAnnotation(): ((Candidate) -> Annotation?)? {
+        if (!Readings.showReadings(prefs)) return null
+        val annotator = Readings.annotator ?: return null
+        val mode = guessMode()
+        val display = Readings.displayPrefs(prefs)
+        return { candidate -> annotator.annotate(candidate.text, "", mode, display) }
     }
 
     /** The background annotation for the current settings, or null when readings are off. */
@@ -391,16 +422,17 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         popup?.dismiss()
         val stripView = strip as? SuggestionStripView
         updateScriptKey(stripView)
-        val candidates = composition?.candidates.orEmpty()
+        val guessing = composition == null && guesses.isNotEmpty()
+        val candidates = if (guessing) guesses.map { Candidate(it, "") } else composition?.candidates.orEmpty()
         preedit?.let { p ->
             val typed = composition?.preedit.orEmpty()
             p.text = typed
             p.visibility = if (isActive && typed.isNotEmpty()) View.VISIBLE else View.GONE
             if (p.visibility == View.VISIBLE) p.bringToFront()
         }
-        updateBarHeight(stripView, isActive && candidates.isNotEmpty())
+        updateBarHeight(stripView, (isActive || guessing) && candidates.isNotEmpty())
         val bar = bar ?: return
-        if (!isActive || candidates.isEmpty()) {
+        if ((!isActive && !guessing) || candidates.isEmpty()) {
             bar.setCandidates(emptyList(), null)
             bar.visibility = View.GONE
             moreButton?.visibility = View.GONE
@@ -410,10 +442,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             return
         }
         bar.setScale(candidateScale())
-        bar.style = Readings.barStyle(prefs, inputMode().lang)
-        bar.setCandidates(candidates, annotation())
+        bar.style = Readings.barStyle(prefs, barMode().lang)
+        bar.setCandidates(candidates, if (guessing) guessAnnotation() else annotation())
         bar.visibility = View.VISIBLE
-        moreButton?.visibility = View.VISIBLE
+        moreButton?.visibility = if (guessing) View.GONE else View.VISIBLE
         // the open dropdown follows the typing
         if (panel?.visibility == View.VISIBLE) panel?.show(candidates, candidateScale(), annotation(), bar.style)
         updateMoreButton()
@@ -497,7 +529,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** What each candidate shows under its characters, so the bar can scale it to fit. */
     private fun annotationLines(): CandidateBarView.Lines {
         if (!Readings.showReadings(prefs)) return CandidateBarView.Lines(0, false)
-        if (!isChinese) {
+        if (!isChinese && !(shown == null && guesses.isNotEmpty())) {
             return CandidateBarView.Lines(1, prefs.getBoolean(Readings.PREF_MEANING, true) && app.lychee.dict.PackData.hasWords(ime, engine))
         }
         val display = Readings.displayPrefs(prefs)

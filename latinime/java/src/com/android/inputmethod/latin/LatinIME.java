@@ -2251,6 +2251,12 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     }
 
     @Override
+    public void lycheeShowGuesses(@Nonnull final java.util.List<String> guesses,
+            @Nonnull final kotlin.jvm.functions.Function1<? super Integer, kotlin.Unit> onPick) {
+        if (mLycheeChinese != null) mLycheeChinese.showGuesses(guesses, onPick);
+    }
+
+    @Override
     public void lycheeOpenSettings(@Nonnull final String page) {
         launchLycheeSettingsPage(page);
     }

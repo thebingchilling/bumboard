@@ -67,6 +67,32 @@ class ReadingsDb(private val sql: Sql) : Dictionary {
         }
     }
 
+    /**
+     * Words that continue [prefix] (what to write next after 學: 校, 生, 習 ...), most frequent
+     * first, in Simplified when [simplified] else Traditional. Returns the rest of each word.
+     */
+    fun continuations(prefix: String, simplified: Boolean, limit: Int = 12): List<String> {
+        if (prefix.isEmpty()) return emptyList()
+        val words = sql.query(
+            "SELECT hw.trad, hw.simp FROM form JOIN hw ON hw.id = form.hw " +
+                "WHERE form.form > ? AND form.form < ? ORDER BY hw.freq DESC LIMIT 60",
+            arrayOf(prefix, prefix + "\uFFFF"),
+        ) { it.string(0)!! to it.string(1)!! }
+        val out = LinkedHashSet<String>()
+        for ((trad, simp) in words) {
+            val word = when {
+                simplified && simp.startsWith(prefix) -> simp
+                trad.startsWith(prefix) -> trad
+                simp.startsWith(prefix) -> simp
+                else -> continue
+            }
+            val rest = word.substring(prefix.length)
+            if (rest.isNotEmpty() && rest.codePointCount(0, rest.length) <= 3) out += rest
+            if (out.size >= limit) break
+        }
+        return out.toList()
+    }
+
     fun meta(key: String): String? =
         sql.query("SELECT v FROM meta WHERE k = ?", arrayOf(key)) { it.string(0) }.firstOrNull()
 }

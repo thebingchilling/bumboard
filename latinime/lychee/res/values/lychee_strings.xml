@@ -106,6 +106,19 @@
     <string name="lychee_fuzzy_pinyin_summary">zh = z, ch = c, sh = s, n = l, en = eng, in = ing, an = ang, f = h. Tone numbers (ni3hao3) always narrow the candidates</string>
     <string name="lychee_fuzzy_jyutping">Lazy Jyutping</string>
     <string name="lychee_fuzzy_jyutping_summary">n = l, ng- can be left out, gwo = go, -ng = -n, -k = -t. Tone numbers (nei5hou2) always narrow the candidates</string>
+    <string name="lychee_emoji_kaomoji">Kaomoji</string>
+    <string name="lychee_personal_title">Personal dictionary</string>
+    <string name="lychee_personal_summary">Your own words for each language</string>
+    <string name="lychee_personal_how">Add a word and what you type for it. When you type that, the word comes first.</string>
+    <string name="lychee_personal_language">Language</string>
+    <string name="lychee_personal_word">Word</string>
+    <string name="lychee_personal_code">Typed as</string>
+    <string name="lychee_personal_code_hint">Letters as you type them, e.g. ngodeigungsi, nihao, arigatou</string>
+    <string name="lychee_personal_add">Add</string>
+    <string name="lychee_personal_edit">Edit</string>
+    <string name="lychee_personal_remove">Remove</string>
+    <string name="lychee_personal_words">Words (%1$d)</string>
+    <string name="lychee_personal_none">No words yet</string>
     <string name="lychee_tone_colours">Tone colours</string>
     <string name="lychee_tone_colours_summary">Each syllable in the colour of its tone</string>
     <string name="lychee_other_script">Other script beside the word</string>

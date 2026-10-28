@@ -84,6 +84,7 @@ enum class Page(@StringRes val title: Int) {
     Home(R.string.english_ime_name),
     Languages(R.string.language_selection_title),
     Chinese(R.string.lychee_chinese),
+    Personal(R.string.lychee_personal_title),
     Preferences(R.string.settings_screen_preferences),
     Theme(R.string.settings_screen_theme),
     Correction(R.string.settings_screen_correction),
@@ -194,6 +195,7 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                     Page.Home -> HomePage(status.value) { page = it }
                     Page.Languages -> LanguagesPage()
                     Page.Chinese -> ChinesePage()
+                    Page.Personal -> PersonalDictionaryPage()
                     Page.Preferences -> PreferencesPage()
                     Page.Theme -> ThemePage()
                     Page.Correction -> CorrectionPage()
@@ -293,6 +295,12 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
                 it, stringResource(R.string.lychee_chinese),
                 stringResource(R.string.lychee_chinese_summary), R.drawable.ic_sym_translate,
             ) { open(Page.Chinese) }
+        }
+        row {
+            NavRow(
+                it, stringResource(R.string.lychee_personal_title),
+                stringResource(R.string.lychee_personal_summary), R.drawable.ic_sym_edit,
+            ) { open(Page.Personal) }
         }
     }
     Group(stringResource(R.string.lychee_section_typing)) {

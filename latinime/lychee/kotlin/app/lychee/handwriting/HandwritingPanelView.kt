@@ -16,7 +16,6 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -31,8 +30,10 @@ import java.util.concurrent.Executors
 /**
  * Handwriting over the keys, like Gboard's: write a character anywhere on the pad; a moment
  * after the last stroke the best guess is typed and the pad clears for the next one, so
- * characters can be written one after another. The guesses stay above the pad: tap one to
- * replace what was typed. ⌫ takes back the last stroke while writing, otherwise deletes.
+ * characters can be written one after another. The guesses show in the candidate bar, with
+ * their readings: tap one to replace what was typed. After each character the bar suggests
+ * what usually follows it (校, 生, 習 after 學), from the readings dictionary's words.
+ * ⌫ takes back the last stroke while writing, otherwise deletes.
  *
  * Two ways in: the Handwriting shortcut opens it over any keyboard (with Back), and the
  * 手寫 Handwriting keyboard ([keyboardMode], subtype extra `LycheeHandwriting`) is this pad in place
@@ -49,10 +50,6 @@ class HandwritingPanelView @JvmOverloads constructor(
     private val palette = M3Colors.of(context)
     private val main = Handler(Looper.getMainLooper())
     private val pad = Pad()
-    private val candidates = LinearLayout(context).apply {
-        orientation = HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-    }
     /** "Write here", faint in the middle of the empty pad. */
     private val hint = TextView(context).apply {
         setText(R.string.lychee_hw_write_here)
@@ -81,10 +78,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         orientation = VERTICAL
         isClickable = true
         setBackgroundColor(palette.surface)
-        addView(HorizontalScrollView(context).apply {
-            isHorizontalScrollBarEnabled = false
-            addView(candidates)
-        }, LayoutParams(LayoutParams.MATCH_PARENT, dp(48)))
+        // the guesses show in the candidate bar above (lycheeShowGuesses), so the pad gets the room
         addView(FrameLayout(context).apply {
             background = GradientDrawable().apply {
                 cornerRadius = dp(16).toFloat()
@@ -93,7 +87,7 @@ class HandwritingPanelView @JvmOverloads constructor(
             addView(hint, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(pad, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(message, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-        }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { setMargins(dp(8), 0, dp(8), dp(4)) })
+        }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { setMargins(dp(8), dp(6), dp(8), dp(4)) })
         addView(bottom, LayoutParams(LayoutParams.MATCH_PARENT, dp(52)).apply { setMargins(dp(4), 0, dp(4), dp(4)) })
         buildBottomRow()
         visibility = GONE
@@ -171,6 +165,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         lastTyped = null
         showGuesses(emptyList())
         release()
+        app.lychee.chinese.Readings.open(context)
         val model = Zinnia.modelFor(context, lycheeHost()?.lycheeEngine())
         zinnia = model?.let { Zinnia.open(it) }
         message.visibility = if (zinnia == null) VISIBLE else GONE
@@ -184,6 +179,8 @@ class HandwritingPanelView @JvmOverloads constructor(
             commitPending()
             main.removeCallbacksAndMessages(null)
             release()
+            guesses = emptyList()
+            lycheeHost()?.lycheeShowGuesses(emptyList()) {}
         }
         super.setVisibility(visibility)
     }
@@ -218,6 +215,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         if (best != null) {
             lycheeHost()?.lycheeType(best)
             lastTyped = best
+            showNext(best)
         }
     }
 
@@ -236,6 +234,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         }
         lycheeHost()?.lycheeType(text)
         lastTyped = text
+        showNext(text)
     }
 
     private fun space() {
@@ -260,21 +259,25 @@ class HandwritingPanelView @JvmOverloads constructor(
         hint.visibility = if (zinnia != null && !pad.hasInk) VISIBLE else GONE
     }
 
+    /** The recogniser's guesses for the ink on the pad, in the candidate bar. */
     private fun showGuesses(list: List<String>) {
         guesses = list
-        candidates.removeAllViews()
-        list.forEachIndexed { i, g ->
-            candidates.addView(TextView(context).apply {
-                text = g
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-                setTextColor(if (i == 0) palette.primary else palette.onSurface)
-                LycheeFonts.chinese(context)?.let { typeface = it }
-                gravity = Gravity.CENTER
-                minWidth = dp(48)
-                setPadding(dp(10), 0, dp(10), 0)
-                background = context.getDrawable(R.drawable.lychee_m3_suggestion)
-                setOnClickListener { pick(g) }
-            }, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+        lycheeHost()?.lycheeShowGuesses(list) { i -> list.getOrNull(i)?.let { pick(it) } }
+    }
+
+    /** What usually follows [typed]: tapping one types it and suggests what follows that. */
+    private fun showNext(typed: String) {
+        val last = typed.codePointBefore(typed.length).let { String(Character.toChars(it)) }
+        @Suppress("DEPRECATION")
+        val simplified = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            .getString(app.lychee.chinese.ChineseInput.PREF_SCRIPT, "traditional") == "simplified"
+        val next = runCatching { app.lychee.chinese.Readings.db?.continuations(last, simplified) }.getOrNull().orEmpty()
+        lycheeHost()?.lycheeShowGuesses(next) { i ->
+            next.getOrNull(i)?.let { text ->
+                lycheeHost()?.lycheeType(text)
+                lastTyped = null
+                showNext(text)
+            }
         }
     }
 

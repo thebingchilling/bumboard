@@ -106,6 +106,36 @@ def parse_name(name: str) -> tuple[str, list[int]]:
     return (f"{head}: {', '.join(rest)}" if rest else head), tones
 
 
+def romanisers(readings_db: Path):
+    """Chinese keyword -> its toneless Jyutping and pinyin ('貓' -> ['maau', 'mao']), from the
+    readings.db build_data.py made, so emoji can be searched on the Chinese keyboards."""
+    if not readings_db.exists():
+        print("readings.db not built: no romanised emoji keywords", file=sys.stderr)
+        return lambda word: []
+    import sqlite3
+    db = sqlite3.connect(readings_db)
+
+    def first(form: str, lang: str) -> str | None:
+        row = db.execute(
+            "SELECT r.r FROM form f JOIN hw ON hw.id = f.hw JOIN reading r ON r.hw = hw.id "
+            "WHERE f.form = ? AND r.lang = ? ORDER BY hw.freq DESC, r.rank LIMIT 1", (form, lang)).fetchone()
+        return row[0] if row else None
+
+    def spell(word: str, lang: str) -> str | None:
+        whole = first(word, lang)
+        parts = [whole] if whole else [first(c, lang) for c in word]
+        if not all(parts):
+            return None
+        return re.sub(r"[\d\s]", "", " ".join(parts)).replace("ü", "v")
+
+    def romanise(word: str) -> list[str]:
+        if not word or not all("\u3400" <= c <= "\u9fff" for c in word):
+            return []
+        return [s for s in (spell(word, "yue"), spell(word, "cmn")) if s]
+
+    return romanise
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, default=HERE / "out")
@@ -115,12 +145,16 @@ def main():
     assets = args.out / "assets" / "lychee"
     assets.mkdir(parents=True, exist_ok=True)
 
+    romanise = romanisers(assets / "readings.db")
     words: dict[str, list[str]] = {}
     for lang in CLDR_LANGS:
         for kind in ("cldr", "cldr-derived"):
             for cp, ws in annotations([src[f"{kind}-{lang}.xml"]]).items():
                 bucket = words.setdefault(cp, [])
                 bucket.extend(w for w in ws if w not in bucket)
+                # Chinese keywords as typed on the Cantonese and Mandarin keyboards
+                for w in ws:
+                    bucket.extend(r for r in romanise(w) if r not in bucket)
 
     line_re = re.compile(r"^([0-9A-F ]+?)\s*;\s*([a-z-]+)\s*#\s*(\S+)\s+E[\d.]+\s+(.+)$")
     groups: list[dict] = []

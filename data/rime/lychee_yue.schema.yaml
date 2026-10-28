@@ -54,3 +54,12 @@ key_binder:
   __include: lychee_common:/key_binder
 recognizer:
   __include: lychee_common:/recognizer
+
+# the user's own words, written by Lychee's Personal dictionary page into Rime's user folder
+custom_phrase:
+  dictionary: ""
+  user_dict: lychee_phrases_yue
+  db_class: stabledb
+  enable_completion: false
+  enable_sentence: false
+  initial_quality: 1

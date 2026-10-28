@@ -19,6 +19,8 @@ chinese_engine:
   translators:
     - punct_translator
     - script_translator
+    # the user's own words (Settings > Personal dictionary)
+    - table_translator@custom_phrase
   filters:
     - simplifier
     - uniquifier
