@@ -37,8 +37,10 @@
         <include
             latin:keyboardLayout="@xml/rowkeys_symbols2" />
     </Row>
+    <!-- LYCHEE: as tall as the letters' shift/delete row -->
     <Row
         latin:keyWidth="10%p"
+        latin:rowHeight="25%"
     >
         <Key
             latin:keyStyle="toMoreSymbolKeyStyle"

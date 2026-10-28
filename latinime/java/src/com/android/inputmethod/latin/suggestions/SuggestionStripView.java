@@ -160,7 +160,8 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mLycheeZhongKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
         mLycheeZhongKey.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         mLycheeZhongKey.setIncludeFontPadding(false);
-        mLycheeZhongKey.setText("\u4E2D");
+        // 英: English words typed come back as Chinese
+        mLycheeZhongKey.setText("\u82F1");
         mLycheeZhongKey.setPadding(0, 0, 0, (int) (getResources().getDisplayMetrics().density * 2));
         mImportantNoticeStrip = findViewById(R.id.important_notice_strip);
         mStripVisibilityGroup = new StripVisibilityGroup(this, mSuggestionsStrip,
@@ -201,16 +202,11 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         keyboardAttr.recycle();
         mVoiceKey.setImageDrawable(iconVoice);
         mVoiceKey.setOnClickListener(this);
-        // LYCHEE: the mic icon is a white Material Symbol, tinted to suit the strip, on a white
-        // circle like Gboard's.
+        // LYCHEE: the mic is a raised round key with a soft shadow, like 繁/简
         mVoiceKey.setImageTintList(android.content.res.ColorStateList.valueOf(
                 context.getColor(R.color.lychee_m3_on_key)));
-        final android.graphics.drawable.GradientDrawable micCircle =
-                new android.graphics.drawable.GradientDrawable();
-        micCircle.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-        micCircle.setColor(context.getColor(R.color.lychee_m3_key));
-        final int micInset = (int) (getResources().getDisplayMetrics().density * 6);
-        mVoiceKey.setBackground(new android.graphics.drawable.InsetDrawable(micCircle, micInset));
+        mVoiceKey.setBackground(lycheeRoundRaisedButton(context,
+                context.getColor(R.color.lychee_m3_key)));
         setLycheeScriptKey(null, null);
     }
 

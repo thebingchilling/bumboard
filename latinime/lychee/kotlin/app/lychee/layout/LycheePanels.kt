@@ -52,8 +52,8 @@ object LycheePanels {
     )
 
     /**
-     * The Back button every panel has, in its bottom-left corner where possible: a filled
-     * circle in the accent colour, so it never looks like one of the keys.
+     * The Back button every panel has, in its bottom-left corner where possible: a raised round
+     * key with a soft shadow, like the mic and 繁/简.
      */
     @JvmStatic
     fun backButton(context: Context, onClick: () -> Unit): View {
@@ -61,18 +61,34 @@ object LycheePanels {
         val size = (context.resources.displayMetrics.density * 40).toInt()
         val button = android.widget.ImageView(context).apply {
             setImageResource(R.drawable.ic_sym_arrow_back)
-            imageTintList = android.content.res.ColorStateList.valueOf(palette.onPrimaryContainer)
+            imageTintList = android.content.res.ColorStateList.valueOf(palette.onSurface)
             scaleType = android.widget.ImageView.ScaleType.CENTER
-            background = android.graphics.drawable.GradientDrawable().apply {
-                shape = android.graphics.drawable.GradientDrawable.OVAL
-                setColor(palette.primaryContainer)
-            }
+            background = raisedRound(context, palette.surfaceContainer)
             contentDescription = context.getString(R.string.lychee_back)
             setOnClickListener { onClick() }
         }
         // centred in whatever cell it is given, at a fixed size
         return FrameLayout(context).apply {
             addView(button, FrameLayout.LayoutParams(size, size, Gravity.CENTER))
+        }
+    }
+
+    /** A round key face over a soft shadow, a little lower, like the raised keys. */
+    @JvmStatic
+    fun raisedRound(context: Context, color: Int): Drawable {
+        val d = context.resources.displayMetrics.density
+        val shadow = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(context.getColor(R.color.lychee_m3_shadow))
+        }
+        val face = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(color)
+        }
+        val lift = (2 * d).toInt()
+        return android.graphics.drawable.LayerDrawable(arrayOf(shadow, face)).apply {
+            setLayerInsetTop(0, lift)
+            setLayerInsetBottom(1, lift)
         }
     }
 

@@ -362,12 +362,7 @@ public class KeyboardView extends View {
         if (!key.isSpacer()) {
             Drawable background = key.selectBackgroundDrawable(
                     mKeyBackground, mFunctionalKeyBackground, mSpacebarBackground);
-            // LYCHEE: ?123 and ABC are pills, like Gboard's
-            if (background != null && mLycheePillBackground != null
-                    && key.getCode() == Constants.CODE_SWITCH_ALPHA_SYMBOL) {
-                mLycheePillBackground.setState(background.getState());
-                background = mLycheePillBackground;
-            }
+            // LYCHEE: ?123, ABC and Enter are rounded squares like every other key
             // LYCHEE: with key borders off, letter keys show a background only while pressed
             final boolean hidden = background == mKeyBackground && !app.lychee.ui.KeyStyle.getBorders()
                     && !key.isPressed();
