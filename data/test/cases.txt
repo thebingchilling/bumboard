@@ -28,3 +28,9 @@ bum_en_cmn	apple	-	苹果	1
 bum_en_cmn	eat	-	吃	2
 bum_en_cmn	refrigerator	-	冰箱	3
 bum_en_cmn	hello	traditionalization=1	你好	3
+bum_ko	annyeong	-	안녕	3
+bum_ko	gamsahamnida	-	감사합니다	3
+bum_ko	kimchi	-	김치	5
+bum_ko	hangeul	-	한글	5
+bum_ko	eopseoyo	-	없어요	5
+bum_ko	saranghae	-	사랑해	3

@@ -1,0 +1,75 @@
+# Korean, typed in romanisation (Revised Romanization) on QWERTY, for learners: "annyeong"
+# gives 안녕. The dictionary spells each syllable letter by letter (감사합니다 = gam sa hab ni
+# da); the algebra below adds the spellings people write by ear (kimchi, gamsahamnida,
+# eopseoyo), and every candidate shows its romanisation.
+schema:
+  schema_id: bum_ko
+  name: 한국어
+  version: "1"
+  description: Korean (romanisation input)
+
+switches:
+  - name: ascii_mode
+    reset: 0
+    states: [ 한, A ]
+
+engine:
+  processors:
+    - ascii_composer
+    - recognizer
+    - key_binder
+    - speller
+    - selector
+    - navigator
+    - express_editor
+  segmentors:
+    - ascii_segmentor
+    - matcher
+    - abc_segmentor
+    - fallback_segmentor
+  translators:
+    - script_translator
+  filters:
+    - uniquifier
+
+speller:
+  alphabet: zyxwvutsrqponmlkjihgfedcba
+  delimiter: " '-"
+  algebra:
+    # initials as heard: k for g, t for d, p for b, ch for j, l for r
+    - derive/^g/k/
+    - derive/^d/t/
+    - derive/^b/p/
+    - derive/^j/ch/
+    - derive/^r/l/
+    # finals as pronounced
+    - derive/kk$/k/
+    - derive/g$/k/
+    - derive/b$/p/
+    - derive/(d|s|ss|j|ch|h)$/t/
+    - derive/(lg|gs)$/k/
+    - derive/(bs|lp)$/p/
+    - derive/(nj|nh)$/n/
+    - derive/(lb|ls|lt|lh)$/l/
+    # a final before n or m turns nasal (합니다 hamnida, 있는 inneun, 먹는 meongneun)
+    - derive/b$/m/
+    - derive/bs$/m/
+    - derive/g$/ng/
+    - derive/(d|s|ss|j|ch|h)$/n/
+    # a cluster's second letter carries over to a vowel (없어요 eopseoyo)
+    - derive/bs$/ps/
+    - derive/gs$/ks/
+
+translator:
+  dictionary: bum_ko
+  enable_sentence: true
+  enable_user_dict: true
+  # the romanisation under every candidate, as a learning aid
+  spelling_hints: 8
+  comment_format:
+    - xform/ /-/
+
+key_binder:
+  __include: bum_common:/key_binder
+recognizer:
+  __include: bum_common:/recognizer

@@ -7,6 +7,7 @@ schema_list:
   - schema: bum_cmn
   - schema: bum_en_yue
   - schema: bum_en_cmn
+  - schema: bum_ko
 
 switcher:
   caption: 〔方案〕

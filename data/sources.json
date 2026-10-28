@@ -35,5 +35,11 @@
     "sha256": "dace310e1279fb51666bb8fc743131f9f12b8e6bdb11a36f58087bdf9f1f49df",
     "license": "CC-BY-SA-4.0",
     "_comment": "MDBG only serves the latest release, so a dated snapshot is kept here. Refresh with update_cedict.sh."
+  },
+  "ko-words": {
+    "url": "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/ko/ko_50k.txt",
+    "sha256": "",
+    "license": "CC-BY-SA-4.0 (word list from OpenSubtitles 2018, by Hermit Dave)",
+    "_comment": "Unpinned until the first CI build prints its sha256."
   }
 }

@@ -63,6 +63,17 @@ def fetch_sources(cache: Path) -> dict[str, Path]:
                 run(["git", "checkout", "-q", "FETCH_HEAD"], cwd=dest)
                 (dest / ".done").touch()
             paths[name] = dest
+        elif "url" in s and not s.get("sha256"):
+            # not pinned yet: fetched once, and its sha256 printed so it can be pinned
+            dest = cache / Path(s["url"]).name
+            if not dest.exists():
+                print(f"downloading {s['url']}", file=sys.stderr)
+                tmp = dest.with_suffix(".part")
+                with urllib.request.urlopen(s["url"]) as r, open(tmp, "wb") as f:
+                    shutil.copyfileobj(r, f)
+                tmp.rename(dest)
+            print(f"warning: {name} is not pinned; sha256 {sha256(dest)}", file=sys.stderr)
+            paths[name] = dest
         elif "url" in s:
             dest = cache / Path(s["url"]).name
             if not dest.exists() or sha256(dest) != s["sha256"]:
@@ -450,6 +461,50 @@ def write_stamp(rime_dir: Path):
     (rime_dir / "STAMP").write_text(f"{DATA_VERSION}-{h.hexdigest()[:16]}\n")
 
 
+# ---------------------------------------------------------------- Korean
+
+KO_INITIALS = ["g", "kk", "n", "d", "tt", "r", "m", "b", "pp", "s", "ss", "", "j", "jj",
+               "ch", "k", "t", "p", "h"]
+KO_VOWELS = ["a", "ae", "ya", "yae", "eo", "e", "yeo", "ye", "o", "wa", "wae", "oe", "yo",
+             "u", "wo", "we", "wi", "yu", "eu", "ui", "i"]
+KO_FINALS = ["", "g", "kk", "gs", "n", "nj", "nh", "d", "l", "lg", "lm", "lb", "ls", "lt",
+             "lp", "lh", "m", "b", "bs", "s", "ss", "ng", "j", "ch", "k", "t", "p", "h"]
+
+
+def ko_syllable(ch: str) -> str | None:
+    """The Revised Romanization of one Hangul syllable, letter by letter (as spelled)."""
+    n = ord(ch) - 0xAC00
+    if not 0 <= n < 11172:
+        return None
+    return KO_INITIALS[n // 588] + KO_VOWELS[(n % 588) // 28] + KO_FINALS[n % 28]
+
+
+def build_ko_dict(words_file: Path, path: Path) -> int:
+    """Rime dictionary for bum_ko: each word's syllables spelled in romanisation; the schema's
+    spelling algebra adds the pronounced forms (kimchi for gimchi, gamsahamnida ...)."""
+    lines, seen = [], set()
+    for raw in words_file.read_text(encoding="utf-8").splitlines():
+        parts = raw.split()
+        if len(parts) != 2 or not parts[1].isdigit():
+            continue
+        word, count = parts[0], int(parts[1])
+        if not 1 <= len(word) <= 8:
+            continue
+        sylls = [ko_syllable(c) for c in word]
+        if any(s is None for s in sylls) or word in seen:
+            continue
+        seen.add(word)
+        lines.append(f"{word}\t{' '.join(sylls)}\t{count}")
+    # every syllable, so anything can be spelled out
+    for n in range(11172):
+        c = chr(0xAC00 + n)
+        if c not in seen:
+            lines.append(f"{c}\t{ko_syllable(c)}\t0")
+    write_dict(path, "bum_ko", lines,
+               note="Korean words: FrequencyWords (Hermit Dave), from OpenSubtitles 2018, CC BY-SA 4.0.")
+    return len(lines)
+
+
 # ---------------------------------------------------------------- main
 
 
@@ -715,6 +770,10 @@ def main():
                       cmn_en_freq,
                       rime_dir / "bum_en_cmn.dict.yaml", "bum_en_cmn")
     print(f"bum_en_cmn: {n} entries", file=sys.stderr)
+
+    # -------- Korean, typed in romanisation: words from a frequency list, every syllable too
+    n = build_ko_dict(src["ko-words"], rime_dir / "bum_ko.dict.yaml")
+    print(f"bum_ko: {n} entries", file=sys.stderr)
 
     # -------- Rime: schemas and shared config (hand-written, in ./rime)
     for f in (HERE / "rime").glob("*.yaml"):

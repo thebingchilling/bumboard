@@ -59,7 +59,8 @@ translator:
   prism: bum_ja
   enable_sentence: true
   enable_user_dict: true
-  spelling_hints: 0
+  # the romaji under every candidate, as a learning aid
+  spelling_hints: 8
 
 punctuator:
   half_shape:

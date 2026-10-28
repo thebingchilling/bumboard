@@ -17,12 +17,11 @@ import com.android.inputmethod.latin.common.Constants
 import com.android.inputmethod.latin.suggestions.SuggestionStripView
 
 /**
- * Chinese typing for LatinIME. When the current subtype carries `BumEngine=yue` or
- * `BumEngine=cmn`, LatinIME hands its key events here first; letters go to Rime and the
+ * Rime typing for LatinIME. When the current subtype carries `BumEngine=yue`, `cmn`, `ja` or
+ * `ko`, LatinIME hands its key events here first; letters (romanisation) go to Rime and the
  * candidates replace the suggestion strip. Everything Rime does not want falls back to LatinIME.
  */
-class ChineseInput(private val ime: InputMethodService, private val prefs: SharedPreferences) :
-    app.bumboard.japanese.FlickKeyboardView.FlickTarget {
+class ChineseInput(private val ime: InputMethodService, private val prefs: SharedPreferences) {
     private var session = 0L
     private var engine: String? = null
     private var bar: CandidateBarView? = null
@@ -41,7 +40,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     val isActive: Boolean
         get() = engine != null
 
-    /** The Rime engine of the current keyboard ("yue", "cmn", "ja"), or null. */
+    /** The Rime engine of the current keyboard ("yue", "cmn", "ja", "ko"), or null. */
     val currentEngine: String?
         get() = engine
 
@@ -83,7 +82,11 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /** The background annotation for the current settings, or null when readings are off. */
     private fun annotation(): ((Candidate) -> Annotation?)? {
-        if (engine == "ja" || !Readings.showReadings(prefs)) return null
+        if (!Readings.showReadings(prefs)) return null
+        // Japanese and Korean: each candidate's romanisation (Rime's spelling hint) as its reading
+        if (!isChinese) return { candidate ->
+            candidate.comment.trim().takeIf { it.isNotEmpty() }?.let { Annotation(listOf(it), null, null) }
+        }
         val annotator = Readings.annotator ?: return null
         val mode = inputMode()
         val display = Readings.displayPrefs(prefs)
@@ -94,6 +97,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     fun voiceLanguage(): String? = when (engine) {
         null -> null
         "ja" -> "ja-JP"
+        "ko" -> "ko-KR"
         "yue" -> "yue-Hant-HK"
         else -> if (prefs.getString(PREF_SCRIPT, "traditional") == "simplified") "cmn-Hans-CN" else "cmn-Hant-TW"
     }
@@ -106,7 +110,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         if (newEngine != null) {
             // imported Rime packs (the Japanese dictionary) join Rime's data first
             RimeService.start(ime) { RimeService.refreshPacks(ime) { selectSchema() } }
-            if (newEngine != "ja") Readings.open(ime) { if (isComposing) show(shown) }
+            if (newEngine == "yue" || newEngine == "cmn") Readings.open(ime) { if (isComposing) show(shown) }
             if (newEngine == "ja" && !app.bumboard.packs.Packs.isInstalled(ime, "rime_ja")) {
                 android.widget.Toast.makeText(ime, R.string.bum_ja_needs_pack, android.widget.Toast.LENGTH_LONG).show()
             }
@@ -114,12 +118,16 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         show(null)
     }
 
+    /** Cantonese or Mandarin (not Japanese or Korean). */
+    private val isChinese: Boolean
+        get() = engine == "yue" || engine == "cmn"
+
     /** Whether 中 is on: English words typed come back as Chinese candidates. */
     private val englishMode: Boolean
         get() = engine.let { it == "yue" || it == "cmn" } && prefs.getBoolean(PREF_ENGLISH_MODE + engine, false)
 
     private fun inputMode() = when {
-        engine == "ja" -> InputMode.Other
+        !isChinese -> InputMode.Other
         engine == "yue" && englishMode -> InputMode.EnglishToCantonese
         engine == "yue" -> InputMode.Cantonese
         englishMode -> InputMode.EnglishToMandarin
@@ -144,8 +152,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private fun selectSchema() {
         val engine = engine ?: return
         if (session == 0L) session = Rime.createSession()
-        if (engine == "ja") {
-            Rime.selectSchema(session, "bum_ja")
+        if (engine == "ja" || engine == "ko") {
+            Rime.selectSchema(session, "bum_$engine")
             return
         }
         val schema = when {
@@ -176,9 +184,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             event.mKeyCode == Constants.CODE_DELETE -> isComposing && key(KEY_BACKSPACE)
             code == Constants.CODE_ENTER -> {
                 if (isComposing) {
-                    // Enter sends the typed letters as they are (flicked kana as kana).
-                    val raw = if (flickKana.isNotEmpty()) flickKana.toString() else Rime.input(session)
-                    endFlickRun()
+                    // Enter sends the typed letters as they are
+                    val raw = Rime.input(session)
                     Rime.clearComposition(session)
                     ime.currentInputConnection?.commitText(raw, 1)
                     sync()
@@ -195,6 +202,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             }
             code == Constants.CODE_SPACE -> isComposing && key(code)
             code in 'a'.code..'z'.code -> key(code)
+            // Korean has no capitals: they spell the same syllables
+            code in 'A'.code..'Z'.code && engine == "ko" -> key(code + 32)
             code in 'A'.code..'Z'.code -> {
                 // A capital letter ends the composition and is typed as is.
                 if (isComposing) commitFirst()
@@ -203,6 +212,11 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             code in '0'.code..'9'.code || code == '\''.code && isComposing -> isComposing && key(code)
             // Chinese punctuation: ends a composition with its first candidate, then the
             // full-width mark, as Chinese input methods do
+            // Korean punctuation is the ASCII marks: the word typed so far goes first
+            engine == "ko" && (code in PUNCTUATION || code == '"'.code || code == '\''.code && !isComposing) -> {
+                if (isComposing) commitFirst()
+                false
+            }
             code in PUNCTUATION || code == '"'.code || code == '\''.code -> {
                 if (isComposing) commitFirst()
                 ime.currentInputConnection?.commitText(fullWidth(code), 1)
@@ -228,63 +242,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     fun pick(index: Int) {
         if (session == 0L) return
         Rime.selectCandidate(session, index)
-        endFlickRun()
         sync()
-    }
-
-    // ------------------------------------------------------------------ 12-key flick (Japanese)
-
-    /** The kana flicked since the last pick, and the romaji sent to Rime for them. */
-    private val flickKana = StringBuilder()
-    private var flickSent = ""
-
-    private fun endFlickRun() {
-        flickKana.setLength(0)
-        flickSent = ""
-    }
-
-    private val flickReady get() = engine == "ja" && RimeService.ready && session != 0L &&
-        app.bumboard.packs.Packs.isInstalled(ime, "rime_ja")
-
-    override fun flickType(text: String) {
-        val kana = text.firstOrNull()
-        val isKana = text.length == 1 && kana != null && (kana in 'ぁ'..'ゖ' || kana == 'ー')
-        if (!isKana || !flickReady) {
-            // marks (、。「」), or no dictionary: typed as they are
-            if (isComposing) commitFirst()
-            endFlickRun()
-            ime.currentInputConnection?.commitText(text, 1)
-            return
-        }
-        flickKana.append(text)
-        feedFlick()
-    }
-
-    override fun flickModify(): Boolean {
-        if (flickKana.isEmpty()) return false
-        val last = flickKana.last()
-        val changed = app.bumboard.japanese.Kana.modify(last) ?: return true
-        flickKana.setCharAt(flickKana.length - 1, changed)
-        feedFlick()
-        return true
-    }
-
-    override fun flickBackspace(): Boolean {
-        if (flickKana.isEmpty()) return false
-        flickKana.setLength(flickKana.length - 1)
-        feedFlick()
-        return true
-    }
-
-    /** Sends Rime only what changed: backspaces for the old romaji's tail, then the new tail. */
-    private fun feedFlick() {
-        val want = app.bumboard.japanese.Kana.romaji(flickKana)
-        val common = flickSent.commonPrefixWith(want).length
-        repeat(flickSent.length - common) { Rime.processKey(session, KEY_BACKSPACE) }
-        for (c in want.substring(common)) Rime.processKey(session, c.code)
-        flickSent = want
-        sync()
-        if (!isComposing) endFlickRun()
     }
 
     /** Whether the next " and ' open a quotation (they alternate, like Chinese IMEs). */
@@ -326,7 +284,6 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /** Drops any composition, e.g. when the text field changes. */
     fun reset() {
-        endFlickRun()
         popup?.dismiss()
         if (session != 0L) Rime.clearComposition(session)
         if (isComposing) ime.currentInputConnection?.finishComposingText()
@@ -335,7 +292,6 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     }
 
     private fun commitFirst() {
-        endFlickRun()
         Rime.commitComposition(session)
         sync()
     }
@@ -358,7 +314,6 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             ic?.finishComposingText()
             isComposing = false
         }
-        if (composition == null) endFlickRun()
         show(composition)
     }
 
@@ -422,7 +377,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** 繁 or 简 on the strip's left edge on the Chinese keyboards; a tap switches. */
     private fun updateScriptKey(stripView: SuggestionStripView?) {
         stripView ?: return
-        if (!isActive || engine == "ja") {
+        if (!isActive || !isChinese) {
             stripView.setBumScriptKey(null, null)
             stripView.setBumZhongKey(null, null)
             updateEdges(stripView)
@@ -462,7 +417,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /** What each candidate shows under its characters, so the bar can scale it to fit. */
     private fun annotationLines(): CandidateBarView.Lines {
-        if (engine == "ja" || !Readings.showReadings(prefs)) return CandidateBarView.Lines(0, false)
+        if (!Readings.showReadings(prefs)) return CandidateBarView.Lines(0, false)
+        if (!isChinese) return CandidateBarView.Lines(1, false)
         val display = Readings.displayPrefs(prefs)
         var lines = 1
         if (display.showOtherLanguage) lines++

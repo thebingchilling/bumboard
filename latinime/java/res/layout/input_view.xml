@@ -53,13 +53,6 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:visibility="gone" />
-    <!-- BUMBOARD: the Japanese 12-key flick keyboard, over the keys on its keyboard. -->
-    <app.bumboard.japanese.FlickKeyboardView
-        android:id="@+id/bum_flick_keyboard"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|start"
-        android:visibility="gone" />
     <app.bumboard.handwriting.HandwritingPanelView
         android:id="@+id/bum_handwriting_panel"
         android:layout_width="match_parent"
