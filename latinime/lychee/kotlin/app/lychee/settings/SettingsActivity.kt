@@ -558,6 +558,22 @@ private fun ChinesePage() {
             )
         }
     }
+    val fuzzyCmn = prefs.boolPref(ChineseInput.PREF_FUZZY + "cmn") { prefs.getBoolean(ChineseInput.PREF_FUZZY + "cmn", false) }
+    val fuzzyYue = prefs.boolPref(ChineseInput.PREF_FUZZY + "yue") { prefs.getBoolean(ChineseInput.PREF_FUZZY + "yue", false) }
+    Group(stringResource(R.string.lychee_group_typing)) {
+        row {
+            SwitchRow(
+                it, stringResource(R.string.lychee_fuzzy_pinyin), stringResource(R.string.lychee_fuzzy_pinyin_summary),
+                fuzzyCmn.value, fuzzyCmn::set,
+            )
+        }
+        row {
+            SwitchRow(
+                it, stringResource(R.string.lychee_fuzzy_jyutping), stringResource(R.string.lychee_fuzzy_jyutping_summary),
+                fuzzyYue.value, fuzzyYue::set,
+            )
+        }
+    }
     Group(stringResource(R.string.lychee_under_candidates)) {
         row {
             SwitchRow(

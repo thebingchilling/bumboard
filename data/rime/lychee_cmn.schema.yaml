@@ -19,10 +19,12 @@ engine:
   __include: lychee_common:/chinese_engine
 
 speller:
-  alphabet: zyxwvutsrqponmlkjihgfedcba
+  alphabet: zyxwvutsrqponmlkjihgfedcba12345
   delimiter: " '"
   algebra:
-    - erase/^xx$/
+    # codes carry their tone (ni3); typing it is optional
+    - erase/^xx\d?$/
+    - derive/\d$//
     - abbrev/^([a-z]).+$/$1/
     - abbrev/^([zcs]h).+$/$1/
     - derive/^([nl])ve$/$1ue/

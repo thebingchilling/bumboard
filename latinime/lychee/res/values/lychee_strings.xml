@@ -99,6 +99,11 @@
     <string name="lychee_card_breakdown">Parts</string>
     <string name="lychee_card_radical">Radical</string>
     <string name="lychee_card_replay">Replay</string>
+    <string name="lychee_group_typing">Typing</string>
+    <string name="lychee_fuzzy_pinyin">Fuzzy pinyin</string>
+    <string name="lychee_fuzzy_pinyin_summary">zh = z, ch = c, sh = s, n = l, en = eng, in = ing, an = ang, f = h. Tone numbers (ni3hao3) always narrow the candidates</string>
+    <string name="lychee_fuzzy_jyutping">Lazy Jyutping</string>
+    <string name="lychee_fuzzy_jyutping_summary">n = l, ng- can be left out, gwo = go, -ng = -n, -k = -t. Tone numbers (nei5hou2) always narrow the candidates</string>
     <string name="lychee_tone_colours">Tone colours</string>
     <string name="lychee_tone_colours_summary">Each syllable in the colour of its tone</string>
     <string name="lychee_other_script">Other script beside the word</string>

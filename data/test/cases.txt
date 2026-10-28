@@ -14,12 +14,15 @@ lychee_yue_yale	yuht	-	月	5
 lychee_yue_yale	chaan	-	餐	5
 lychee_yue_yale	neihou	-	你好	1
 lychee_yue_yale	heunggong	-	香港	1	hoeng1 gong2
-lychee_cmn	nihao	-	你好	1	ni hao
+lychee_cmn	nihao	-	你好	1	ni3 hao3
+lychee_cmn	ni3hao3	-	你好	1	ni3 hao3
+lychee_cmn	ma1	-	妈	1
+lychee_cmn	ma3	-	马	1
 lychee_cmn	zhongguo	-	中国	1
 lychee_cmn	nv	-	女	3
 lychee_cmn	lvse	-	绿色	1
 lychee_cmn	toufa	traditionalization=1	頭髮	1
-lychee_cmn	xingren	-	行人	1	xing ren
+lychee_cmn	xingren	-	行人	1	xing2 ren2
 lychee_en_yue	fridge	-	雪櫃	1
 lychee_en_yue	apple	-	蘋果	1
 lychee_en_yue	hello	-	你好	3
@@ -34,3 +37,11 @@ lychee_ko	kimchi	-	김치	5
 lychee_ko	hangeul	-	한글	5
 lychee_ko	eopseoyo	-	없어요	5
 lychee_ko	saranghae	-	사랑해	3
+lychee_cmn_fuzzy	zongguo	-	中国	1
+lychee_cmn_fuzzy	nihao	-	你好	1
+lychee_cmn_fuzzy	lihao	-	你好	3
+lychee_yue_fuzzy	leihou	-	你好	1
+lychee_yue_fuzzy	ngohou	-	我好	3
+lychee_yue_fuzzy	ohou	-	我好	3
+lychee_yue_fuzzy	gokgaa	-	國家	3
+lychee_yue_yale_fuzzy	leihou	-	你好	1

@@ -175,8 +175,9 @@ def norm_jyutping(raw: str) -> list[str] | None:
 
 
 def pinyin_code(sylls: list[str]) -> str:
-    """Rime code for Mandarin: toneless, ü typed as v."""
-    return " ".join(s[:-1].replace("ü", "v") for s in sylls)
+    """Rime code for Mandarin: ü typed as v, with the tone number (the schema derives the
+    toneless spelling, so tones are optional: ni3hao3 narrows what nihao finds)."""
+    return " ".join(s.replace("ü", "v") for s in sylls)
 
 
 def is_han(ch: str) -> bool:
@@ -492,6 +493,44 @@ def write_stamp(rime_dir: Path):
         h.update(f.relative_to(rime_dir).as_posix().encode())
         h.update(sha256(f).encode())
     (rime_dir / "STAMP").write_text(f"{DATA_VERSION}-{h.hexdigest()[:16]}\n")
+
+
+# ---------------------------------------------------------------- fuzzy spellings
+
+# Spelling rules added in front of a schema's own algebra, on the dictionary's codes (numbered
+# syllables): sounds learners and many native speakers merge type the same.
+FUZZY_CMN = [
+    r"derive/^([zcs])h/$1/", r"derive/^([zcs])([^h])/$1h$2/",
+    r"derive/^n/l/", r"derive/^l/n/",
+    r"derive/([ei])n(\d?)$/$1ng$2/", r"derive/([ei])ng(\d?)$/$1n$2/",
+    r"derive/([^i])an(\d?)$/$1ang$2/", r"derive/([^i])ang(\d?)$/$1an$2/",
+    r"derive/^f/h/", r"derive/^h([aeiu])/f$1/",
+]
+FUZZY_YUE = [
+    r"derive/^n(?!g)/l/", r"derive/^l/n/",
+    r"derive/^ng(?=[aeiou])//", r"derive/^(?=[aeo])/ng/",
+    r"derive/^([gk])w(?=o)/$1/",
+    r"derive/ng(?=\d)/n/", r"derive/k(?=\d)/t/",
+]
+FUZZY = {"lychee_cmn": FUZZY_CMN, "lychee_yue": FUZZY_YUE, "lychee_yue_yale": FUZZY_YUE}
+
+
+def write_fuzzy_schema(rime_dir: Path, schema_id: str, rules: list[str]):
+    text = (HERE / "rime" / f"{schema_id}.schema.yaml").read_text(encoding="utf-8")
+    fuzzy = f"{schema_id}_fuzzy"
+    text = text.replace(f"schema_id: {schema_id}\n", f"schema_id: {fuzzy}\n", 1)
+    text = re.sub(r"^(  prism: )\S+$", rf"\g<1>{fuzzy}", text, count=1, flags=re.M)
+    if f"prism: {fuzzy}" not in text:
+        text = text.replace(f"  dictionary: {dict_of(text)}\n",
+                            f"  dictionary: {dict_of(text)}\n  prism: {fuzzy}\n", 1)
+    added = "".join(f"    - {r}\n" for r in rules)
+    text = text.replace("  algebra:\n", "  algebra:\n    # fuzzy spellings (Lychee setting)\n" + added, 1)
+    assert f"schema_id: {fuzzy}" in text and f"prism: {fuzzy}" in text
+    (rime_dir / f"{fuzzy}.schema.yaml").write_text(text, encoding="utf-8")
+
+
+def dict_of(schema_text: str) -> str:
+    return re.search(r"^  dictionary: (\S+)$", schema_text, re.M).group(1)
 
 
 # ---------------------------------------------------------------- Korean
@@ -849,6 +888,9 @@ def main():
     # -------- Rime: schemas and shared config (hand-written, in ./rime)
     for f in (HERE / "rime").glob("*.yaml"):
         shutil.copy(f, rime_dir / f.name)
+    # fuzzy variants (Settings: zh/z, n/l, ng ...), each with its own prism
+    for schema_id, rules in FUZZY.items():
+        write_fuzzy_schema(rime_dir, schema_id, rules)
 
     (assets / "data-licenses.txt").write_text((HERE / "DATA-LICENSES.txt").read_text())
 

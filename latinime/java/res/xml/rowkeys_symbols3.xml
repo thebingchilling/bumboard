@@ -18,11 +18,24 @@
 */
 -->
 
-<!-- LYCHEE: Gboard's third row of symbols (、 “ ” on the Chinese keyboards), with its popups -->
+<!-- LYCHEE: Gboard's third row of symbols (、 “ ” on the Chinese keyboards; 、 「 」 on the
+     Cantonese one, Hong Kong's quotation marks), with its popups -->
 <merge
     xmlns:latin="http://schemas.android.com/apk/res-auto"
 >
     <switch>
+        <case
+            latin:localeCode="zh_HK"
+        >
+            <Key
+                latin:keySpec="、" />
+            <Key
+                latin:keySpec="「"
+                latin:moreKeys="『,“,﹁,《" />
+            <Key
+                latin:keySpec="」"
+                latin:moreKeys="』,”,﹂,》" />
+        </case>
         <case
             latin:languageCode="zh|ja"
         >

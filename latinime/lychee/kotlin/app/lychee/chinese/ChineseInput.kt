@@ -179,10 +179,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             Rime.selectSchema(session, "lychee_$engine")
             return
         }
+        // fuzzy spellings (zh/z, n/l, ng ...) have schemas of their own
+        val fuzzy = if (prefs.getBoolean(PREF_FUZZY + engine, false)) "_fuzzy" else ""
         val schema = when {
             englishMode -> if (engine == "yue") "lychee_en_yue" else "lychee_en_cmn"
-            engine == "yue" -> if (prefs.getString(PREF_CANTONESE_INPUT, "jyutping") == "yale") "lychee_yue_yale" else "lychee_yue"
-            else -> "lychee_cmn"
+            engine == "yue" -> (if (prefs.getString(PREF_CANTONESE_INPUT, "jyutping") == "yale") "lychee_yue_yale" else "lychee_yue") + fuzzy
+            else -> "lychee_cmn$fuzzy"
         }
         Rime.selectSchema(session, schema)
         val simplified = prefs.getString(PREF_SCRIPT, "traditional") == "simplified"
@@ -487,6 +489,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         /** Long-press on a candidate: "peek" (while held) or "pin" (until closed). */
         const val PREF_DICTIONARY_HOLD = "lychee_dictionary_hold"
         const val PREF_CANTONESE_INPUT = "lychee_cantonese_input"
+        /** Per keyboard ("…yue", "…cmn"): fuzzy spellings (zh/z, n/l, ng ...). */
+        const val PREF_FUZZY = "lychee_fuzzy_"
         /** Per keyboard ("…yue", "…cmn"): 中 is on. */
         const val PREF_ENGLISH_MODE = "lychee_english_mode_"
         private const val KEY_BACKSPACE = 0xff08
