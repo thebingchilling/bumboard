@@ -61,21 +61,6 @@
       "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-font-zh-chiron-sung.zip"
     },
     {
-      "id": "font_zh_zhuque",
-      "kind": "font_zh",
-      "name": "Zhuque Fangsong 朱雀仿宋",
-      "summary": "Fangsong style",
-      "version": "latest",
-      "url": "https://github.com/TrionesType/zhuque/releases/latest",
-      "file": "ZhuqueFangsong-Regular.ttf",
-      "pick": "(?i)Zhuque.*\\.(ttf|otf)$",
-      "prefer": "(?i)Regular",
-      "size": "10 MB",
-      "license": "SIL Open Font License 1.1",
-      "credit": "Zhuque Fangsong by TrionesType",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-font-zh-zhuque.zip"
-    },
-    {
       "id": "font_zh_gensen",
       "kind": "font_zh",
       "name": "GenSen Rounded 源泉圓體",
@@ -158,20 +143,6 @@
       "license": "Apache License 2.0",
       "credit": "Blobmoji by C1710, based on Noto Emoji by Google",
       "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-blobmoji.zip"
-    },
-    {
-      "id": "emoji_serenity",
-      "kind": "font_emoji",
-      "name": "SerenityOS Emoji",
-      "summary": "Pixel-art style",
-      "version": "latest",
-      "url": "https://github.com/linusg/serenityos-emoji-font",
-      "file": "SerenityOS-Emoji.ttf",
-      "pick": "(?i)\\.ttf$",
-      "size": "1 MB",
-      "license": "BSD 2-Clause",
-      "credit": "SerenityOS emoji by the SerenityOS contributors",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-serenity.zip"
     },
     {
       "id": "emoji_custom",
