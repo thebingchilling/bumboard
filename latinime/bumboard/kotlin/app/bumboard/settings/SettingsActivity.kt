@@ -970,14 +970,14 @@ private fun LicencesPage() {
             context.assets.open("bumboard/data-licenses.txt").bufferedReader().use { it.readText() }
         }.getOrDefault("")
     }
+    val packs = remember {
+        app.bumboard.packs.Packs.catalog(context).filter { it.credit.isNotEmpty() }
+            .joinToString("\n\n") { "${it.name}\n${it.credit}\n${it.license}" }
+    }
     Group {
         row { TextRow(it, stringResource(R.string.bum_licences_software), software) }
         if (data.isNotEmpty()) {
             row { TextRow(it, stringResource(R.string.bum_licences_data), data) }
-        }
-        val packs = remember {
-            app.bumboard.packs.Packs.catalog(context).filter { it.credit.isNotEmpty() }
-                .joinToString("\n\n") { "${it.name}\n${it.credit}\n${it.license}" }
         }
         row { TextRow(it, stringResource(R.string.bum_licences_packs), packs) }
     }
