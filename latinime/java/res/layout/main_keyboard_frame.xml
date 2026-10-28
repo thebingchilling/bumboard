@@ -53,6 +53,19 @@
             android:layout_width="match_parent"
             android:layout_height="@dimen/bum_emoji_search_height"
             android:visibility="gone" />
+        <!-- BUMBOARD: what is being typed (pinyin, romaji ...), small above the candidates,
+             like Gboard's; the text field shows nothing until a candidate is picked. -->
+        <TextView
+            android:id="@+id/bum_preedit"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/bum_preedit_height"
+            android:layout_gravity="top|start"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:gravity="center_vertical"
+            android:textSize="12sp"
+            android:singleLine="true"
+            android:visibility="gone" />
         <!-- Chinese candidates, between the strip's locked edge keys while Rime is composing. -->
         <app.bumboard.chinese.CandidateBarView
             android:id="@+id/bum_candidate_bar"

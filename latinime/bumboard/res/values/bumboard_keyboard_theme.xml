@@ -112,6 +112,12 @@
         <item name="gestureFloatingPreviewTextColor">@color/bum_m3_on_key</item>
         <item name="gestureFloatingPreviewColor">@color/bum_m3_surface_high</item>
         <item name="gestureTrailColor">@color/bum_m3_primary</item>
+        <!-- Gboard's trail: thick, fading away from its tail -->
+        <item name="gestureTrailStartWidth">12dp</item>
+        <item name="gestureTrailEndWidth">3dp</item>
+        <item name="gestureTrailBodyRatio">90</item>
+        <item name="gestureTrailFadeoutStartDelay">100</item>
+        <item name="gestureTrailFadeoutDuration">300</item>
         <item name="slidingKeyInputPreviewColor">@color/bum_m3_sliding_preview</item>
         <item name="languageOnSpacebarTextColor">@color/bum_m3_on_key</item>
         <item name="languageOnSpacebarTextShadowRadius">-1.0</item>

@@ -32,6 +32,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private var popup: DictionaryPopup? = null
     private var keyboardFrame: View? = null
     private var shown: Composition? = null
+    private var preedit: android.widget.TextView? = null
 
     /** True while Rime holds a composition, so LatinIME must leave the composing text alone. */
     var isComposing = false
@@ -50,6 +51,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         popup?.dismiss()
         popup = DictionaryPopup(inputView.context)
         keyboardFrame = inputView.findViewById(R.id.main_keyboard_frame)
+        preedit = inputView.findViewById<android.widget.TextView>(R.id.bum_preedit)?.also {
+            it.setTextColor(ime.getColor(R.color.bum_m3_on_key_variant))
+            it.typeface = app.bumboard.fonts.BumFonts.ui(ime, 400)
+        }
         this.inputView = inputView
         panel = inputView.findViewById<CandidatePanelView>(R.id.bum_candidate_panel)?.also { p ->
             p.onPick = { index -> pick(index); updateMoreButton() }
@@ -307,7 +312,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         Rime.commit(session)?.let { ic?.commitText(it, 1) }
         val composition = Rime.composition(session, CANDIDATE_LIMIT)
         if (composition != null) {
-            ic?.setComposingText(composition.preedit, 1)
+            // like Gboard: the letters show above the candidates, not in the text field
+            ic?.setComposingText("", 1)
             isComposing = true
         } else if (isComposing) {
             ic?.setComposingText("", 1)
@@ -328,6 +334,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val stripView = strip as? SuggestionStripView
         updateScriptKey(stripView)
         val candidates = composition?.candidates.orEmpty()
+        preedit?.let { p ->
+            val typed = composition?.preedit.orEmpty()
+            p.text = typed
+            p.visibility = if (isActive && typed.isNotEmpty()) View.VISIBLE else View.GONE
+            if (p.visibility == View.VISIBLE) p.bringToFront()
+        }
         updateBarHeight(stripView, isActive && candidates.isNotEmpty())
         val bar = bar ?: return
         if (!isActive || candidates.isEmpty()) {
@@ -360,11 +372,13 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val res = ime.resources
         val standard = res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
         val bar = bar
+        val line = res.getDimensionPixelSize(R.dimen.bum_preedit_height)
         val height = if (!candidates || bar == null) standard
         else {
             bar.setScale(candidateScale())
-            maxOf(standard, bar.heightFor(annotationLines()))
+            maxOf(standard, bar.heightFor(annotationLines())) + line
         }
+        bar?.setPadding(0, if (candidates) line else 0, 0, 0)
         for (view in listOfNotNull(stripView, bar)) {
             val lp = view.layoutParams ?: continue
             if (lp.height != height) {
