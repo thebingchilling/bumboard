@@ -1199,16 +1199,11 @@ public final class InputLogic {
                 unlearnWordBeingDeleted(
                         inputTransaction.mSettingsValues, currentKeyboardScriptId);
             }
-            if (mConnection.hasSlowInputConnection()) {
-                mSuggestionStripViewAccessor.setNeutralSuggestionStrip();
-            } else if (inputTransaction.mSettingsValues.isSuggestionsEnabledPerUserSettings()
-                    && inputTransaction.mSettingsValues.mSpacingAndPunctuations
-                            .mCurrentLanguageHasSpaces
-                    && !mConnection.isCursorFollowedByWordCharacter(
-                            inputTransaction.mSettingsValues.mSpacingAndPunctuations)) {
-                restartSuggestionsOnWordTouchedByCursor(inputTransaction.mSettingsValues,
-                        false /* forStartInput */, currentKeyboardScriptId);
-            }
+            // LYCHEE: backspace only ever deletes; it never turns the word before the cursor
+            // back into composing text. That re-composing trusted LatinIME's idea of where the
+            // cursor is; when the app disagreed, the composing region took in the spaces before
+            // the word, and the next backspace replaced them along with the letter.
+            mSuggestionStripViewAccessor.setNeutralSuggestionStrip();
         }
     }
 
