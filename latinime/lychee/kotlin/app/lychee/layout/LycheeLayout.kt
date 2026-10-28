@@ -29,8 +29,11 @@ class LycheeLayout private constructor(private val prefs: SharedPreferences) {
     /** Keyboard height as a fraction of the standard height. */
     val heightScale: Float get() = prefs.getFloat(PREF_HEIGHT_SCALE, 1f).coerceIn(MIN_HEIGHT, MAX_HEIGHT)
 
+    /** The floating keyboard's own height scale (resizing it never changes the docked one). */
+    val floatHeightScale: Float get() = prefs.getFloat(PREF_FLOAT_HEIGHT_SCALE, 1f).coerceIn(MIN_HEIGHT, MAX_HEIGHT)
+
     /** Floating keyboard width as a fraction of the screen width. */
-    val floatWidth: Float get() = prefs.getFloat(PREF_FLOAT_WIDTH, 0.8f).coerceIn(MIN_FLOAT_WIDTH, 1f)
+    val floatWidth: Float get() = prefs.getFloat(PREF_FLOAT_WIDTH, DEFAULT_FLOAT_WIDTH).coerceIn(MIN_FLOAT_WIDTH, 1f)
 
     /** Floating keyboard position: left edge and distance above the bottom, in pixels (-1: centre). */
     val floatX: Int get() = prefs.getInt(PREF_FLOAT_X, -1)
@@ -86,7 +89,7 @@ class LycheeLayout private constructor(private val prefs: SharedPreferences) {
     }
 
     fun keyboardHeight(standardHeight: Int): Int {
-        var h = standardHeight * heightScale
+        var h = standardHeight * (if (mode == Mode.FLOATING) floatHeightScale else heightScale)
         if (numberRow) h *= NUMBER_ROW_GROWTH
         if (mode == Mode.FLOATING) h *= FLOAT_HEIGHT
         return h.toInt()
@@ -105,6 +108,8 @@ class LycheeLayout private constructor(private val prefs: SharedPreferences) {
         const val PREF_ONE_HANDED_RIGHT = "lychee_one_handed_right"
         const val PREF_HEIGHT_SCALE = "lychee_height_scale"
         const val PREF_FLOAT_WIDTH = "lychee_float_width"
+        const val PREF_FLOAT_HEIGHT_SCALE = "lychee_float_height_scale"
+        const val DEFAULT_FLOAT_WIDTH = 0.8f
         const val PREF_FLOAT_X = "lychee_float_x"
         const val PREF_FLOAT_Y = "lychee_float_y"
         const val PREF_NUMBER_ROW = "lychee_number_row"

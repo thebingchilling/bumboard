@@ -164,7 +164,7 @@ class ShortcutGalleryView @JvmOverloads constructor(
         val bar = store.toolbar()
         val engine = lycheeHost()?.lycheeEngine()
         // Settings has its own corner button
-        items = store.order().filter { it !in bar && it != Shortcut.SETTINGS && Shortcuts.available(it, engine) }
+        items = store.order().filter { it !in bar && it != Shortcut.SETTINGS && Shortcuts.available(it, engine, Shortcuts.isFloating(context)) }
             .toMutableList()
         adapter.notifyDataSetChanged()
         empty.visibility = if (items.isEmpty()) VISIBLE else GONE

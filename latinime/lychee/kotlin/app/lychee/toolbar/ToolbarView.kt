@@ -114,7 +114,7 @@ class ToolbarView @JvmOverloads constructor(
             Mode.EDIT -> row.addView(button(R.drawable.ic_sym_check, R.string.lychee_resize_done, highlighted = true) { onEditToggle() })
             Mode.TITLE -> Unit
         }
-        val shortcuts = store.toolbar().filter { Shortcuts.available(it, lycheeHost()?.lycheeEngine()) }
+        val shortcuts = store.toolbar().filter { Shortcuts.available(it, lycheeHost()?.lycheeEngine(), Shortcuts.isFloating(context)) }
         // packed on the left, beside the menu button; a long list scrolls
         fun shortcutParams() = LinearLayout.LayoutParams(dp(48), dp(40)).apply { gravity = Gravity.CENTER_VERTICAL }
         if (mode == Mode.EDIT) {

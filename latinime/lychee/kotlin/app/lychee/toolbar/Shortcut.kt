@@ -62,10 +62,18 @@ class ShortcutStore(private val prefs: SharedPreferences) {
 }
 
 object Shortcuts {
-    /** Whether [shortcut] belongs on the current keyboard ([engine]: null for English). */
-    fun available(shortcut: Shortcut, engine: String?): Boolean = when (shortcut) {
+    /**
+     * Whether [shortcut] belongs on the current keyboard ([engine]: null for English;
+     * [floating]: the keyboard is floating).
+     */
+    fun available(shortcut: Shortcut, engine: String?, floating: Boolean = false): Boolean = when (shortcut) {
         // handwriting is for Chinese and Japanese, not the English keyboards
         Shortcut.HANDWRITING -> engine != null && engine != "ko"
+        // resizing is for the floating keyboard only; the docked one keeps its size
+        Shortcut.RESIZE -> floating
         else -> true
     }
+
+    fun isFloating(context: android.content.Context) =
+        app.lychee.layout.LycheeLayout.get(context).mode == app.lychee.layout.LycheeLayout.Mode.FLOATING
 }

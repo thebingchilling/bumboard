@@ -20,9 +20,11 @@ import com.android.inputmethod.latin.R
 import com.android.inputmethod.latin.utils.ResourceUtils
 
 /**
- * Resizing the floating keyboard with handles on the keyboard itself: drag the top edge for
- * the height, either side for the width; the outline shows the new size as you drag. Done
- * applies it (the keys are rebuilt at the new size), Back leaves it as it was.
+ * Resizing the floating keyboard with a handle on each edge: top and bottom for the height,
+ * either side for the width; the outline shows the new size as you drag, and the keyboard stays
+ * where it is (only the dragged edge moves). Done keeps it, Reset goes back to the standard
+ * floating size, Back leaves it as it was. Only the floating keyboard changes: the docked
+ * keyboard keeps its own size.
  *
  * It covers the whole input view while open, so the outline can grow past the keyboard; the
  * keyboard's current bounds come from [show].
@@ -81,6 +83,21 @@ class FloatResizeView @JvmOverloads constructor(
         }, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         buttons.addView(sizeLabel, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT,
             Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(16) })
+        buttons.addView(TextView(context).apply {
+            setText(R.string.lychee_resize_reset)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
+            setTextColor(palette.primary)
+            gravity = Gravity.CENTER
+            setPadding(dp(20), dp(10), dp(20), dp(10))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(24).toFloat()
+                setStroke(dp(1), palette.outline)
+            }
+            setOnClickListener { reset() }
+        }, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.END).apply {
+            rightMargin = dp(8); bottomMargin = dp(4)
+        })
         addView(buttons)
         visibility = GONE
     }
@@ -122,8 +139,9 @@ class FloatResizeView @JvmOverloads constructor(
         val thick = dp(6).toFloat()
         val cx = outline.centerX()
         val cy = outline.centerY()
-        // top, left and right handles
+        // a handle on each edge
         canvas.drawRoundRect(cx - long / 2, outline.top - thick / 2, cx + long / 2, outline.top + thick / 2, thick, thick, handle)
+        canvas.drawRoundRect(cx - long / 2, outline.bottom - thick / 2, cx + long / 2, outline.bottom + thick / 2, thick, thick, handle)
         canvas.drawRoundRect(outline.left - thick / 2, cy - long / 2, outline.left + thick / 2, cy + long / 2, thick, thick, handle)
         canvas.drawRoundRect(outline.right - thick / 2, cy - long / 2, outline.right + thick / 2, cy + long / 2, thick, thick, handle)
     }
@@ -137,6 +155,7 @@ class FloatResizeView @JvmOverloads constructor(
                 downY = event.y
                 dragging = when {
                     kotlin.math.abs(event.y - outline.top) < grab && event.x in outline.left..outline.right -> TOP
+                    kotlin.math.abs(event.y - outline.bottom) < grab && event.x in outline.left..outline.right -> BOTTOM
                     kotlin.math.abs(event.x - outline.left) < grab && event.y in outline.top..outline.bottom -> LEFT
                     kotlin.math.abs(event.x - outline.right) < grab && event.y in outline.top..outline.bottom -> RIGHT
                     else -> NONE
@@ -147,6 +166,7 @@ class FloatResizeView @JvmOverloads constructor(
                 val minH = openedHeight - keysHeight * (1 - MIN_KEYS / currentScale())
                 when (dragging) {
                     TOP -> outline.top = (start.top + event.y - downY).coerceIn(0f, outline.bottom - minH)
+                    BOTTOM -> outline.bottom = (start.bottom + event.y - downY).coerceIn(outline.top + minH, height.toFloat())
                     LEFT -> outline.left = (start.left + event.x - downX).coerceIn(0f, outline.right - minW)
                     RIGHT -> outline.right = (start.right + event.x - downX).coerceIn(outline.left + minW, width.toFloat())
                 }
@@ -166,7 +186,7 @@ class FloatResizeView @JvmOverloads constructor(
         return true
     }
 
-    private fun currentScale() = LycheeLayout.get(context).heightScale
+    private fun currentScale() = LycheeLayout.get(context).floatHeightScale
 
     private var frame: View? = null
     private var keys: View? = null
@@ -175,14 +195,14 @@ class FloatResizeView @JvmOverloads constructor(
 
     private fun remember() {
         val layout = LycheeLayout.get(context)
-        before = floatArrayOf(layout.heightScale, layout.floatWidth, layout.floatX.toFloat(), layout.floatY.toFloat())
+        before = floatArrayOf(layout.floatHeightScale, layout.floatWidth, layout.floatX.toFloat(), layout.floatY.toFloat())
     }
 
     /** Back: the size and place from before resizing. */
     private fun cancel() {
         before?.let { b ->
             LycheeLayout.get(context).edit()
-                .putFloat(LycheeLayout.PREF_HEIGHT_SCALE, b[0])
+                .putFloat(LycheeLayout.PREF_FLOAT_HEIGHT_SCALE, b[0])
                 .putFloat(LycheeLayout.PREF_FLOAT_WIDTH, b[1])
                 .putInt(LycheeLayout.PREF_FLOAT_X, b[2].toInt())
                 .putInt(LycheeLayout.PREF_FLOAT_Y, b[3].toInt())
@@ -201,14 +221,30 @@ class FloatResizeView @JvmOverloads constructor(
         val full = ResourceUtils.getDefaultKeyboardWidth(context)
         // the extra height all goes to the keys; the bar and handle keep theirs
         val grown = outline.height() - openedHeight
-        val scale = (layout.heightScale * (keysHeight + grown) / keysHeight)
+        val scale = (layout.floatHeightScale * (keysHeight + grown) / keysHeight)
             .coerceIn(LycheeLayout.MIN_HEIGHT, LycheeLayout.MAX_HEIGHT)
+        // the keyboard stays put: its bottom only moves when the bottom edge was dragged
+        val bottomGap = layout.floatY.takeIf { it >= 0 } ?: ((parent as View).height - start.bottom).toInt()
         layout.edit()
-            .putFloat(LycheeLayout.PREF_HEIGHT_SCALE, scale)
+            .putFloat(LycheeLayout.PREF_FLOAT_HEIGHT_SCALE, scale)
             .putFloat(LycheeLayout.PREF_FLOAT_WIDTH, (outline.width() / full).coerceIn(LycheeLayout.MIN_FLOAT_WIDTH, 1f))
             .putInt(LycheeLayout.PREF_FLOAT_X, outline.left.toInt())
-            .putInt(LycheeLayout.PREF_FLOAT_Y, ((parent as View).height - outline.bottom).toInt())
+            .putInt(LycheeLayout.PREF_FLOAT_Y, (bottomGap - (outline.bottom - start.bottom)).toInt().coerceAtLeast(0))
             .apply()
+        reopen()
+    }
+
+    /** Reset: the standard floating size, in the same place. */
+    private fun reset() {
+        LycheeLayout.get(context).edit()
+            .putFloat(LycheeLayout.PREF_FLOAT_HEIGHT_SCALE, 1f)
+            .putFloat(LycheeLayout.PREF_FLOAT_WIDTH, LycheeLayout.DEFAULT_FLOAT_WIDTH)
+            .apply()
+        reopen()
+    }
+
+    /** Rebuilds the keys at the saved size and puts the handles back on the keyboard. */
+    private fun reopen() {
         val host = lycheeHost() ?: return
         val frame = frame ?: return
         val keys = keys ?: return
@@ -234,6 +270,7 @@ class FloatResizeView @JvmOverloads constructor(
         const val TOP = 1
         const val LEFT = 2
         const val RIGHT = 3
+        const val BOTTOM = 4
         /** Keys never shrink below this share of their standard height. */
         const val MIN_KEYS = LycheeLayout.MIN_HEIGHT
     }
