@@ -17,6 +17,7 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -60,17 +61,45 @@ def from_zip(data: bytes, pick, prefer):
         return Path(name).name, z.read(name), licence
 
 
+def from_tree(owner: str, repo: str, pick, prefer):
+    """(font name, font bytes, licence bytes or None, version) from the newest commit of the
+    repository's default branch, for fonts that are kept in the repository, not released."""
+    info = json.loads(get(f"https://api.github.com/repos/{owner}/{repo}", api=True))
+    branch = info["default_branch"]
+    commit = json.loads(get(f"https://api.github.com/repos/{owner}/{repo}/commits/{branch}", api=True))["sha"]
+    tree = json.loads(get(f"https://api.github.com/repos/{owner}/{repo}/git/trees/{commit}?recursive=1", api=True))
+    paths = [t["path"] for t in tree.get("tree", []) if t.get("type") == "blob"]
+    path = best([p for p in paths if FONT.search(p)], pick, prefer)
+    if not path:
+        raise LookupError(f"no font matching {pick.pattern} in {owner}/{repo} ({branch})")
+    raw = lambda p: get(f"https://raw.githubusercontent.com/{owner}/{repo}/{commit}/{p}")
+    font = raw(path)
+    if len(font) < 10_000 or font[:4] not in (b"\x00\x01\x00\x00", b"OTTO", b"true"):
+        raise LookupError(f"{path} in {owner}/{repo} is not a font file (Git LFS?)")
+    licence_path = next((p for p in paths if "/" not in p and LICENCE.search(p)), None)
+    licence = raw(licence_path) if licence_path else None
+    return Path(path).name, font, licence, f"{branch}@{commit[:7]}"
+
+
 def fetch(pack: dict):
-    """(font name, font bytes, licence bytes or None, version) for a catalogue font."""
+    """(font name, font bytes, licence bytes or None, version) for a catalogue font: always the
+    newest — the latest release's file, or (when the latest release has none, or there are no
+    releases) the file in the repository's newest commit."""
     pick = re.compile(pack.get("pick") or r"\.(ttf|otf)$")
     prefer = re.compile(pack["prefer"]) if pack.get("prefer") else None
     url = pack["url"]
-    m = re.match(r"https://github\.com/([^/]+)/([^/]+)/releases/latest", url)
+    m = re.match(r"https://github\.com/([^/]+)/([^/]+?)(?:\.git)?(?:/releases/latest)?/?$", url)
     if not m:
         # a direct link to the font itself
         data = get(url)
         return Path(url).name, data, None, "latest"
-    release = json.loads(get(f"https://api.github.com/repos/{m[1]}/{m[2]}/releases/latest", api=True))
+    owner, repo = m[1], m[2]
+    try:
+        release = json.loads(get(f"https://api.github.com/repos/{owner}/{repo}/releases/latest", api=True))
+    except urllib.error.HTTPError as e:
+        if e.code != 404:
+            raise
+        return from_tree(owner, repo, pick, prefer)
     tag = release.get("tag_name", "latest")
     assets = {a["name"]: a["browser_download_url"] for a in release.get("assets", [])}
     licence = None
@@ -87,7 +116,11 @@ def fetch(pack: dict):
         found = from_zip(get(assets[z]), pick, prefer)
         if found:
             return found[0], found[1], found[2] or licence, tag
-    raise LookupError(f"no font matching {pick.pattern} in {url}; its files: {', '.join(assets) or 'none'}")
+    # the release has no font: the repository's newest
+    try:
+        return from_tree(owner, repo, pick, prefer)
+    except LookupError as e:
+        raise LookupError(f"{e}; release files: {', '.join(assets) or 'none'}")
 
 
 def main():
