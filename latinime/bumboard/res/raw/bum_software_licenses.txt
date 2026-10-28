@@ -11,6 +11,9 @@ BumBoard software — open-source components and licences
   * marisa-trie — BSD 2-Clause / LGPL 2.1 (used under BSD 2-Clause). (c) Susumu Yata.
   * glog — BSD 3-Clause. (c) Google Inc.
   * Lua — MIT. (c) Lua.org, PUC-Rio.
+  * Zinnia (handwriting recognition) — https://github.com/taku910/zinnia — BSD 3-Clause. (c) Taku Kudo.
+  * Glide typing decoder and Hangul composition — BumBoard's own, after the SHARK² method
+    (Kristensson & Zhai) and the Unicode Hangul syllable algorithm.
   * Prebuilt native libraries from fcitx5-android/prebuilt — built from the projects above.
   * AndroidX and Jetpack Compose, including Material 3 — Apache License 2.0. (c) Google LLC.
   * Material Symbols — Apache License 2.0. (c) Google LLC.

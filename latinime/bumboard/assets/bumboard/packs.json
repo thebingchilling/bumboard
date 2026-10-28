@@ -183,7 +183,7 @@
       "built": true,
       "url": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
       "file": "bumboard-hw-zh-hant.zip",
-      "size": "4 MB",
+      "size": "33 MB",
       "license": "LGPL 2.1 (Tegaki/Tomoe models); Zinnia engine BSD",
       "credit": "Handwriting models from the Tegaki and Tomoe projects"
     },
@@ -196,7 +196,7 @@
       "built": true,
       "url": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
       "file": "bumboard-hw-zh-hans.zip",
-      "size": "4 MB",
+      "size": "17 MB",
       "license": "LGPL 2.1 (Tegaki/Tomoe models); Zinnia engine BSD",
       "credit": "Handwriting models from the Tegaki and Tomoe projects"
     },
@@ -209,7 +209,7 @@
       "built": true,
       "url": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
       "file": "bumboard-hw-ja.zip",
-      "size": "4 MB",
+      "size": "17 MB",
       "license": "LGPL 2.1 (Tomoe model); Zinnia engine BSD",
       "credit": "Handwriting model from the Tomoe project"
     },
@@ -222,7 +222,7 @@
       "built": true,
       "url": "https://github.com/thebingchilling/bumboard/releases/tag/packs",
       "file": "bumboard-rime-ja.zip",
-      "size": "12 MB",
+      "size": "10 MB",
       "license": "Mozc dictionary (BSD-3-Clause, IPAdic licence)",
       "credit": "Japanese dictionary from Mozc (Google) and IPAdic"
     }
