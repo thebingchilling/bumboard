@@ -322,17 +322,30 @@ public class Key implements Comparable<Key> {
         // which they include when there is no number row)
         String bumLetterHint = null;
         String[] bumLetterMoreKeys = null;
+        app.bumboard.keys.LetterSymbols.Style bumLetterStyle =
+                app.bumboard.keys.LetterSymbols.Style.LATIN;
         if (params.mId.isAlphabetKeyboard() && keySpec != null) {
             final String letter = KeySpecParser.getLabel(keySpec);
             if (letter != null && letter.length() == 1 && letter.charAt(0) < 0x80
                     && Character.isLetter(letter.charAt(0))) {
                 String currency = params.mTextsSet.getText("keyspec_currency");
                 if (currency == null || currency.isEmpty()) currency = "$";
+                final String engine = params.mId.mSubtype.getRawSubtype().getExtraValueOf("BumEngine");
+                bumLetterStyle = "cmn".equals(engine) ? app.bumboard.keys.LetterSymbols.Style.PINYIN
+                        : "yue".equals(engine) ? app.bumboard.keys.LetterSymbols.Style.CHINESE
+                        : app.bumboard.keys.LetterSymbols.Style.LATIN;
                 bumLetterHint = app.bumboard.keys.LetterSymbols.hint(
-                        letter.charAt(0), params.mId.mBumNumberRow, currency);
+                        letter.charAt(0), params.mId.mBumNumberRow, currency, bumLetterStyle);
                 bumLetterMoreKeys = app.bumboard.keys.LetterSymbols.moreKeys(
-                        letter.charAt(0), params.mId.mBumNumberRow, currency);
+                        letter.charAt(0), params.mId.mBumNumberRow, currency, bumLetterStyle);
             }
+        }
+        // the Chinese keyboards' popups are exactly the symbol, the letter and its capital (and
+        // tones): no locale accents, and nothing upcased
+        final boolean bumChinesePopup = bumLetterMoreKeys != null
+                && bumLetterStyle != app.bumboard.keys.LetterSymbols.Style.LATIN;
+        if (bumChinesePopup) {
+            moreKeys = null;
         }
         final String[] additionalMoreKeys;
         if ((mLabelFlags & LABEL_FLAGS_DISABLE_ADDITIONAL_MORE_KEYS) != 0) {
@@ -348,7 +361,8 @@ public class Key implements Comparable<Key> {
             actionFlags |= ACTION_FLAGS_ENABLE_LONG_PRESS;
             mMoreKeys = new MoreKeySpec[moreKeys.length];
             for (int i = 0; i < moreKeys.length; i++) {
-                mMoreKeys[i] = new MoreKeySpec(moreKeys[i], needsToUpcase, localeForUpcasing);
+                mMoreKeys[i] = new MoreKeySpec(moreKeys[i], needsToUpcase && !bumChinesePopup,
+                        localeForUpcasing);
             }
         } else {
             mMoreKeys = null;

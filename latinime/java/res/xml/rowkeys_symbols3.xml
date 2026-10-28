@@ -18,60 +18,54 @@
 */
 -->
 
-<!-- BUMBOARD: Gboard's third row of symbols: * " ' : ; ! ? (each with a full popup) -->
+<!-- BUMBOARD: Gboard's third row of symbols (、 “ ” on the Chinese keyboards), with its popups -->
 <merge
     xmlns:latin="http://schemas.android.com/apk/res-auto"
 >
     <switch>
-        <!-- Chinese and Japanese (like Gboard's): 、 and curly quotes in place of * " ' -->
         <case
             latin:languageCode="zh|ja"
         >
             <Key
-                latin:keySpec="、"
-                latin:moreKeys="*,・,､" />
+                latin:keySpec="、" />
             <Key
                 latin:keySpec="“"
-                latin:moreKeys="&quot;,「,『,„,«" />
+                latin:moreKeys="&quot;,《" />
             <Key
                 latin:keySpec="”"
-                latin:moreKeys="\',」,』,»" />
-        </case>
-        <case
-            latin:languageCode="fa"
-        >
-            <Key
-                latin:keySpec="*"
-                latin:moreKeys="!text/morekeys_star" />
-            <Key
-                latin:keySpec="!text/keyspec_left_double_angle_quote"
-                latin:moreKeys="!text/morekeys_double_quote" />
-            <Key
-                latin:keySpec="!text/keyspec_right_double_angle_quote"
-                latin:moreKeys="!text/morekeys_single_quote" />
+                latin:moreKeys="&quot;,》" />
         </case>
         <default>
             <Key
                 latin:keySpec="*"
-                latin:moreKeys="!text/morekeys_star" />
+                latin:moreKeys="†,‡,★" />
             <Key
                 latin:keySpec="&quot;"
-                latin:moreKeys="“,”,„,«,»" />
+                latin:moreKeys="„,“,”,«,»" />
             <Key
                 latin:keySpec="\'"
-                latin:moreKeys="‘,’,‚,‹,›,`,´" />
+                latin:moreKeys="‚,‘,’,‹,›" />
         </default>
     </switch>
     <Key
-        latin:keySpec=":"
-        latin:moreKeys="∶,：,⁝" />
+        latin:keySpec=":" />
     <Key
-        latin:keySpec="!text/keyspec_symbols_semicolon"
-        latin:moreKeys="⁏,；" />
+        latin:keySpec=";" />
     <Key
         latin:keySpec="!"
-        latin:moreKeys="¡,‼,⁉,！" />
-    <Key
-        latin:keySpec="!text/keyspec_symbols_question"
-        latin:moreKeys="¿,‽,⁇,？" />
+        latin:moreKeys="¡" />
+    <switch>
+        <case
+            latin:languageCode="zh|ja"
+        >
+            <Key
+                latin:keySpec="?"
+                latin:moreKeys="¿" />
+        </case>
+        <default>
+            <Key
+                latin:keySpec="?"
+                latin:moreKeys="¿,‽" />
+        </default>
+    </switch>
 </merge>

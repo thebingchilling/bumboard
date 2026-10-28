@@ -21,15 +21,14 @@
 <merge xmlns:latin="http://schemas.android.com/apk/res-auto" >
     <!-- BUMBOARD: the same bottom row as the letters (row_qwerty4), so nothing moves when
          switching to symbols: the number pad key ("1234", as on Gboard's symbols page) takes
-         the emoji/language key's place, and the space and "." keep theirs. "/" and "_" are in
-         popups ("." and "-"). -->
+         the emoji/language key's place, and the space and "." keep theirs. Gboard's comma and full
+         stop here have no popups. -->
     <switch>
         <case
             latin:bumSideKey="false"
         >
             <Key
                 latin:keySpec="!text/keyspec_comma"
-                latin:moreKeys="，,、,;,‚"
                 latin:backgroundType="functional" />
             <Key
                 latin:keyStyle="bumNumpadKeyStyle" />
@@ -42,7 +41,6 @@
                 latin:keyStyle="bumNumpadKeyStyle" />
             <Key
                 latin:keySpec="!text/keyspec_comma"
-                latin:moreKeys="，,、,;,‚"
                 latin:backgroundType="functional" />
             <Key
                 latin:keyStyle="spaceKeyStyle"
@@ -52,6 +50,5 @@
     <!-- U+2026: "…" HORIZONTAL ELLIPSIS -->
     <Key
         latin:keySpec="."
-        latin:moreKeys="。,&#x2026;,·,•,/"
         latin:backgroundType="functional" />
 </merge>

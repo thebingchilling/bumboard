@@ -18,49 +18,63 @@
 */
 -->
 
-<!-- BUMBOARD: Gboard's second symbols page, first row: ~ ` | • √ π ÷ × § Δ -->
+<!-- BUMBOARD: Gboard's second symbols page, first row, with its popups -->
 <merge
     xmlns:latin="http://schemas.android.com/apk/res-auto"
 >
-    <Key
-        latin:keySpec="~"
-        latin:moreKeys="≈,∼,～,≃" />
-    <Key
-        latin:keySpec="`"
-        latin:moreKeys="´,ˋ,ˊ" />
-    <Key
-        latin:keySpec="|"
-        latin:moreKeys="¦,‖,∣" />
-    <Key
-        latin:keySpec="•"
-        latin:moreKeys="·,◦,‣,○,●,■,□" />
-    <Key
-        latin:keySpec="&#x221A;"
-        latin:moreKeys="∛,∜,∞" />
-    <Key
-        latin:keySpec="&#x03C0;"
-        latin:moreKeys="Π,τ,φ,θ,µ,Ω" />
-    <Key
-        latin:keySpec="÷"
-        latin:moreKeys="/,⁄,∕" />
-    <Key
-        latin:keySpec="&#x00D7;"
-        latin:moreKeys="⋅,✕,∗" />
-    <Key
-        latin:keySpec="§"
-        latin:moreKeys="¶,†,‡" />
     <switch>
         <case
             latin:languageCode="zh|ja"
         >
             <Key
+                latin:keySpec="~" />
+            <Key
+                latin:keySpec="`" />
+            <Key
+                latin:keySpec="|" />
+            <Key
+                latin:keySpec="•"
+                latin:moreKeys="♣,♠,♪,♥,♦" />
+            <Key
+                latin:keySpec="√" />
+            <Key
+                latin:keySpec="π"
+                latin:moreKeys="Ω,Π,μ" />
+            <Key
+                latin:keySpec="÷" />
+            <Key
+                latin:keySpec="×" />
+            <Key
                 latin:keySpec="*"
-                latin:moreKeys="Δ,∂,∑,∏,∫,★,†" />
+                latin:moreKeys="★,‡,†" />
+            <Key
+                latin:keySpec="§"
+                latin:moreKeys="¶" />
         </case>
         <default>
             <Key
-                latin:keySpec="Δ"
-                latin:moreKeys="∆,∂,∑,∏,∫" />
+                latin:keySpec="~" />
+            <Key
+                latin:keySpec="`" />
+            <Key
+                latin:keySpec="|" />
+            <Key
+                latin:keySpec="•"
+                latin:moreKeys="♣,♠,♪,♥,♦" />
+            <Key
+                latin:keySpec="√" />
+            <Key
+                latin:keySpec="π"
+                latin:moreKeys="Ω,Π,μ" />
+            <Key
+                latin:keySpec="÷" />
+            <Key
+                latin:keySpec="×" />
+            <Key
+                latin:keySpec="§"
+                latin:moreKeys="¶" />
+            <Key
+                latin:keySpec="Δ" />
         </default>
     </switch>
 </merge>

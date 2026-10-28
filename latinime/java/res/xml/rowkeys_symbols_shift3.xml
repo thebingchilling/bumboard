@@ -18,43 +18,37 @@
 */
 -->
 
-<!-- BUMBOARD: Gboard's second symbols page, third row: % © ® ™ ✓ [ ] -->
+<!-- BUMBOARD: Gboard's second symbols page, third row (‘ ’ on the Chinese keyboards), with its popups -->
 <merge
     xmlns:latin="http://schemas.android.com/apk/res-auto"
 >
     <Key
-        latin:keySpec="!text/keyspec_symbols_percent"
-        latin:moreKeys="‰,‱" />
+        latin:keySpec="%"
+        latin:moreKeys="‰" />
     <switch>
         <case
             latin:languageCode="zh|ja"
         >
             <Key
                 latin:keySpec="‘"
-                latin:moreKeys="\',‚,‹,©" />
+                latin:moreKeys="\',〈" />
             <Key
                 latin:keySpec="’"
-                latin:moreKeys="\',›,®" />
+                latin:moreKeys="‚,〉" />
         </case>
         <default>
             <Key
-                latin:keySpec="©"
-                latin:moreKeys="℗,🄯" />
+                latin:keySpec="©" />
             <Key
-                latin:keySpec="&#x00AE;"
-                latin:moreKeys="Ⓡ" />
+                latin:keySpec="®" />
         </default>
     </switch>
     <Key
-        latin:keySpec="™"
-        latin:moreKeys="℠" />
+        latin:keySpec="™" />
     <Key
-        latin:keySpec="✓"
-        latin:moreKeys="✔,✗,✘,☐,☑,☒" />
+        latin:keySpec="✓" />
     <Key
-        latin:keySpec="!text/keyspec_left_square_bracket"
-        latin:moreKeys="〈,《,⟨" />
+        latin:keySpec="[" />
     <Key
-        latin:keySpec="!text/keyspec_right_square_bracket"
-        latin:moreKeys="〉,》,⟩" />
+        latin:keySpec="]" />
 </merge>

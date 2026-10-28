@@ -4199,12 +4199,13 @@ public final class KeyboardTextsTable {
         putBumEnglish();
     }
 
-    // BUMBOARD: English letters get Gboard's long-press letters (as in FlorisBoard's English
-    // popup mappings): LatinIME's accents, plus ń on n.
+    // BUMBOARD: Gboard's English popups: LatinIME's accents (the same as Gboard's), and the
+    // full stop's punctuation in Gboard's order (a fixed order fills the bottom row first).
     private static void putBumEnglish() {
         final String[] en = java.util.Arrays.copyOf(TEXTS_en, NAMES.length);
         final String[][] texts = {
-            { "morekeys_n", "ñ,ń" },                 // ñ ń
+            { "morekeys_punctuation", "!fixedColumnOrder!8,;,/,\\(,\\),#,!,\\,,?,"
+                    + "&,\\%,+,\",-,:,',@" },
         };
         for (final String[] text : texts) {
             final Integer index = sNameToIndexesMap.get(text[0]);
@@ -4235,11 +4236,10 @@ public final class KeyboardTextsTable {
             { "keyspec_right_double_angle_quote", "》" },
             { "keyspec_left_single_angle_quote", "〈" },    // 〈
             { "keyspec_right_single_angle_quote", "〉" },   // 〉
-            // the period's popup: Chinese punctuation
-            { "morekeys_punctuation", "!autoColumnOrder!8,？,！,、,：,；,"
-                    + "“,”,‘,’,「,」,《,》,（,）,"
-                    + "……,——" },
-            { "morekeys_period", "…,．,·" },
+            // the 。 key's popup, as Gboard's (a fixed order fills the bottom row first)
+            { "morekeys_punctuation", "!fixedColumnOrder!8,\\%,_,;,:,、,!,……,?,"
+                    + "^_^,:),:(,:D,:P,&,$,^" },
+            { "morekeys_period", "!text/morekeys_punctuation" },
         };
         for (final String[] text : texts) {
             final Integer index = sNameToIndexesMap.get(text[0]);

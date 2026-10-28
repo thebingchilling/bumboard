@@ -18,7 +18,7 @@
 */
 -->
 
-<!-- BUMBOARD: Gboard's second symbols page, second row: € ¥ $ ¢ ^ ° = { } \ -->
+<!-- BUMBOARD: Gboard's second symbols page, second row (「 」 on the Chinese keyboards), with its popups -->
 <merge
     xmlns:latin="http://schemas.android.com/apk/res-auto"
 >
@@ -32,34 +32,33 @@
         latin:keyStyle="moreCurrency4KeyStyle" />
     <Key
         latin:keySpec="^"
-        latin:moreKeys="&#x2191;,&#x2193;,&#x2190;,&#x2192;,ˆ" />
+        latin:moreKeys="←,↑,↓,→" />
     <Key
-        latin:keySpec="&#x00B0;"
-        latin:moreKeys="&#x2032;,&#x2033;,℃,℉" />
+        latin:keySpec="°"
+        latin:moreKeys="′,″" />
     <Key
         latin:keySpec="="
-        latin:moreKeys="&#x2260;,&#x2248;,&#x221E;,≡,≤,≥" />
+        latin:moreKeys="∞,≠,≈" />
     <switch>
         <case
             latin:languageCode="zh|ja"
         >
             <Key
                 latin:keySpec="「"
-                latin:moreKeys="『,【,〔,《,〈,{" />
+                latin:moreKeys="﹁" />
             <Key
                 latin:keySpec="」"
-                latin:moreKeys="』,】,〕,》,〉,}" />
+                latin:moreKeys="﹂" />
         </case>
         <default>
             <Key
-                latin:keySpec="!text/keyspec_left_curly_bracket"
-                latin:moreKeys="〔,【,「,『" />
+                latin:keySpec="{"
+                latin:moreKeys="(" />
             <Key
-                latin:keySpec="!text/keyspec_right_curly_bracket"
-                latin:moreKeys="〕,】,」,』" />
+                latin:keySpec="}"
+                latin:moreKeys=")" />
         </default>
     </switch>
     <Key
-        latin:keySpec="\\"
-        latin:moreKeys="/,|,∖" />
+        latin:keySpec="\\" />
 </merge>
