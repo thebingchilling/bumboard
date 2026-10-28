@@ -78,7 +78,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         addView(LinearLayout(context).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            addView(BumPanels.backButton(context) { visibility = GONE }, LayoutParams(dp(56), LayoutParams.MATCH_PARENT))
+            addView(BumPanels.backButton(context) { this@HandwritingPanelView.visibility = GONE }, LayoutParams(dp(56), LayoutParams.MATCH_PARENT))
             addView(key(null, R.string.bum_hw_space, isSpace = true) { space() }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
             addView(key(R.drawable.ic_sym_backspace, R.string.bum_emoji_delete) { backspace() }, LayoutParams(dp(72), LayoutParams.MATCH_PARENT))
             addView(key(R.drawable.ic_sym_keyboard_return, R.string.bum_hw_enter) { commitPending(); bumHost()?.bumSendCode(Constants.CODE_ENTER) },

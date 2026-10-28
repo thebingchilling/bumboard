@@ -77,7 +77,7 @@ class FloatResizeView @JvmOverloads constructor(
                 cornerRadius = dp(24).toFloat()
                 setColor(palette.primary)
             }
-            setOnClickListener { visibility = GONE }
+            setOnClickListener { this@FloatResizeView.visibility = GONE }
         }, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         buttons.addView(sizeLabel, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT,
             Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(16) })
