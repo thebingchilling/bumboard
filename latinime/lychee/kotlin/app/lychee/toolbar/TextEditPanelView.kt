@@ -26,8 +26,9 @@ import com.android.inputmethod.latin.common.Constants
 
 /**
  * Text editing over the keys, laid out like Gboard's: tall ◀ and ▶ either side of ▲, a Select
- * toggle and ▼ (with Select on, the arrows extend the selection), start/end of line and cut
- * underneath, then select all, copy, paste and delete. Arrows and delete repeat while held.
+ * toggle and ▼ (with Select on, the arrows extend the selection), start/end of line under
+ * ◀ and ▶, then select all (cut while selecting), copy, paste and delete. Arrows and delete
+ * repeat while held.
  */
 class TextEditPanelView @JvmOverloads constructor(
     context: Context,
@@ -38,6 +39,7 @@ class TextEditPanelView @JvmOverloads constructor(
     private val repeat = Handler(Looper.getMainLooper())
     private var selecting = false
     private lateinit var selectKey: TextView
+    private lateinit var selectAllKey: LinearLayout
 
     init {
         orientation = HORIZONTAL
@@ -54,9 +56,8 @@ class TextEditPanelView @JvmOverloads constructor(
         ), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         left.addView(column(
             1 to icon(R.drawable.ic_sym_keyboard_arrow_up, R.string.lychee_edit_up, repeats = true) { move(KeyEvent.KEYCODE_DPAD_UP) },
-            1 to selectKey,
+            2 to selectKey,
             1 to icon(R.drawable.ic_sym_keyboard_arrow_down, R.string.lychee_edit_down, repeats = true) { move(KeyEvent.KEYCODE_DPAD_DOWN) },
-            1 to icon(R.drawable.ic_sym_content_cut, R.string.lychee_edit_cut) { menu(android.R.id.cut); setSelecting(false) },
         ), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         left.addView(column(
             3 to icon(R.drawable.ic_sym_keyboard_arrow_right, R.string.lychee_edit_right, repeats = true) { move(KeyEvent.KEYCODE_DPAD_RIGHT) },
@@ -65,7 +66,16 @@ class TextEditPanelView @JvmOverloads constructor(
         addView(left, LayoutParams(0, LayoutParams.MATCH_PARENT, 3f))
         // right: select all, copy, paste and delete
         val right = LinearLayout(context).apply { orientation = VERTICAL }
-        right.addView(labelled(R.drawable.ic_sym_select_all, R.string.lychee_edit_select_all) { menu(android.R.id.selectAll) }, keyParams())
+        // select all; cut in its place while selecting
+        selectAllKey = labelled(R.drawable.ic_sym_select_all, R.string.lychee_edit_select_all) {
+            if (selecting) {
+                menu(android.R.id.cut)
+                setSelecting(false)
+            } else {
+                menu(android.R.id.selectAll)
+            }
+        }
+        right.addView(selectAllKey, keyParams())
         right.addView(labelled(R.drawable.ic_sym_content_copy, R.string.lychee_edit_copy) { menu(android.R.id.copy); setSelecting(false) }, keyParams())
         right.addView(labelled(R.drawable.ic_sym_content_paste, R.string.lychee_edit_paste) { menu(android.R.id.paste); setSelecting(false) }, keyParams())
         right.addView(icon(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete, repeats = true) {
@@ -119,6 +129,10 @@ class TextEditPanelView @JvmOverloads constructor(
         // on: the primary colour, like a key that is switched on
         selectKey.setTextColor(if (on) palette.onPrimary else palette.onSecondaryContainer)
         selectKey.background = if (on) context.getDrawable(R.drawable.lychee_m3_key_popup_action) else LycheePanels.functionalKey(context)
+        if (::selectAllKey.isInitialized) {
+            (selectAllKey.getChildAt(0) as ImageView).setImageResource(if (on) R.drawable.ic_sym_content_cut else R.drawable.ic_sym_select_all)
+            (selectAllKey.getChildAt(1) as TextView).setText(if (on) R.string.lychee_edit_cut else R.string.lychee_edit_select_all)
+        }
     }
 
     /** Where a selection started (absolute offset), while Select is on; -1 until the first move. */
