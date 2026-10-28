@@ -373,8 +373,22 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         // LYCHEE: suggestions only while a word is being typed; next-word predictions and
         // punctuation "suggestions" give way to the shortcuts.
         mLycheeHasSuggestions = !suggestedWords.isEmpty() && !suggestedWords.isPunctuationSuggestions()
-                && !suggestedWords.isPrediction();
+                && !suggestedWords.isPrediction() && lycheeTypingWord();
         updateLycheeMiddle();
+    }
+
+    /**
+     * LYCHEE: whether a word is being typed right now: the character before the cursor is part
+     * of one. After a space (a finished word), or in a field of nothing but spaces, the bar
+     * shows the shortcuts.
+     */
+    private boolean lycheeTypingWord() {
+        final app.lychee.LycheeHost host = app.lychee.LycheeHostKt.lycheeHost(this);
+        final android.view.inputmethod.InputConnection ic =
+                host == null ? null : host.lycheeInputConnection();
+        if (ic == null) return true;
+        final CharSequence before = ic.getTextBeforeCursor(1, 0);
+        return before != null && before.length() > 0 && !Character.isWhitespace(before.charAt(0));
     }
 
     public void setMoreSuggestionsHeight(final int remainingHeight) {

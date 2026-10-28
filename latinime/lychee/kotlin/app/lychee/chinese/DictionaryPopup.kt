@@ -13,6 +13,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.ScrollView
@@ -29,17 +30,19 @@ import app.lychee.ui.M3Colors
 import com.android.inputmethod.latin.R
 
 /**
- * The full dictionary entry for a candidate, in a small card that opens from the candidate
- * on long-press. Plain Views in a PopupWindow (this runs inside the input method window) in
- * Material 3 colours: the wallpaper-based system palette on Android 12+, Lychee's teal
- * palette before.
+ * The full dictionary entry for a candidate, opened by a long-press: part of the keyboard,
+ * it opens out over the keys (in lychee_dictionary_panel) and closes back into them. Plain
+ * Views in Material 3 colours.
  */
 class DictionaryPopup(private val ctx: Context) {
-    private var window: PopupWindow? = null
+    private var host: FrameLayout? = null
 
     fun dismiss() {
-        window?.dismiss()
-        window = null
+        host?.let {
+            it.removeAllViews()
+            it.visibility = View.GONE
+        }
+        host = null
     }
 
     /**
@@ -83,10 +86,8 @@ class DictionaryPopup(private val ctx: Context) {
 
     private fun present(keyboard: View, peek: Boolean, onType: () -> Unit, fill: (M3Colors, LinearLayout) -> Unit) {
         dismiss()
-        val location = IntArray(2).also { keyboard.getLocationInWindow(it) }
-        // the room above the keyboard, below the status bar
-        val maxHeight = location[1] - dp(48)
-        if (maxHeight < dp(96)) return
+        val panel = keyboard.rootView.findViewById<FrameLayout>(R.id.lychee_dictionary_panel) ?: return
+        val parent = panel.parent as? View ?: return
         val c = M3Colors.of(ctx)
         val body = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -99,43 +100,36 @@ class DictionaryPopup(private val ctx: Context) {
             gravity = Gravity.END
             setPadding(dp(12), dp(6), dp(12), dp(10))
         }
-        val card = MaxHeightLayout(ctx, maxHeight).apply {
+        val card = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
+            isClickable = true
             background = GradientDrawable().apply {
                 setColor(c.surfaceContainerHigh)
-                cornerRadius = dp(24).toFloat()
+                cornerRadii = floatArrayOf(dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), 0f, 0f, 0f, 0f)
             }
-            elevation = dp(8).toFloat()
             addView(ScrollView(ctx).apply { addView(body) },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             addView(actions)
         }
-        val screen = ctx.resources.displayMetrics.widthPixels
-        val popup = PopupWindow(card, minOf(dp(340), screen - dp(16)), ViewGroup.LayoutParams.WRAP_CONTENT, false).apply {
-            // tapping outside closes it; the keyboard underneath keeps working
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-            isOutsideTouchable = true
-            elevation = dp(8).toFloat()
-            setOnDismissListener { if (window === this) window = null }
-        }
         if (peek) {
             actions.visibility = View.GONE
         } else {
-            actions.addView(button(ctx.getString(R.string.lychee_close), c, filled = false) { popup.dismiss() })
+            actions.addView(button(ctx.getString(R.string.lychee_close), c, filled = false) { dismiss() })
             actions.addView(button(ctx.getString(R.string.lychee_type_it), c, filled = true) {
-                popup.dismiss()
+                dismiss()
                 onType()
             })
         }
-        window = popup
-        // just above the keyboard, centred
-        val width = minOf(dp(340), screen - dp(16))
-        card.measure(
-            View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(maxHeight, View.MeasureSpec.AT_MOST),
-        )
-        popup.showAtLocation(keyboard, Gravity.TOP or Gravity.START,
-            (screen - width) / 2, location[1] - card.measuredHeight - dp(8))
+        // over the keys, opening up out of them
+        app.lychee.layout.LycheePanels.cover(panel, parent)
+        panel.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        panel.visibility = View.VISIBLE
+        panel.bringToFront()
+        panel.pivotY = panel.layoutParams.height.toFloat()
+        panel.scaleY = 0.6f
+        panel.alpha = 0f
+        panel.animate().scaleY(1f).alpha(1f).setDuration(140).start()
+        host = panel
     }
 
     /** A column that never grows taller than [maxHeight]. */

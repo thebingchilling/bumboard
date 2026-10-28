@@ -54,6 +54,8 @@ speller:
     - derive/^n$/nn/
     - derive/^tch/cch/
     - derive/^wo$/o/
+    # short typing: first letters only (Chinese has it too: zg is 中国)
+    - abbrev/^([a-z]).+$/$1/
 
 translator:
   dictionary: lychee_ja

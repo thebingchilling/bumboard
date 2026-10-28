@@ -806,6 +806,8 @@ def main():
         if "kTGHZ2013" in fields:
             simp_chars.add(ch)
     char_codes: dict[str, set[str]] = defaultdict(set)
+    # each character's most common reading, for words read character by character
+    char_best: dict[str, str] = {}
     entries: dict[tuple[str, str], int] = {}
 
     def put(text, code, weight):
@@ -822,6 +824,7 @@ def main():
         for i, (syl, share) in enumerate(rs):
             code = pinyin_code([syl])
             char_codes[ch].add(code)
+            char_best.setdefault(ch, code)
             w = base * share if share else base / (n + i)
             put(ch, code, max(1, int(w)))
     for trad, simp, py, _, _ in cedict:
@@ -839,8 +842,11 @@ def main():
         if len(word) < 2 or word in have_words or not all_han(word):
             continue
         codes = [char_codes.get(c) for c in word]
-        if all(c and len(c) == 1 for c in codes):
-            put(word, " ".join(next(iter(c)) for c in codes), max(1, f))
+        # every character has one reading (tones aside: a word's tones follow the character's
+        # most common one, which tone typing may miss but plain typing never does)
+        if all(c and len({re.sub(r"\d", "", x) for x in c}) == 1 and ch in char_best
+               for c, ch in zip(codes, word)):
+            put(word, " ".join(char_best[ch] for ch in word), max(1, f))
     write_dict(rime_dir / "lychee_cmn.dict.yaml", "lychee_cmn",
                [f"{t}\t{c}\t{w}" for (t, c), w in sorted(entries.items())],
                note="Words: CC-CEDICT (CC BY-SA 4.0); characters: Unihan (Unicode License v3); "

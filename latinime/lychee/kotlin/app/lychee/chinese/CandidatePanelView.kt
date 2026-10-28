@@ -31,6 +31,8 @@ class CandidatePanelView @JvmOverloads constructor(
 
     /** A candidate was tapped; the index is Rime's. */
     var onPick: (Int) -> Unit = {}
+    /** A candidate was held: its dictionary entry. */
+    var onLongPick: (Int, android.view.View) -> Unit = { _, _ -> }
 
     private val palette = M3Colors.of(context)
     private val grid = RecyclerView(context)
@@ -168,6 +170,7 @@ class CandidatePanelView @JvmOverloads constructor(
                 visibility = GONE
                 onPick(index)
             }
+            cell.setOnLongClickListener { v -> onLongPick(index, v); true }
         }
     }
 

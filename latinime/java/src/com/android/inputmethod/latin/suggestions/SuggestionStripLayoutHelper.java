@@ -237,8 +237,12 @@ final class SuggestionStripLayoutHelper {
         final boolean shouldOmitTypedWord = shouldOmitTypedWord(suggestedWords.mInputStyle,
                 settingsValues.mGestureFloatingPreviewTextEnabled,
                 settingsValues.mShouldShowLxxSuggestionUi);
+        // LYCHEE: what was typed always has a place (left of the correction), so a tap keeps
+        // it and autocorrection never forces a change; glides have no typed word to show
+        final boolean lycheeOmit = shouldOmitTypedWord
+                && suggestedWords.mInputStyle != SuggestedWords.INPUT_STYLE_TYPING;
         return getPositionInSuggestionStrip(indexInSuggestedWords, suggestedWords.mWillAutoCorrect,
-                settingsValues.mShouldShowLxxSuggestionUi && shouldOmitTypedWord,
+                settingsValues.mShouldShowLxxSuggestionUi && lycheeOmit,
                 mCenterPositionInStrip, mTypedWordPositionWhenAutocorrect);
     }
 

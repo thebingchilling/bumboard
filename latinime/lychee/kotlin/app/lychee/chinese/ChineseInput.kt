@@ -56,6 +56,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         this.inputView = inputView
         panel = inputView.findViewById<CandidatePanelView>(R.id.lychee_candidate_panel)?.also { p ->
             p.onPick = { index -> pick(index); updateMoreButton() }
+            p.onLongPick = { index, anchor -> showDictionary(index, anchor) }
         }
         moreButton = inputView.findViewById<android.widget.ImageView>(R.id.lychee_candidate_more)?.also { b ->
             b.imageTintList = android.content.res.ColorStateList.valueOf(inputView.context.getColor(R.color.lychee_m3_on_key_variant))

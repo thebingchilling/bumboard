@@ -47,8 +47,18 @@ class PreeditPopup(private val ctx: Context) {
         val loc = IntArray(2).also { anchor.getLocationInWindow(it) }
         val x = loc[0] + dp(6)
         val y = loc[1] - text.measuredHeight - dp(4)
-        if (window.isShowing) window.update(x, y, text.measuredWidth, text.measuredHeight)
-        else window.showAtLocation(anchor, Gravity.TOP or Gravity.START, x, y)
+        val w = text.measuredWidth
+        val h = text.measuredHeight
+        // a window shown at one size doesn't reliably take a new one: show it afresh when the
+        // text grows or shrinks, so all of it is always there
+        if (window.isShowing && window.width == w && window.height == h) {
+            window.update(x, y, w, h)
+        } else {
+            if (window.isShowing) window.dismiss()
+            window.width = w
+            window.height = h
+            window.showAtLocation(anchor, Gravity.TOP or Gravity.START, x, y)
+        }
     }
 
     fun dismiss() {

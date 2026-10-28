@@ -41,6 +41,13 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:visibility="gone" />
+    <!-- LYCHEE: a candidate's dictionary entry, opened over the keys (DictionaryPopup) -->
+    <FrameLayout
+        android:id="@+id/lychee_dictionary_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:visibility="gone" />
     <app.lychee.toolbar.ShortcutGalleryView
         android:id="@+id/lychee_gallery_panel"
         android:layout_width="match_parent"
