@@ -31,8 +31,8 @@
     <string name="bum_fonts_emoji">Emoji</string>
     <string name="bum_fonts_preview_zh">你好，我哋去飲茶啦 你好，我们去喝茶吧</string>
     <string name="bum_fonts_preview_emoji">😀 😂 🥹 ❤️ 👍🏽 🐶 🍜 🎉 🇭🇰</string>
-    <string name="bum_fonts_system">Phone's font</string>
-    <string name="bum_fonts_system_summary">The system's Chinese font</string>
+    <string name="bum_fonts_system">Phone\'s font</string>
+    <string name="bum_fonts_system_summary">The system\'s Chinese font</string>
     <string name="bum_fonts_on_keys">Use on the keys too</string>
     <string name="bum_fonts_on_keys_summary">Key labels in the Chinese font as well</string>
     <string name="bum_fonts_noto">Noto Color Emoji</string>
