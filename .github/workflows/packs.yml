@@ -58,8 +58,13 @@ jobs:
       # Public: the packs go to the "packs" release of thebingchilling/lychee (a pre-release,
       # so it never shows as the app's latest release), uploaded with the owner's token
       # (the PACKS_TOKEN secret), so they appear as the owner's. Only the pack zips go there.
+      # what would be published, file by file, for review
+      - name: List the packs' contents
+        run: for z in out/packs/lychee-*.zip; do echo "== $z"; unzip -l "$z" | tail -n +4 | head -n -2 | awk '{print $4}' | head -20; done
+
+      # publishing is public, so it only happens when started by hand (Run workflow on main)
       - name: Publish to lychee's "packs" release
-        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.PACKS_TOKEN }}
           REPO: thebingchilling/lychee

@@ -14,7 +14,7 @@
     <string name="lychee_pref_spacebar_method">粵拼</string>
     <string name="lychee_subtype_hw" translatable="false">手寫 Handwriting</string>
     <string name="lychee_hw_write_here">在這裡手寫輸入文字 · Write here</string>
-    <string name="lychee_hw_symbols" translatable="false">?123</string>
+    <string name="lychee_hw_symbols" translatable="false">\?123</string>
     <string name="lychee_hw_space_label" translatable="false">手寫</string>
     <string name="lychee_section_typing">Typing</string>
     <string name="lychee_section_look">Look</string>

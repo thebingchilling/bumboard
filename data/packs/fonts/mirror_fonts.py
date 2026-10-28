@@ -87,7 +87,7 @@ def fetch(pack: dict):
         found = from_zip(get(assets[z]), pick, prefer)
         if found:
             return found[0], found[1], found[2] or licence, tag
-    raise SystemExit(f"{pack['id']}: no font matching {pick.pattern} in {url}")
+    raise LookupError(f"no font matching {pick.pattern} in {url}; its files: {', '.join(assets) or 'none'}")
 
 
 def main():
@@ -99,7 +99,12 @@ def main():
     for pack in packs:
         if pack["kind"] not in ("font_zh", "font_emoji") or pack.get("custom"):
             continue
-        name, font, licence, version = fetch(pack)
+        try:
+            name, font, licence, version = fetch(pack)
+        except Exception as e:
+            # one font that cannot be found must not hold the others back
+            print(f"::warning::{pack['id']} not mirrored: {e}", file=sys.stderr)
+            continue
         if not licence:
             # every published zip carries its licence: the catalogue's when the release has no file
             licence = (f"{pack['name']}\n{pack.get('credit', '')}\nLicence: {pack.get('license', '')}\n"
