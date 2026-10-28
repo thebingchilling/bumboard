@@ -18,5 +18,6 @@
 */
 -->
 <resources>
-    <bool name="config_gesture_input_enabled_by_build_config">false</bool>
+    <!-- BUMBOARD: on; the paths are decoded by app.bumboard.glide. -->
+    <bool name="config_gesture_input_enabled_by_build_config">true</bool>
 </resources>

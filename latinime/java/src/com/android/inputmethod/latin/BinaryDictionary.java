@@ -441,6 +441,32 @@ public final class BinaryDictionary extends Dictionary {
                 getWordProperty(word, isBeginningOfSentence[0]), nextToken);
     }
 
+    /** BUMBOARD: receives each word of a dictionary with its probability. */
+    public interface WordConsumer {
+        void accept(String word, int probability);
+    }
+
+    /**
+     * BUMBOARD: every word of this dictionary with its probability (the glide decoder's word
+     * list), without building full word properties.
+     */
+    public void forEachWord(final WordConsumer consumer) {
+        if (!isValidDictionary()) {
+            return;
+        }
+        final int[] codePoints = new int[DICTIONARY_MAX_WORD_LENGTH];
+        final boolean[] isBeginningOfSentence = new boolean[1];
+        int token = 0;
+        do {
+            token = getNextWordNative(mNativeDict, token, codePoints, isBeginningOfSentence);
+            final String word = StringUtils.getStringFromNullTerminatedCodePointArray(codePoints);
+            if (!isBeginningOfSentence[0] && !word.isEmpty()) {
+                consumer.accept(word, getProbabilityNative(mNativeDict,
+                        StringUtils.toCodePointArray(word)));
+            }
+        } while (token != 0);
+    }
+
     // Add a unigram entry to binary dictionary with unigram attributes in native code.
     public boolean addUnigramEntry(
             final String word, final int probability, final boolean isBeginningOfSentence,

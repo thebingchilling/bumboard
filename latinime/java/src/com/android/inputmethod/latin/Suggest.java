@@ -286,14 +286,39 @@ public final class Suggest {
 
     // Retrieves suggestions for the batch input
     // and calls the callback function with the suggestions.
+    // BUMBOARD: the glide decoder's words as suggestion results, best first.
+    private static SuggestionResults bumGlideResults(final WordComposer wordComposer,
+            final Keyboard keyboard, final NgramContext ngramContext) {
+        final SuggestionResults results = new SuggestionResults(SuggestedWords.MAX_SUGGESTIONS,
+                ngramContext.isBeginningOfSentenceContext(), false);
+        if (keyboard == null) {
+            return results;
+        }
+        final java.util.List<app.bumboard.glide.GlideMatch> matches =
+                app.bumboard.glide.GlideTyping.decode(wordComposer.getInputPointers(), keyboard);
+        int rank = 0;
+        for (final app.bumboard.glide.GlideMatch match : matches) {
+            // strictly falling scores keep the decoder's order
+            final int score = SuggestedWordInfo.MAX_SCORE / 2 - rank * 1000;
+            results.add(new SuggestedWordInfo(match.getWord(), "" /* prevWordsContext */, score,
+                    SuggestedWordInfo.KIND_CORRECTION
+                            | SuggestedWordInfo.KIND_FLAG_APPROPRIATE_FOR_AUTO_CORRECTION,
+                    Dictionary.DICTIONARY_USER_TYPED, SuggestedWordInfo.NOT_AN_INDEX,
+                    SuggestedWordInfo.NOT_A_CONFIDENCE));
+            rank++;
+        }
+        return results;
+    }
+
     private void getSuggestedWordsForBatchInput(final WordComposer wordComposer,
             final NgramContext ngramContext, final Keyboard keyboard,
             final SettingsValuesForSuggestion settingsValuesForSuggestion,
             final int inputStyle, final int sequenceNumber,
             final OnGetSuggestedWordsCallback callback) {
-        final SuggestionResults suggestionResults = mDictionaryFacilitator.getSuggestionResults(
-                wordComposer.getComposedDataSnapshot(), ngramContext, keyboard,
-                settingsValuesForSuggestion, SESSION_ID_GESTURE, inputStyle);
+        // BUMBOARD: LatinIME's native gesture decoder was never open source (its policy is
+        // empty), so glides are decoded by app.bumboard.glide instead.
+        final SuggestionResults suggestionResults = bumGlideResults(wordComposer, keyboard,
+                ngramContext);
         // For transforming words that don't come from a dictionary, because it's our best bet
         final Locale locale = mDictionaryFacilitator.getLocale();
         final ArrayList<SuggestedWordInfo> suggestionsContainer =

@@ -1196,8 +1196,16 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                 currentSettingsValues.mKeyPreviewPopupDismissDelay);
         mainKeyboardView.setSlidingKeyInputPreviewEnabled(
                 currentSettingsValues.mSlidingKeyInputPreviewEnabled);
+        // BUMBOARD: glide typing on the keyboards with a word list (not Chinese or Korean),
+        // decoded by app.bumboard.glide; its word list loads in the background.
+        final boolean bumGlide = currentSettingsValues.mGestureInputEnabled
+                && app.bumboard.Features.isEnabled(app.bumboard.Feature.GLIDE_TYPING)
+                && mRichImm.getCurrentSubtype().getRawSubtype().getExtraValueOf("BumEngine") == null;
+        if (bumGlide) {
+            app.bumboard.glide.GlideTyping.prepare(this, mRichImm.getCurrentSubtypeLocale());
+        }
         mainKeyboardView.setGestureHandlingEnabledByUser(
-                currentSettingsValues.mGestureInputEnabled,
+                bumGlide,
                 currentSettingsValues.mGestureTrailEnabled,
                 currentSettingsValues.mGestureFloatingPreviewTextEnabled);
 
