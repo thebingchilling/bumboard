@@ -79,11 +79,8 @@ class HandwritingPanelView @JvmOverloads constructor(
         isClickable = true
         setBackgroundColor(palette.surface)
         // the guesses show in the candidate bar above (lycheeShowGuesses), so the pad gets the room
+        // the pad has no background of its own: write straight on the keyboard
         addView(FrameLayout(context).apply {
-            background = GradientDrawable().apply {
-                cornerRadius = dp(16).toFloat()
-                setColor(palette.surfaceContainer)
-            }
             addView(hint, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(pad, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(message, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
@@ -196,14 +193,63 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     private fun recognise() {
         val z = zinnia ?: return
-        val strokes = pad.strokes()
-        val w = pad.width
-        val h = pad.height
-        if (strokes.isEmpty() || w <= 0 || h <= 0) return
+        val strokes = normalise(pad.strokes())
+        if (strokes.isEmpty()) return
         worker.execute {
-            val result = runCatching { z.classify(w, h, strokes) }.getOrDefault(emptyList())
+            val result = runCatching { z.classify(BOX, BOX, strokes) }.getOrDefault(emptyList())
             main.post { if (pad.hasInk) showGuesses(result) }
         }
+    }
+
+    /**
+     * The ink as Zinnia's models expect it: the character alone, centred in a square [BOX]
+     * (the pad is much wider than a character, and Zinnia scales x and y by the box it is
+     * given), with the points thinned out like the models' training strokes.
+     */
+    private fun normalise(strokes: FloatArray): FloatArray {
+        var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE
+        var maxX = -Float.MAX_VALUE; var maxY = -Float.MAX_VALUE
+        var i = 0
+        while (i + 1 < strokes.size) {
+            val x = strokes[i]; val y = strokes[i + 1]
+            if (x >= 0) {
+                minX = minOf(minX, x); maxX = maxOf(maxX, x)
+                minY = minOf(minY, y); maxY = maxOf(maxY, y)
+            }
+            i += 2
+        }
+        if (minX > maxX) return FloatArray(0)
+        // a little margin; a flat stroke (一) keeps its shape instead of being stretched
+        val side = maxOf(maxX - minX, maxY - minY, dp(24).toFloat()) * 1.15f
+        val scale = BOX / side
+        val offX = (side - (maxX - minX)) / 2 - minX
+        val offY = (side - (maxY - minY)) / 2 - minY
+        val minStep = BOX * 0.025f
+        val out = ArrayList<Float>(strokes.size)
+        var lastX = -1f; var lastY = -1f
+        var pendingX = -1f; var pendingY = -1f
+        i = 0
+        while (i + 1 < strokes.size) {
+            val x = strokes[i]; val y = strokes[i + 1]
+            if (x < 0) {
+                // always keep a stroke's end
+                if (pendingX >= 0) { out += pendingX; out += pendingY }
+                out += -1f; out += -1f
+                lastX = -1f; pendingX = -1f
+            } else {
+                val nx = (x + offX) * scale
+                val ny = (y + offY) * scale
+                if (lastX < 0 || kotlin.math.hypot(nx - lastX, ny - lastY) >= minStep) {
+                    out += nx; out += ny
+                    lastX = nx; lastY = ny
+                    pendingX = -1f
+                } else {
+                    pendingX = nx; pendingY = ny
+                }
+            }
+            i += 2
+        }
+        return out.toFloatArray()
     }
 
     /** Types the best guess for the ink on the pad and clears it for the next character. */
@@ -402,6 +448,8 @@ class HandwritingPanelView @JvmOverloads constructor(
     private companion object {
         /** A pause this long after a stroke types the character. */
         const val AUTO_COMMIT_MS = 750L
+        /** The square Zinnia sees each character in. */
+        const val BOX = 300
         val worker = Executors.newSingleThreadExecutor()
     }
 }

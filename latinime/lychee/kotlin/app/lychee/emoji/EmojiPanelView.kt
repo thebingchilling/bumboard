@@ -107,10 +107,15 @@ class EmojiPanelView @JvmOverloads constructor(
                     else -> 1
                 }
         }
-        addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        // room around the emoji, like Gboard's: at the sides and above the bottom bar
+        addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply {
+            setMargins(dp(GRID_SIDE_DP), 0, dp(GRID_SIDE_DP), dp(6))
+        })
         pinchToResize()
         swipeBetweenCategories()
-        addView(bottomBar(), LayoutParams(LayoutParams.MATCH_PARENT, dp(50)))
+        addView(bottomBar(), LayoutParams(LayoutParams.MATCH_PARENT, dp(50)).apply {
+            setMargins(dp(6), 0, dp(6), dp(6))
+        })
         // loaded ahead, so the panel opens full at once
         EmojiData.load(context) {}
     }
@@ -163,7 +168,7 @@ class EmojiPanelView @JvmOverloads constructor(
      * so fewer columns means bigger emoji.
      */
     private fun applyColumns() {
-        val w = grid.width.takeIf { it > 0 } ?: (width - paddingLeft - paddingRight)
+        val w = grid.width.takeIf { it > 0 } ?: (width - paddingLeft - paddingRight - 2 * dp(GRID_SIDE_DP))
         if (w <= 0) return
         @Suppress("DEPRECATION")
         val saved = PreferenceManager.getDefaultSharedPreferences(context).getInt(PREF_COLUMNS, 0)
@@ -534,6 +539,7 @@ class EmojiPanelView @JvmOverloads constructor(
         const val MAX_COLUMNS = 12
         /** Emoji glyph size as a share of its cell. */
         private const val EMOJI_FILL = 0.74f
+        private const val GRID_SIDE_DP = 8
         /** The kaomoji section's id, and the keywords that mark its cells. */
         private const val KAOMOJI = "kaomoji"
 
