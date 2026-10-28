@@ -32,8 +32,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
-      REPO: thebingchilling/lychee
-      RELEASE_FILES: https://github.com/thebingchilling/lychee/releases/download/packs
+      REPO: lychee-keyboard/lychee
+      RELEASE_FILES: https://github.com/lychee-keyboard/lychee/releases/download/packs
     steps:
       - uses: actions/checkout@v4
 
@@ -105,8 +105,8 @@ jobs:
           done
 
       # Public: the changed packs and manifest.json go to the "packs" release of
-      # thebingchilling/lychee (a pre-release, so it never shows as the app's latest release),
-      # uploaded with the owner's token (the PACKS_TOKEN secret), so they appear as the owner's.
+      # lychee-keyboard/lychee (a pre-release, so it never shows as the app's latest release),
+      # uploaded with lychee-keyboard's token (the PACKS_TOKEN secret), so they appear as its own.
       # Only pack zips and the manifest go there. Runs on main only.
       - name: Publish to lychee's "packs" release
         if: github.ref == 'refs/heads/main'
@@ -129,7 +129,7 @@ jobs:
           gh release upload packs out/site/manifest.json --repo "$REPO" --clobber
 
       # The packs page (index.html, manifest.json, its font) on the lychee repository's gh-pages
-      # branch, which GitHub Pages serves at https://thebingchilling.github.io/lychee/. Off until
+      # branch, which GitHub Pages serves at https://lychee-keyboard.github.io/lychee/. Off until
       # the LYCHEE_PAGE repository variable is "on".
       - name: Publish the packs page
         if: github.ref == 'refs/heads/main' && vars.LYCHEE_PAGE == 'on'

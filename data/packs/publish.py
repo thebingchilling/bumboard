@@ -30,7 +30,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 CATALOGUE = ROOT / "latinime/lychee/assets/lychee/packs.json"
-RELEASE = "https://github.com/thebingchilling/lychee/releases/download/packs/"
+RELEASE = "https://github.com/lychee-keyboard/lychee/releases/download/packs/"
 FONT = (".ttf", ".otf", ".ttc")
 
 sys.path.insert(0, str(HERE / "fonts"))
@@ -133,7 +133,7 @@ def main():
     packs = {k: v for k, v in packs.items() if k in catalogue}
     manifest = {
         "updated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
-        "release": "https://github.com/thebingchilling/lychee/releases/tag/packs",
+        "release": "https://github.com/lychee-keyboard/lychee/releases/tag/packs",
         "packs": dict(sorted(packs.items())),
     }
     args.manifest.parent.mkdir(parents=True, exist_ok=True)

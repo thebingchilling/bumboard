@@ -10,9 +10,12 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
 - Don't compile locally: GitHub Actions builds and tests (`build.yml`, `packs.yml`). Check
   the runs on `main` after pushing and fix any red build.
 - Never publish the Lychee app (APK or a release of it) anywhere until the owner says so.
-- Packs may be published to the public `thebingchilling/lychee` repository (see below).
+- Packs may be published to the public `lychee-keyboard/lychee` repository (see below).
+- This repository is the private workspace. Lychee's code is not released publicly (the owner
+  may decide later what to release); only the public-facing parts (packs, the packs page) go
+  to `lychee-keyboard/lychee`. `thebingchilling/lychee` was the packs' earlier test home.
 
-## Public repository: `thebingchilling/lychee`
+## Public repository: `lychee-keyboard/lychee`
 
 Public facing, so be careful:
 
@@ -21,9 +24,9 @@ Public facing, so be careful:
   `gh-pages` branch. No app code, APKs, internal notes or anything else from this repository.
 - `packs.yml` publishes by itself on `main` (weekly, and when the pack builders change): it
   rebuilds every pack from its sources' newest data and uploads only the packs whose contents
-  changed, with a date version (`data/packs/publish.py`). It uses the owner's token
-  (`PACKS_TOKEN` secret), so uploads appear as the owner's.
-- The packs page (https://thebingchilling.github.io/lychee/) is only pushed when the
+  changed, with a date version (`data/packs/publish.py`). It uses a token of the
+  lychee-keyboard account (`PACKS_TOKEN` secret), so uploads appear as lychee-keyboard's.
+- The packs page (https://lychee-keyboard.github.io/lychee/) is only pushed when the
   `LYCHEE_PAGE` repository variable is `on`; the owner turns it on.
 - Release notes and file names say Lychee, never BumBoard or Claude.
 

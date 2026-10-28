@@ -1,6 +1,6 @@
 {
-  "_comment": "Lychee's pack catalogue. Lychee has no network access: 'download' (a direct link to a file on the public 'packs' release of thebingchilling/lychee, where the packs workflow builds or mirrors every pack) opens in the browser, which saves the file; opening it installs it in Lychee. 'url' is the pack's source, for credit and updates. 'sha256' (optional) pins an exact file; 'pick' chooses the font inside a zip; 'prefer' breaks ties between matches. 'emoji' is the Emoji version a font covers; 'preview' is a picture of the font, shown before it is downloaded (data/packs/fonts/render_preview.js).",
-  "release": "https://github.com/thebingchilling/lychee/releases/tag/packs",
+  "_comment": "Lychee's pack catalogue. Lychee has no network access: 'download' (a direct link to a file on the public 'packs' release of lychee-keyboard/lychee, where the packs workflow builds or mirrors every pack) opens in the browser, which saves the file; opening it installs it in Lychee. 'url' is the pack's source, for credit and updates. 'sha256' (optional) pins an exact file; 'pick' chooses the font inside a zip; 'prefer' breaks ties between matches. 'emoji' is the Emoji version a font covers; 'preview' is a picture of the font, shown before it is downloaded (data/packs/fonts/render_preview.js).",
+  "release": "https://github.com/lychee-keyboard/lychee/releases/tag/packs",
   "packs": [
     {
       "id": "font_zh_custom",
@@ -62,7 +62,7 @@
       "size": "10 MB",
       "license": "SIL Open Font License 1.1",
       "credit": "Noto Color Emoji by Google",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-noto-latest.zip",
+      "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-emoji-noto-latest.zip",
       "emoji": "17.0",
       "preview": "lychee/previews/emoji_noto_latest.png"
     },
@@ -78,7 +78,7 @@
       "size": "1.5 MB",
       "license": "Graphics CC BY 4.0; font build MPL/Apache",
       "credit": "Twemoji by Twitter, Inc and other contributors (CC BY 4.0); font by Mozilla",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-twemoji.zip",
+      "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-emoji-twemoji.zip",
       "emoji": "14.0",
       "preview": "lychee/previews/emoji_twemoji.png"
     },
@@ -95,7 +95,7 @@
       "size": "10 MB",
       "license": "CC BY-SA 4.0",
       "credit": "OpenMoji, the open-source emoji project (CC BY-SA 4.0)",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-openmoji.zip",
+      "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-emoji-openmoji.zip",
       "emoji": "17.0",
       "preview": "lychee/previews/emoji_openmoji.png"
     },
@@ -111,7 +111,7 @@
       "size": "10 MB",
       "license": "Apache License 2.0",
       "credit": "Blobmoji by C1710, based on Noto Emoji by Google",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-blobmoji.zip",
+      "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-emoji-blobmoji.zip",
       "emoji": "15.0",
       "preview": "lychee/previews/emoji_blobmoji.png"
     },
@@ -134,12 +134,12 @@
       "summary": "Write 繁體 and 简体 characters, including Cantonese ones",
       "version": "1",
       "built": true,
-      "url": "https://github.com/thebingchilling/lychee/releases/tag/packs",
+      "url": "https://github.com/lychee-keyboard/lychee/releases/tag/packs",
       "file": "lychee-hw-zh.zip",
       "size": "50 MB",
       "license": "LGPL 2.1 (Tegaki/Tomoe models); Zinnia engine BSD",
       "credit": "Handwriting models from the Tegaki and Tomoe projects",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-hw-zh.zip"
+      "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-hw-zh.zip"
     },
     {
       "id": "hw_ja",
@@ -148,12 +148,12 @@
       "summary": "Write kana and kanji",
       "version": "1",
       "built": true,
-      "url": "https://github.com/thebingchilling/lychee/releases/tag/packs",
+      "url": "https://github.com/lychee-keyboard/lychee/releases/tag/packs",
       "file": "lychee-hw-ja.zip",
       "size": "17 MB",
       "license": "LGPL 2.1 (Tomoe model); Zinnia engine BSD",
       "credit": "Handwriting model from the Tomoe project",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-hw-ja.zip"
+      "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-hw-ja.zip"
     },
     {
       "id": "rime_ja",
@@ -162,12 +162,12 @@
       "summary": "Kana to kanji conversion, with readings and meanings (JMdict) under the candidates",
       "version": "2",
       "built": true,
-      "url": "https://github.com/thebingchilling/lychee/releases/tag/packs",
+      "url": "https://github.com/lychee-keyboard/lychee/releases/tag/packs",
       "file": "lychee-rime-ja.zip",
       "size": "30 MB",
       "license": "Mozc dictionary (BSD-3-Clause, IPAdic licence); JMdict (CC BY-SA 4.0)",
       "credit": "Japanese dictionary from Mozc (Google) and IPAdic; meanings from JMdict (EDRDG)",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-rime-ja.zip"
+      "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-rime-ja.zip"
     },
     {
       "id": "dict_ko",
@@ -176,12 +176,12 @@
       "summary": "Meanings, Hanja and part of speech under the Korean candidates",
       "version": "1",
       "built": true,
-      "url": "https://github.com/thebingchilling/lychee/releases/tag/packs",
+      "url": "https://github.com/lychee-keyboard/lychee/releases/tag/packs",
       "file": "lychee-dict-ko.zip",
       "size": "10 MB",
       "license": "CC BY-SA 4.0 (Wiktionary)",
       "credit": "Korean dictionary from Wiktionary, via kaikki.org (Wiktextract)",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-dict-ko.zip"
+      "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-dict-ko.zip"
     },
     {
       "id": "strokes_zh",
@@ -190,12 +190,12 @@
       "summary": "Stroke order animations and character breakdown (parts, radical) in the word card",
       "version": "1",
       "built": true,
-      "url": "https://github.com/thebingchilling/lychee/releases/tag/packs",
+      "url": "https://github.com/lychee-keyboard/lychee/releases/tag/packs",
       "file": "lychee-strokes.zip",
       "size": "14 MB",
       "license": "Arphic Public License (stroke shapes); LGPL (character data)",
       "credit": "Make Me a Hanzi by Shaunak Kishore",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-strokes.zip"
+      "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-strokes.zip"
     },
     {
       "id": "examples",
@@ -204,12 +204,12 @@
       "summary": "Cantonese, Mandarin, Japanese and Korean sentences with English, in the word card",
       "version": "1",
       "built": true,
-      "url": "https://github.com/thebingchilling/lychee/releases/tag/packs",
+      "url": "https://github.com/lychee-keyboard/lychee/releases/tag/packs",
       "file": "lychee-examples.zip",
       "size": "5 MB",
       "license": "CC BY 2.0 FR (Tatoeba)",
       "credit": "Example sentences from Tatoeba (tatoeba.org) and its contributors",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-examples.zip"
+      "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-examples.zip"
     }
   ]
 }

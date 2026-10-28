@@ -16,7 +16,7 @@ import org.json.JSONObject
  */
 object Updates {
     /** The packs page (GitHub Pages of the public lychee repository; data/packs/site). */
-    const val PAGE = "https://thebingchilling.github.io/lychee/"
+    const val PAGE = "https://lychee-keyboard.github.io/lychee/"
     private const val PREF_LATEST = "lychee_pack_latest"
     private const val PREF_CHECKED = "lychee_pack_checked"
     /** A quiet reminder to check shows after this long without a check. */
