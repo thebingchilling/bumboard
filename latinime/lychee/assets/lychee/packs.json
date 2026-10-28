@@ -31,51 +31,6 @@
       "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-font-zh-wenkai-tc.zip"
     },
     {
-      "id": "font_zh_chiron_hei",
-      "kind": "font_zh",
-      "name": "Chiron Hei HK 昭源黑體",
-      "summary": "Hei style, Hong Kong glyph standard",
-      "version": "latest",
-      "url": "https://github.com/chiron-fonts/chiron-hei-hk/releases/latest",
-      "file": "ChironHeiHK (zip or .otf)",
-      "pick": "(?i)\\.(otf|ttf)$",
-      "prefer": "(?i)-R(egular)?\\.|VF",
-      "size": "15 MB",
-      "license": "SIL Open Font License 1.1",
-      "credit": "Chiron Hei HK by Tamcy",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-font-zh-chiron-hei.zip"
-    },
-    {
-      "id": "font_zh_chiron_sung",
-      "kind": "font_zh",
-      "name": "Chiron Sung HK 昭源宋體",
-      "summary": "Song style, Hong Kong glyph standard",
-      "version": "latest",
-      "url": "https://github.com/chiron-fonts/chiron-sung-hk/releases/latest",
-      "file": "ChironSungHK (zip or .otf)",
-      "pick": "(?i)\\.(otf|ttf)$",
-      "prefer": "(?i)-R(egular)?\\.|VF",
-      "size": "20 MB",
-      "license": "SIL Open Font License 1.1",
-      "credit": "Chiron Sung HK by Tamcy",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-font-zh-chiron-sung.zip"
-    },
-    {
-      "id": "font_zh_zhuque",
-      "kind": "font_zh",
-      "name": "Zhuque Fangsong 朱雀仿宋",
-      "summary": "Fangsong style",
-      "version": "latest",
-      "url": "https://github.com/TrionesType/zhuque/releases/latest",
-      "file": "ZhuqueFangsong-Regular.ttf",
-      "pick": "(?i)Zhuque.*\\.(ttf|otf)$",
-      "prefer": "(?i)Regular",
-      "size": "10 MB",
-      "license": "SIL Open Font License 1.1",
-      "credit": "Zhuque Fangsong by TrionesType",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-font-zh-zhuque.zip"
-    },
-    {
       "id": "font_zh_gensen",
       "kind": "font_zh",
       "name": "GenSen Rounded 源泉圓體",
@@ -101,20 +56,6 @@
       "size": "",
       "license": "Your font's own licence",
       "credit": ""
-    },
-    {
-      "id": "emoji_noto_latest",
-      "kind": "font_emoji",
-      "name": "Noto Color Emoji (newest)",
-      "summary": "Google's emoji; Lychee already includes a copy",
-      "version": "latest",
-      "url": "https://github.com/googlefonts/noto-emoji/raw/main/fonts/NotoColorEmoji.ttf",
-      "file": "NotoColorEmoji.ttf",
-      "pick": "(?i)NotoColorEmoji\\.ttf$",
-      "size": "10 MB",
-      "license": "SIL Open Font License 1.1",
-      "credit": "Noto Color Emoji by Google",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-noto-latest.zip"
     },
     {
       "id": "emoji_twemoji",
@@ -158,20 +99,6 @@
       "license": "Apache License 2.0",
       "credit": "Blobmoji by C1710, based on Noto Emoji by Google",
       "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-blobmoji.zip"
-    },
-    {
-      "id": "emoji_serenity",
-      "kind": "font_emoji",
-      "name": "SerenityOS Emoji",
-      "summary": "Pixel-art style",
-      "version": "latest",
-      "url": "https://github.com/linusg/serenityos-emoji-font/releases/latest",
-      "file": "SerenityOS-Emoji.ttf",
-      "pick": "(?i)\\.ttf$",
-      "size": "1 MB",
-      "license": "BSD 2-Clause",
-      "credit": "SerenityOS emoji by the SerenityOS contributors",
-      "download": "https://github.com/thebingchilling/lychee/releases/download/packs/lychee-emoji-serenity.zip"
     },
     {
       "id": "emoji_custom",
