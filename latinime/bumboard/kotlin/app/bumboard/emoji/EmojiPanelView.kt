@@ -434,7 +434,7 @@ class EmojiPanelView @JvmOverloads constructor(
                     setPadding(dp(14), dp(10), dp(14), dp(4))
                     layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 } else {
-                    typeface = EmojiData.typeface
+                    typeface = app.bumboard.fonts.BumFonts.emoji(context)
                     includeFontPadding = false
                     background = selectable()
                     layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(50))

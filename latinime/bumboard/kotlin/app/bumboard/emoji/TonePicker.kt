@@ -48,7 +48,7 @@ class TonePicker(private val ctx: Context) {
         }
         fun cell(text: String, size: Int = 46, onClick: () -> Unit = { pick(text) }) = TextView(ctx).apply {
             this.text = text
-            typeface = EmojiData.typeface
+            typeface = app.bumboard.fonts.BumFonts.emoji(context)
             setTextSize(TypedValue.COMPLEX_UNIT_PX, dp(size) * 0.62f)
             gravity = Gravity.CENTER
             includeFontPadding = false

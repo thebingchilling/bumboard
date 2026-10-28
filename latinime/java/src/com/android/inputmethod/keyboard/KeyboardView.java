@@ -413,7 +413,9 @@ public class KeyboardView extends View {
         float labelBaseline = centerY;
         final String label = key.getLabel();
         if (label != null) {
-            paint.setTypeface(key.selectTypeface(params));
+            // BUMBOARD: the Chinese font from Settings > Fonts, when it is used on the keys too.
+            final Typeface bumKeysFace = app.bumboard.fonts.BumFonts.keys(getContext());
+            paint.setTypeface(bumKeysFace != null ? bumKeysFace : key.selectTypeface(params));
             paint.setTextSize(key.selectTextSize(params));
             final float labelCharHeight = TypefaceUtils.getReferenceCharHeight(paint);
             final float labelCharWidth = TypefaceUtils.getReferenceCharWidth(paint);

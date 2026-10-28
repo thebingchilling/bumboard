@@ -97,6 +97,7 @@ class CandidatePanelView @JvmOverloads constructor(
             val (index, candidate) = items[position]
             val cell = holder.itemView as TextView
             cell.text = candidate.text
+            cell.typeface = app.bumboard.fonts.BumFonts.chinese(cell.context) ?: android.graphics.Typeface.DEFAULT
             cell.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f * scale)
             cell.setTextColor(if (position == 0) palette.primary else palette.onSurface)
             cell.setOnClickListener {

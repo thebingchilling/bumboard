@@ -132,7 +132,7 @@ class EmojiSearchBar @JvmOverloads constructor(
         found.forEach { emoji ->
             results.addView(TextView(context).apply {
                 text = emoji
-                typeface = EmojiData.typeface
+                typeface = app.bumboard.fonts.BumFonts.emoji(context)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 30f)
                 gravity = Gravity.CENTER
                 includeFontPadding = false

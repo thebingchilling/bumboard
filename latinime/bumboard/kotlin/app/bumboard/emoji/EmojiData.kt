@@ -56,7 +56,7 @@ object EmojiData {
         val app = context.applicationContext
         executor.execute {
             try {
-                typeface = Typeface.createFromAsset(app.assets, "bumboard/NotoColorEmoji.ttf")
+                typeface = app.bumboard.fonts.BumFonts.bundledEmoji(app)
                 val json = app.assets.open("bumboard/emoji.json").bufferedReader().use { it.readText() }
                 groups = parse(JSONObject(json))
                 byForm = buildMap {

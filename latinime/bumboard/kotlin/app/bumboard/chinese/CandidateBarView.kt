@@ -125,7 +125,10 @@ class CandidateBarView @JvmOverloads constructor(
                 event.actionMasked == android.view.MotionEvent.ACTION_CANCEL) onRelease()
             false
         }
-        addView(text(candidate.text, CHAR_SP * scale, tag as Int).apply { includeFontPadding = false }, wrap())
+        addView(text(candidate.text, CHAR_SP * scale, tag as Int).apply {
+            includeFontPadding = false
+            app.bumboard.fonts.BumFonts.chinese(context)?.let { typeface = it }
+        }, wrap())
     }
 
     private fun fill(cell: LinearLayout, annotation: Annotation) {

@@ -89,6 +89,7 @@ enum class Page(@StringRes val title: Int) {
     Correction(R.string.settings_screen_correction),
     Gesture(R.string.settings_screen_gesture),
     Advanced(R.string.settings_screen_advanced),
+    Fonts(R.string.bum_fonts_title),
     Packs(R.string.bum_packs_title),
     About(R.string.bum_about),
     Licences(R.string.bum_licences),
@@ -196,6 +197,7 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                     Page.Correction -> CorrectionPage()
                     Page.Gesture -> GesturePage()
                     Page.Advanced -> AdvancedPage()
+                    Page.Fonts -> FontsPage()
                     Page.Packs -> PacksPage()
                     Page.About -> AboutPage { page = Page.Licences }
                     Page.Licences -> LicencesPage()
@@ -206,7 +208,7 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
 }
 
 @Composable
-private fun prefs(): SharedPreferences {
+internal fun prefs(): SharedPreferences {
     val context = LocalContext.current
     @Suppress("DEPRECATION")
     return remember { PreferenceManager.getDefaultSharedPreferences(context) }
@@ -300,6 +302,12 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
                 it, stringResource(R.string.settings_screen_theme),
                 stringResource(R.string.bum_theme_summary), R.drawable.ic_sym_palette,
             ) { open(Page.Theme) }
+        }
+        row {
+            NavRow(
+                it, stringResource(R.string.bum_fonts_title),
+                stringResource(R.string.bum_fonts_summary), R.drawable.ic_sym_text_fields,
+            ) { open(Page.Fonts) }
         }
         row {
             NavRow(

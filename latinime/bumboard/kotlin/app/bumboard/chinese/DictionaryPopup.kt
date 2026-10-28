@@ -136,7 +136,9 @@ class DictionaryPopup(private val ctx: Context) {
             // headword: Traditional · Simplified
             val forms = if (main != null && !r.composed && main.traditional != main.simplified)
                 "${main.traditional} · ${main.simplified}" else text
-            body.addView(textView(forms, 34f, c.onSurface))
+            body.addView(textView(forms, 34f, c.onSurface).apply {
+                app.bumboard.fonts.BumFonts.chinese(ctx)?.let { typeface = it }
+            })
             readings(r, main).forEach { (label, value) -> body.addView(labelled(label, value)) }
 
             if (r.composed) {
@@ -147,7 +149,9 @@ class DictionaryPopup(private val ctx: Context) {
             r.headwords.forEachIndexed { i, hw ->
                 if (i > 0) {
                     body.addView(divider())
-                    body.addView(textView("${hw.traditional} · ${hw.simplified}", 22f, c.onSurface))
+                    body.addView(textView("${hw.traditional} · ${hw.simplified}", 22f, c.onSurface).apply {
+                        app.bumboard.fonts.BumFonts.chinese(ctx)?.let { typeface = it }
+                    })
                     readings(Resolved(r.lang, null, null, null, listOf(hw), false), hw)
                         .forEach { (label, value) -> body.addView(labelled(label, value)) }
                 }

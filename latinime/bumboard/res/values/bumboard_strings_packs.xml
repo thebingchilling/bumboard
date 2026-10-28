@@ -23,4 +23,18 @@
     <string name="bum_packs_dictionaries">Dictionaries</string>
     <string name="bum_packs_voice">Offline voice</string>
     <string name="bum_licences_packs">Packs</string>
+    <!-- Settings > Fonts -->
+    <string name="bum_fonts_title">Fonts</string>
+    <string name="bum_fonts_summary">Chinese font and emoji style</string>
+    <string name="bum_fonts_note">These change how BumBoard shows candidates, the dictionary and emoji. Apps show what you type in their own fonts.</string>
+    <string name="bum_fonts_chinese">Chinese font</string>
+    <string name="bum_fonts_emoji">Emoji</string>
+    <string name="bum_fonts_preview_zh">你好，我哋去飲茶啦 你好，我们去喝茶吧</string>
+    <string name="bum_fonts_preview_emoji">😀 😂 🥹 ❤️ 👍🏽 🐶 🍜 🎉 🇭🇰</string>
+    <string name="bum_fonts_system">Phone's font</string>
+    <string name="bum_fonts_system_summary">The system's Chinese font</string>
+    <string name="bum_fonts_on_keys">Use on the keys too</string>
+    <string name="bum_fonts_on_keys_summary">Key labels in the Chinese font as well</string>
+    <string name="bum_fonts_noto">Noto Color Emoji</string>
+    <string name="bum_fonts_noto_summary">Included with BumBoard</string>
 </resources>
