@@ -167,7 +167,7 @@ class ShortcutGalleryView @JvmOverloads constructor(
         // hidden shortcuts only show (faded) while editing, to bring back
         val hidden = store.hidden()
         items = store.order().filter {
-            it !in bar && it != Shortcut.SETTINGS && Shortcuts.available(it, engine, Shortcuts.isFloating(context)) &&
+            it !in bar && it != Shortcut.SETTINGS && Shortcuts.available(it, engine) &&
                 (editing || it !in hidden)
         }.toMutableList()
         adapter.notifyDataSetChanged()

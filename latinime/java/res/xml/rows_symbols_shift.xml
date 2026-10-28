@@ -37,21 +37,23 @@
         <include
             latin:keyboardLayout="@xml/rowkeys_symbols_shift2" />
     </Row>
-    <!-- LYCHEE: as tall as the letters' shift/delete row -->
+    <!-- LYCHEE: the symbols share the rows' height, but =\< and delete keep the size and place
+         of the letters' shift and delete -->
     <Row
         latin:keyWidth="10%p"
-        latin:rowHeight="25%"
     >
         <Key
             latin:keyStyle="backFromMoreSymbolKeyStyle"
             latin:keyWidth="15%p"
-            latin:visualInsetsRight="1%p" />
+            latin:visualInsetsRight="1%p"
+            latin:lycheeLetterHeight="true" />
         <include
             latin:keyboardLayout="@xml/rowkeys_symbols_shift3" />
         <Key
             latin:keyStyle="deleteKeyStyle"
             latin:keyWidth="fillRight"
-            latin:visualInsetsLeft="1%p" />
+            latin:visualInsetsLeft="1%p"
+            latin:lycheeLetterHeight="true" />
     </Row>
     <!-- LYCHEE: no row-wide functional background, so the bottom row looks the same as
          on the letters. -->

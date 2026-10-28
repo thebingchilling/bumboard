@@ -23,10 +23,7 @@ object KeyboardInsets {
         val emojiBottom = emoji?.let { (it.getTag(R.id.emoji_palettes_view) as? Int) ?: it.paddingBottom.also { p -> it.setTag(R.id.emoji_palettes_view, p) } } ?: 0
         inputView.setOnApplyWindowInsetsListener { _, insets ->
             val nav = insets.getInsets(WindowInsets.Type.navigationBars()).bottom
-            // a floating keyboard is placed by its own margin and needs no padding
-            val floating = app.lychee.layout.LycheeLayout.get(inputView.context).mode ==
-                app.lychee.layout.LycheeLayout.Mode.FLOATING
-            val bottom = if (floating) 0 else nav
+            val bottom = nav
             if (frame.paddingBottom != bottom) {
                 frame.setPadding(frame.paddingLeft, frame.paddingTop, frame.paddingRight, bottom)
                 if (frame.background == null) {

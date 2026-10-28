@@ -25,9 +25,9 @@ import com.android.inputmethod.latin.R
 import com.android.inputmethod.latin.common.Constants
 
 /**
- * Text editing over the keys, laid out like Gboard's: tall ◀ and ▶ either side of ▲, a Select
- * toggle and ▼ (with Select on, the arrows extend the selection), start/end of line under
- * ◀ and ▶, then select all (cut while selecting), copy, paste and delete. Arrows and delete
+ * Text editing over the keys, laid out like Gboard's: ◀ and ▶ either side of ▲, a Select
+ * toggle and ▼, all the same height (with Select on, the arrows extend the selection), start
+ * and end of line underneath, then select all (cut while selecting), copy, paste and delete. Arrows and delete
  * repeat while held.
  */
 class TextEditPanelView @JvmOverloads constructor(
@@ -46,23 +46,30 @@ class TextEditPanelView @JvmOverloads constructor(
         isClickable = true
         setBackgroundColor(palette.surface)
         setPadding(dp(4), dp(4), dp(4), dp(4))
-        // left, as Gboard lays it out: tall ◀ and ▶ either side of ▲ / Select / ▼, with start of
-        // line, cut and end of line underneath
-        val left = LinearLayout(context).apply { orientation = HORIZONTAL }
+        // left, as Gboard lays it out: ◀ and ▶ either side of ▲ / Select / ▼, all as tall as
+        // each other, with start and end of line underneath
+        val left = LinearLayout(context).apply { orientation = VERTICAL }
         selectKey = label(R.string.lychee_edit_select) { toggleSelect() }
-        left.addView(column(
-            3 to icon(R.drawable.ic_sym_keyboard_arrow_left, R.string.lychee_edit_left, repeats = true) { move(KeyEvent.KEYCODE_DPAD_LEFT) },
-            1 to icon(R.drawable.ic_sym_first_page, R.string.lychee_edit_line_start) { move(KeyEvent.KEYCODE_MOVE_HOME) },
+        val arrows = LinearLayout(context).apply { orientation = HORIZONTAL }
+        arrows.addView(column(
+            1 to icon(R.drawable.ic_sym_keyboard_arrow_left, R.string.lychee_edit_left, repeats = true) { move(KeyEvent.KEYCODE_DPAD_LEFT) },
         ), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
-        left.addView(column(
+        arrows.addView(column(
             1 to icon(R.drawable.ic_sym_keyboard_arrow_up, R.string.lychee_edit_up, repeats = true) { move(KeyEvent.KEYCODE_DPAD_UP) },
-            2 to selectKey,
+            1 to selectKey,
             1 to icon(R.drawable.ic_sym_keyboard_arrow_down, R.string.lychee_edit_down, repeats = true) { move(KeyEvent.KEYCODE_DPAD_DOWN) },
         ), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
-        left.addView(column(
-            3 to icon(R.drawable.ic_sym_keyboard_arrow_right, R.string.lychee_edit_right, repeats = true) { move(KeyEvent.KEYCODE_DPAD_RIGHT) },
-            1 to icon(R.drawable.ic_sym_last_page, R.string.lychee_edit_line_end) { move(KeyEvent.KEYCODE_MOVE_END) },
+        arrows.addView(column(
+            1 to icon(R.drawable.ic_sym_keyboard_arrow_right, R.string.lychee_edit_right, repeats = true) { move(KeyEvent.KEYCODE_DPAD_RIGHT) },
         ), LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        left.addView(arrows, LayoutParams(LayoutParams.MATCH_PARENT, 0, 3f))
+        left.addView(LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            addView(icon(R.drawable.ic_sym_first_page, R.string.lychee_edit_line_start) { move(KeyEvent.KEYCODE_MOVE_HOME) },
+                LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
+            addView(icon(R.drawable.ic_sym_last_page, R.string.lychee_edit_line_end) { move(KeyEvent.KEYCODE_MOVE_END) },
+                LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
+        }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         addView(left, LayoutParams(0, LayoutParams.MATCH_PARENT, 3f))
         // right: select all, copy, paste and delete
         val right = LinearLayout(context).apply { orientation = VERTICAL }
@@ -201,7 +208,7 @@ class TextEditPanelView @JvmOverloads constructor(
         lycheeHost()?.lycheeInputConnection()?.performContextMenuAction(id)
     }
 
-    /** A column of the left grid: each key with how many rows it spans. */
+    /** A column of the arrows: each key with how many rows it spans. */
     private fun column(vararg keys: Pair<Int, View>) = LinearLayout(context).apply {
         orientation = VERTICAL
         keys.forEach { (rows, key) ->

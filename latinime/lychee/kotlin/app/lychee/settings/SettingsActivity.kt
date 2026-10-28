@@ -870,7 +870,6 @@ private fun ThemePage() {
                 listOf(
                     "normal" to stringResource(R.string.lychee_pref_layout_normal),
                     "one_handed" to stringResource(R.string.lychee_pref_layout_one_handed),
-                    "floating" to stringResource(R.string.lychee_pref_layout_floating),
                 ),
                 mode.value, onSelect = mode::set,
             )

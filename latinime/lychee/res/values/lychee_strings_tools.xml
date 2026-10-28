@@ -6,8 +6,6 @@
     <string name="lychee_sc_language">Next language</string>
     <string name="lychee_sc_text_edit">Text editing</string>
     <string name="lychee_sc_one_handed">One-handed</string>
-    <string name="lychee_sc_floating">Floating</string>
-    <string name="lychee_sc_resize">Resize</string>
     <string name="lychee_sc_numpad">Number pad</string>
     <string name="lychee_sc_emoji">Emoji</string>
     <string name="lychee_sc_undo">Undo</string>
@@ -39,12 +37,7 @@
     <!-- Layout modes -->
     <string name="lychee_one_handed_exit">Full-width keyboard</string>
     <string name="lychee_one_handed_swap">Move keyboard to the other side</string>
-    <string name="lychee_float_dock">Dock keyboard</string>
-    <string name="lychee_resize_reset">Reset</string>
     <string name="lychee_resize_done">Done</string>
-    <!-- The keyboard's size while resizing, in pixels. -->
-    <string name="lychee_resize_size_h">Height %1$d px</string>
-    <string name="lychee_resize_size_wh">%1$d × %2$d px</string>
 
     <!-- Number pad -->
     <string name="lychee_numpad_space">Space</string>
@@ -74,7 +67,6 @@
     <string name="lychee_pref_layout">Keyboard mode</string>
     <string name="lychee_pref_layout_normal">Full width</string>
     <string name="lychee_pref_layout_one_handed">One-handed</string>
-    <string name="lychee_pref_layout_floating">Floating</string>
 
     <!-- Chinese -->
     <string name="lychee_script_key_traditional">Traditional Chinese. Tap for Simplified.</string>

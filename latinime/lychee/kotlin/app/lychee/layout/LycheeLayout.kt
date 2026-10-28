@@ -7,19 +7,17 @@ import app.lychee.toolbar.Shortcut
 import app.lychee.toolbar.ShortcutStore
 
 /**
- * How the keyboard is laid out: normal, one-handed (narrower, against one side) or floating
- * (a smaller card that can be dragged anywhere), its height, the number row and which key sits
- * beside the comma. Stored in LatinIME's default preferences; KeyboardSwitcher sizes the keys
+ * How the keyboard is laid out: normal or one-handed (narrower, against one side), its height,
+ * the number row and which key sits beside the comma. Stored in LatinIME's default preferences; KeyboardSwitcher sizes the keys
  * from this and [LayoutApplier] arranges the views.
  */
 class LycheeLayout private constructor(private val prefs: SharedPreferences) {
 
-    enum class Mode { NORMAL, ONE_HANDED, FLOATING }
+    enum class Mode { NORMAL, ONE_HANDED }
 
     val mode: Mode
         get() = when (prefs.getString(PREF_MODE, null)) {
             "one_handed" -> Mode.ONE_HANDED
-            "floating" -> Mode.FLOATING
             else -> Mode.NORMAL
         }
 
@@ -28,16 +26,6 @@ class LycheeLayout private constructor(private val prefs: SharedPreferences) {
 
     /** Keyboard height as a fraction of the standard height. */
     val heightScale: Float get() = prefs.getFloat(PREF_HEIGHT_SCALE, 1f).coerceIn(MIN_HEIGHT, MAX_HEIGHT)
-
-    /** The floating keyboard's own height scale (resizing it never changes the docked one). */
-    val floatHeightScale: Float get() = prefs.getFloat(PREF_FLOAT_HEIGHT_SCALE, 1f).coerceIn(MIN_HEIGHT, MAX_HEIGHT)
-
-    /** Floating keyboard width as a fraction of the screen width. */
-    val floatWidth: Float get() = prefs.getFloat(PREF_FLOAT_WIDTH, DEFAULT_FLOAT_WIDTH).coerceIn(MIN_FLOAT_WIDTH, 1f)
-
-    /** Floating keyboard position: left edge and distance above the bottom, in pixels (-1: centre). */
-    val floatX: Int get() = prefs.getInt(PREF_FLOAT_X, -1)
-    val floatY: Int get() = prefs.getInt(PREF_FLOAT_Y, -1)
 
     val numberRow: Boolean get() = prefs.getBoolean(PREF_NUMBER_ROW, true)
 
@@ -77,21 +65,23 @@ class LycheeLayout private constructor(private val prefs: SharedPreferences) {
     fun setCommaMenu(shortcuts: List<Shortcut>) =
         prefs.edit().putString(PREF_COMMA_MENU, shortcuts.joinToString(",") { it.id }).apply()
 
-    /** The comma's popup as LatinIME more-keys: Settings, then each chosen shortcut. */
-    fun commaMoreKeys(@Suppress("UNUSED_PARAMETER") languageKey: Boolean): String =
-        (listOf("!text/keyspec_settings") + commaMenu().map { "!icon/lychee_sc_${it.id}|!code/key_lychee_sc_${it.id}" })
+    /**
+     * The comma's popup as LatinIME more-keys: Settings, then each chosen shortcut that belongs
+     * on the keyboard ([engine]: null for English, which has no handwriting).
+     */
+    fun commaMoreKeys(@Suppress("UNUSED_PARAMETER") languageKey: Boolean, engine: String?): String =
+        (listOf("!text/keyspec_settings") + commaMenu().filter { app.lychee.toolbar.Shortcuts.available(it, engine) }
+            .map { "!icon/lychee_sc_${it.id}|!code/key_lychee_sc_${it.id}" })
             .joinToString(",")
 
     fun keyboardWidth(fullWidth: Int): Int = when (mode) {
         Mode.NORMAL -> fullWidth
         Mode.ONE_HANDED -> (fullWidth * ONE_HANDED_WIDTH).toInt()
-        Mode.FLOATING -> (fullWidth * floatWidth).toInt()
     }
 
     fun keyboardHeight(standardHeight: Int): Int {
-        var h = standardHeight * (if (mode == Mode.FLOATING) floatHeightScale else heightScale)
+        var h = standardHeight * heightScale
         if (numberRow) h *= NUMBER_ROW_GROWTH
-        if (mode == Mode.FLOATING) h *= FLOAT_HEIGHT
         return h.toInt()
     }
 
@@ -100,29 +90,21 @@ class LycheeLayout private constructor(private val prefs: SharedPreferences) {
     fun setMode(mode: Mode) = prefs.edit().putString(PREF_MODE, when (mode) {
         Mode.NORMAL -> "normal"
         Mode.ONE_HANDED -> "one_handed"
-        Mode.FLOATING -> "floating"
     }).apply()
 
     companion object {
         const val PREF_MODE = "lychee_layout_mode"
         const val PREF_ONE_HANDED_RIGHT = "lychee_one_handed_right"
         const val PREF_HEIGHT_SCALE = "lychee_height_scale"
-        const val PREF_FLOAT_WIDTH = "lychee_float_width"
-        const val PREF_FLOAT_HEIGHT_SCALE = "lychee_float_height_scale"
-        const val DEFAULT_FLOAT_WIDTH = 0.8f
-        const val PREF_FLOAT_X = "lychee_float_x"
-        const val PREF_FLOAT_Y = "lychee_float_y"
         const val PREF_NUMBER_ROW = "lychee_number_row"
         const val PREF_COMMA_KEY = "lychee_comma_key"
         const val PREF_COMMA_MENU = "lychee_comma_menu"
 
         const val MIN_HEIGHT = 0.7f
         const val MAX_HEIGHT = 1.5f
-        const val MIN_FLOAT_WIDTH = 0.5f
         const val ONE_HANDED_WIDTH = 0.82f
         /** A fifth row on top of four: the letters keep their height. */
         const val NUMBER_ROW_GROWTH = 1.25f
-        const val FLOAT_HEIGHT = 0.85f
 
         @JvmStatic
         @Suppress("DEPRECATION")

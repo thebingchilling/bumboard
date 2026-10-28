@@ -1413,34 +1413,30 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             return;
         }
         // LYCHEE: the keyboard is whatever of the frame (or the emoji panel, which takes its
-        // place) is on screen: full width, one-handed with its side panel, or floating. The
-        // frame holds the top bar, the keys and the navigation bar padding. A floating
-        // keyboard leaves the app its full height and takes touches only on itself.
+        // place) is on screen: full width, or one-handed with its side panel. The frame holds
+        // the top bar, the keys and the navigation bar padding.
         final boolean showingEmoji = mKeyboardSwitcher.isShowingEmojiPalettes();
         final View frame = showingEmoji
                 ? mInputView.findViewById(R.id.emoji_palettes_view)
                 : mInputView.findViewById(R.id.main_keyboard_frame);
         if (frame == null) return;
-        final boolean floating = app.lychee.layout.LycheeLayout.get(this).getMode()
-                == app.lychee.layout.LycheeLayout.Mode.FLOATING;
-        final View resize = mInputView.findViewById(R.id.lychee_resize_panel);
-        final boolean resizing = resize != null && resize.getVisibility() == View.VISIBLE;
         final int frameTop = frame.getTop();
-        final int visibleTopY = floating ? inputHeight : frameTop;
+        final int visibleTopY = frameTop;
         mSuggestionStripView.setMoreSuggestionsHeight(frameTop);
         // Need to set expanded touchable region only if a keyboard view is being shown.
         if (visibleKeyboardView.isShown() || showingEmoji) {
             outInsets.touchableInsets = InputMethodService.Insets.TOUCHABLE_INSETS_REGION;
-            final View floatResize = mInputView.findViewById(R.id.lychee_float_resize);
-            if (mKeyboardSwitcher.isShowingMoreKeysPanel()
-                    || (floatResize != null && floatResize.getVisibility() == View.VISIBLE)) {
+            if (mKeyboardSwitcher.isShowingMoreKeysPanel()) {
                 outInsets.touchableRegion.set(0, 0, mInputView.getWidth(), inputHeight);
             } else {
                 outInsets.touchableRegion.set(frame.getLeft(), frameTop,
-                        floating ? frame.getRight() : mInputView.getWidth(), frame.getBottom());
-                if (resizing) {
-                    outInsets.touchableRegion.union(new android.graphics.Rect(resize.getLeft(),
-                            resize.getTop(), resize.getRight(), resize.getBottom()));
+                        mInputView.getWidth(), frame.getBottom());
+                // the dictionary card sits above the keyboard, over the app
+                final View dictionary = mInputView.findViewById(R.id.lychee_dictionary_panel);
+                if (dictionary != null && dictionary.getVisibility() == View.VISIBLE) {
+                    outInsets.touchableRegion.union(new android.graphics.Rect(
+                            dictionary.getLeft(), dictionary.getTop(),
+                            dictionary.getRight(), dictionary.getBottom()));
                 }
             }
         }
@@ -2159,32 +2155,10 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         case TEXT_EDIT:
             showLycheePanel(R.id.lychee_text_edit_panel);
             break;
-        case RESIZE:
-            if (mode == app.lychee.layout.LycheeLayout.Mode.FLOATING) {
-                // floating: handles right on the keyboard
-                final app.lychee.layout.FloatResizeView resize =
-                        (app.lychee.layout.FloatResizeView) mInputView.findViewById(
-                                R.id.lychee_float_resize);
-                if (resize != null) {
-                    app.lychee.layout.LycheePanels.hideOthers(mInputView, resize);
-                    resize.bringToFront();
-                    resize.show(mInputView.findViewById(R.id.main_keyboard_frame),
-                            mInputView.findViewById(R.id.keyboard_view));
-                }
-            } else {
-                showLycheePanel(R.id.lychee_resize_panel);
-            }
-            break;
         case ONE_HANDED:
             layout.setMode(mode == app.lychee.layout.LycheeLayout.Mode.ONE_HANDED
                     ? app.lychee.layout.LycheeLayout.Mode.NORMAL
                     : app.lychee.layout.LycheeLayout.Mode.ONE_HANDED);
-            lycheeReloadLayout();
-            break;
-        case FLOATING:
-            layout.setMode(mode == app.lychee.layout.LycheeLayout.Mode.FLOATING
-                    ? app.lychee.layout.LycheeLayout.Mode.NORMAL
-                    : app.lychee.layout.LycheeLayout.Mode.FLOATING);
             lycheeReloadLayout();
             break;
         case EMOJI:
@@ -2277,21 +2251,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         app.lychee.layout.LycheePanels.hideOthers(mInputView, panel);
         app.lychee.layout.LycheePanels.cover(panel, mInputView);
         panel.bringToFront();
-        if (panel instanceof app.lychee.layout.ResizePanelView) {
-            // taller (and, floating, wider) than the keys, so the outline can grow
-            final android.widget.FrameLayout.LayoutParams lp =
-                    (android.widget.FrameLayout.LayoutParams) panel.getLayoutParams();
-            final int keysWidth = lp.width;
-            final int keysHeight = lp.height;
-            lp.height = Math.min((int) (keysHeight * app.lychee.layout.ResizePanelView.ROOM),
-                    mInputView.getHeight() - lp.bottomMargin);
-            if (app.lychee.layout.LycheeLayout.get(this).getMode()
-                    == app.lychee.layout.LycheeLayout.Mode.FLOATING) {
-                lp.width = mInputView.getWidth() - lp.leftMargin;
-            }
-            panel.setLayoutParams(lp);
-            ((app.lychee.layout.ResizePanelView) panel).show(keysWidth, keysHeight);
-        } else if (panel instanceof app.lychee.toolbar.ShortcutGalleryView) {
+        if (panel instanceof app.lychee.toolbar.ShortcutGalleryView) {
             ((app.lychee.toolbar.ShortcutGalleryView) panel).show();
         } else if (panel instanceof app.lychee.toolbar.TextEditPanelView) {
             ((app.lychee.toolbar.TextEditPanelView) panel).show();

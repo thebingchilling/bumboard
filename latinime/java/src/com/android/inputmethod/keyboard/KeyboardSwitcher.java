@@ -135,7 +135,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         final KeyboardLayoutSet.Builder builder = new KeyboardLayoutSet.Builder(
                 mThemeContext, editorInfo);
         final Resources res = mThemeContext.getResources();
-        // LYCHEE: one-handed, floating and resized keyboards, and the number row.
+        // LYCHEE: one-handed and resized keyboards, and the number row.
         final app.lychee.layout.LycheeLayout lycheeLayout =
                 app.lychee.layout.LycheeLayout.get(mThemeContext);
         final int keyboardWidth = lycheeLayout.keyboardWidth(
@@ -149,7 +149,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         KeyboardView.sLycheeEmojiOnComma = lycheeLayout.getEmojiOnComma();
         // the comma's popup comes from Settings; a change makes cached keyboards stale
         if (com.android.inputmethod.keyboard.internal.KeyboardTextsSet.setLycheeCommaMoreKeys(
-                lycheeLayout.commaMoreKeys(languageKey))) {
+                lycheeLayout.commaMoreKeys(languageKey, mRichImm.getCurrentSubtype()
+                        .getRawSubtype().getExtraValueOf("LycheeEngine")))) {
             KeyboardLayoutSet.onKeyboardThemeChanged();
         }
         builder.setSubtype(mRichImm.getCurrentSubtype());

@@ -83,8 +83,8 @@ class NumpadPanelView @JvmOverloads constructor(
             addView(abcKey(), keyParams(1.3f))
             addView(text(","), keyParams(0.8f))
             addView(key("!?#", letter = false, size = 15f) {
-                // the symbols page is underneath
-                visibility = GONE
+                // the symbols page is underneath (this, not the row the key sits in)
+                this@NumpadPanelView.visibility = GONE
             }, keyParams(1f))
             addView(digit("0"), keyParams(1.6f))
             addView(text("="), keyParams(0.8f))

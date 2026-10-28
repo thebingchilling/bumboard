@@ -377,6 +377,9 @@
         <!-- Visual insets, in the proportion of keyboard width. -->
         <attr name="visualInsetsLeft" format="fraction" />
         <attr name="visualInsetsRight" format="fraction" />
+        <!-- LYCHEE: the key keeps the letters' row height in a taller row (the symbols pages
+             with the number row on), sitting at the row's bottom. -->
+        <attr name="lycheeLetterHeight" format="boolean" />
         <!-- Width of the key, in the proportion of keyboard width.
              If the value is fillRight, the actual key width will be determined to fill out the
              area up to the right edge of the keyboard. -->

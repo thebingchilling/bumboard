@@ -60,7 +60,14 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         }
         moreButton = inputView.findViewById<android.widget.ImageView>(R.id.lychee_candidate_more)?.also { b ->
             b.imageTintList = android.content.res.ColorStateList.valueOf(inputView.context.getColor(R.color.lychee_m3_on_key_variant))
-            b.background = inputView.context.getDrawable(R.drawable.lychee_m3_suggestion)
+            // a divider keeps it apart from the candidates; it presses as a pill beside it
+            val ctx = inputView.context
+            b.background = android.graphics.drawable.LayerDrawable(arrayOf(
+                ctx.getDrawable(R.drawable.lychee_m3_strip_divider)!!, ctx.getDrawable(R.drawable.lychee_m3_suggestion)!!,
+            )).apply {
+                setLayerGravity(0, android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL)
+                setLayerInsetStart(1, (ctx.resources.displayMetrics.density * 3).toInt())
+            }
             b.setOnClickListener { togglePanel() }
         }
         bar?.onPick = { index -> if (showingGuesses) onGuess(index) else pick(index) }
@@ -514,7 +521,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** Keeps the candidates and their ⌄ clear of the pinned keys: 中 on the left, 繁/简 on the right. */
     private fun updateEdges(stripView: SuggestionStripView) {
         val edge = stripView.lycheeEdgeWidth
-        val more = ime.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width)
+        val more = ime.resources.getDimensionPixelSize(R.dimen.lychee_candidate_more_width)
         (moreButton?.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
             if (lp.marginEnd != edge) {
                 lp.marginEnd = edge

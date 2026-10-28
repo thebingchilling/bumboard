@@ -10,8 +10,6 @@ enum class Shortcut(val id: String, @DrawableRes val icon: Int, @StringRes val l
     LANGUAGE("language", R.drawable.ic_sym_language, R.string.lychee_sc_language),
     TEXT_EDIT("text_edit", R.drawable.ic_sym_text_select_start, R.string.lychee_sc_text_edit),
     ONE_HANDED("one_handed", R.drawable.ic_sym_front_hand, R.string.lychee_sc_one_handed),
-    FLOATING("floating", R.drawable.ic_sym_picture_in_picture, R.string.lychee_sc_floating),
-    RESIZE("resize", R.drawable.ic_sym_height, R.string.lychee_sc_resize),
     EMOJI("emoji", R.drawable.ic_sym_mood, R.string.lychee_sc_emoji),
     UNDO("undo", R.drawable.ic_sym_undo, R.string.lychee_sc_undo),
     REDO("redo", R.drawable.ic_sym_redo, R.string.lychee_sc_redo),
@@ -68,23 +66,17 @@ class ShortcutStore(private val prefs: SharedPreferences) {
         const val PREF_PINNED = "lychee_shortcuts_pinned"
         /** Like Gboard's bar: next language, text editing and undo. */
         // handwriting first: on the Chinese and Japanese keyboards it writes their language
+        // (an edit icon; English has none)
         const val DEFAULT_PINNED = "handwriting,language,text_edit,undo"
     }
 }
 
 object Shortcuts {
-    /**
-     * Whether [shortcut] belongs on the current keyboard ([engine]: null for English;
-     * [floating]: the keyboard is floating).
-     */
-    fun available(shortcut: Shortcut, engine: String?, floating: Boolean = false): Boolean = when (shortcut) {
-        // handwriting is for Chinese and Japanese, not the English keyboards
+    /** Whether [shortcut] belongs on the current keyboard ([engine]: null for English). */
+    fun available(shortcut: Shortcut, engine: String?): Boolean = when (shortcut) {
+        // handwriting is for Chinese and Japanese (the languages with a handwriting pack), never
+        // the English keyboards
         Shortcut.HANDWRITING -> engine != null && engine != "ko"
-        // resizing is for the floating keyboard only; the docked one keeps its size
-        Shortcut.RESIZE -> floating
         else -> true
     }
-
-    fun isFloating(context: android.content.Context) =
-        app.lychee.layout.LycheeLayout.get(context).mode == app.lychee.layout.LycheeLayout.Mode.FLOATING
 }

@@ -19,19 +19,13 @@
 -->
 
 <!-- LYCHEE: a fixed-height top bar (strip, emoji search or Chinese candidates in one row),
-     then the keys with one-handed side panels; a drag handle on top in floating mode. -->
+     then the keys with one-handed side panels. -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_gravity="bottom"
     android:orientation="vertical" >
-
-    <app.lychee.layout.FloatHandleView
-        android:id="@+id/lychee_float_handle"
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:visibility="gone" />
 
     <!-- wraps the strip; taller only while emoji search shows its results row -->
     <FrameLayout
@@ -64,7 +58,7 @@
         <!-- Opens every candidate, with readings and meanings, over the keys. -->
         <ImageView
             android:id="@+id/lychee_candidate_more"
-            android:layout_width="@dimen/config_suggestions_strip_edge_key_width"
+            android:layout_width="@dimen/lychee_candidate_more_width"
             android:layout_height="@dimen/config_suggestions_strip_height"
             android:layout_gravity="end|bottom"
             android:layout_marginEnd="@dimen/lychee_script_key_width"

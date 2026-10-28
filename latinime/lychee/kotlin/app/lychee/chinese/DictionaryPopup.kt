@@ -30,9 +30,9 @@ import app.lychee.ui.M3Colors
 import com.android.inputmethod.latin.R
 
 /**
- * The full dictionary entry for a candidate, opened by a long-press: part of the keyboard,
- * it opens out over the keys (in lychee_dictionary_panel) and closes back into them. Plain
- * Views in Material 3 colours.
+ * The full dictionary entry for a candidate, opened by a long-press: a card always just above
+ * the keyboard (in lychee_dictionary_panel), never over the keys or the candidates, as tall as
+ * its entry up to the room above. Plain Views in Material 3 colours.
  */
 class DictionaryPopup(private val ctx: Context) {
     private var host: FrameLayout? = null
@@ -92,6 +92,14 @@ class DictionaryPopup(private val ctx: Context) {
         dismiss()
         val panel = keyboard.rootView.findViewById<FrameLayout>(R.id.lychee_dictionary_panel) ?: return
         val parent = panel.parent as? View ?: return
+        // the keyboard's top edge in the input view (which spans the screen), and the room
+        // between it and the status bar
+        val keyboardTop = IntArray(2).also { keyboard.getLocationInWindow(it) }[1] -
+            IntArray(2).also { parent.getLocationInWindow(it) }[1]
+        @Suppress("DEPRECATION")
+        val statusBar = parent.rootWindowInsets?.stableInsetTop ?: dp(24)
+        val room = keyboardTop - statusBar - dp(12)
+        if (room < dp(96)) return
         val c = M3Colors.of(ctx)
         val body = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -104,13 +112,14 @@ class DictionaryPopup(private val ctx: Context) {
             gravity = Gravity.END
             setPadding(dp(12), dp(6), dp(12), dp(10))
         }
-        val card = LinearLayout(ctx).apply {
+        val card = MaxHeightLayout(ctx, room).apply {
             orientation = LinearLayout.VERTICAL
             isClickable = true
             background = GradientDrawable().apply {
                 setColor(c.surfaceContainerHigh)
-                cornerRadii = floatArrayOf(dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), dp(20).toFloat(), 0f, 0f, 0f, 0f)
+                cornerRadius = dp(20).toFloat()
             }
+            elevation = dp(6).toFloat()
             addView(ScrollView(ctx).apply { addView(body) },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             addView(actions)
@@ -124,15 +133,23 @@ class DictionaryPopup(private val ctx: Context) {
                 onType()
             })
         }
-        // over the keys, opening up out of them
-        app.lychee.layout.LycheePanels.cover(panel, parent)
-        panel.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        // just above the keyboard, rising out of it
+        (panel.layoutParams as FrameLayout.LayoutParams).let { lp ->
+            lp.gravity = Gravity.BOTTOM or Gravity.START
+            lp.width = ViewGroup.LayoutParams.MATCH_PARENT
+            lp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            lp.leftMargin = 0
+            lp.bottomMargin = parent.height - keyboardTop
+            panel.layoutParams = lp
+        }
+        panel.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+            setMargins(dp(8), dp(8), dp(8), dp(6))
+        })
         panel.visibility = View.VISIBLE
         panel.bringToFront()
-        panel.pivotY = panel.layoutParams.height.toFloat()
-        panel.scaleY = 0.6f
-        panel.alpha = 0f
-        panel.animate().scaleY(1f).alpha(1f).setDuration(140).start()
+        card.translationY = dp(16).toFloat()
+        card.alpha = 0f
+        card.animate().translationY(0f).alpha(1f).setDuration(140).start()
         host = panel
     }
 

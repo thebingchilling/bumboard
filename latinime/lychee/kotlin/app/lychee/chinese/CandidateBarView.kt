@@ -69,6 +69,9 @@ class CandidateBarView @JvmOverloads constructor(
     init {
         isHorizontalScrollBarEnabled = false
         isFillViewport = true
+        // candidates running on past the edge fade out before the ⌄, rather than being cut by it
+        isHorizontalFadingEdgeEnabled = true
+        setFadingEdgeLength(dp(20))
         addView(row, LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
         val a = context.obtainStyledAttributes(
             null, R.styleable.SuggestionStripView, R.attr.suggestionStripViewStyle, R.style.SuggestionStripView,

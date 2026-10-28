@@ -33,7 +33,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:visibility="gone" />
-    <!-- LYCHEE: panels drawn over the keys (shortcuts, text editing, number pad, resizing,
+    <!-- LYCHEE: panels drawn over the keys (shortcuts, text editing, number pad,
          Chinese candidates); LycheePanels places them on the keyboard view. -->
     <app.lychee.chinese.CandidatePanelView
         android:id="@+id/lychee_candidate_panel"
@@ -41,7 +41,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:visibility="gone" />
-    <!-- LYCHEE: a candidate's dictionary entry, opened over the keys (DictionaryPopup) -->
+    <!-- LYCHEE: a candidate's dictionary entry, a card just above the keyboard (DictionaryPopup) -->
     <FrameLayout
         android:id="@+id/lychee_dictionary_panel"
         android:layout_width="match_parent"
@@ -71,17 +71,5 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
-        android:visibility="gone" />
-    <app.lychee.layout.ResizePanelView
-        android:id="@+id/lychee_resize_panel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|start"
-        android:visibility="gone" />
-    <!-- LYCHEE: resizing the floating keyboard with handles on it; covers the input view. -->
-    <app.lychee.layout.FloatResizeView
-        android:id="@+id/lychee_float_resize"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
         android:visibility="gone" />
 </com.android.inputmethod.latin.InputView>

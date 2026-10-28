@@ -4,8 +4,10 @@
     <dimen name="lychee_emoji_search_height">100dp</dimen>
     <!-- The Traditional/Simplified chip on the strip's left edge. -->
     <dimen name="lychee_script_key_width">44dp</dimen>
-    <!-- Right of the candidates: the ⌄ (36dp) and the 繁/简 button (44dp). -->
-    <dimen name="lychee_candidate_bar_end">80dp</dimen>
+    <!-- The ⌄ that opens every candidate: a full finger's width, apart from the candidates. -->
+    <dimen name="lychee_candidate_more_width">48dp</dimen>
+    <!-- Right of the candidates: the ⌄ (48dp) and the 繁/简 button (44dp). -->
+    <dimen name="lychee_candidate_bar_end">92dp</dimen>
     <!-- The line above the candidates showing what is being typed. -->
     <!-- The key preview: a compact card just above the pressed key. -->
     <dimen name="lychee_key_preview_height">52dp</dimen>

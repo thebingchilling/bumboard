@@ -114,7 +114,7 @@ class ToolbarView @JvmOverloads constructor(
             Mode.EDIT -> row.addView(button(R.drawable.ic_sym_check, R.string.lychee_resize_done, highlighted = true) { onEditToggle() })
             Mode.TITLE -> Unit
         }
-        val shortcuts = store.toolbar().filter { Shortcuts.available(it, lycheeHost()?.lycheeEngine(), Shortcuts.isFloating(context)) }
+        val shortcuts = store.toolbar().filter { Shortcuts.available(it, lycheeHost()?.lycheeEngine()) }
         // packed on the left, beside the menu button; a long list scrolls
         fun shortcutParams() = LinearLayout.LayoutParams(dp(48), dp(40)).apply { gravity = Gravity.CENTER_VERTICAL }
         if (mode == Mode.EDIT) {
@@ -145,32 +145,8 @@ class ToolbarView @JvmOverloads constructor(
             return
         }
         shortcuts.forEach { sc ->
-            val label = if (sc == Shortcut.HANDWRITING) handwritingLabel(lycheeHost()?.lycheeEngine()) else null
-            val view = if (label != null) textButton(label) { lycheeHost()?.lycheeRunShortcut(sc) }
-                else button(sc.icon, sc.label) { lycheeHost()?.lycheeRunShortcut(sc) }
-            row.addView(view, if (label != null) LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(40))
-                .apply { gravity = Gravity.CENTER_VERTICAL } else shortcutParams())
+            row.addView(button(sc.icon, sc.label) { lycheeHost()?.lycheeRunShortcut(sc) }, shortcutParams())
         }
-    }
-
-    /** Handwriting writes the keyboard's own language, and says so: 手寫, 手写, 手書き. */
-    private fun handwritingLabel(engine: String?): String? = when (engine) {
-        "yue" -> "手寫"
-        "cmn" -> if (prefs.getString(app.lychee.chinese.ChineseInput.PREF_SCRIPT, "traditional") == "simplified") "手写" else "手寫"
-        "ja" -> "手書き"
-        else -> null
-    }
-
-    private fun textButton(label: String, onClick: () -> Unit) = TextView(context).apply {
-        text = label
-        setTextColor(palette.onSurface)
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-        app.lychee.fonts.LycheeFonts.forText(context, label)?.let { typeface = it }
-        gravity = Gravity.CENTER
-        setPadding(dp(10), 0, dp(10), 0)
-        background = context.getDrawable(R.drawable.lychee_m3_suggestion)
-        contentDescription = context.getString(R.string.lychee_sc_handwriting)
-        setOnClickListener { onClick() }
     }
 
     private fun titleText(text: Int) = TextView(context).apply {

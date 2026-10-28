@@ -260,7 +260,12 @@ public class Key implements Comparable<Key> {
 
         final float horizontalGapFloat = mHorizontalGap;
         final int rowHeight = row.getRowHeight();
-        mHeight = rowHeight - mVerticalGap;
+        // LYCHEE: a key keeping the letters' height sits at the bottom of a taller row
+        final int letterRowHeight = params.mLycheeLetterRowHeight;
+        final int keyHeightInRow = (letterRowHeight > 0 && letterRowHeight < rowHeight
+                && keyAttr.getBoolean(R.styleable.Keyboard_Key_lycheeLetterHeight, false))
+                ? letterRowHeight : rowHeight;
+        mHeight = keyHeightInRow - mVerticalGap;
 
         final float keyXPos = row.getKeyX(keyAttr);
         final float keyWidth = row.getKeyWidth(keyAttr, keyXPos);
@@ -268,7 +273,7 @@ public class Key implements Comparable<Key> {
 
         // Horizontal gap is divided equally to both sides of the key.
         mX = Math.round(keyXPos + horizontalGapFloat / 2);
-        mY = keyYPos;
+        mY = keyYPos + rowHeight - keyHeightInRow;
         mWidth = Math.round(keyWidth - horizontalGapFloat);
         mHitBox.set(Math.round(keyXPos), keyYPos, Math.round(keyXPos + keyWidth) + 1,
                 keyYPos + rowHeight);

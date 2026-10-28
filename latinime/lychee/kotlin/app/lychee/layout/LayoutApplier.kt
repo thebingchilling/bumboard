@@ -1,7 +1,6 @@
 package app.lychee.layout
 
 import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -11,9 +10,10 @@ import com.android.inputmethod.latin.R
 import com.android.inputmethod.latin.utils.ResourceUtils
 
 /**
- * Arranges the keyboard frame for [LycheeLayout.mode]: full width; one-handed with a side panel
- * on the free side; or a floating card at its saved position with a drag handle on top.
- * The keys themselves are already sized by KeyboardSwitcher.
+ * Arranges the keyboard frame for [LycheeLayout.mode]: full width, or one-handed with a side
+ * panel on the free side. One-handed, the whole keyboard is narrower, not only the keys: the
+ * top bar (with its locked edge keys) and the emoji panel are as wide as the keys and sit
+ * above them. The keys themselves are already sized by KeyboardSwitcher.
  */
 object LayoutApplier {
 
@@ -24,60 +24,56 @@ object LayoutApplier {
         val frame = inputView.findViewById<View>(R.id.main_keyboard_frame) ?: return
         val left = inputView.findViewById<OneHandedSideView>(R.id.lychee_one_hand_left)
         val right = inputView.findViewById<OneHandedSideView>(R.id.lychee_one_hand_right)
-        val handle = inputView.findViewById<View>(R.id.lychee_float_handle)
+        val topBar = inputView.findViewById<View>(R.id.lychee_top_bar)
         val emoji = inputView.findViewById<View>(R.id.emoji_palettes_view)
         val background = ctx.getColor(R.color.lychee_m3_kb_background)
         val full = ResourceUtils.getDefaultKeyboardWidth(ctx)
         val keys = layout.keyboardWidth(full)
+        val oneHanded = layout.mode == LycheeLayout.Mode.ONE_HANDED
+        val keysOnRight = layout.oneHandedRight
 
         left?.visibility = View.GONE
         right?.visibility = View.GONE
-        handle?.visibility = View.GONE
         val lp = frame.layoutParams as FrameLayout.LayoutParams
         lp.gravity = Gravity.BOTTOM
+        lp.width = ViewGroup.LayoutParams.MATCH_PARENT
         lp.leftMargin = 0
         lp.bottomMargin = 0
-        lp.width = ViewGroup.LayoutParams.MATCH_PARENT
+        frame.layoutParams = lp
         frame.background = ColorDrawable(background)
         frame.elevation = 0f
+        frame.clipToOutline = false
 
-        when (layout.mode) {
-            LycheeLayout.Mode.NORMAL -> Unit
-            LycheeLayout.Mode.ONE_HANDED -> {
-                val side = if (layout.oneHandedRight) left else right
-                side?.let {
-                    it.visibility = View.VISIBLE
-                    it.layoutParams = (it.layoutParams as LinearLayout.LayoutParams).apply { width = full - keys }
-                    it.setKeysOnRight(layout.oneHandedRight)
-                }
-            }
-            LycheeLayout.Mode.FLOATING -> {
-                handle?.visibility = View.VISIBLE
-                lp.width = keys
-                lp.gravity = Gravity.BOTTOM or Gravity.START
-                val dm = ctx.resources.displayMetrics
-                lp.leftMargin = if (layout.floatX >= 0) layout.floatX else (full - keys) / 2
-                lp.bottomMargin = if (layout.floatY >= 0) layout.floatY else (dm.density * 96).toInt()
-                frame.background = GradientDrawable().apply {
-                    setColor(background)
-                    cornerRadius = dm.density * 20
-                }
-                frame.clipToOutline = true
-                frame.elevation = dm.density * 8
+        if (oneHanded) {
+            val side = if (keysOnRight) left else right
+            side?.let {
+                it.visibility = View.VISIBLE
+                it.layoutParams = (it.layoutParams as LinearLayout.LayoutParams).apply { width = full - keys }
+                it.setKeysOnRight(keysOnRight)
             }
         }
-        frame.layoutParams = lp
-        // the emoji panel takes the keyboard's place, size and position
+        // the top bar over the keys only
+        topBar?.let {
+            val tlp = it.layoutParams as LinearLayout.LayoutParams
+            tlp.width = if (oneHanded) keys else ViewGroup.LayoutParams.MATCH_PARENT
+            tlp.gravity = if (oneHanded && keysOnRight) Gravity.END else Gravity.START
+            it.layoutParams = tlp
+        }
+        // the emoji panel takes the keyboard's place; one-handed, its emoji and keys keep to
+        // the keys' side (its width is the keys' plus this padding, see EmojiPanelView)
         emoji?.let {
-            val elp = it.layoutParams as FrameLayout.LayoutParams
-            elp.gravity = lp.gravity
-            elp.leftMargin = lp.leftMargin
-            elp.bottomMargin = lp.bottomMargin
-            it.layoutParams = elp
-            it.elevation = frame.elevation
-            it.clipToOutline = layout.mode == LycheeLayout.Mode.FLOATING
-            if (layout.mode == LycheeLayout.Mode.FLOATING) it.background = frame.background.constantState?.newDrawable()
-            else it.setBackgroundColor(background)
+            val free = if (oneHanded) full - keys else 0
+            it.setPadding(if (oneHanded && keysOnRight) free else 0, it.paddingTop,
+                if (oneHanded && !keysOnRight) free else 0, it.paddingBottom)
+            it.setBackgroundColor(background)
+            it.elevation = 0f
+            it.clipToOutline = false
+            (it.layoutParams as FrameLayout.LayoutParams).let { elp ->
+                elp.gravity = Gravity.BOTTOM
+                elp.leftMargin = 0
+                elp.bottomMargin = 0
+                it.layoutParams = elp
+            }
         }
     }
 }

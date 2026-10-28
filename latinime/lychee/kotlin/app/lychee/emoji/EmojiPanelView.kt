@@ -79,6 +79,8 @@ class EmojiPanelView @JvmOverloads constructor(
     private val tabViews = mutableListOf<ImageView?>()
     private var sections: List<Section> = emptyList()
     private val repeat = Handler(Looper.getMainLooper())
+    /** Delete, floating over the grid's bottom corner. */
+    private val floatingDelete by lazy { deleteKey() }
 
     private class Section(val id: String, val title: Int, val icon: Int, val emoji: List<Emoji>, val forms: List<String>?)
     private sealed class Row {
@@ -98,6 +100,9 @@ class EmojiPanelView @JvmOverloads constructor(
         grid.setHasFixedSize(true)
         grid.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) = followScroll()
+            // the floating delete steps aside while the grid scrolls, and comes back when it stops
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) =
+                showFloatingDelete(newState == RecyclerView.SCROLL_STATE_IDLE)
         })
         layoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
             override fun getSpanSize(position: Int) =
@@ -112,7 +117,7 @@ class EmojiPanelView @JvmOverloads constructor(
         // delete floats over the grid's corner, so the categories get the whole bottom bar
         addView(FrameLayout(context).apply {
             addView(grid, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-            addView(deleteKey().apply { elevation = dp(3).toFloat() },
+            addView(floatingDelete.apply { elevation = dp(3).toFloat() },
                 FrameLayout.LayoutParams(dp(56), dp(44), Gravity.BOTTOM or Gravity.END).apply {
                     rightMargin = dp(4); bottomMargin = dp(4)
                 })
@@ -141,6 +146,8 @@ class EmojiPanelView @JvmOverloads constructor(
 
     @Suppress("UNUSED_PARAMETER")
     fun startEmojiPalettes(switchToAlphaLabel: String?, keyVisualAttr: KeyVisualAttributes?, iconSet: KeyboardIconsSet?) {
+        floatingDelete.animate().cancel()
+        floatingDelete.apply { alpha = 1f; translationY = 0f; visibility = VISIBLE; isEnabled = true }
         applyColumns()
         EmojiData.load(context) { rebuild() }
     }
@@ -155,9 +162,8 @@ class EmojiPanelView @JvmOverloads constructor(
         val res = context.resources
         val layout = app.lychee.layout.LycheeLayout.get(context)
         val full = ResourceUtils.getDefaultKeyboardWidth(context)
-        // one-handed: the panel spans the whole width; floating: the floating keyboard's size
-        val width = (if (layout.mode == app.lychee.layout.LycheeLayout.Mode.FLOATING) layout.keyboardWidth(full) else full) +
-            paddingLeft + paddingRight
+        // one-handed: as wide as the keys, plus the free side's padding (LayoutApplier)
+        val width = layout.keyboardWidth(full) + paddingLeft + paddingRight
         val height = layout.keyboardHeight(ResourceUtils.getDefaultKeyboardHeight(res)) +
             res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height) + paddingTop + paddingBottom
         super.onMeasure(
@@ -386,6 +392,17 @@ class EmojiPanelView @JvmOverloads constructor(
         }, LayoutParams(dp(50), dp(40)))
         tabs.gravity = Gravity.CENTER_VERTICAL
         addView(tabs, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(2); marginEnd = dp(2) })
+    }
+
+    private fun showFloatingDelete(show: Boolean) {
+        val target = if (show) 1f else 0f
+        if (floatingDelete.alpha == target && floatingDelete.isEnabled == show) return
+        floatingDelete.isEnabled = show
+        floatingDelete.animate().cancel()
+        floatingDelete.animate().alpha(target).translationY(if (show) 0f else dp(16).toFloat())
+            .setDuration(150).withEndAction { floatingDelete.visibility = if (show) VISIBLE else INVISIBLE }
+            .withStartAction { if (show) floatingDelete.visibility = VISIBLE }.start()
+        if (!show) repeat.removeCallbacksAndMessages(null)
     }
 
     private fun deleteKey() = ImageView(context).apply {
