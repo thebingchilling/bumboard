@@ -15,9 +15,21 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
   may decide later what to release); only the public-facing parts (packs, the packs page) go
   to `lychee-keyboard/lychee`. `thebingchilling/lychee` was the packs' earlier test home.
 
-## Public repository: `lychee-keyboard/lychee`
+## Public side: the lychee-keyboard account
 
-Public facing, so be careful:
+`lychee-keyboard/lychee` (packs) and `lychee-keyboard/lychee-keyboard.github.io` (website,
+packs page). Public facing, so be careful:
+
+- No connection to thebingchilling or bumboard may ever show there. Everything on the public
+  side appears as lychee-keyboard.
+- Never push, create releases or upload to lychee-keyboard's repositories from a Claude
+  session: a session acts as the GitHub account claude.ai is connected to (thebingchilling),
+  and GitHub's public activity would show that account. Attaching them read-only to look is
+  fine.
+- Every write goes through this repository's workflows with lychee-keyboard's token
+  (`PACKS_TOKEN` secret): packs, the packs page, the website (kept here, in this private
+  repository), and, only when the owner asks, final releases. Commits the workflows make are
+  authored as "Lychee packs" (or Lychee), never with a thebingchilling name or email.
 
 - Only the pack zips (`lychee-*.zip`) and `manifest.json` go on the `packs` pre-release, and
   only the packs page (`data/packs/site`: index.html, manifest.json, Google Sans Flex) on
