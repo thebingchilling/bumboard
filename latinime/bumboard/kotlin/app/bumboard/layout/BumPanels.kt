@@ -44,7 +44,7 @@ object BumPanels {
     private val PANELS = intArrayOf(
         R.id.bum_voice_panel, R.id.bum_gallery_panel, R.id.bum_text_edit_panel,
         R.id.bum_resize_panel, R.id.bum_numpad_panel, R.id.bum_candidate_panel,
-        R.id.bum_float_resize,
+        R.id.bum_float_resize, R.id.bum_handwriting_panel,
     )
 
     /**

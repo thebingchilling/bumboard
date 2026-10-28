@@ -45,6 +45,10 @@ class Engines(ime: InputMethodService, prefs: SharedPreferences) {
         korean.reset()
     }
 
+    /** The current keyboard's engine: "yue", "cmn", "ja", "ko", or null for LatinIME's own. */
+    val currentEngine: String?
+        get() = chinese.currentEngine ?: if (korean.isActive) "ko" else null
+
     /** The speech recogniser language for the current keyboard, or null to use its locale. */
     fun voiceLanguage(): String? = chinese.voiceLanguage() ?: if (korean.isActive) "ko-KR" else null
 }

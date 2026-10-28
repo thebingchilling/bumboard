@@ -18,6 +18,12 @@ interface BumHost {
     fun bumType(text: String)
 
     fun bumInputConnection(): InputConnection?
+
+    /** The current keyboard's engine ("yue", "cmn", "ja", "ko"), or null for English. */
+    fun bumEngine(): String?
+
+    /** Opens one page of BumBoard's settings (a [app.bumboard.settings.Page] name). */
+    fun bumOpenSettings(page: String)
 }
 
 /** The [BumHost] (LatinIME) behind a keyboard view's themed context, if any. */

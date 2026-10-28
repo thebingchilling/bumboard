@@ -37,4 +37,10 @@
     <string name="bum_fonts_on_keys_summary">Key labels in the Chinese font as well</string>
     <string name="bum_fonts_noto">Noto Color Emoji</string>
     <string name="bum_fonts_noto_summary">Included with BumBoard</string>
+    <!-- Handwriting -->
+    <string name="bum_sc_handwriting">Handwriting</string>
+    <string name="bum_hw_space">Space</string>
+    <string name="bum_hw_enter">Enter</string>
+    <string name="bum_hw_no_pack">Handwriting needs a handwriting pack. Tap here to get one in Settings &gt; Downloads.</string>
+    <string name="bum_hw_bad_pack">This handwriting pack couldn\'t be opened. Tap here to import it again.</string>
 </resources>

@@ -15,6 +15,7 @@ enum class Shortcut(val id: String, @DrawableRes val icon: Int, @StringRes val l
     EMOJI("emoji", R.drawable.ic_sym_mood, R.string.bum_sc_emoji),
     UNDO("undo", R.drawable.ic_sym_undo, R.string.bum_sc_undo),
     REDO("redo", R.drawable.ic_sym_redo, R.string.bum_sc_redo),
+    HANDWRITING("handwriting", R.drawable.ic_sym_edit, R.string.bum_sc_handwriting),
     SETTINGS("settings", R.drawable.ic_sym_settings, R.string.bum_sc_settings);
 
     companion object {

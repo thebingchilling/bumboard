@@ -53,6 +53,12 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:visibility="gone" />
+    <app.bumboard.handwriting.HandwritingPanelView
+        android:id="@+id/bum_handwriting_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:visibility="gone" />
     <app.bumboard.toolbar.NumpadPanelView
         android:id="@+id/bum_numpad_panel"
         android:layout_width="match_parent"

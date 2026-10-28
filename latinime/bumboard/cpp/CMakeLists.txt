@@ -19,3 +19,41 @@ target_compile_features(bumrime PRIVATE cxx_std_17)
 # Whole archive so librime's self-registering modules are kept by the linker.
 target_link_libraries(bumrime PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,Rime_static>" log)
 target_link_options(bumrime PRIVATE -Wl,-z,max-page-size=16384)
+
+# libbumzinnia.so: handwriting recognition with Zinnia (BSD-3-Clause), fetched by CI into
+# prebuilt/zinnia (scripts/fetch-zinnia.sh). Models come as packs and are memory-mapped.
+set(Z "${BUMBOARD_PREBUILT_DIR}/zinnia/zinnia")
+if(NOT EXISTS "${Z}/recognizer.cpp")
+    message(FATAL_ERROR "Zinnia sources not found in ${Z}; run scripts/fetch-zinnia.sh")
+endif()
+set(ZINNIA_CONFIG_DIR "${CMAKE_CURRENT_BINARY_DIR}/zinnia-config")
+file(WRITE "${ZINNIA_CONFIG_DIR}/config.h" "
+#define HAVE_CTYPE_H 1
+#define HAVE_FCNTL_H 1
+#define HAVE_MMAP 1
+#define HAVE_STDINT_H 1
+#define HAVE_STDLIB_H 1
+#define HAVE_STRING_H 1
+#define HAVE_SYS_MMAN_H 1
+#define HAVE_SYS_STAT_H 1
+#define HAVE_SYS_TYPES_H 1
+#define HAVE_UNISTD_H 1
+#define PACKAGE \"zinnia\"
+#define VERSION \"0.06\"
+")
+add_library(bumzinnia SHARED
+    bum_zinnia.cpp
+    ${Z}/character.cpp
+    ${Z}/feature.cpp
+    ${Z}/libzinnia.cpp
+    ${Z}/param.cpp
+    ${Z}/recognizer.cpp
+    ${Z}/sexp.cpp
+    ${Z}/svm.cpp
+    ${Z}/trainer.cpp)
+target_include_directories(bumzinnia PRIVATE "${ZINNIA_CONFIG_DIR}" "${Z}")
+target_compile_definitions(bumzinnia PRIVATE HAVE_CONFIG_H=1)
+# Zinnia is C++98-era code: keep an older standard and quiet its warnings.
+target_compile_options(bumzinnia PRIVATE -std=gnu++11 -w -fexceptions)
+target_link_libraries(bumzinnia PRIVATE log)
+target_link_options(bumzinnia PRIVATE -Wl,-z,max-page-size=16384)

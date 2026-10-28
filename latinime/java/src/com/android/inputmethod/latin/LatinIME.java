@@ -2188,6 +2188,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         case SETTINGS:
             launchSettings(null);
             break;
+        case HANDWRITING:
+            showBumPanel(R.id.bum_handwriting_panel);
+            break;
         }
     }
 
@@ -2217,6 +2220,16 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     @Override
     public InputConnection bumInputConnection() {
         return getCurrentInputConnection();
+    }
+
+    @Override
+    public String bumEngine() {
+        return mBumChinese == null ? null : mBumChinese.getCurrentEngine();
+    }
+
+    @Override
+    public void bumOpenSettings(@Nonnull final String page) {
+        launchBumSettingsPage(page);
     }
 
     /** Shows one of the panels over the keys (gallery, text editing, numpad, resizing). */
@@ -2249,6 +2262,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             ((app.bumboard.toolbar.ShortcutGalleryView) panel).show();
         } else if (panel instanceof app.bumboard.toolbar.TextEditPanelView) {
             ((app.bumboard.toolbar.TextEditPanelView) panel).show();
+        } else if (panel instanceof app.bumboard.handwriting.HandwritingPanelView) {
+            ((app.bumboard.handwriting.HandwritingPanelView) panel).show();
         } else {
             panel.setVisibility(View.VISIBLE);
         }

@@ -40,6 +40,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     val isActive: Boolean
         get() = engine != null
 
+    /** The Rime engine of the current keyboard ("yue", "cmn", "ja"), or null. */
+    val currentEngine: String?
+        get() = engine
+
     fun attachViews(bar: CandidateBarView?, strip: View?, inputView: View) {
         this.bar = bar
         this.strip = strip
