@@ -91,6 +91,7 @@ public class KeyboardView extends View {
     private final float mVerticalCorrection;
     private final Drawable mKeyBackground;
     private final Drawable mFunctionalKeyBackground;
+    @Nullable private final Drawable mBumPillBackground;
     private final Drawable mSpacebarBackground;
     private final float mSpacebarIconWidthRatio;
     private final Rect mKeyBackgroundPadding = new Rect();
@@ -145,6 +146,10 @@ public class KeyboardView extends View {
         final Drawable spacebarBackground = keyboardViewAttr.getDrawable(
                 R.styleable.KeyboardView_spacebarBackground);
         mSpacebarBackground = (spacebarBackground != null) ? spacebarBackground : mKeyBackground;
+        final TypedArray bumTheme = context.obtainStyledAttributes(
+                new int[] { R.attr.bumPillKeyBackground });
+        mBumPillBackground = bumTheme.getDrawable(0);
+        bumTheme.recycle();
         mSpacebarIconWidthRatio = keyboardViewAttr.getFloat(
                 R.styleable.KeyboardView_spacebarIconWidthRatio, 1.0f);
         mKeyHintLetterPadding = keyboardViewAttr.getDimension(
@@ -351,8 +356,14 @@ public class KeyboardView extends View {
         params.mAnimAlpha = Constants.Color.ALPHA_OPAQUE;
 
         if (!key.isSpacer()) {
-            final Drawable background = key.selectBackgroundDrawable(
+            Drawable background = key.selectBackgroundDrawable(
                     mKeyBackground, mFunctionalKeyBackground, mSpacebarBackground);
+            // BUMBOARD: ?123 and ABC are pills, like Gboard's
+            if (background != null && mBumPillBackground != null
+                    && key.getCode() == Constants.CODE_SWITCH_ALPHA_SYMBOL) {
+                mBumPillBackground.setState(background.getState());
+                background = mBumPillBackground;
+            }
             if (background != null) {
                 onDrawKeyBackground(key, canvas, background);
             }
@@ -423,6 +434,10 @@ public class KeyboardView extends View {
 
             // Vertical label text alignment.
             labelBaseline = centerY + labelCharHeight / 2.0f;
+            // BUMBOARD: the comma sits low, under the emoji face (Gboard's emoji-comma key)
+            if (isBumEmojiComma(key)) {
+                labelBaseline = keyHeight * 0.80f;
+            }
 
             // Horizontal label text alignment
             if (key.isAlignLabelOffCenter()) {
@@ -464,7 +479,15 @@ public class KeyboardView extends View {
             blendAlpha(paint, params.mAnimAlpha);
             // BUMBOARD: full-width CJK punctuation (，。？) sits in a corner of its em box;
             // centre its ink on the key instead so it looks like the other labels.
-            if (isBumFullWidthMark(label) && paint.getTextAlign() == Align.CENTER) {
+            if ("1234".equals(label) && key.getCode() == Constants.CODE_BUM_NUMPAD) {
+                // BUMBOARD: Gboard's number pad key, "12" over "34"
+                final float size = paint.getTextSize();
+                paint.setTextSize(size * 0.78f);
+                final float lineHeight = TypefaceUtils.getReferenceCharHeight(paint);
+                canvas.drawText("12", labelX, centerY - lineHeight * 0.18f, paint);
+                canvas.drawText("34", labelX, centerY + lineHeight * 1.18f, paint);
+                paint.setTextSize(size);
+            } else if (isBumFullWidthMark(label) && paint.getTextAlign() == Align.CENTER) {
                 paint.getTextBounds(label, 0, label.length(), mBumInkBounds);
                 paint.setTextAlign(Align.LEFT);
                 canvas.drawText(label, 0, label.length(),
@@ -543,6 +566,11 @@ public class KeyboardView extends View {
             drawIcon(canvas, icon, iconX, iconY, iconWidth, iconHeight);
         }
 
+        // BUMBOARD: the emoji face above the comma
+        if (isBumEmojiComma(key)) {
+            drawBumEmojiFace(key, canvas, params);
+            return;
+        }
         if (key.hasPopupHint() && key.getMoreKeys() != null) {
             drawKeyPopupHint(key, canvas, paint, params);
         }
@@ -568,6 +596,37 @@ public class KeyboardView extends View {
     }
 
     private final Rect mBumInkBounds = new Rect();
+
+    /** BUMBOARD: true when the emoji key is folded into the comma key (BumLayout "combined"). */
+    public static boolean sBumEmojiOnComma = true;
+    private Drawable mBumEmojiFace;
+
+    /** The comma key of a letters keyboard, when it carries the emoji face. */
+    private boolean isBumEmojiComma(@Nonnull final Key key) {
+        if (!sBumEmojiOnComma) return false;
+        final Keyboard keyboard = getKeyboard();
+        if (keyboard == null || !keyboard.mId.isAlphabetKeyboard()) return false;
+        final int code = key.getCode();
+        return code == ',' || code == 0xFF0C || code == 0x3001;
+    }
+
+    private void drawBumEmojiFace(@Nonnull final Key key, @Nonnull final Canvas canvas,
+            @Nonnull final KeyDrawParams params) {
+        if (mBumEmojiFace == null) {
+            final Drawable face = getContext().getDrawable(R.drawable.ic_sym_mood);
+            if (face == null) return;
+            mBumEmojiFace = face.mutate();
+        }
+        final int color = mBumFunctionalIconColor != 0 ? mBumFunctionalIconColor
+                : key.selectTextColor(params);
+        mBumEmojiFace.setColorFilter(new android.graphics.PorterDuffColorFilter(
+                color, android.graphics.PorterDuff.Mode.SRC_IN));
+        mBumEmojiFace.setAlpha(params.mAnimAlpha);
+        final int size = Math.round(key.getHeight() * 0.34f);
+        final int x = (key.getDrawWidth() - size) / 2;
+        final int y = Math.round(key.getHeight() * 0.38f) - size / 2;
+        drawIcon(canvas, mBumEmojiFace, x, y, size, size);
+    }
 
     /** A single full-width CJK punctuation mark (U+3000-303F, U+FF00-FF65). */
     public static boolean isBumFullWidthMark(@Nullable final String label) {

@@ -49,32 +49,38 @@
         <item name="moreKeysKeyboardStyle">@style/MoreKeysKeyboard.BumM3.Flat</item>
         <item name="bumKeyBackground">@drawable/bum_m3_key_flat</item>
         <item name="bumFunctionalKeyBackground">@drawable/bum_m3_key_functional_flat</item>
+        <item name="bumPillKeyBackground">@drawable/bum_m3_key_pill_flat</item>
     </style>
     <style name="KeyboardTheme.BumM3.Raised">
         <item name="keyboardStyle">@style/Keyboard.BumM3.Raised</item>
         <item name="moreKeysKeyboardStyle">@style/MoreKeysKeyboard.BumM3.Raised</item>
         <item name="bumKeyBackground">@drawable/bum_m3_key_raised</item>
         <item name="bumFunctionalKeyBackground">@drawable/bum_m3_key_functional_raised</item>
+        <item name="bumPillKeyBackground">@drawable/bum_m3_key_pill_raised</item>
     </style>
 
     <!-- themeId must match KeyboardTheme.THEME_ID_BUM_* -->
     <style name="Keyboard.BumM3.Flat" parent="Keyboard">
         <item name="themeId">BumFlat</item>
-        <!-- a slim margin under the bottom row, right above the navigation bar -->
-        <item name="keyboardBottomPadding">1.2%p</item>
-        <!-- Gboard-like spacing: taller keys with slimmer gaps between the rows -->
-        <item name="keyboardTopPadding">1.5%p</item>
-        <item name="verticalGap">3.6%p</item>
-        <item name="horizontalGap">1.5%p</item>
+        <!-- Gboard's measurements (from a 1080px-wide phone): rows 3.5% apart, a margin of 2.2% above
+             the keys and 4% below, keys 1.6% apart with 0.6% more at the sides -->
+        <item name="keyboardTopPadding">2.2%p</item>
+        <item name="keyboardBottomPadding">4%p</item>
+        <item name="verticalGap">3.5%p</item>
+        <item name="horizontalGap">1.6%p</item>
+        <item name="keyboardLeftPadding">0.6%p</item>
+        <item name="keyboardRightPadding">0.6%p</item>
     </style>
     <style name="Keyboard.BumM3.Raised" parent="Keyboard">
         <item name="themeId">BumRaised</item>
-        <!-- a slim margin under the bottom row, right above the navigation bar -->
-        <item name="keyboardBottomPadding">1.2%p</item>
-        <!-- Gboard-like spacing: taller keys with slimmer gaps between the rows -->
-        <item name="keyboardTopPadding">1.5%p</item>
-        <item name="verticalGap">3.6%p</item>
-        <item name="horizontalGap">1.5%p</item>
+        <!-- Gboard's measurements (from a 1080px-wide phone): rows 3.5% apart, a margin of 2.2% above
+             the keys and 4% below, keys 1.6% apart with 0.6% more at the sides -->
+        <item name="keyboardTopPadding">2.2%p</item>
+        <item name="keyboardBottomPadding">4%p</item>
+        <item name="verticalGap">3.5%p</item>
+        <item name="horizontalGap">1.6%p</item>
+        <item name="keyboardLeftPadding">0.6%p</item>
+        <item name="keyboardRightPadding">0.6%p</item>
     </style>
 
     <style name="KeyboardView.BumM3" parent="KeyboardView.LXX">
@@ -117,12 +123,16 @@
         <item name="keyboardTopPadding">0%p</item>
         <item name="keyboardBottomPadding">0%p</item>
         <item name="horizontalGap">0%p</item>
+        <item name="keyboardLeftPadding">0%p</item>
+        <item name="keyboardRightPadding">0%p</item>
         <item name="touchPositionCorrectionData">@null</item>
     </style>
     <style name="MoreKeysKeyboard.BumM3.Raised" parent="Keyboard.BumM3.Raised">
         <item name="keyboardTopPadding">0%p</item>
         <item name="keyboardBottomPadding">0%p</item>
         <item name="horizontalGap">0%p</item>
+        <item name="keyboardLeftPadding">0%p</item>
+        <item name="keyboardRightPadding">0%p</item>
         <item name="touchPositionCorrectionData">@null</item>
     </style>
     <style name="MoreKeysKeyboardView.BumM3" parent="KeyboardView.BumM3">

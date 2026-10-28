@@ -612,8 +612,8 @@ private fun PreferencesPage() {
     val voiceOffline = prefs.boolPref(app.bumboard.voice.VoicePanelView.PREF_OFFLINE) {
         prefs.getBoolean(app.bumboard.voice.VoicePanelView.PREF_OFFLINE, true)
     }
-    val numberRow = prefs.boolPref(BumLayout.PREF_NUMBER_ROW) { prefs.getBoolean(BumLayout.PREF_NUMBER_ROW, false) }
-    val commaKey = prefs.stringPref(BumLayout.PREF_COMMA_KEY) { prefs.getString(BumLayout.PREF_COMMA_KEY, null) ?: "emoji" }
+    val numberRow = prefs.boolPref(BumLayout.PREF_NUMBER_ROW) { prefs.getBoolean(BumLayout.PREF_NUMBER_ROW, true) }
+    val commaKey = prefs.stringPref(BumLayout.PREF_COMMA_KEY) { prefs.getString(BumLayout.PREF_COMMA_KEY, null) ?: "combined" }
     val hasVibrator = AudioAndHapticFeedbackManager.getInstance().hasVibrator()
 
     Group {
@@ -638,12 +638,13 @@ private fun PreferencesPage() {
             ChoiceRow(
                 it, stringResource(R.string.bum_pref_comma_key), stringResource(R.string.bum_pref_comma_key_summary),
                 listOf(
+                    "combined" to stringResource(R.string.bum_pref_comma_key_combined),
                     "emoji" to stringResource(R.string.bum_pref_comma_key_emoji),
                     "language" to stringResource(R.string.bum_pref_comma_key_language),
                     "none" to stringResource(R.string.bum_pref_comma_key_none),
                 ),
                 commaKey.value,
-                icons = listOf(R.drawable.ic_sym_mood, R.drawable.ic_sym_language, R.drawable.ic_sym_close),
+                icons = listOf(R.drawable.ic_sym_mood, R.drawable.ic_sym_mood, R.drawable.ic_sym_language, R.drawable.ic_sym_close),
                 onSelect = commaKey::set,
             )
         }

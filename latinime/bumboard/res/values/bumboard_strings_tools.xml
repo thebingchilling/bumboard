@@ -59,8 +59,9 @@
     <!-- Settings -->
     <string name="bum_pref_number_row">Number row</string>
     <string name="bum_pref_number_row_summary">Show 1–0 above the letters</string>
-    <string name="bum_pref_comma_key">Key beside the comma</string>
-    <string name="bum_pref_comma_key_summary">The other one goes in the comma\'s long-press menu, with Settings and one-handed mode</string>
+    <string name="bum_pref_comma_key">Emoji key</string>
+    <string name="bum_pref_comma_key_summary">On the comma (long-press it for emoji) or a key beside the comma. What has no key goes in the comma\'s long-press menu, with Settings and one-handed mode</string>
+    <string name="bum_pref_comma_key_combined">On comma</string>
     <string name="bum_pref_comma_key_emoji">Emoji</string>
     <string name="bum_pref_comma_key_language">Next language</string>
     <string name="bum_pref_emoji_size">Emoji per row</string>

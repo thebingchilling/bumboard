@@ -27,8 +27,9 @@
             latin:bumSideKey="false"
         >
             <Key
-                latin:keySpec="!text/keyspec_comma"
-                latin:moreKeys="&lt;" />
+                latin:keySpec="&lt;"
+                latin:moreKeys="≤,‹,«,〈,《"
+                latin:backgroundType="functional" />
             <Key
                 latin:keyStyle="bumNumpadKeyStyle" />
             <Key
@@ -39,15 +40,16 @@
             <Key
                 latin:keyStyle="bumNumpadKeyStyle" />
             <Key
-                latin:keySpec="!text/keyspec_comma"
-                latin:moreKeys="&lt;" />
+                latin:keySpec="&lt;"
+                latin:moreKeys="≤,‹,«,〈,《"
+                latin:backgroundType="functional" />
             <Key
                 latin:keyStyle="spaceKeyStyle"
                 latin:keyWidth="40%p" />
         </default>
     </switch>
-    <!-- U+2026: "…" HORIZONTAL ELLIPSIS -->
-    <Key
-        latin:keySpec="."
-        latin:moreKeys="&gt;,/,&#x2026;" />
+        <Key
+        latin:keySpec="&gt;"
+        latin:moreKeys="≥,›,»,〉,》"
+        latin:backgroundType="functional" />
 </merge>

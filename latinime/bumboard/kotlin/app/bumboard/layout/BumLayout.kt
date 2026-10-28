@@ -36,16 +36,22 @@ class BumLayout private constructor(private val prefs: SharedPreferences) {
     val floatX: Int get() = prefs.getInt(PREF_FLOAT_X, -1)
     val floatY: Int get() = prefs.getInt(PREF_FLOAT_Y, -1)
 
-    val numberRow: Boolean get() = prefs.getBoolean(PREF_NUMBER_ROW, false)
+    val numberRow: Boolean get() = prefs.getBoolean(PREF_NUMBER_ROW, true)
 
-    /** The key beside the comma: "emoji", "language" or "none". */
-    val commaKey: String get() = prefs.getString(PREF_COMMA_KEY, null) ?: "emoji"
+    /**
+     * The emoji key: "combined" on the comma key like Gboard's (tap for a comma, long-press for
+     * emoji), or a key beside the comma: "emoji", "language" or "none".
+     */
+    val commaKey: String get() = prefs.getString(PREF_COMMA_KEY, null) ?: "combined"
+
+    /** True: the comma key shows the emoji face and has emoji in its long-press menu. */
+    val emojiOnComma: Boolean get() = commaKey == "combined"
 
     /** True: an emoji key beside the comma (when there is one); false: a next-language key. */
     val emojiKey: Boolean get() = commaKey != "language"
 
     /** Whether there is a key beside the comma at all. */
-    val sideKey: Boolean get() = commaKey != "none"
+    val sideKey: Boolean get() = commaKey != "none" && commaKey != "combined"
 
     /**
      * The shortcuts in the comma's popup, after Settings (which is always first). By default

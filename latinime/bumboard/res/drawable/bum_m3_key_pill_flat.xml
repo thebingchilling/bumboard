@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A pill-shaped functional key (?123, ABC), like Gboard's. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="?attr/bumColorFunctionalPressed" /><corners android:radius="100dp" /></shape></item>
+    <item><shape android:shape="rectangle"><solid android:color="?attr/bumColorFunctional" /><corners android:radius="100dp" /></shape></item>
+</selector>

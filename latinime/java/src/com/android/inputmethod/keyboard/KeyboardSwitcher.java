@@ -133,6 +133,7 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         final boolean languageKey = mLatinIME.shouldShowLanguageSwitchKey();
         builder.setBumOptions(bumLayout.getNumberRow(),
                 bumLayout.getEmojiKey() || !languageKey, bumLayout.getSideKey());
+        KeyboardView.sBumEmojiOnComma = bumLayout.getEmojiOnComma();
         // the comma's popup comes from Settings; a change makes cached keyboards stale
         if (com.android.inputmethod.keyboard.internal.KeyboardTextsSet.setBumCommaMoreKeys(
                 bumLayout.commaMoreKeys(languageKey))) {

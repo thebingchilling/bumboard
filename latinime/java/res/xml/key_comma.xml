@@ -49,6 +49,7 @@
             <Key
                 latin:keySpec="!text/keyspec_comma"
                 latin:keyLabelFlags="hasPopupHint"
+                latin:backgroundType="functional"
                 latin:keyStyle="settingsMoreKeysStyle" />
         </default>
     </switch>

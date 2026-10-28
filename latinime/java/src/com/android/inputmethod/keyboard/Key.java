@@ -317,9 +317,28 @@ public class Key implements Comparable<Key> {
         }
         mMoreKeysColumnAndFlags = moreKeysColumnAndFlags;
 
+        // BUMBOARD: Gboard's symbols on the letter keys: one in the corner and, at the start of
+        // the popup, that symbol and related ones (they replace the digit of the top row,
+        // which they include when there is no number row)
+        String bumLetterHint = null;
+        String[] bumLetterMoreKeys = null;
+        if (params.mId.isAlphabetKeyboard() && keySpec != null) {
+            final String letter = KeySpecParser.getLabel(keySpec);
+            if (letter != null && letter.length() == 1 && letter.charAt(0) < 0x80
+                    && Character.isLetter(letter.charAt(0))) {
+                String currency = params.mTextsSet.getText("keyspec_currency");
+                if (currency == null || currency.isEmpty()) currency = "$";
+                bumLetterHint = app.bumboard.keys.LetterSymbols.hint(
+                        letter.charAt(0), params.mId.mBumNumberRow, currency);
+                bumLetterMoreKeys = app.bumboard.keys.LetterSymbols.moreKeys(
+                        letter.charAt(0), params.mId.mBumNumberRow, currency);
+            }
+        }
         final String[] additionalMoreKeys;
         if ((mLabelFlags & LABEL_FLAGS_DISABLE_ADDITIONAL_MORE_KEYS) != 0) {
             additionalMoreKeys = null;
+        } else if (bumLetterMoreKeys != null) {
+            additionalMoreKeys = bumLetterMoreKeys;
         } else {
             additionalMoreKeys = style.getStringArray(keyAttr,
                     R.styleable.Keyboard_Key_additionalMoreKeys);
@@ -359,8 +378,10 @@ public class Key implements Comparable<Key> {
         } else {
             String hintLabel = style.getString(
                     keyAttr, R.styleable.Keyboard_Key_keyHintLabel);
-            // BUMBOARD: with the number row on, the top letters drop their digit hints.
-            if (params.mId.mBumNumberRow && hintLabel != null && hintLabel.length() == 1
+            // BUMBOARD: the letter's symbol (or, without the number row, its digit)
+            if (bumLetterHint != null) {
+                hintLabel = bumLetterHint;
+            } else if (params.mId.mBumNumberRow && hintLabel != null && hintLabel.length() == 1
                     && Character.isDigit(hintLabel.charAt(0))) {
                 hintLabel = null;
             }

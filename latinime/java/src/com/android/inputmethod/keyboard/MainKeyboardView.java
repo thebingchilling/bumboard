@@ -843,6 +843,21 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     // Layout language name on spacebar.
     private String layoutLanguageOnSpacebar(final Paint paint,
             final RichInputMethodSubtype subtype, final int width) {
+        // BUMBOARD: the input method's own name on BumBoard's engines, like Gboard's 拼音
+        final String engine = subtype.getRawSubtype().getExtraValueOf("BumEngine");
+        if (engine != null) {
+            final String name;
+            switch (engine) {
+                case "yue": name = "\u7CB5\u62FC"; break;      // 粵拼
+                case "cmn": name = "\u62FC\u97F3"; break;      // 拼音
+                case "ja": name = "\u65E5\u672C\u8A9E"; break; // 日本語
+                case "ko": name = "\uD55C\uAD6D\uC5B4"; break; // 한국어
+                default: name = null;
+            }
+            if (name != null && fitsTextIntoWidth(width, name, paint)) {
+                return name;
+            }
+        }
         // Choose appropriate language name to fit into the width.
         if (mLanguageOnSpacebarFormatType == LanguageOnSpacebarUtils.FORMAT_TYPE_FULL_LOCALE) {
             final String fullText = subtype.getFullDisplayName();
@@ -867,7 +882,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         final int width = key.getWidth();
         final int height = key.getHeight();
         paint.setTextAlign(Align.CENTER);
-        paint.setTypeface(Typeface.DEFAULT);
+        paint.setTypeface(app.bumboard.fonts.BumFonts.ui(getContext(), 400));
         paint.setTextSize(mLanguageOnSpacebarTextSize);
         final String language = layoutLanguageOnSpacebar(paint, keyboard.mId.mSubtype, width);
         // Draw language text with shadow

@@ -18,27 +18,43 @@
 */
 -->
 
+<!-- BUMBOARD: Gboard's second symbols page, third row: % © ® ™ ✓ [ ] -->
 <merge
     xmlns:latin="http://schemas.android.com/apk/res-auto"
 >
     <Key
-        latin:keySpec="\\" />
-    <!-- U+00A9: "©" COPYRIGHT SIGN -->
-    <Key
-        latin:keySpec="&#x00A9;"
-                latin:moreKeys="℗" />
-    <!-- U+00AE: "®" REGISTERED SIGN -->
-    <Key
-        latin:keySpec="&#x00AE;"
+        latin:keySpec="!text/keyspec_symbols_percent"
+        latin:moreKeys="‰,‱" />
+    <switch>
+        <case
+            latin:languageCode="zh|ja"
+        >
+            <Key
+                latin:keySpec="‘"
+                latin:moreKeys="\',‚,‹,©" />
+            <Key
+                latin:keySpec="’"
+                latin:moreKeys="\',›,®" />
+        </case>
+        <default>
+            <Key
+                latin:keySpec="©"
+                latin:moreKeys="℗,🄯" />
+            <Key
+                latin:keySpec="&#x00AE;"
                 latin:moreKeys="Ⓡ" />
-    <!-- U+2122: "™" TRADE MARK SIGN -->
+        </default>
+    </switch>
     <Key
-        latin:keySpec="&#x2122;"
-                latin:moreKeys="℠" />
-    <!-- U+2105: "℅" CARE OF -->
+        latin:keySpec="™"
+        latin:moreKeys="℠" />
     <Key
-        latin:keySpec="&#x2105;"
-                latin:moreKeys="℀,℁" />
-    <include
-        latin:keyboardLayout="@xml/keys_square_brackets" />
+        latin:keySpec="✓"
+        latin:moreKeys="✔,✗,✘,☐,☑,☒" />
+    <Key
+        latin:keySpec="!text/keyspec_left_square_bracket"
+        latin:moreKeys="〈,《,⟨" />
+    <Key
+        latin:keySpec="!text/keyspec_right_square_bracket"
+        latin:moreKeys="〉,》,⟩" />
 </merge>
