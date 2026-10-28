@@ -525,6 +525,9 @@ private fun ChinesePage() {
         prefs.getBoolean(Readings.PREF_OTHER_LANGUAGE, false)
     }
     val meaning = prefs.boolPref(Readings.PREF_MEANING) { prefs.getBoolean(Readings.PREF_MEANING, true) }
+    val toneColours = prefs.boolPref(Readings.PREF_TONE_COLOURS) { prefs.getBoolean(Readings.PREF_TONE_COLOURS, true) }
+    val otherScript = prefs.boolPref(Readings.PREF_OTHER_SCRIPT) { prefs.getBoolean(Readings.PREF_OTHER_SCRIPT, true) }
+    val badges = prefs.boolPref(Readings.PREF_BADGES) { prefs.getBoolean(Readings.PREF_BADGES, true) }
     Text(
         stringResource(R.string.lychee_chinese_how),
         style = MaterialTheme.typography.bodyMedium,
@@ -576,18 +579,46 @@ private fun ChinesePage() {
                     meaning.value, meaning::set,
                 )
             }
+            row {
+                SwitchRow(
+                    it, stringResource(R.string.lychee_tone_colours), stringResource(R.string.lychee_tone_colours_summary),
+                    toneColours.value, toneColours::set,
+                )
+            }
+        }
+        row {
+            SwitchRow(
+                it, stringResource(R.string.lychee_other_script), stringResource(R.string.lychee_other_script_summary),
+                otherScript.value, otherScript::set,
+            )
+        }
+        row {
+            SwitchRow(
+                it, stringResource(R.string.lychee_badges), stringResource(R.string.lychee_badges_summary),
+                badges.value, badges::set,
+            )
         }
     }
-    val candidateSize = prefs.floatPref(ChineseInput.PREF_CANDIDATE_SIZE) { prefs.getFloat(ChineseInput.PREF_CANDIDATE_SIZE, 1f) }
+    val baseSize = prefs.getFloat(ChineseInput.PREF_CANDIDATE_SIZE, 1f)
+    // one size per language: characters and kana read best at different sizes
+    val sizes = listOf(
+        "yue" to R.string.lychee_language_cantonese, "cmn" to R.string.lychee_language_mandarin,
+        "ja" to R.string.lychee_language_japanese, "ko" to R.string.lychee_language_korean,
+    ).map { (engine, name) ->
+        val key = ChineseInput.PREF_CANDIDATE_SIZE + "_" + engine
+        Triple(engine, name, prefs.floatPref(key) { prefs.getFloat(key, baseSize) })
+    }
     val dictionaryHold = prefs.stringPref(ChineseInput.PREF_DICTIONARY_HOLD) {
         prefs.getString(ChineseInput.PREF_DICTIONARY_HOLD, null) ?: "pin"
     }
     Group(stringResource(R.string.lychee_group_candidates)) {
-        row {
-            SliderRow(
-                it, stringResource(R.string.lychee_pref_candidate_size), (candidateSize.value * 100).roundToInt(),
-                70..160, 10, format = { v -> "$v%" },
-            ) { v -> candidateSize.set(v / 100f) }
+        for ((_, name, size) in sizes) {
+            row {
+                SliderRow(
+                    it, stringResource(R.string.lychee_candidate_size_for, stringResource(name)),
+                    (size.value * 100).roundToInt(), 70..160, 10, format = { v -> "$v%" },
+                ) { v -> size.set(v / 100f) }
+            }
         }
         row {
             ChoiceRow(

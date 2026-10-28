@@ -73,11 +73,23 @@ object Readings {
         },
         showOtherLanguage = prefs.getBoolean(PREF_OTHER_LANGUAGE, false),
         showMeaning = prefs.getBoolean(PREF_MEANING, true),
+        simplified = prefs.getString(ChineseInput.PREF_SCRIPT, "traditional") == "simplified",
     )
 
     /** Readings under candidates are off when both the romanisation and the meaning are off. */
     fun showReadings(prefs: SharedPreferences) = prefs.getBoolean(PREF_SHOW_READINGS, true)
 
+    /** Around each candidate: tone colours, the other script, level and register badges. */
+    fun barStyle(prefs: SharedPreferences, lang: app.lychee.core.Lang?) = CandidateBarView.Style(
+        toneColours = prefs.getBoolean(PREF_TONE_COLOURS, true),
+        otherScript = prefs.getBoolean(PREF_OTHER_SCRIPT, true),
+        badges = prefs.getBoolean(PREF_BADGES, true),
+        lang = lang,
+    )
+
+    const val PREF_TONE_COLOURS = "lychee_tone_colours"
+    const val PREF_OTHER_SCRIPT = "lychee_other_script"
+    const val PREF_BADGES = "lychee_badges"
     const val PREF_SHOW_READINGS = "lychee_show_readings"
     const val PREF_OTHER_LANGUAGE = "lychee_other_language"
     const val PREF_MEANING = "lychee_show_meaning"

@@ -19,6 +19,8 @@ data class DisplayPrefs(
     /** pinyin under Cantonese candidates, Jyutping/Yale under Mandarin ones */
     val showOtherLanguage: Boolean = false,
     val showMeaning: Boolean = true,
+    /** the Chinese keyboards type Simplified */
+    val simplified: Boolean = false,
 )
 
 /** Everything resolved for one candidate, before formatting. */
@@ -35,7 +37,17 @@ data class Resolved(
     val composed: Boolean,
 )
 
-data class Annotation(val lines: List<String>, val meaning: String?, val resolved: Resolved?) {
+data class Annotation(
+    val lines: List<String>,
+    val meaning: String?,
+    val resolved: Resolved?,
+    /** each line's tones, syllable by syllable (0: neutral or unknown) */
+    val tones: List<List<Int>> = emptyList(),
+    /** level, register ... of the word (not of a word read piece by piece) */
+    val info: WordInfo? = null,
+    /** the word in the other script (学校 for 學校), when it differs */
+    val otherScript: String? = null,
+) {
     companion object {
         val Empty = Annotation(emptyList(), null, null)
     }
@@ -61,7 +73,16 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
 
     fun annotate(text: String, comment: String, mode: InputMode, prefs: DisplayPrefs): Annotation {
         val resolved = resolve(text, comment, mode) ?: return Annotation.Empty
-        return Annotation(lines(resolved, prefs), if (prefs.showMeaning) resolved.meaning else null, resolved)
+        val lines = toneLines(resolved, prefs)
+        val word = resolved.headwords.firstOrNull()?.takeIf { !resolved.composed }
+        return Annotation(
+            lines.map { it.first },
+            if (prefs.showMeaning) resolved.meaning else null,
+            resolved,
+            tones = lines.map { it.second },
+            info = word?.info,
+            otherScript = otherScript(text, resolved),
+        )
     }
 
     @Synchronized
@@ -226,24 +247,58 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
             return g
         }
 
-        fun lines(r: Resolved, prefs: DisplayPrefs): List<String> {
-            val out = mutableListOf<String>()
+        fun lines(r: Resolved, prefs: DisplayPrefs): List<String> = toneLines(r, prefs).map { it.first }
+
+        /** Tone numbers of a numbered reading ("nei5 hou2" -> [5, 2]; Mandarin's 5 is neutral, 0). */
+        fun tones(reading: String, lang: Lang): List<Int> =
+            reading.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }.map { s ->
+                val d = s.last().digitToIntOrNull() ?: 0
+                if (lang == Lang.Mandarin && d == 5) 0 else d
+            }
+
+        /** [text] in the other script, from the word's Traditional and Simplified forms. */
+        fun otherScript(text: String, r: Resolved): String? {
+            if (r.headwords.isEmpty()) return null
+            val other = if (r.composed) {
+                // only when the pieces cover the whole text
+                val trad = r.headwords.joinToString("") { it.traditional }
+                val simp = r.headwords.joinToString("") { it.simplified }
+                when (text) { trad -> simp; simp -> trad; else -> null }
+            } else {
+                val hw = r.headwords.first()
+                when (text) { hw.traditional -> hw.simplified; hw.simplified -> hw.traditional; else -> null }
+            }
+            return other?.takeIf { it != text }
+        }
+
+        /** Each reading line with its tones. */
+        fun toneLines(r: Resolved, prefs: DisplayPrefs): List<Pair<String, List<Int>>> {
+            val out = mutableListOf<Pair<String, List<Int>>>()
+            var lineLang = Lang.Cantonese
+            var source = ""
+            fun emit(line: String) {
+                out += line to tones(source, lineLang)
+            }
             fun cantonese(reading: String) {
+                lineLang = Lang.Cantonese
+                source = reading
                 when (prefs.cantonese) {
                     CantoneseRomanization.Jyutping ->
-                        out += Romanization.format(reading, Romanization.Style.JyutpingNumbers)
-                    CantoneseRomanization.Yale -> out += yale(reading, prefs)
+                        emit(Romanization.format(reading, Romanization.Style.JyutpingNumbers))
+                    CantoneseRomanization.Yale -> emit(yale(reading, prefs))
                     CantoneseRomanization.Both -> {
-                        out += yale(reading, prefs)
-                        out += Romanization.format(reading, Romanization.Style.JyutpingNumbers)
+                        emit(yale(reading, prefs))
+                        emit(Romanization.format(reading, Romanization.Style.JyutpingNumbers))
                     }
                 }
             }
             fun mandarin(reading: String) {
-                out += Romanization.format(
+                lineLang = Lang.Mandarin
+                source = reading
+                emit(Romanization.format(
                     reading,
                     if (prefs.pinyinToneMarks) Romanization.Style.PinyinMarks else Romanization.Style.PinyinNumbers
-                )
+                ))
             }
             when (r.lang) {
                 Lang.Cantonese -> {

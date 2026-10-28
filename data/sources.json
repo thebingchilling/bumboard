@@ -36,10 +36,14 @@
     "license": "CC-BY-SA-4.0",
     "_comment": "MDBG only serves the latest release, so a dated snapshot is kept here. Refresh with update_cedict.sh."
   },
+  "hsk": {
+    "git": "https://github.com/drkameleon/complete-hsk-vocabulary",
+    "commit": "7ac65bf1a6387d35f1ade478906172a19311c7f9",
+    "license": "MIT (HSK 2.0 word lists, levels 1-6)"
+  },
   "ko-words": {
     "url": "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/ko/ko_50k.txt",
-    "sha256": "",
-    "license": "CC-BY-SA-4.0 (word list from OpenSubtitles 2018, by Hermit Dave)",
-    "_comment": "Unpinned until the first CI build prints its sha256."
+    "sha256": "8d00401b6728c8d6feeaa5455583c1a33408dd020aae4aa55609b25004d1d99d",
+    "license": "CC-BY-SA-4.0 (word list from OpenSubtitles 2018, by Hermit Dave)"
   }
 }

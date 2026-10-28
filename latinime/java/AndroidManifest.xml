@@ -43,6 +43,10 @@
         <intent>
             <action android:name="android.support.customtabs.action.CustomTabsService"/>
         </intent>
+        <!-- LYCHEE: tap to hear, with the phone's text-to-speech engine -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
     </queries>
 
     <!-- A signature-protected permission to ask AOSP Keyboard to close the software keyboard.

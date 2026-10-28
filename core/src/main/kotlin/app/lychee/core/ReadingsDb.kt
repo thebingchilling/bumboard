@@ -50,8 +50,20 @@ class ReadingsDb(private val sql: Sql) : Dictionary {
             )
         }.forEach { (id, s) -> senses.getOrPut(id) { mutableListOf() }.add(s) }
 
+        val info = HashMap<Long, WordInfo>()
+        sql.query("SELECT hw, hsk, band, reg, cl, pos FROM info WHERE hw IN ($marks)", idArgs) {
+            it.long(0) to WordInfo(
+                hsk = it.string(1)?.toIntOrNull(),
+                band = it.string(2)?.toIntOrNull(),
+                register = it.string(3),
+                measureWords = it.string(4),
+                partOfSpeech = it.string(5),
+            )
+        }.forEach { (id, i) -> info[id] = i }
+
         return heads.map { (id, forms, freq) ->
-            Headword(id, forms.first, forms.second, freq, readings[id].orEmpty(), senses[id].orEmpty())
+            Headword(id, forms.first, forms.second, freq, readings[id].orEmpty(), senses[id].orEmpty(),
+                info[id] ?: WordInfo.None)
         }
     }
 

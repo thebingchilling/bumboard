@@ -81,4 +81,17 @@ class AnnotatorTest {
         assertEquals("row", Annotator.shorten("(bound form) row; line"))
         assertEquals("hello", Annotator.shorten("hello; hi"))
     }
+
+    @Test
+    fun tonesFollowLines() {
+        val a = annotator.annotate("你好", "ni hao", InputMode.Mandarin, DisplayPrefs(showOtherLanguage = true))
+        assertEquals(listOf(listOf(3, 3), listOf(5, 2)), a.tones)
+        assertEquals(listOf(0, 1), Annotator.tones("ma5 ma1", Lang.Mandarin))
+    }
+
+    @Test
+    fun measureWords() {
+        val info = WordInfo(measureWords = "個|个[ge4],本[ben3]")
+        assertEquals(listOf(Triple("個", "个", "ge4"), Triple("本", "本", "ben3")), info.measureWordList())
+    }
 }

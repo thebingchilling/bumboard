@@ -66,6 +66,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         }
         bar?.onPick = { index -> pick(index) }
         bar?.onLongPick = { index, anchor -> showDictionary(index, anchor) }
+        // the notch: a swipe down on the candidates opens them all, with more room
+        bar?.onExpand = { if (panel?.visibility != View.VISIBLE) togglePanel() }
+        bar?.onAnnotated = { index, annotation -> if (index == 0) showPreeditReading(annotation) }
         // hold to peek: the card goes when the finger lifts
         bar?.onRelease = { if (prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek") popup?.dismiss() }
         show(null)
@@ -80,9 +83,24 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         if (resolved.headwords.isEmpty() && resolved.reading == null) return
         val frame = keyboardFrame?.takeIf { it.height > 0 } ?: return
         val peek = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
-        popup?.show(frame, candidate.text, resolved, Readings.displayPrefs(prefs), peek) {
+        val locales = app.lychee.speech.Speech.localesFor(engine, prefs.getString(PREF_SCRIPT, "traditional") == "simplified")
+        popup?.show(frame, candidate.text, resolved, Readings.displayPrefs(prefs), peek,
+            onSpeak = { text -> app.lychee.speech.Speech.speak(ime, text, locales) }) {
             pick(index)
         }
+    }
+
+    /** The preedit line: what is typed, then the first candidate with its reading. */
+    private fun showPreeditReading(annotation: Annotation) {
+        val p = preedit ?: return
+        val composition = shown ?: return
+        val first = composition.candidates.firstOrNull() ?: return
+        val line = annotation.lines.firstOrNull() ?: return
+        val reading = if (prefs.getBoolean(Readings.PREF_TONE_COLOURS, true)) {
+            ToneColours.apply(line, annotation.tones.firstOrNull(), p.currentTextColor)
+        } else line
+        p.text = android.text.SpannableStringBuilder(composition.preedit)
+            .append("   ").append(first.text).append("  ").append(reading)
     }
 
     /** The background annotation for the current settings, or null when readings are off. */
@@ -277,7 +295,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             app.lychee.layout.LycheePanels.hideOthers(view, panel)
             app.lychee.layout.LycheePanels.cover(panel, view)
             panel.bringToFront()
-            panel.show(candidates, candidateScale())
+            panel.show(candidates, candidateScale(), annotation(), Readings.barStyle(prefs, inputMode().lang))
         }
         updateMoreButton()
     }
@@ -352,16 +370,21 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             return
         }
         bar.setScale(candidateScale())
+        bar.style = Readings.barStyle(prefs, inputMode().lang)
         bar.setCandidates(candidates, annotation())
         bar.visibility = View.VISIBLE
         moreButton?.visibility = View.VISIBLE
         // the open dropdown follows the typing
-        if (panel?.visibility == View.VISIBLE) panel?.show(candidates, candidateScale())
+        if (panel?.visibility == View.VISIBLE) panel?.show(candidates, candidateScale(), annotation(), bar.style)
         updateMoreButton()
         stripView?.setLycheeCandidatesShowing(true)
     }
 
-    private fun candidateScale() = prefs.getFloat(PREF_CANDIDATE_SIZE, 1f).coerceIn(0.7f, 1.6f)
+    /** The candidate size for this keyboard's language, else the one for all languages. */
+    private fun candidateScale(): Float {
+        val all = prefs.getFloat(PREF_CANDIDATE_SIZE, 1f)
+        return prefs.getFloat(PREF_CANDIDATE_SIZE + "_" + engine, all).coerceIn(0.7f, 1.6f)
+    }
 
     /**
      * The top bar keeps the usual strip height (the same as on the English keyboards) and only
@@ -459,7 +482,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             (PUNCTUATION.values.flatMap { it.codePoints().toArray().toList() } + "“”‘’・〜".map { it.code }).toSet()
         const val EXTRA_ENGINE = "LycheeEngine"
         const val PREF_SCRIPT = "lychee_chinese_script"
-        /** Candidate text size, 0.7 .. 1.6. */
+        /** Candidate text size, 0.7 .. 1.6; per language with "_yue", "_cmn", "_ja", "_ko". */
         const val PREF_CANDIDATE_SIZE = "lychee_candidate_size"
         /** Long-press on a candidate: "peek" (while held) or "pin" (until closed). */
         const val PREF_DICTIONARY_HOLD = "lychee_dictionary_hold"

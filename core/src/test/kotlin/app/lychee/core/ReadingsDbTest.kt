@@ -75,4 +75,16 @@ class ReadingsDbTest {
         val a = annotate("我哋去飲茶", "ngo5 dei6 heoi3 jam2 caa4", InputMode.Cantonese)
         assertEquals(listOf("ngo5 dei6 heoi3 jam2 caa4"), a.lines)
     }
+
+    @Test
+    fun wordFacts() {
+        val school = annotate("學校", "hok6 haau6", InputMode.Cantonese)
+        assertEquals("学校", school.otherScript)
+        assertEquals(1, school.info?.hsk)
+        assertEquals(1, school.info?.band)
+        assertEquals("col", annotate("冇", "mou5", InputMode.Cantonese).info?.register)
+        val book = annotate("书", "shu", InputMode.Mandarin).resolved!!.headwords.first().info
+        assertEquals(Triple("本", "本", "ben3"), book.measureWordList().first())
+        assertEquals("n", book.partOfSpeech)
+    }
 }

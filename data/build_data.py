@@ -269,6 +269,8 @@ class Readings:
         self.senses: list[tuple] = []
         self.sense_keys: set[tuple] = set()
         self.with_senses: set[int] = set()
+        # per headword: hsk, band, reg, cl, pos (see Readings.write)
+        self.info: dict[int, dict] = defaultdict(dict)
 
     def headword(self, trad: str, simp: str) -> int:
         key = (trad, simp)
@@ -312,6 +314,11 @@ class Readings:
                                r TEXT, gloss TEXT NOT NULL, pos TEXT, reg TEXT, label TEXT,
                                written TEXT, vern TEXT, colloc TEXT, src TEXT, alt TEXT,
                                PRIMARY KEY(hw, ord)) WITHOUT ROWID;
+            -- hsk: HSK 2.0 level 1-6 (Mandarin); band: 1 common, 2 everyday, 3 advanced
+            -- (Cantonese frequency); reg: 'col' colloquial / 'wri' written Cantonese;
+            -- cl: measure words as in CEDICT ('個|个[ge4],隻|只[zhi1]'); pos: jieba tag
+            CREATE TABLE info(hw INTEGER PRIMARY KEY, hsk INTEGER, band INTEGER, reg TEXT,
+                              cl TEXT, pos TEXT);
             """
         )
         db.executemany("INSERT INTO meta VALUES(?,?)", sorted(meta.items()))
@@ -339,9 +346,35 @@ class Readings:
                         s[12] or None))
             per_hw[hid] += 1
         db.executemany("INSERT INTO sense VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)", out)
+        db.executemany(
+            "INSERT INTO info VALUES(?,?,?,?,?,?)",
+            ((hid, i.get("hsk"), i.get("band"), i.get("reg"), i.get("cl"), i.get("pos"))
+             for hid, i in sorted(self.info.items()) if i),
+        )
         db.commit()
         db.execute("VACUUM")
         db.close()
+
+
+# ---------------------------------------------------------------- word facts
+
+
+def load_hsk(repo: Path) -> dict[str, int]:
+    """Simplified and Traditional word -> its HSK 2.0 level (the lowest, if listed twice)."""
+    levels: dict[str, int] = {}
+    for level in range(1, 7):
+        for e in json.loads((repo / "wordlists" / "exclusive" / "old" / f"{level}.json").read_text()):
+            forms = {e["simplified"]} | {f["traditional"] for f in e.get("forms", [])}
+            for w in forms:
+                levels[w] = min(levels.get(w, 9), level)
+    return levels
+
+
+def frequency_bands(freq: dict[str, int], common: int = 3000, everyday: int = 12000) -> dict[str, int]:
+    """Cantonese has no official word levels: the most frequent words are band 1 (common),
+    the next band 2 (everyday), the rest band 3 (advanced)."""
+    ranked = sorted((w for w, f in freq.items() if f > 0), key=lambda w: -freq[w])
+    return {w: 1 if i < common else 2 if i < everyday else 3 for i, w in enumerate(ranked)}
 
 
 # ---------------------------------------------------------------- English keyword index
@@ -539,10 +572,13 @@ def main():
             if len(p) == 2 and p[1].isdigit():
                 yue_freq[p[0]] = max(yue_freq.get(p[0], 0), int(p[1]))
     cmn_freq: dict[str, int] = {}
+    cmn_pos: dict[str, str] = {}
     with open(src["jieba"], encoding="utf-8") as f:
         for line in f:
             p = line.split()
             if len(p) >= 2 and p[1].isdigit():
+                if int(p[1]) >= cmn_freq.get(p[0], 0) and len(p) >= 3:
+                    cmn_pos[p[0]] = p[2]
                 cmn_freq[p[0]] = max(cmn_freq.get(p[0], 0), int(p[1]))
 
     unihan, variants = parse_unihan(src["unihan"])
@@ -588,6 +624,8 @@ def main():
         for g in glosses:
             R.add_sense(hid, "cmn", reading, g, "cedict",
                         pos="cl" if g.startswith("CL:") else "", alt=alt)
+            if g.startswith("CL:") and "cl" not in R.info[hid]:
+                R.info[hid]["cl"] = g[3:].strip()
 
     # -------- CC-Canto (Pleco, CC BY-SA 3.0): Cantonese words and meanings
     cccanto = list(parse_cedict_like(zip_text(src["cccanto"], ".txt")))
@@ -605,6 +643,7 @@ def main():
 
     # -------- TypeDuck (CC BY 4.0): readings, English, register, written equivalents
     typeduck_entries = []
+    typeduck_reg: dict[str, set[str]] = defaultdict(set)
     for row in dict_body(td / "jyut6ping3_scolar.dict.yaml"):
         if len(row) < 2:
             continue
@@ -622,6 +661,8 @@ def main():
                         reg=fields[11], label=fields[12], written=fields[13],
                         vern=fields[14], colloc=fields[15])
             typeduck_entries.append((text, [g.strip() for g in eng.split(";")], 1.2))
+        if fields[11]:
+            typeduck_reg[text].add(fields[11])
 
     # -------- rime-cantonese characters and words (readings only)
     for row in dict_body(rc / "jyut6ping3.chars.dict.yaml"):
@@ -665,12 +706,42 @@ def main():
     for i, (trad, simp, _) in enumerate(R.hw):
         R.hw[i][2] = max(yue_freq.get(trad, 0), cmn_freq.get(simp, 0))
 
+    # -------- word facts: HSK level, Cantonese band and register, part of speech
+    hsk = load_hsk(src["hsk"])
+    bands = frequency_bands(yue_freq)
+    swc_colloquial, swc_written = set(), set()
+    for line in (HERE / "swc" / "swc.tsv").read_text(encoding="utf-8").splitlines():
+        body = line.split("#", 1)[0]
+        if "\t" in body:
+            a, b = (x.strip() for x in body.split("\t", 1))
+            if a != b:
+                swc_colloquial.add(a)
+                swc_written.add(b)
+    cedict_trad = {trad for trad, _, _, _, _ in cedict}
+    cccanto_only = {trad for trad, _, _, _, _ in cccanto if trad not in cedict_trad}
+    for i, (trad, simp, _) in enumerate(R.hw):
+        hid = i + 1
+        info = R.info[hid]
+        level = hsk.get(simp) or hsk.get(trad)
+        if level:
+            info["hsk"] = level
+        if R.readings.get((hid, "yue")) and trad in bands:
+            info["band"] = bands[trad]
+        regs = typeduck_reg.get(trad, set())
+        if trad in swc_colloquial or trad in cccanto_only or regs == {"ver"}:
+            info["reg"] = "col"
+        elif "wri" in regs or (len(trad) >= 2 and trad in swc_written):
+            info["reg"] = "wri"
+        if simp in cmn_pos:
+            info["pos"] = cmn_pos[simp]
+
     meta = {
         "version": str(DATA_VERSION),
         "cedict": "2026-10-13",
         "sources": "CC-CEDICT (CC BY-SA 4.0); CC-Canto + CC-CEDICT Cantonese readings "
                    "(Pleco, CC BY-SA 3.0); TypeDuck (CC BY 4.0); rime-cantonese (CC BY 4.0); "
-                   "Unihan (Unicode License v3)",
+                   "Unihan (Unicode License v3); HSK levels: complete-hsk-vocabulary (MIT); "
+                   "parts of speech: jieba (MIT)",
         "license": "CC BY-SA 4.0",
     }
     R.write(assets / "readings.db", meta)

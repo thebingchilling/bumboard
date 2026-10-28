@@ -35,6 +35,21 @@ class CandidateBarView @JvmOverloads constructor(
     var onLongPick: (Int, View) -> Unit = { _, _ -> }
     /** The finger left a candidate (after a long-press, for hold-to-peek). */
     var onRelease: () -> Unit = {}
+    /** A swipe down on the row: open every candidate (the notch). */
+    var onExpand: () -> Unit = {}
+    /** A candidate's readings arrived (the first one's go in the preedit line). */
+    var onAnnotated: (Int, Annotation) -> Unit = { _, _ -> }
+
+    /** What shows around each candidate, from the Chinese settings. */
+    data class Style(
+        val toneColours: Boolean = true,
+        val otherScript: Boolean = true,
+        val badges: Boolean = true,
+        /** whose level badge: HSK for Mandarin, frequency band and register for Cantonese */
+        val lang: app.lychee.core.Lang? = null,
+    )
+
+    var style = Style()
 
     private val row = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
@@ -107,10 +122,31 @@ class CandidateBarView @JvmOverloads constructor(
     private fun deliver(gen: Int, results: List<Pair<Int, Annotation>>) {
         post {
             if (gen != generation) return@post
-            results.forEach { (index, annotation) -> cells[index]?.let { fill(it, annotation) } }
+            results.forEach { (index, annotation) ->
+                cells[index]?.let { fill(it, annotation) }
+                onAnnotated(index, annotation)
+            }
         }
     }
 
+    private var downX = 0f
+    private var downY = 0f
+
+    override fun onInterceptTouchEvent(ev: android.view.MotionEvent): Boolean {
+        when (ev.actionMasked) {
+            android.view.MotionEvent.ACTION_DOWN -> { downX = ev.x; downY = ev.y }
+            android.view.MotionEvent.ACTION_MOVE -> {
+                val dy = ev.y - downY
+                if (dy > dp(28) && dy > 2 * kotlin.math.abs(ev.x - downX)) {
+                    onExpand()
+                    return true
+                }
+            }
+        }
+        return super.onInterceptTouchEvent(ev)
+    }
+
+    /** The word with, beside it, the other script on top and its badges below. */
     private fun cell(index: Int, candidate: Candidate, first: Boolean) = LinearLayout(context).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER
@@ -125,17 +161,75 @@ class CandidateBarView @JvmOverloads constructor(
                 event.actionMasked == android.view.MotionEvent.ACTION_CANCEL) onRelease()
             false
         }
-        addView(text(candidate.text, CHAR_SP * scale, tag as Int).apply {
+        val word = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        word.addView(text(candidate.text, CHAR_SP * scale, tag as Int).apply {
             includeFontPadding = false
             app.lychee.fonts.LycheeFonts.chinese(context)?.let { typeface = it }
         }, wrap())
+        addView(word, wrap())
+    }
+
+    /** The small column beside the word: the other script, then the badges. */
+    private fun side(annotation: Annotation, color: Int): LinearLayout? {
+        val other = annotation.otherScript?.takeIf { style.otherScript }
+        val badges = if (style.badges) badges(annotation) else emptyList()
+        if (other == null && badges.isEmpty()) return null
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(3), 0, 0, 0)
+            other?.let {
+                addView(text(it, SIDE_SP * scale, ColorUtils.setAlphaComponent(color, 0xB0)).apply {
+                    includeFontPadding = false
+                    gravity = Gravity.START
+                    app.lychee.fonts.LycheeFonts.chinese(context)?.let { f -> typeface = f }
+                })
+            }
+            if (badges.isNotEmpty()) {
+                addView(text(badges.joinToString(" "), BADGE_SP * scale, ColorUtils.setAlphaComponent(color, 0xB0)).apply {
+                    includeFontPadding = false
+                    gravity = Gravity.START
+                    typeface = app.lychee.fonts.LycheeFonts.ui(context, 600)
+                })
+            }
+        }
+    }
+
+    /** HSK 1-6 under Mandarin; colloquial or written, then the frequency band, under Cantonese. */
+    private fun badges(annotation: Annotation): List<String> {
+        val info = annotation.info ?: return emptyList()
+        return when (style.lang) {
+            app.lychee.core.Lang.Mandarin -> listOfNotNull(info.hsk?.let { "HSK$it" })
+            app.lychee.core.Lang.Cantonese -> listOfNotNull(
+                when (info.register) {
+                    "col" -> context.getString(R.string.lychee_badge_colloquial)
+                    "wri" -> context.getString(R.string.lychee_badge_written)
+                    else -> null
+                },
+                when (info.band) {
+                    1 -> context.getString(R.string.lychee_badge_common)
+                    2 -> context.getString(R.string.lychee_badge_everyday)
+                    3 -> context.getString(R.string.lychee_badge_advanced)
+                    else -> null
+                },
+            )
+            else -> emptyList()
+        }
     }
 
     private fun fill(cell: LinearLayout, annotation: Annotation) {
         val color = cell.tag as Int
         while (cell.childCount > 1) cell.removeViewAt(1)
-        annotation.lines.forEach { line ->
-            cell.addView(text(line, READING_SP * scale, ColorUtils.setAlphaComponent(color, 0xD0)).apply {
+        (cell.getChildAt(0) as? LinearLayout)?.let { word ->
+            while (word.childCount > 1) word.removeViewAt(1)
+            side(annotation, color)?.let { word.addView(it, wrap()) }
+        }
+        val readingColor = ColorUtils.setAlphaComponent(color, 0xD0)
+        annotation.lines.forEachIndexed { i, line ->
+            val shown = if (style.toneColours) ToneColours.apply(line, annotation.tones.getOrNull(i), color) else line
+            cell.addView(text(shown, READING_SP * scale, readingColor).apply {
                 typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
                 includeFontPadding = false
             }, wrap())
@@ -160,7 +254,7 @@ class CandidateBarView @JvmOverloads constructor(
         return sample.measuredHeight
     }
 
-    private fun text(value: String, sp: Float, color: Int) = TextView(context).apply {
+    private fun text(value: CharSequence, sp: Float, color: Int) = TextView(context).apply {
         text = value
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sp)
         setTextColor(color)
@@ -225,6 +319,8 @@ class CandidateBarView @JvmOverloads constructor(
         const val CHAR_SP = 20f
         const val READING_SP = 11.5f
         const val MEANING_SP = 10.5f
+        const val SIDE_SP = 9.5f
+        const val BADGE_SP = 7.5f
 
         /**
          * Whether the phone's fonts can draw [text] (no empty boxes). Paint.hasGlyph takes one

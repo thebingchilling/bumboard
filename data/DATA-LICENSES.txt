@@ -17,8 +17,12 @@ adaptations under the same licence. It is built from:
     Cantonese Computational Linguistics Infrastructure Development Workgroup (CanCLID).
   * Unihan database — https://www.unicode.org — Unicode License v3,
     (c) 1991-2026 Unicode, Inc.
+  * HSK 2.0 word levels — complete-hsk-vocabulary by Yanis Zafirópulos,
+    https://github.com/drkameleon/complete-hsk-vocabulary — MIT.
+  * Parts of speech — jieba's dict.txt (MIT, (c) 2013 Sun Junyi).
 
 Changes: entries were merged, deduplicated, ranked and converted to SQLite;
+Cantonese frequency bands and colloquial/written marks were derived by Lychee;
 Simplified forms of TypeDuck and rime-cantonese entries were generated with OpenCC.
 
 Rime dictionaries (assets/rime):
