@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -25,8 +26,10 @@ import app.bumboard.ui.M3Colors
 import com.android.inputmethod.latin.R
 
 /**
- * Voice typing in the bar above the keys, like Gboard's. Speech goes to Google's recognition service when the phone has
- * it (Speech Services by Google, then the Google app), otherwise to the system default. The
+ * Voice typing in the bar above the keys, like Gboard's. With "offline" on (the default) and
+ * Android 12+, speech is recognised on the phone by the system's on-device recogniser; otherwise
+ * it goes to Google's recognition service when the phone has it (Speech Services by Google,
+ * then the Google app), or to the system default. BumBoard itself never uses the network. The
  * panel shows what is heard as it is heard and hands the final text to [onText]; nothing is
  * typed until the recogniser is done, so LatinIME's own composing state is never disturbed.
  */
@@ -114,22 +117,59 @@ class VoicePanelView @JvmOverloads constructor(
             return false
         }
         cancel(notify = false)
-        val r = googleService()?.let { SpeechRecognizer.createSpeechRecognizer(context, it) }
-            ?: SpeechRecognizer.createSpeechRecognizer(context)
+        this.language = language
+        // on this phone when it can (Android 12+): nothing leaves the phone, and the speech
+        // model runs in the system's own process, not BumBoard's
+        onDevice = offlinePreferred() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
+        val r = if (onDevice) {
+            SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+        } else {
+            googleService()?.let { SpeechRecognizer.createSpeechRecognizer(context, it) }
+                ?: SpeechRecognizer.createSpeechRecognizer(context)
+        }
         recognizer = r
         r.setRecognitionListener(listener)
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
-        if (language != null) intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
+        val intent = request()
         heard.text = ""
         status.visibility = VISIBLE
-        status.setText(R.string.bum_voice_starting)
+        status.setText(if (onDevice) R.string.bum_voice_starting_offline else R.string.bum_voice_starting)
         visibility = VISIBLE
         r.startListening(intent)
         return true
     }
+
+    private var language: String? = null
+    /** Whether the recogniser in use runs on this phone. */
+    private var onDevice = false
+
+    private fun request() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+        .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, offlinePreferred())
+        .apply { language?.let { putExtra(RecognizerIntent.EXTRA_LANGUAGE, it) } }
+
+    @Suppress("DEPRECATION")
+    private fun offlinePreferred() =
+        android.preference.PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREF_OFFLINE, true)
+
+    /**
+     * The on-device recogniser lacks this language: Android 13+ downloads it itself (the
+     * system does, not BumBoard); meanwhile this time goes to the phone's usual recogniser.
+     */
+    private fun onDeviceLanguageMissing(): Boolean {
+        if (!onDevice) return false
+        val r = recognizer
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && r != null) {
+            runCatching { r.triggerModelDownload(request()) }
+        }
+        cancel(notify = false)
+        onDeviceFailed = true
+        return true
+    }
+
+    private var onDeviceFailed = false
 
     fun cancel() = cancel(notify = true)
 
@@ -161,7 +201,8 @@ class VoicePanelView @JvmOverloads constructor(
     }
 
     private val listener = object : RecognitionListener {
-        override fun onReadyForSpeech(params: Bundle?) = status.setText(R.string.bum_voice_listening)
+        override fun onReadyForSpeech(params: Bundle?) =
+            status.setText(if (onDevice) R.string.bum_voice_listening_offline else R.string.bum_voice_listening)
         override fun onBeginningOfSpeech() {}
         override fun onRmsChanged(rmsdB: Float) {
             val scale = 1f + (rmsdB.coerceIn(0f, 10f) / 10f) * 0.45f
@@ -172,6 +213,23 @@ class VoicePanelView @JvmOverloads constructor(
         override fun onEndOfSpeech() = status.setText(R.string.bum_voice_working)
         override fun onError(error: Int) {
             Log.w(TAG, "recogniser error $error")
+            if (error == ERROR_LANGUAGE_NOT_SUPPORTED || error == ERROR_LANGUAGE_UNAVAILABLE) {
+                if (onDeviceLanguageMissing()) {
+                    // try once more with the phone's usual recogniser
+                    val lang = language
+                    visibility = VISIBLE
+                    status.visibility = VISIBLE
+                    status.setText(R.string.bum_voice_offline_downloading)
+                    val r = googleService()?.let { SpeechRecognizer.createSpeechRecognizer(context, it) }
+                        ?: SpeechRecognizer.createSpeechRecognizer(context)
+                    recognizer = r
+                    onDevice = false
+                    this@VoicePanelView.language = lang
+                    r.setRecognitionListener(this)
+                    r.startListening(request())
+                    return
+                }
+            }
             if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
                 finish(null)
             } else {
@@ -205,10 +263,15 @@ class VoicePanelView @JvmOverloads constructor(
         status.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
     }
 
-    private companion object {
-        const val TAG = "BumVoice"
-        const val RECOGNITION_SERVICE = "android.speech.RecognitionService"
-        val GOOGLE_SERVICES = listOf(
+    companion object {
+        /** Voice typing on this phone (offline) when the phone can. */
+        const val PREF_OFFLINE = "bum_voice_offline"
+        private const val TAG = "BumVoice"
+        // SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED / _UNAVAILABLE (Android 12)
+        private const val ERROR_LANGUAGE_NOT_SUPPORTED = 12
+        private const val ERROR_LANGUAGE_UNAVAILABLE = 13
+        private const val RECOGNITION_SERVICE = "android.speech.RecognitionService"
+        private val GOOGLE_SERVICES = listOf(
             ComponentName("com.google.android.tts",
                 "com.google.android.apps.speech.tts.googletts.service.GoogleTTSRecognitionService"),
             ComponentName("com.google.android.googlequicksearchbox",
