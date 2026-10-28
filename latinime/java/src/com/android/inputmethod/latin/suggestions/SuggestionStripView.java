@@ -332,8 +332,9 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         final boolean panel = mLycheeToolbar.getMode() != app.lychee.toolbar.ToolbarView.Mode.NORMAL;
         final boolean idle = panel || (!mLycheeHasSuggestions && !mLycheeCandidatesShowing && !notice);
         mLycheeToolbar.setVisibility(idle ? VISIBLE : INVISIBLE);
-        // like Gboard's, the mic stays on the right while suggestions show (not over candidates)
-        final boolean voice = !panel && !mLycheeCandidatesShowing && !notice && mLycheeVoiceEnabled;
+        // the mic belongs to the toolbar, like the menu button: it goes when suggestions or
+        // candidates take the bar
+        final boolean voice = idle && !panel && mLycheeVoiceEnabled;
         mVoiceKey.setVisibility(voice ? VISIBLE : GONE);
         if (!notice) {
             mSuggestionsStrip.setVisibility(mLycheeHasSuggestions && !mLycheeCandidatesShowing && !panel

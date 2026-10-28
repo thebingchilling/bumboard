@@ -51,10 +51,4 @@
     <string name="lychee_hw_no_pack">Handwriting needs a handwriting pack. Tap here to get one in Settings &gt; Downloads.</string>
     <string name="lychee_hw_bad_pack">This handwriting pack couldn\'t be opened. Tap here to import it again.</string>
     <!-- 書面語: Cantonese to Standard Written Chinese -->
-    <string name="lychee_sc_written">書面語 Written Chinese</string>
-    <string name="lychee_written_title">書面語 · Standard Written Chinese</string>
-    <string name="lychee_written_replace">Replace</string>
-    <string name="lychee_written_undo">Undo</string>
-    <string name="lychee_written_nothing">Write or select some Cantonese first.</string>
-    <string name="lychee_written_same">This is already standard written Chinese.</string>
 </resources>

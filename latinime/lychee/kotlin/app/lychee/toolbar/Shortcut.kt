@@ -16,7 +16,6 @@ enum class Shortcut(val id: String, @DrawableRes val icon: Int, @StringRes val l
     UNDO("undo", R.drawable.ic_sym_undo, R.string.lychee_sc_undo),
     REDO("redo", R.drawable.ic_sym_redo, R.string.lychee_sc_redo),
     HANDWRITING("handwriting", R.drawable.ic_sym_edit, R.string.lychee_sc_handwriting),
-    WRITTEN_CHINESE("written_chinese", R.drawable.ic_sym_translate, R.string.lychee_sc_written),
     SETTINGS("settings", R.drawable.ic_sym_settings, R.string.lychee_sc_settings);
 
     companion object {
@@ -58,5 +57,14 @@ class ShortcutStore(private val prefs: SharedPreferences) {
         const val PREF_PINNED = "lychee_shortcuts_pinned"
         /** Like Gboard's bar: next language, text editing and undo. */
         const val DEFAULT_PINNED = "language,text_edit,undo"
+    }
+}
+
+object Shortcuts {
+    /** Whether [shortcut] belongs on the current keyboard ([engine]: null for English). */
+    fun available(shortcut: Shortcut, engine: String?): Boolean = when (shortcut) {
+        // handwriting is for Chinese and Japanese, not the English keyboards
+        Shortcut.HANDWRITING -> engine != null && engine != "ko"
+        else -> true
     }
 }

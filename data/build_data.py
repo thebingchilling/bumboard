@@ -894,21 +894,6 @@ def main():
 
     (assets / "data-licenses.txt").write_text((HERE / "DATA-LICENSES.txt").read_text())
 
-    # -------- Cantonese -> Standard Written Chinese table (hand-written, ./swc), with each
-    # line also in Simplified so either script converts
-    swc_lines = []
-    for line in (HERE / "swc" / "swc.tsv").read_text(encoding="utf-8").splitlines():
-        body = line.split("#", 1)[0]
-        if "\t" not in body:
-            continue
-        a, b = body.split("\t", 1)
-        swc_lines.append(f"{a.strip()}\t{b.strip()}")
-        sa, sb = t2s.convert(a.strip()), t2s.convert(b.strip())
-        # single characters are skipped: 係 becomes 系, a standard Simplified word on its own
-        if sa != a.strip() and len(sa) >= 2:
-            swc_lines.append(f"{sa}\t{sb}")
-    (assets / "swc.tsv").write_text("\n".join(swc_lines) + "\n", encoding="utf-8")
-    print(f"swc: {len(swc_lines)} lines", file=sys.stderr)
 
     if not args.no_compile:
         compile_rime(rime_dir)

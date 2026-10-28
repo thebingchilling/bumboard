@@ -24,9 +24,9 @@ import app.lychee.ui.M3Colors
 import com.android.inputmethod.latin.R
 
 /**
- * Every shortcut over the keys, like Gboard's menu: pages of two columns of rounded buttons
- * (icon, name and › for those that open a panel), swiped sideways, with dots under them and a
- * pencil in the corner. The menu button on the bar (now ✕) closes it. Tap a shortcut to use it.
+ * Every shortcut over the keys, like Gboard's menu: pages of a grid of icons with their names
+ * under them, swiped sideways, with dots under them, Settings in the left corner and a pencil
+ * in the right one. The menu button on the bar (now ✕) closes it. Tap a shortcut to use it.
  *
  * Editing (the pencil; the bar's ✓ ends it): the menu holds the shortcuts not on the bar. Touch
  * and hold one to drag it: within the menu to reorder, or up onto the bar to put it there;
@@ -69,6 +69,21 @@ class ShortcutGalleryView @JvmOverloads constructor(
         }
         setOnClickListener { setEditing(!editing) }
     }
+    /** Settings, in the corner opposite the pencil. */
+    private val settings = ImageView(context).apply {
+        setImageResource(R.drawable.ic_sym_settings)
+        imageTintList = ColorStateList.valueOf(palette.onSurface)
+        scaleType = ImageView.ScaleType.CENTER
+        contentDescription = context.getString(R.string.lychee_sc_settings)
+        background = GradientDrawable().apply {
+            cornerRadius = dp(18).toFloat()
+            setStroke(dp(1), palette.outline)
+        }
+        setOnClickListener {
+            this@ShortcutGalleryView.visibility = GONE
+            lycheeHost()?.lycheeRunShortcut(Shortcut.SETTINGS)
+        }
+    }
     /** Shown when every shortcut is on the bar. */
     private val empty = TextView(context).apply {
         setText(R.string.lychee_gallery_all_on_bar)
@@ -96,6 +111,8 @@ class ShortcutGalleryView @JvmOverloads constructor(
             orientation = LinearLayout.VERTICAL
             addView(pages, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
             addView(FrameLayout(context).apply {
+                addView(settings, LayoutParams(dp(64), dp(36), Gravity.START or Gravity.CENTER_VERTICAL)
+                    .apply { leftMargin = dp(12) })
                 addView(hint, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT, Gravity.START)
                     .apply { leftMargin = dp(16) })
                 addView(dots, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT, Gravity.CENTER))
@@ -134,6 +151,7 @@ class ShortcutGalleryView @JvmOverloads constructor(
         // editing: the hint in place of the dots, the pencil hidden, the menu outlined
         hint.visibility = if (on) VISIBLE else GONE
         pencil.visibility = if (on) GONE else VISIBLE
+        settings.visibility = if (on) GONE else VISIBLE
         foreground = if (on) GradientDrawable().apply {
             cornerRadius = dp(16).toFloat()
             setStroke(dp(2), palette.outline)
@@ -144,7 +162,10 @@ class ShortcutGalleryView @JvmOverloads constructor(
     /** The shortcuts not already on the bar (those are one tap away there). */
     private fun load() {
         val bar = store.toolbar()
-        items = store.order().filter { it !in bar }.toMutableList()
+        val engine = lycheeHost()?.lycheeEngine()
+        // Settings has its own corner button
+        items = store.order().filter { it !in bar && it != Shortcut.SETTINGS && Shortcuts.available(it, engine) }
+            .toMutableList()
         adapter.notifyDataSetChanged()
         empty.visibility = if (items.isEmpty()) VISIBLE else GONE
         updateDots()
@@ -226,45 +247,36 @@ class ShortcutGalleryView @JvmOverloads constructor(
         return true
     }
 
-    /** Shortcuts that open a panel get a › like Gboard's sub-menus. */
-    private fun opensPanel(sc: Shortcut) = when (sc) {
-        Shortcut.TEXT_EDIT, Shortcut.RESIZE, Shortcut.EMOJI, Shortcut.HANDWRITING,
-        Shortcut.WRITTEN_CHINESE, Shortcut.SETTINGS -> true
-        else -> false
-    }
-
+    /** One icon of the grid, with its name under it. */
     private fun tile(index: Int): View {
         val sc = items[index]
         return LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
             tag = index
-            setPadding(dp(16), 0, dp(12), 0)
             background = android.graphics.drawable.RippleDrawable(
-                ColorStateList.valueOf(palette.surfaceContainerPressed),
-                GradientDrawable().apply {
-                    cornerRadius = dp(24).toFloat()
-                    setColor(palette.surfaceContainer)
-                },
-                null,
+                ColorStateList.valueOf(palette.surfaceContainerPressed), null,
+                GradientDrawable().apply { cornerRadius = dp(16).toFloat(); setColor(0xFFFFFFFF.toInt()) },
             )
             addView(ImageView(context).apply {
                 setImageResource(sc.icon)
                 imageTintList = ColorStateList.valueOf(palette.onSurface)
                 scaleType = ImageView.ScaleType.CENTER
-            }, LinearLayout.LayoutParams(dp(24), dp(24)).apply { rightMargin = dp(12) })
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(palette.surfaceContainer)
+                }
+            }, LinearLayout.LayoutParams(dp(48), dp(48)))
             addView(TextView(context).apply {
                 setText(sc.label)
                 setTextColor(palette.onSurface)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-                typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                typeface = app.lychee.fonts.LycheeFonts.ui(context, 400)
+                gravity = Gravity.CENTER
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
-            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-            if (opensPanel(sc)) addView(ImageView(context).apply {
-                setImageResource(R.drawable.ic_sym_chevron_right)
-                imageTintList = ColorStateList.valueOf(palette.onSurfaceVariant)
-            }, LinearLayout.LayoutParams(dp(20), dp(20)))
+                setPadding(dp(2), dp(4), dp(2), 0)
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
             contentDescription = context.getString(sc.label)
             setOnClickListener {
                 if (editing) return@setOnClickListener
@@ -281,7 +293,7 @@ class ShortcutGalleryView @JvmOverloads constructor(
         }
     }
 
-    /** One page: up to three rows of two buttons. */
+    /** One page: a grid of [ROWS] rows of [COLUMNS] icons. */
     private inner class PageAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         override fun getItemCount() = pageCount
 
@@ -315,8 +327,8 @@ class ShortcutGalleryView @JvmOverloads constructor(
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 
     private companion object {
-        const val COLUMNS = 2
-        const val ROWS = 3
+        const val COLUMNS = 4
+        const val ROWS = 2
         const val PER_PAGE = COLUMNS * ROWS
     }
 }

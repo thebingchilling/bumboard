@@ -2203,17 +2203,6 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         case HANDWRITING:
             showLycheePanel(R.id.lychee_handwriting_panel);
             break;
-        case WRITTEN_CHINESE:
-            if (app.lychee.Features.isEnabled(app.lychee.Feature.WRITTEN_CHINESE)) {
-                mLycheeChinese.reset();
-                final InputConnection connection = getCurrentInputConnection();
-                final View frame = mInputView == null ? null
-                        : mInputView.findViewById(R.id.main_keyboard_frame);
-                if (connection != null && frame != null) {
-                    app.lychee.written.WrittenChinesePopup.INSTANCE.show(this, connection, frame);
-                }
-            }
-            break;
         }
     }
 

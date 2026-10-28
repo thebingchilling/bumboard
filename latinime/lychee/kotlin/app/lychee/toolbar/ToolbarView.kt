@@ -114,11 +114,9 @@ class ToolbarView @JvmOverloads constructor(
             Mode.EDIT -> row.addView(button(R.drawable.ic_sym_check, R.string.lychee_resize_done, highlighted = true) { onEditToggle() })
             Mode.TITLE -> Unit
         }
-        val shortcuts = store.toolbar()
-        // spread across the bar like Gboard's; a long list scrolls instead
-        val spread = shortcuts.size <= SPREAD_MAX
-        fun shortcutParams() = if (spread) LinearLayout.LayoutParams(0, dp(40), 1f).apply { gravity = Gravity.CENTER_VERTICAL }
-            else LinearLayout.LayoutParams(dp(48), dp(40)).apply { gravity = Gravity.CENTER_VERTICAL }
+        val shortcuts = store.toolbar().filter { Shortcuts.available(it, lycheeHost()?.lycheeEngine()) }
+        // packed on the left, beside the menu button; a long list scrolls
+        fun shortcutParams() = LinearLayout.LayoutParams(dp(48), dp(40)).apply { gravity = Gravity.CENTER_VERTICAL }
         if (mode == Mode.EDIT) {
             // the bar's shortcuts in an outlined pill: drag them along it, or down into the menu
             val pill = LinearLayout(context).apply {
@@ -210,11 +208,6 @@ class ToolbarView @JvmOverloads constructor(
         }, dp(6), dp(2), dp(6), dp(2)) else context.getDrawable(R.drawable.lychee_m3_suggestion)
         setOnClickListener { onClick() }
         layoutParams = LinearLayout.LayoutParams(dp(48), dp(40)).apply { gravity = Gravity.CENTER_VERTICAL }
-    }
-
-    private companion object {
-        /** Up to this many shortcuts spread across the bar; more scroll. */
-        const val SPREAD_MAX = 6
     }
 
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
