@@ -1,11 +1,17 @@
 name: Build Lychee packs
 
 # The optional downloads the app's catalogue (latinime/lychee/assets/lychee/packs.json)
-# links to: built (or, for fonts, mirrored) here and published on the public lychee repository's
-# "packs" release. The app has no network access: the browser downloads these, and opening the
-# downloaded file installs it.
+# links to: built (or, for fonts, mirrored) here from their sources' newest data and published
+# on the public lychee repository's "packs" release. The app has no network access: the browser
+# downloads these, and opening the downloaded file installs it.
+#
+# Every week (and on changes to the pack builders on main) the packs are rebuilt; only packs
+# whose contents changed get a new version and are uploaded (data/packs/publish.py), and
+# manifest.json, which the packs page uses to tell Lychee users about updates, is refreshed.
 on:
   workflow_dispatch: {}
+  schedule:
+    - cron: '17 3 * * 1'
   push:
     branches: [main, 'claude/**']
     paths:
@@ -18,12 +24,16 @@ permissions:
 
 concurrency:
   group: lychee-packs-${{ github.ref }}
-  cancel-in-progress: true
+  # a publishing run on main always finishes
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   packs:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
+    env:
+      REPO: thebingchilling/lychee
+      RELEASE_FILES: https://github.com/thebingchilling/lychee/releases/download/packs
     steps:
       - uses: actions/checkout@v4
 
@@ -32,13 +42,19 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends librime-bin zip zinnia-utils || \
             sudo apt-get install -y -q --no-install-recommends librime-bin zip
+          pip install --quiet fonttools
+
+      # the sources are fetched afresh each week (the cache only saves refetching within a week)
+      - name: Week
+        id: week
+        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/cache@v4
         with:
           path: |
             data/packs/ja/.cache
             data/packs/dict/.cache
-          key: lychee-pack-sources-v2
+          key: lychee-pack-sources-${{ steps.week.outputs.week }}
 
       - name: Japanese dictionary pack
         run: python3 data/packs/ja/build_ja.py --out out/packs
@@ -54,34 +70,80 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: python3 data/packs/fonts/mirror_fonts.py --out out/packs
 
+      # what changed since the published packs: new versions, and the manifest
+      - name: Version the changed packs
+        run: |
+          curl -fsSL -o out/previous-manifest.json "$RELEASE_FILES/manifest.json" || echo "no published manifest yet"
+          python3 data/packs/publish.py --packs out/packs --previous out/previous-manifest.json \
+            --upload out/upload --manifest out/site/manifest.json
+
+      - name: The packs page
+        run: |
+          scripts/fetch-fonts.sh
+          cp data/packs/site/index.html out/site/
+          cp data/out/assets/lychee/GoogleSansFlex.ttf out/site/
+          printf 'Google Sans Flex, SIL Open Font License 1.1 (https://openfontlicense.org).\n' > out/site/FONT-LICENSE.txt
+          touch out/site/.nojekyll
+
       - uses: actions/upload-artifact@v4
         with:
           name: lychee-packs
           path: out/packs/lychee-*.zip
           if-no-files-found: error
 
-      # Public: the packs go to the "packs" release of thebingchilling/lychee (a pre-release,
-      # so it never shows as the app's latest release), uploaded with the owner's token
-      # (the PACKS_TOKEN secret), so they appear as the owner's. Only the pack zips go there.
-      # what would be published, file by file, for review
-      - name: List the packs' contents
-        run: for z in out/packs/lychee-*.zip; do echo "== $z"; unzip -l "$z" | tail -n +4 | head -n -2 | awk '{print $4}' | head -20; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lychee-packs-page
+          path: out/site
 
-      # publishing is public, so it only happens when started by hand (Run workflow on main)
+      # what is published, file by file
+      - name: List the packs' contents
+        run: |
+          for z in out/upload/lychee-*.zip; do
+            [ -e "$z" ] || { echo "no pack changed"; break; }
+            echo "== $z"; unzip -l "$z" | tail -n +4 | head -n -2 | awk '{print $4}' | head -20
+          done
+
+      # Public: the changed packs and manifest.json go to the "packs" release of
+      # thebingchilling/lychee (a pre-release, so it never shows as the app's latest release),
+      # uploaded with the owner's token (the PACKS_TOKEN secret), so they appear as the owner's.
+      # Only pack zips and the manifest go there. Runs on main only.
       - name: Publish to lychee's "packs" release
-        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.PACKS_TOKEN }}
-          REPO: thebingchilling/lychee
         run: |
           if [ -z "$GH_TOKEN" ]; then
             echo "::warning::PACKS_TOKEN is not set; the packs were built but not published"
             exit 0
           fi
-          # nothing but the pack zips is ever uploaded
-          ls out/packs/lychee-*.zip
           if ! gh release view packs --repo "$REPO" >/dev/null 2>&1; then
             gh release create packs --repo "$REPO" --prerelease --title "Lychee packs" \
               --notes "Optional downloads for the Lychee keyboard: handwriting, dictionaries and fonts. In Lychee, open Settings > Downloads and tap Download; when your browser has saved the file, tap Open. All packs are free and openly licensed; each zip includes its licence."
           fi
-          gh release upload packs out/packs/lychee-*.zip --repo "$REPO" --clobber
+          shopt -s nullglob
+          zips=(out/upload/lychee-*.zip)
+          if [ ${#zips[@]} -gt 0 ]; then
+            gh release upload packs "${zips[@]}" --repo "$REPO" --clobber
+          fi
+          gh release upload packs out/site/manifest.json --repo "$REPO" --clobber
+
+      # The packs page (index.html, manifest.json, its font) on the lychee repository's gh-pages
+      # branch, which GitHub Pages serves at https://thebingchilling.github.io/lychee/. Off until
+      # the LYCHEE_PAGE repository variable is "on".
+      - name: Publish the packs page
+        if: github.ref == 'refs/heads/main' && vars.LYCHEE_PAGE == 'on'
+        env:
+          GH_TOKEN: ${{ secrets.PACKS_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::PACKS_TOKEN is not set; the page was not published"
+            exit 0
+          fi
+          cd out/site
+          git init -q -b gh-pages
+          git config user.name "Lychee packs"
+          git config user.email "noreply@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Lychee packs page"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" gh-pages

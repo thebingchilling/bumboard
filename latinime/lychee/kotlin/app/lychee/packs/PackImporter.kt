@@ -131,6 +131,12 @@ object PackImporter {
         return when (kind) {
             PackKind.FONT_ZH ->
                 if (SAMPLE_ZH.all { paint.hasGlyph(it.toString()) }) null else "That font has no Chinese characters."
+            PackKind.FONT_JA ->
+                if (SAMPLE_JA.all { paint.hasGlyph(it.toString()) }) null else "That font has no Japanese kana."
+            PackKind.FONT_KO ->
+                if (SAMPLE_KO.all { paint.hasGlyph(it.toString()) }) null else "That font has no Korean Hangul."
+            PackKind.FONT_KEYS ->
+                if (SAMPLE_KEYS.all { paint.hasGlyph(it.toString()) }) null else "That font has no letters."
             PackKind.FONT_EMOJI -> if (drawsInColour(typeface)) null
                 else "This phone can't show that emoji font (it may need a newer Android version)."
             else -> null
@@ -224,5 +230,8 @@ object PackImporter {
 
     private val FONT_EXTENSIONS = setOf("ttf", "otf", "ttc", "otc")
     private const val SAMPLE_ZH = "永你好"
+    private const val SAMPLE_JA = "あいう"
+    private const val SAMPLE_KO = "한글"
+    private const val SAMPLE_KEYS = "Aaz"
     private const val SAMPLE_EMOJI = "😀"
 }

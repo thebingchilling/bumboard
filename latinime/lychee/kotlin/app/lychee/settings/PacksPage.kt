@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -134,6 +133,7 @@ fun PackRow(
     val context = LocalContext.current
     @Suppress("UNUSED_VARIABLE") val refresh = actions.version
     val installed = Packs.isInstalled(context, pack.id)
+    val newer = if (installed) app.lychee.packs.Updates.newer(context, pack) else null
     val canSelect = onSelect != null && installed
     Row(
         Modifier
@@ -172,6 +172,12 @@ fun PackRow(
                 detail, style = MaterialTheme.typography.bodyMedium,
                 color = if (installed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (newer != null) {
+                Text(
+                    stringResource(R.string.lychee_updates_new, newer), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
             if (installed) {
                 TextButton(
                     onClick = { actions.remove(pack) },
@@ -179,11 +185,12 @@ fun PackRow(
                 ) { Text(stringResource(R.string.lychee_packs_remove)) }
             }
         }
+        // installed packs only update when the packs page said there is a newer version
         if (pack.download.isNotEmpty() || pack.url.isNotEmpty()) {
-            if (installed) {
-                OutlinedButton(onClick = { actions.get(pack) }) { Text(stringResource(R.string.lychee_packs_update)) }
-            } else {
+            if (!installed) {
                 FilledTonalButton(onClick = { actions.get(pack) }) { Text(stringResource(R.string.lychee_packs_get)) }
+            } else if (newer != null) {
+                FilledTonalButton(onClick = { actions.get(pack) }) { Text(stringResource(R.string.lychee_packs_update)) }
             }
         }
     }
@@ -236,12 +243,80 @@ fun PackGroup(title: String, kinds: Set<PackKind>, actions: PackActions) {
     }
 }
 
+/**
+ * At the top of Downloads: the updates the packs page found for installed packs, with Update all
+ * (the page downloads them) and a way to install the downloaded files; or, when nothing was
+ * checked for a couple of weeks, a quiet reminder to check.
+ */
+@Composable
+fun UpdatesCard() {
+    val context = LocalContext.current
+    @Suppress("UNUSED_VARIABLE") val refresh = PackRefresh.tick
+    val updates = app.lychee.packs.Updates.available(context)
+    val remind = updates.isEmpty() && app.lychee.packs.Updates.shouldRemind(context)
+    if (updates.isEmpty() && !remind) return
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (updates.isNotEmpty()) {
+                Text(
+                    if (updates.size == 1) stringResource(R.string.lychee_updates_available_one)
+                    else stringResource(R.string.lychee_updates_available, updates.size),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Text(
+                    updates.joinToString(" · ") { it.name },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Text(
+                    stringResource(R.string.lychee_updates_available_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.Button(onClick = { app.lychee.packs.Updates.check(context, all = true) }) {
+                        Text(stringResource(R.string.lychee_updates_all))
+                    }
+                    TextButton(onClick = {
+                        context.startActivity(
+                            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("lychee://updates?install=1"))
+                                .setPackage(context.packageName),
+                        )
+                    }) { Text(stringResource(R.string.lychee_updates_install_downloaded)) }
+                }
+            } else {
+                Text(
+                    stringResource(R.string.lychee_updates_remind),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Text(
+                    stringResource(R.string.lychee_updates_remind_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                androidx.compose.material3.Button(onClick = { app.lychee.packs.Updates.check(context) }) {
+                    Text(stringResource(R.string.lychee_updates_check))
+                }
+            }
+        }
+    }
+}
+
 /** Settings > Downloads: everything Lychee can use but doesn't include, in one place. */
 @Composable
 fun PacksPage() {
     val context = LocalContext.current
     val actions = rememberPackActions()
     @Suppress("UNUSED_VARIABLE") val refresh = actions.version + PackRefresh.tick
+    remember { Packs.removeUnlisted(context) }
     Text(
         stringResource(R.string.lychee_packs_how),
         style = MaterialTheme.typography.bodyMedium,
@@ -250,12 +325,19 @@ fun PacksPage() {
     )
     PackPending(actions)
     PackMessage(actions)
+    UpdatesCard()
     PackGroup(stringResource(R.string.lychee_packs_handwriting), setOf(PackKind.HANDWRITING), actions)
     PackGroup(stringResource(R.string.lychee_packs_dictionaries), setOf(PackKind.RIME, PackKind.DATA), actions)
-    PackGroup(stringResource(R.string.lychee_packs_fonts_zh), setOf(PackKind.FONT_ZH), actions)
     PackGroup(stringResource(R.string.lychee_packs_fonts_emoji), setOf(PackKind.FONT_EMOJI), actions)
     PackGroup(stringResource(R.string.lychee_packs_voice), setOf(PackKind.VOICE), actions)
     Group(stringResource(R.string.lychee_section_more)) {
+        if (app.lychee.packs.Updates.installed(context).isNotEmpty()) {
+            row {
+                NavRow(it, stringResource(R.string.lychee_packs_updates), stringResource(R.string.lychee_packs_updates_summary)) {
+                    app.lychee.packs.Updates.check(context)
+                }
+            }
+        }
         row {
             NavRow(it, stringResource(R.string.lychee_packs_import_any), stringResource(R.string.lychee_packs_import_any_summary)) {
                 actions.import(null)

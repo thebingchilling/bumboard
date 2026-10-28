@@ -426,12 +426,9 @@ public class KeyboardView extends View {
         float labelBaseline = centerY;
         final String label = key.getLabel();
         if (label != null) {
-            // LYCHEE: the Chinese font from Settings > Fonts, when it is used on the keys too,
-            // and only on keys showing Chinese, Japanese or Korean (letters keep their font)
-            final Typeface lycheeKeysFace = app.lychee.fonts.LycheeFonts.isCjk(label)
-                    ? app.lychee.fonts.LycheeFonts.keys(getContext()) : null;
-            paint.setTypeface(lycheeKeysFace != null ? lycheeKeysFace
-                    : app.lychee.fonts.LycheeFonts.uiLike(getContext(), key.selectTypeface(params)));
+            // LYCHEE: the keyboard font from Settings > Fonts; Chinese, Japanese and Korean
+            // labels in their language's font
+            paint.setTypeface(app.lychee.fonts.LycheeFonts.keyFace(getContext(), label, key.selectTypeface(params)));
             paint.setTextSize(key.selectTextSize(params));
             final float labelCharHeight = TypefaceUtils.getReferenceCharHeight(paint);
             final float labelCharWidth = TypefaceUtils.getReferenceCharWidth(paint);
@@ -514,8 +511,8 @@ public class KeyboardView extends View {
         if (hintLabel != null) {
             paint.setTextSize(key.selectHintTextSize(params));
             paint.setColor(key.selectHintTextColor(params));
-            // LYCHEE: hint symbols in the interface font's regular weight, like Gboard's
-            paint.setTypeface(app.lychee.fonts.LycheeFonts.ui(getContext(), 400));
+            // LYCHEE: hint symbols in the keyboard font's regular weight, like Gboard's
+            paint.setTypeface(app.lychee.fonts.LycheeFonts.keysLatin(getContext(), 400));
             blendAlpha(paint, params.mAnimAlpha);
             final float labelCharHeight = TypefaceUtils.getReferenceCharHeight(paint);
             final float labelCharWidth = TypefaceUtils.getReferenceCharWidth(paint);
@@ -593,7 +590,7 @@ public class KeyboardView extends View {
         final int keyWidth = key.getDrawWidth();
         final int keyHeight = key.getHeight();
 
-        paint.setTypeface(app.lychee.fonts.LycheeFonts.uiLike(getContext(), params.mTypeface));
+        paint.setTypeface(app.lychee.fonts.LycheeFonts.keysLike(getContext(), params.mTypeface));
         paint.setTextSize(params.mHintLetterSize);
         paint.setColor(params.mHintLabelColor);
         paint.setTextAlign(Align.CENTER);
@@ -674,11 +671,11 @@ public class KeyboardView extends View {
         final Paint paint = new Paint();
         paint.setAntiAlias(true);
         if (key == null) {
-            paint.setTypeface(app.lychee.fonts.LycheeFonts.uiLike(getContext(), mKeyDrawParams.mTypeface));
+            paint.setTypeface(app.lychee.fonts.LycheeFonts.keysLike(getContext(), mKeyDrawParams.mTypeface));
             paint.setTextSize(mKeyDrawParams.mLabelSize);
         } else {
             paint.setColor(key.selectTextColor(mKeyDrawParams));
-            paint.setTypeface(app.lychee.fonts.LycheeFonts.uiLike(getContext(), key.selectTypeface(mKeyDrawParams)));
+            paint.setTypeface(app.lychee.fonts.LycheeFonts.keyFace(getContext(), key.getLabel(), key.selectTypeface(mKeyDrawParams)));
             paint.setTextSize(key.selectTextSize(mKeyDrawParams));
         }
         return paint;

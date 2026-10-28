@@ -64,7 +64,7 @@ public class KeyPreviewView extends TextView {
         setCompoundDrawables(null, null, null, null);
         setTextColor(drawParams.mPreviewTextColor);
         setTextSize(TypedValue.COMPLEX_UNIT_PX, key.selectPreviewTextSize(drawParams));
-        setTypeface(app.lychee.fonts.LycheeFonts.uiLike(getContext(), key.selectPreviewTypeface(drawParams)));
+        setTypeface(app.lychee.fonts.LycheeFonts.keyFace(getContext(), key.getPreviewLabel(), key.selectPreviewTypeface(drawParams)));
         // TODO Should take care of temporaryShiftLabel here.
         setTextAndScaleX(key.getPreviewLabel());
         setMaxLines(1);

@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex">
+<title>Lychee packs</title>
+<!--
+  Lychee's packs page. Lychee has no internet access, so "Check for updates" opens this page with
+  the installed packs after the '#' (it never reaches the server). The page compares them with
+  manifest.json, downloads the packs that changed, and hands the newest versions back to Lychee
+  through a lychee://updates link. No tracking, no cookies, nothing loaded from anywhere else.
+-->
+<style>
+  @font-face {
+    font-family: "Google Sans Flex";
+    src: url("GoogleSansFlex.ttf") format("truetype");
+    font-weight: 100 1000;
+    font-display: swap;
+  }
+  :root {
+    --accent: #6750a4;
+    --primary: var(--accent);
+    --on-primary: #ffffff;
+    --surface: color-mix(in srgb, var(--accent) 4%, #fffbff);
+    --surface-container: color-mix(in srgb, var(--accent) 9%, #fffbff);
+    --surface-container-high: color-mix(in srgb, var(--accent) 14%, #fffbff);
+    --primary-container: color-mix(in srgb, var(--accent) 22%, #ffffff);
+    --on-primary-container: color-mix(in srgb, var(--accent) 70%, #000000);
+    --on-surface: #1c1b1f;
+    --on-surface-variant: #49454f;
+    --outline-variant: color-mix(in srgb, var(--accent) 12%, #cac4d0);
+    --tertiary: color-mix(in srgb, var(--accent) 55%, #7d5260);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary: color-mix(in srgb, var(--accent) 45%, #ffffff);
+      --on-primary: color-mix(in srgb, var(--accent) 60%, #000000);
+      --surface: color-mix(in srgb, var(--accent) 6%, #141218);
+      --surface-container: color-mix(in srgb, var(--accent) 10%, #1d1b20);
+      --surface-container-high: color-mix(in srgb, var(--accent) 14%, #26232b);
+      --primary-container: color-mix(in srgb, var(--accent) 45%, #1d1b20);
+      --on-primary-container: color-mix(in srgb, var(--accent) 20%, #ffffff);
+      --on-surface: #e6e0e9;
+      --on-surface-variant: #cac4d0;
+      --outline-variant: color-mix(in srgb, var(--accent) 10%, #49454f);
+      --tertiary: color-mix(in srgb, var(--accent) 35%, #efb8c8);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--surface);
+    color: var(--on-surface);
+    font-family: "Google Sans Flex", "Google Sans", Roboto, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+  }
+  main {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 24px 16px calc(32px + env(safe-area-inset-bottom));
+  }
+  header { display: flex; align-items: center; gap: 12px; padding: 8px 4px 20px; }
+  .logo {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: var(--primary-container); color: var(--on-primary-container);
+    display: grid; place-items: center; font-weight: 600; font-size: 20px;
+  }
+  h1 { font-size: 22px; font-weight: 500; margin: 0; }
+  h2 {
+    font-size: 14px; font-weight: 500; letter-spacing: .1px;
+    color: var(--primary); margin: 28px 4px 8px;
+  }
+  .summary {
+    background: var(--primary-container); color: var(--on-primary-container);
+    border-radius: 28px; padding: 20px;
+  }
+  .summary .big { font-size: 24px; font-weight: 500; margin: 0 0 4px; }
+  .summary p { margin: 0; }
+  .list { display: flex; flex-direction: column; gap: 2px; border-radius: 20px; overflow: hidden; }
+  .item {
+    background: var(--surface-container-high);
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .item .text { flex: 1; min-width: 0; }
+  .item .name { font-weight: 500; }
+  .item .detail { color: var(--on-surface-variant); font-size: 14px; }
+  .item .versions { color: var(--tertiary); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .item.done .versions { color: var(--primary); }
+  .actions { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+  .button {
+    appearance: none; border: 0; cursor: pointer; text-decoration: none; text-align: center;
+    font: inherit; font-weight: 500; font-size: 15px;
+    min-height: 48px; padding: 12px 24px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .filled { background: var(--primary); color: var(--on-primary); }
+  .tonal { background: var(--primary-container); color: var(--on-primary-container); }
+  .text-button { background: transparent; color: var(--primary); }
+  .small { min-height: 40px; padding: 8px 16px; font-size: 14px; }
+  .button[disabled] { opacity: .45; cursor: default; }
+  .muted { color: var(--on-surface-variant); font-size: 14px; margin: 16px 4px 0; }
+  .hidden { display: none !important; }
+  .spinner {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 3px solid var(--outline-variant); border-top-color: var(--primary);
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="logo" aria-hidden="true">荔</div>
+    <h1>Lychee packs</h1>
+  </header>
+
+  <section id="loading" class="summary"><p>Checking…</p></section>
+  <section id="error" class="summary hidden">
+    <p class="big">Couldn't check</p>
+    <p>The packs list didn't load. Check your connection and try again.</p>
+  </section>
+
+  <section id="result" class="hidden">
+    <div class="summary">
+      <p class="big" id="headline"></p>
+      <p id="subline"></p>
+    </div>
+
+    <div id="updates-block">
+      <h2>Updates</h2>
+      <div class="list" id="updates"></div>
+      <div class="actions">
+        <button class="button filled" id="update-all"></button>
+        <a class="button tonal hidden" id="back-install">Back to Lychee to install</a>
+        <a class="button text-button" id="back">Back to Lychee</a>
+      </div>
+    </div>
+
+    <div id="current-block" class="hidden">
+      <h2>Up to date</h2>
+      <div class="list" id="current"></div>
+    </div>
+
+    <div id="uptodate-actions" class="actions hidden">
+      <a class="button filled" id="back-done">Back to Lychee</a>
+    </div>
+
+    <div id="all-block" class="hidden">
+      <h2>All packs</h2>
+      <div class="list" id="all"></div>
+      <p class="muted">In Lychee, open Settings › Downloads and tap Check for updates to see what's new for your packs.</p>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const params = new URLSearchParams(location.hash.slice(1));
+  const app = /^[\w.]+$/.test(params.get('app') || '') ? params.get('app') : 'app.lychee';
+  const accent = params.get('accent');
+  if (/^[0-9a-f]{6}$/i.test(accent || '')) document.documentElement.style.setProperty('--accent', '#' + accent);
+  // id:version pairs; versions may hold any character, so split on the first ':'
+  const have = new Map();
+  (params.get('have') || '').split(',').filter(Boolean).forEach((item) => {
+    const i = item.indexOf(':');
+    if (i > 0) have.set(item.slice(0, i), item.slice(i + 1));
+  });
+  const opened = params.has('have');
+
+  const $ = (id) => document.getElementById(id);
+  const mb = (bytes) => bytes >= 1048576 ? (bytes / 1048576).toFixed(bytes >= 10485760 ? 0 : 1) + ' MB'
+    : Math.max(1, Math.round(bytes / 1024)) + ' KB';
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  };
+
+  // lychee://updates through Chrome's intent: links, which open Lychee itself
+  const back = (latest, install) => {
+    const q = 'latest=' + encodeURIComponent(latest) + (install ? '&install=1' : '');
+    return 'intent://updates?' + q + '#Intent;scheme=lychee;package=' + app + ';end';
+  };
+
+  function row(pack, extra) {
+    const item = el('div', 'item');
+    const text = el('div', 'text');
+    text.append(el('div', 'name', pack.name));
+    const detail = [pack.emoji ? 'Emoji ' + pack.emoji : null, pack.note || pack.summary, mb(pack.size)]
+      .filter(Boolean).join(' · ');
+    text.append(el('div', 'detail', detail));
+    if (extra) text.append(extra);
+    item.append(text);
+    return item;
+  }
+
+  function download(url) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.rel = 'noopener';
+    document.body.append(a);
+    a.click();
+    a.remove();
+  }
+
+  fetch('manifest.json', { cache: 'no-store' })
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then((manifest) => show(manifest.packs || {}))
+    .catch(() => { $('loading').classList.add('hidden'); $('error').classList.remove('hidden'); });
+
+  function show(packs) {
+    $('loading').classList.add('hidden');
+    $('result').classList.remove('hidden');
+    const ids = Object.keys(packs);
+
+    if (!opened) {
+      // opened directly, not from Lychee: every pack, to download
+      $('headline').textContent = ids.length + ' packs';
+      $('subline').textContent = 'Optional downloads for the Lychee keyboard. Open a downloaded file to install it.';
+      $('updates-block').classList.add('hidden');
+      $('all-block').classList.remove('hidden');
+      ids.forEach((id) => {
+        const item = row(packs[id]);
+        const get = el('a', 'button tonal small', 'Download');
+        get.href = packs[id].url;
+        item.append(get);
+        $('all').append(item);
+      });
+      return;
+    }
+
+    // only packs Lychee has installed are ever checked
+    const installed = ids.filter((id) => have.has(id));
+    const updates = installed.filter((id) => packs[id].version !== have.get(id));
+    const current = installed.filter((id) => packs[id].version === have.get(id));
+    const latest = installed.map((id) => id + ':' + packs[id].version).join(',');
+
+    current.forEach((id) => $('current').append(row(packs[id])));
+    $('current-block').classList.toggle('hidden', current.length === 0);
+
+    if (updates.length === 0) {
+      $('headline').textContent = installed.length ? 'All up to date' : 'No packs installed';
+      $('subline').textContent = installed.length
+        ? 'Your packs are the newest versions.'
+        : 'Packs you install in Lychee show up here when they have updates.';
+      $('updates-block').classList.add('hidden');
+      $('uptodate-actions').classList.remove('hidden');
+      $('back-done').href = back(latest, false);
+      return;
+    }
+
+    const total = updates.reduce((n, id) => n + (packs[id].size || 0), 0);
+    $('headline').textContent = updates.length === 1 ? '1 update' : updates.length + ' updates';
+    $('subline').textContent = 'For the packs you have installed.';
+    $('back').href = back(latest, false);
+    $('back-install').href = back(latest, true);
+
+    const rows = new Map();
+    updates.forEach((id) => {
+      const versions = el('div', 'versions', have.get(id) + ' → ' + packs[id].version);
+      const item = row(packs[id], versions);
+      const get = el('button', 'button tonal small', 'Download');
+      get.addEventListener('click', () => { fetched(id); download(packs[id].url); });
+      item.append(get);
+      rows.set(id, { item, get, versions });
+      $('updates').append(item);
+    });
+
+    const all = $('update-all');
+    all.textContent = 'Update all (' + mb(total) + ')';
+    const done = new Set();
+    function fetched(id) {
+      done.add(id);
+      const r = rows.get(id);
+      r.get.disabled = true;
+      r.get.textContent = 'Downloaded';
+      r.item.classList.add('done');
+      $('back-install').classList.remove('hidden');
+      if (done.size === updates.length) {
+        all.disabled = true;
+        all.textContent = 'All downloaded';
+      }
+    }
+    // one file at a time; the browser may ask once to allow several downloads
+    async function updateAll() {
+      all.disabled = true;
+      for (const id of updates) {
+        if (done.has(id)) continue;
+        fetched(id);
+        download(packs[id].url);
+        await new Promise((r) => setTimeout(r, 1200));
+      }
+    }
+    all.addEventListener('click', updateAll);
+    if (params.get('all') === '1') updateAll();
+  }
+})();
+</script>
+</body>
+</html>

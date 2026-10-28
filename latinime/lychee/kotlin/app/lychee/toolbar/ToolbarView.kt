@@ -165,7 +165,7 @@ class ToolbarView @JvmOverloads constructor(
         text = label
         setTextColor(palette.onSurface)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-        app.lychee.fonts.LycheeFonts.chinese(context)?.let { typeface = it }
+        app.lychee.fonts.LycheeFonts.forText(context, label)?.let { typeface = it }
         gravity = Gravity.CENTER
         setPadding(dp(10), 0, dp(10), 0)
         background = context.getDrawable(R.drawable.lychee_m3_suggestion)

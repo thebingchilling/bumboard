@@ -134,7 +134,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val examples = app.lychee.dict.PackData.examples(ime, lang, forms)
         val locales = app.lychee.speech.Speech.localesFor(engine, false)
         popup?.showWord(frame, candidate.text, candidate.comment.trim().takeIf { it.isNotEmpty() }, entries,
-            examples, peek, onSpeak = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }) {
+            examples, peek, onSpeak = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }, lang = lang) {
             pick(index)
         }
     }
@@ -449,7 +449,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             return
         }
         bar.setScale(candidateScale())
-        bar.style = Readings.barStyle(prefs, barMode().lang)
+        bar.style = Readings.barStyle(prefs, barMode().lang).copy(fontLang = engine)
         bar.setCandidates(candidates, if (guessing) guessAnnotation() else annotation())
         bar.visibility = View.VISIBLE
         moreButton?.visibility = if (guessing) View.GONE else View.VISIBLE

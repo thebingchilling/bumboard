@@ -649,7 +649,7 @@ final class SuggestionStripLayoutHelper {
     }
 
     private static Typeface getTextTypeface(@Nullable final CharSequence text) {
-        return app.lychee.fonts.LycheeFonts.uiLike(null,
+        return app.lychee.fonts.LycheeFonts.keysLike(null,
                 hasStyleSpan(text, BOLD_SPAN) ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
     }
 }

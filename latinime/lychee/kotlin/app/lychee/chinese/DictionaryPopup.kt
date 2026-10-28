@@ -62,16 +62,20 @@ class DictionaryPopup(private val ctx: Context) {
      */
     fun showWord(
         keyboard: View, text: String, romanisation: String?, entries: List<app.lychee.dict.WordEntry>,
-        examples: List<Pair<String, String>>, peek: Boolean, onSpeak: ((String, Lang?) -> Unit)?, onType: () -> Unit,
+        examples: List<Pair<String, String>>, peek: Boolean, onSpeak: ((String, Lang?) -> Unit)?,
+        lang: String? = null, onType: () -> Unit,
     ) {
         present(keyboard, peek, onType) { c, body ->
             val content = Content(ctx, c, DisplayPrefs(), body, onSpeak)
+            content.fontLang = lang
             content.heading(text, text)
             romanisation?.let { body.addView(content.labelled(ctx.getString(R.string.lychee_card_romanisation), it)) }
             entries.forEachIndexed { i, e ->
                 if (i > 0 || e.lemma != text) {
                     if (i > 0) body.addView(content.divider())
-                    body.addView(content.textView(e.lemma, 22f, c.onSurface))
+                    body.addView(content.textView(e.lemma, 22f, c.onSurface).apply {
+                        app.lychee.fonts.LycheeFonts.forText(ctx, e.lemma, lang)?.let { typeface = it }
+                    })
                 }
                 e.reading?.takeIf { it != e.lemma && it != romanisation }?.let {
                     body.addView(content.labelled(ctx.getString(R.string.lychee_card_reading), it))
@@ -162,6 +166,8 @@ class DictionaryPopup(private val ctx: Context) {
         val ctx: Context, val c: M3Colors, val prefs: DisplayPrefs, val body: LinearLayout,
         val onSpeak: ((String, Lang?) -> Unit)?,
     ) {
+        /** The word's language ("ja", "ko"; null for Chinese), which picks the font. */
+        var fontLang: String? = null
 
         fun fill(text: String, r: Resolved) {
             val main = r.headwords.firstOrNull()
@@ -186,7 +192,7 @@ class DictionaryPopup(private val ctx: Context) {
                 if (i > 0) {
                     body.addView(divider())
                     body.addView(textView("${hw.traditional} · ${hw.simplified}", 22f, c.onSurface).apply {
-                        app.lychee.fonts.LycheeFonts.chinese(ctx)?.let { typeface = it }
+                        app.lychee.fonts.LycheeFonts.forText(ctx, hw.traditional)?.let { typeface = it }
                     })
                     readingRows(Resolved(r.lang, null, null, null, listOf(hw), false), hw, null)
                 }
@@ -256,7 +262,7 @@ class DictionaryPopup(private val ctx: Context) {
                 gravity = Gravity.CENTER_VERTICAL
             }
             head.addView(textView(shown, 34f, c.onSurface).apply {
-                app.lychee.fonts.LycheeFonts.chinese(ctx)?.let { typeface = it }
+                app.lychee.fonts.LycheeFonts.forText(ctx, shown, fontLang)?.let { typeface = it }
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             if (spoken != null) onSpeak?.let { speak -> head.addView(speaker { speak(spoken, null) }) }
             body.addView(head)
@@ -289,7 +295,7 @@ class DictionaryPopup(private val ctx: Context) {
                 }
                 val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
                 col.addView(textView(sentence, 16f, c.onSurface).apply {
-                    app.lychee.fonts.LycheeFonts.chinese(ctx)?.let { typeface = it }
+                    app.lychee.fonts.LycheeFonts.forText(ctx, sentence, fontLang)?.let { typeface = it }
                     setPadding(0, dp(6), 0, 0)
                 })
                 col.addView(textView(english, 13f, c.onSurfaceVariant))

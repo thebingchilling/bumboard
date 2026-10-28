@@ -16,11 +16,15 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
 
 Public facing, so be careful:
 
-- Only the pack zips (`lychee-*.zip`) go there, on the `packs` pre-release. No app code,
-  APKs, internal notes or anything from this private repository.
-- Packs are uploaded by `packs.yml` with the owner's token (`PACKS_TOKEN` secret), so they
-  appear as the owner's. Publishing only runs when the workflow is started by hand on `main`
-  (workflow_dispatch); review the "List the packs' contents" step of a normal run first.
+- Only the pack zips (`lychee-*.zip`) and `manifest.json` go on the `packs` pre-release, and
+  only the packs page (`data/packs/site`: index.html, manifest.json, Google Sans Flex) on its
+  `gh-pages` branch. No app code, APKs, internal notes or anything else from this repository.
+- `packs.yml` publishes by itself on `main` (weekly, and when the pack builders change): it
+  rebuilds every pack from its sources' newest data and uploads only the packs whose contents
+  changed, with a date version (`data/packs/publish.py`). It uses the owner's token
+  (`PACKS_TOKEN` secret), so uploads appear as the owner's.
+- The packs page (https://thebingchilling.github.io/lychee/) is only pushed when the
+  `LYCHEE_PAGE` repository variable is `on`; the owner turns it on.
 - Release notes and file names say Lychee, never BumBoard or Claude.
 
 ## Product constraints
@@ -44,4 +48,8 @@ Public facing, so be careful:
 - `core/` — pure Kotlin logic with JVM unit tests (romanisation, glide decoder, symbols ...).
 - `data/` — build scripts for bundled data (Rime schemas and dictionaries, emoji, Korean word
   list) and for packs (`data/packs/`: Japanese dictionary, handwriting, font mirrors).
-- `latinime/lychee/assets/lychee/packs.json` — the downloads catalogue.
+- `latinime/lychee/assets/lychee/packs.json` — the downloads catalogue; `previews/` holds the
+  pictures of emoji fonts shown before they are downloaded (`data/packs/fonts/render_preview.js`).
+- Pack updates: Lychee can't go online, so "Check for updates" opens the packs page with the
+  installed versions after the `#`; the page hands the newest back via `lychee://updates`
+  (`packs/Updates.kt`, `PackImportActivity`). Only installed packs are checked.

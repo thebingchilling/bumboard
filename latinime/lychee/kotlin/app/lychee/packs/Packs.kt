@@ -12,6 +12,10 @@ import java.io.File
 /** What a pack holds; decides how it is checked on import and where it is used. */
 enum class PackKind(val id: String) {
     FONT_ZH("font_zh"),
+    FONT_JA("font_ja"),
+    FONT_KO("font_ko"),
+    /** the font of the letters on the keys */
+    FONT_KEYS("font_keys"),
     FONT_EMOJI("font_emoji"),
     HANDWRITING("handwriting"),
     RIME("rime"),
@@ -19,7 +23,7 @@ enum class PackKind(val id: String) {
     DATA("data"),
     VOICE("voice");
 
-    val isFont get() = this == FONT_ZH || this == FONT_EMOJI
+    val isFont get() = this == FONT_ZH || this == FONT_JA || this == FONT_KO || this == FONT_KEYS || this == FONT_EMOJI
 
     companion object {
         fun of(id: String) = entries.firstOrNull { it.id == id }
@@ -53,6 +57,10 @@ data class Pack(
     val built: Boolean,
     /** Speech language for voice packs ("en", "cmn", ...). */
     val lang: String?,
+    /** For emoji fonts: the Emoji version the font covers ("17.0"). */
+    val emoji: String?,
+    /** A picture of the font (an asset path), shown before it is downloaded. */
+    val preview: String?,
 )
 
 /**
@@ -91,6 +99,8 @@ object Packs {
                 custom = o.optBoolean("custom"),
                 built = o.optBoolean("built"),
                 lang = o.optString("lang").takeIf { it.isNotEmpty() },
+                emoji = o.optString("emoji").takeIf { it.isNotEmpty() },
+                preview = o.optString("preview").takeIf { it.isNotEmpty() },
             )
         }
         cached = packs
@@ -169,6 +179,12 @@ object Packs {
 
     fun totalSize(context: Context): Long =
         root(context).walkTopDown().filter { it.isFile }.sumOf { it.length() }
+
+    /** Removes installed packs the catalogue no longer lists (fonts Lychee stopped offering). */
+    fun removeUnlisted(context: Context) {
+        val listed = catalog(context).map { it.id }.toSet()
+        root(context).listFiles()?.filter { it.isDirectory && it.name !in listed }?.forEach { it.deleteRecursively() }
+    }
 
     fun remove(context: Context, id: String) {
         dir(context, id).deleteRecursively()

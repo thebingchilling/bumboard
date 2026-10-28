@@ -14,7 +14,10 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -92,12 +95,19 @@ fun lycheeColorScheme(dark: Boolean): ColorScheme {
     }
 }
 
-/** Google Sans Flex in the weights the settings use; null when the font is not in the APK. */
+/** The app's font choice (Settings > Fonts), as state, so changing it restyles the settings at once. */
+object AppFont {
+    var system by mutableStateOf<Boolean?>(null)
+}
+
+/** Google Sans Flex in the weights the settings use; null for the phone's font, or when the
+ *  font is not in the APK. */
 @Composable
 private fun googleSansFlex(): FontFamily? {
     val context = LocalContext.current
-    return remember {
-        if (!LycheeFonts.hasUiFont(context)) return@remember null
+    val system = AppFont.system ?: remember { LycheeFonts.uiIsSystem(context) }
+    return remember(system) {
+        if (system || !LycheeFonts.hasUiFont(context)) return@remember null
         val assets = context.applicationContext.assets
         FontFamily(listOf(400, 500, 600, 700).map { w ->
             Font(

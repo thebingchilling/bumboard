@@ -908,7 +908,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         final int width = key.getWidth();
         final int height = key.getHeight();
         paint.setTextAlign(Align.CENTER);
-        paint.setTypeface(app.lychee.fonts.LycheeFonts.ui(getContext(), 400));
+        paint.setTypeface(app.lychee.fonts.LycheeFonts.keysLatin(getContext(), 400));
         paint.setTextSize(mLanguageOnSpacebarTextSize);
         final String language = layoutLanguageOnSpacebar(paint, keyboard.mId.mSubtype, width);
         // Draw language text with shadow

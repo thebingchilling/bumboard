@@ -149,7 +149,8 @@ class CandidatePanelView @JvmOverloads constructor(
             val meaning = cell.getChildAt(2) as TextView
             val color = if (position == 0) palette.primary else palette.onSurface
             word.text = candidate.text
-            word.typeface = app.lychee.fonts.LycheeFonts.chinese(cell.context) ?: android.graphics.Typeface.DEFAULT
+            word.typeface = app.lychee.fonts.LycheeFonts.forText(cell.context, candidate.text, style.fontLang)
+                ?: android.graphics.Typeface.DEFAULT
             word.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f * scale)
             word.setTextColor(color)
             val a = annotations[position]

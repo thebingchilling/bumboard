@@ -111,7 +111,8 @@
 
         <!-- Activities -->
         <!-- LYCHEE: asks for the microphone on the voice key's first use. -->
-        <!-- LYCHEE: opening a downloaded pack (the browser's "Open", or sharing it) installs it. -->
+        <!-- LYCHEE: opening a downloaded pack (the browser's "Open", or sharing it) installs it;
+             lychee://updates links from the packs page record and install pack updates. -->
         <activity android:name="app.lychee.packs.PackImportActivity"
              android:theme="@style/Theme.Lychee.Translucent"
              android:label="@string/lychee_import_open_with"
@@ -141,6 +142,13 @@
                 <data android:mimeType="application/octet-stream"/>
                 <data android:mimeType="font/*"/>
                 <data android:mimeType="application/x-font-ttf"/>
+            </intent-filter>
+            <!-- the packs page's links back: the newest pack versions, and installing updates -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="lychee" android:host="updates"/>
             </intent-filter>
         </activity>
         <activity android:name="app.lychee.voice.MicPermissionActivity"

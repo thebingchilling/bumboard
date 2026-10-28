@@ -45,6 +45,8 @@ class CandidateBarView @JvmOverloads constructor(
     data class Style(
         val toneColours: Boolean = true,
         val lang: app.lychee.core.Lang? = null,
+        /** The typing language ("yue", "cmn", "ja", "ko"), which picks the candidates' font. */
+        val fontLang: String? = null,
     )
 
     var style = Style()
@@ -184,7 +186,7 @@ class CandidateBarView @JvmOverloads constructor(
         word.addView(text(candidate.text, CHAR_SP * scale, tag as Int).apply {
             includeFontPadding = false
             setPadding(dp(10), 0, dp(10), 0)
-            app.lychee.fonts.LycheeFonts.chinese(context)?.let { typeface = it }
+            app.lychee.fonts.LycheeFonts.forText(context, candidate.text, style.fontLang)?.let { typeface = it }
         }, wrap())
         addView(word, wrap())
     }
