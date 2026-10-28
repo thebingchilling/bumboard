@@ -18,8 +18,10 @@
     <string name="lychee_gallery_title">Shortcuts</string>
     <string name="lychee_gallery_edit">Edit</string>
     <string name="lychee_gallery_all_on_bar">Every shortcut is on the bar. Tap the pencil to change which ones are there.</string>
-    <string name="lychee_gallery_hint">Hold and drag to customise</string>
+    <string name="lychee_gallery_hint">Hold and drag to move · the eye hides one</string>
     <string name="lychee_gallery_close">Close</string>
+    <string name="lychee_gallery_hide">Hide from the menu</string>
+    <string name="lychee_gallery_show">Show in the menu</string>
 
     <!-- Text editing -->
     <string name="lychee_edit_select">Select</string>

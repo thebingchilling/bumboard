@@ -164,8 +164,12 @@ class ShortcutGalleryView @JvmOverloads constructor(
         val bar = store.toolbar()
         val engine = lycheeHost()?.lycheeEngine()
         // Settings has its own corner button
-        items = store.order().filter { it !in bar && it != Shortcut.SETTINGS && Shortcuts.available(it, engine, Shortcuts.isFloating(context)) }
-            .toMutableList()
+        // hidden shortcuts only show (faded) while editing, to bring back
+        val hidden = store.hidden()
+        items = store.order().filter {
+            it !in bar && it != Shortcut.SETTINGS && Shortcuts.available(it, engine, Shortcuts.isFloating(context)) &&
+                (editing || it !in hidden)
+        }.toMutableList()
         adapter.notifyDataSetChanged()
         empty.visibility = if (items.isEmpty()) VISIBLE else GONE
         updateDots()
@@ -247,26 +251,24 @@ class ShortcutGalleryView @JvmOverloads constructor(
         return true
     }
 
-    /** One icon of the grid, with its name under it. */
+    /**
+     * One shortcut: a rounded square tile drawn like the keys (raised with a shadow, or flat,
+     * as the key style), its icon over its name. While editing, a corner button hides it from
+     * the menu or brings it back.
+     */
     private fun tile(index: Int): View {
         val sc = items[index]
-        return LinearLayout(context).apply {
+        val isHidden = sc in store.hidden()
+        val face = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            tag = index
-            background = android.graphics.drawable.RippleDrawable(
-                ColorStateList.valueOf(palette.surfaceContainerPressed), null,
-                GradientDrawable().apply { cornerRadius = dp(16).toFloat(); setColor(0xFFFFFFFF.toInt()) },
-            )
+            background = app.lychee.layout.LycheePanels.letterKey(context)
+            alpha = if (isHidden) 0.4f else 1f
             addView(ImageView(context).apply {
                 setImageResource(sc.icon)
                 imageTintList = ColorStateList.valueOf(palette.onSurface)
                 scaleType = ImageView.ScaleType.CENTER
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(palette.surfaceContainer)
-                }
-            }, LinearLayout.LayoutParams(dp(48), dp(48)))
+            }, LinearLayout.LayoutParams(dp(28), dp(28)))
             addView(TextView(context).apply {
                 setText(sc.label)
                 setTextColor(palette.onSurface)
@@ -275,15 +277,35 @@ class ShortcutGalleryView @JvmOverloads constructor(
                 gravity = Gravity.CENTER
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
-                setPadding(dp(2), dp(4), dp(2), 0)
+                setPadding(dp(4), dp(4), dp(4), 0)
             }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+        return FrameLayout(context).apply {
+            tag = index
+            addView(face, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            if (editing) {
+                addView(ImageView(context).apply {
+                    setImageResource(if (isHidden) R.drawable.ic_sym_visibility_off else R.drawable.ic_sym_visibility)
+                    imageTintList = ColorStateList.valueOf(palette.onPrimaryContainer)
+                    scaleType = ImageView.ScaleType.CENTER
+                    background = GradientDrawable().apply {
+                        shape = GradientDrawable.OVAL
+                        setColor(palette.primaryContainer)
+                    }
+                    contentDescription = context.getString(if (isHidden) R.string.lychee_gallery_show else R.string.lychee_gallery_hide)
+                    setOnClickListener {
+                        store.setHidden(sc, !isHidden)
+                        load()
+                    }
+                }, LayoutParams(dp(26), dp(26), Gravity.TOP or Gravity.END).apply { topMargin = dp(2); rightMargin = dp(2) })
+            }
             contentDescription = context.getString(sc.label)
-            setOnClickListener {
+            face.setOnClickListener {
                 if (editing) return@setOnClickListener
                 this@ShortcutGalleryView.visibility = GONE
                 lycheeHost()?.lycheeRunShortcut(sc)
             }
-            setOnLongClickListener { v ->
+            face.setOnLongClickListener { v ->
                 if (!editing) return@setOnLongClickListener false
                 v.startDragAndDrop(ClipData.newPlainText("shortcut", sc.id), View.DragShadowBuilder(v),
                     ToolbarView.DragSource(sc, fromBar = false), 0)

@@ -52,7 +52,18 @@ class ShortcutStore(private val prefs: SharedPreferences) {
         prefs.edit().putString(PREF_PINNED, set.joinToString(",") { it.id }).apply()
     }
 
+    /** Shortcuts hidden from the menu (in edit mode they show faded, to bring back). */
+    fun hidden(): Set<Shortcut> =
+        prefs.getString(PREF_HIDDEN, null).orEmpty().split(',').mapNotNull { Shortcut.byId(it) }.toSet()
+
+    fun setHidden(shortcut: Shortcut, hidden: Boolean) {
+        val set = hidden().toMutableSet()
+        if (hidden) set += shortcut else set -= shortcut
+        prefs.edit().putString(PREF_HIDDEN, set.joinToString(",") { it.id }).apply()
+    }
+
     companion object {
+        const val PREF_HIDDEN = "lychee_shortcuts_hidden"
         const val PREF_ORDER = "lychee_shortcuts_order"
         const val PREF_PINNED = "lychee_shortcuts_pinned"
         /** Like Gboard's bar: next language, text editing and undo. */
