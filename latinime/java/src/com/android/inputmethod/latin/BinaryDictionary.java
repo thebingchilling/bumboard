@@ -458,6 +458,9 @@ public final class BinaryDictionary extends Dictionary {
         final boolean[] isBeginningOfSentence = new boolean[1];
         int token = 0;
         do {
+            // the native side writes the word without a terminating zero, so a shorter word
+            // would otherwise keep the end of the one before it
+            java.util.Arrays.fill(codePoints, 0);
             token = getNextWordNative(mNativeDict, token, codePoints, isBeginningOfSentence);
             final String word = StringUtils.getStringFromNullTerminatedCodePointArray(codePoints);
             if (!isBeginningOfSentence[0] && !word.isEmpty()) {
