@@ -33,7 +33,7 @@ data class M3Colors(
     companion object {
         fun of(ctx: Context): M3Colors {
             fun c(id: Int) = ctx.getColor(id)
-            val neutral = LycheeColorStyle.isNeutral(ctx)
+            val functional = LycheeColorStyle.functionalColors(ctx)
             return M3Colors(
                 surface = c(R.color.lychee_m3_kb_background),
                 surfaceContainer = c(R.color.lychee_m3_key),
@@ -45,11 +45,9 @@ data class M3Colors(
                 onPrimary = c(R.color.lychee_m3_on_primary),
                 primaryContainer = c(R.color.lychee_m3_primary_container),
                 onPrimaryContainer = c(R.color.lychee_m3_on_primary_container),
-                secondaryContainer = c(if (neutral) R.color.lychee_m3_key_functional_neutral else R.color.lychee_m3_key_functional),
-                secondaryContainerPressed = c(
-                    if (neutral) R.color.lychee_m3_key_functional_pressed_neutral else R.color.lychee_m3_key_functional_pressed
-                ),
-                onSecondaryContainer = c(if (neutral) R.color.lychee_m3_on_key_functional_neutral else R.color.lychee_m3_on_key_functional),
+                secondaryContainer = functional[0],
+                secondaryContainerPressed = functional[1],
+                onSecondaryContainer = functional[2],
                 outline = c(R.color.lychee_m3_outline),
                 outlineVariant = c(R.color.lychee_m3_outline_variant),
             )

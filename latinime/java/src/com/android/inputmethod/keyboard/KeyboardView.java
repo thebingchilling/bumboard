@@ -138,14 +138,16 @@ public class KeyboardView extends View {
 
         final TypedArray keyboardViewAttr = context.obtainStyledAttributes(attrs,
                 R.styleable.KeyboardView, defStyle, R.style.KeyboardView);
-        mKeyBackground = keyboardViewAttr.getDrawable(R.styleable.KeyboardView_keyBackground);
+        // LYCHEE: key corners as round as chosen in Settings > Theme
+        mKeyBackground = app.lychee.ui.KeyStyle.round(context,
+                keyboardViewAttr.getDrawable(R.styleable.KeyboardView_keyBackground));
         mKeyBackground.getPadding(mKeyBackgroundPadding);
-        final Drawable functionalKeyBackground = keyboardViewAttr.getDrawable(
-                R.styleable.KeyboardView_functionalKeyBackground);
+        final Drawable functionalKeyBackground = app.lychee.ui.KeyStyle.round(context,
+                keyboardViewAttr.getDrawable(R.styleable.KeyboardView_functionalKeyBackground));
         mFunctionalKeyBackground = (functionalKeyBackground != null) ? functionalKeyBackground
                 : mKeyBackground;
-        final Drawable spacebarBackground = keyboardViewAttr.getDrawable(
-                R.styleable.KeyboardView_spacebarBackground);
+        final Drawable spacebarBackground = app.lychee.ui.KeyStyle.round(context,
+                keyboardViewAttr.getDrawable(R.styleable.KeyboardView_spacebarBackground));
         mSpacebarBackground = (spacebarBackground != null) ? spacebarBackground : mKeyBackground;
         final TypedArray lycheeTheme = context.obtainStyledAttributes(
                 new int[] { R.attr.lycheePillKeyBackground });
@@ -366,7 +368,10 @@ public class KeyboardView extends View {
                 mLycheePillBackground.setState(background.getState());
                 background = mLycheePillBackground;
             }
-            if (background != null) {
+            // LYCHEE: with key borders off, letter keys show a background only while pressed
+            final boolean hidden = background == mKeyBackground && !app.lychee.ui.KeyStyle.getBorders()
+                    && !key.isPressed();
+            if (background != null && !hidden) {
                 onDrawKeyBackground(key, canvas, background);
             }
         }

@@ -16,6 +16,21 @@
         <item name="lycheeColorFunctionalPressed">@color/lychee_m3_key_functional_pressed_neutral</item>
         <item name="lycheeColorOnFunctional">@color/lychee_m3_on_key_functional_neutral</item>
     </style>
+    <style name="LycheeColors.Rose" parent="">
+        <item name="lycheeColorFunctional">@color/lychee_palette_rose</item>
+        <item name="lycheeColorFunctionalPressed">@color/lychee_palette_rose_pressed</item>
+        <item name="lycheeColorOnFunctional">@color/lychee_palette_rose_on</item>
+    </style>
+    <style name="LycheeColors.Ocean" parent="">
+        <item name="lycheeColorFunctional">@color/lychee_palette_ocean</item>
+        <item name="lycheeColorFunctionalPressed">@color/lychee_palette_ocean_pressed</item>
+        <item name="lycheeColorOnFunctional">@color/lychee_palette_ocean_on</item>
+    </style>
+    <style name="LycheeColors.Forest" parent="">
+        <item name="lycheeColorFunctional">@color/lychee_palette_forest</item>
+        <item name="lycheeColorFunctionalPressed">@color/lychee_palette_forest_pressed</item>
+        <item name="lycheeColorOnFunctional">@color/lychee_palette_forest_on</item>
+    </style>
     <style name="LycheeColors.Wallpaper" parent="">
         <item name="lycheeColorFunctional">@color/lychee_m3_key_functional</item>
         <item name="lycheeColorFunctionalPressed">@color/lychee_m3_key_functional_pressed</item>

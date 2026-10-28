@@ -669,6 +669,9 @@ private fun PreferencesPage() {
     }
     val vibrate = prefs.boolPref(Settings.PREF_VIBRATE_ON) { Settings.readVibrationEnabled(prefs, res) }
     val sound = prefs.boolPref(Settings.PREF_SOUND_ON) { Settings.readKeypressSoundEnabled(prefs, res) }
+    val keySound = prefs.stringPref(app.lychee.ui.KeySounds.PREF) {
+        prefs.getString(app.lychee.ui.KeySounds.PREF, null) ?: app.lychee.ui.KeySounds.SYSTEM
+    }
     val popup = prefs.boolPref(Settings.PREF_POPUP_ON) { Settings.readKeyPreviewPopupEnabled(prefs, res) }
     val voice = prefs.boolPref(Settings.PREF_VOICE_INPUT_KEY) { prefs.getBoolean(Settings.PREF_VOICE_INPUT_KEY, true) }
     val voiceOffline = prefs.boolPref(app.lychee.voice.VoicePanelView.PREF_OFFLINE) {
@@ -732,6 +735,14 @@ private fun PreferencesPage() {
             row { SwitchRow(it, stringResource(R.string.vibrate_on_keypress), null, vibrate.value, vibrate::set) }
         }
         row { SwitchRow(it, stringResource(R.string.sound_on_keypress), null, sound.value, sound::set) }
+        if (sound.value) {
+            row {
+                RadioChoice(it, stringResource(R.string.lychee_pref_key_sound), keySound.value,
+                    app.lychee.ui.KeySounds.STYLES.map { s -> s to stringResource(keySoundName(s)) }) { s ->
+                    keySound.set(s)
+                }
+            }
+        }
         if (Settings.readFromBuildConfigIfToShowKeyPreviewPopupOption(res)) {
             row { SwitchRow(it, stringResource(R.string.popup_on_keypress), null, popup.value, popup::set) }
         }
@@ -783,16 +794,46 @@ private fun ThemePage() {
     val colors = prefs.stringPref(app.lychee.ui.LycheeColorStyle.PREF) {
         prefs.getString(app.lychee.ui.LycheeColorStyle.PREF, null) ?: app.lychee.ui.LycheeColorStyle.NEUTRAL
     }
-    Group(stringResource(R.string.lychee_group_key_style)) {
+    val themeMode = prefs.stringPref(app.lychee.ui.KeyStyle.PREF_THEME_MODE) {
+        prefs.getString(app.lychee.ui.KeyStyle.PREF_THEME_MODE, null) ?: app.lychee.ui.KeyStyle.MODE_SYSTEM
+    }
+    val borders = prefs.boolPref(app.lychee.ui.KeyStyle.PREF_BORDERS) { prefs.getBoolean(app.lychee.ui.KeyStyle.PREF_BORDERS, true) }
+    val roundness = prefs.intPref(app.lychee.ui.KeyStyle.PREF_ROUNDNESS) {
+        prefs.getInt(app.lychee.ui.KeyStyle.PREF_ROUNDNESS, app.lychee.ui.KeyStyle.DEFAULT_ROUNDNESS)
+    }
+    Group(stringResource(R.string.lychee_group_appearance)) {
         row {
             ChoiceRow(
-                it, stringResource(R.string.lychee_pref_colors), null,
+                it, stringResource(R.string.lychee_pref_theme_mode), stringResource(R.string.lychee_pref_theme_mode_summary),
                 listOf(
-                    app.lychee.ui.LycheeColorStyle.NEUTRAL to stringResource(R.string.lychee_pref_colors_neutral),
-                    app.lychee.ui.LycheeColorStyle.WALLPAPER to stringResource(R.string.lychee_pref_colors_wallpaper),
+                    app.lychee.ui.KeyStyle.MODE_SYSTEM to stringResource(R.string.lychee_theme_system),
+                    app.lychee.ui.KeyStyle.MODE_LIGHT to stringResource(R.string.lychee_theme_light),
+                    app.lychee.ui.KeyStyle.MODE_DARK to stringResource(R.string.lychee_theme_dark),
+                    app.lychee.ui.KeyStyle.MODE_TIME to stringResource(R.string.lychee_theme_time),
                 ),
-                colors.value, onSelect = colors::set,
+                themeMode.value, onSelect = themeMode::set,
             )
+        }
+    }
+    Group(stringResource(R.string.lychee_pref_colors)) {
+        listOf(
+            app.lychee.ui.LycheeColorStyle.NEUTRAL to R.string.lychee_pref_colors_neutral,
+            app.lychee.ui.LycheeColorStyle.WALLPAPER to R.string.lychee_pref_colors_wallpaper,
+            app.lychee.ui.LycheeColorStyle.ROSE to R.string.lychee_pref_colors_rose,
+            app.lychee.ui.LycheeColorStyle.OCEAN to R.string.lychee_pref_colors_ocean,
+            app.lychee.ui.LycheeColorStyle.FOREST to R.string.lychee_pref_colors_forest,
+        ).forEach { (id, name) ->
+            row { shape -> RadioRow(shape, stringResource(name), colors.value == id) { colors.set(id) } }
+        }
+    }
+    Group(stringResource(R.string.lychee_group_key_style)) {
+        row {
+            SwitchRow(it, stringResource(R.string.lychee_pref_key_borders), stringResource(R.string.lychee_pref_key_borders_summary),
+                borders.value, borders::set)
+        }
+        row {
+            SliderRow(it, stringResource(R.string.lychee_pref_key_roundness), roundness.value, 0..100, 5,
+                format = { v -> "$v%" }) { v -> roundness.set(v) }
         }
         names.indices.forEach { i ->
             row { shape ->
@@ -1088,5 +1129,22 @@ private fun LicencesPage() {
             row { TextRow(it, stringResource(R.string.lychee_licences_data), data) }
         }
         row { TextRow(it, stringResource(R.string.lychee_licences_packs), packs) }
+    }
+}
+
+private fun keySoundName(style: String) = when (style) {
+    "soft" -> R.string.lychee_key_sound_soft
+    "click" -> R.string.lychee_key_sound_click
+    "typewriter" -> R.string.lychee_key_sound_typewriter
+    "bubble" -> R.string.lychee_key_sound_bubble
+    else -> R.string.lychee_key_sound_system
+}
+
+/** A titled list of radio choices inside one row. */
+@Composable
+private fun <T> RadioChoice(shape: androidx.compose.ui.graphics.Shape, title: String, selected: T, options: List<Pair<T, String>>, onSelect: (T) -> Unit) {
+    Column(Modifier.padding(top = 12.dp)) {
+        Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(horizontal = 16.dp))
+        options.forEach { (value, label) -> RadioRow(shape, label, value == selected) { onSelect(value) } }
     }
 }

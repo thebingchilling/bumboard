@@ -111,6 +111,8 @@ class EmojiPanelView @JvmOverloads constructor(
         pinchToResize()
         swipeBetweenCategories()
         addView(bottomBar(), LayoutParams(LayoutParams.MATCH_PARENT, dp(50)))
+        // loaded ahead, so the panel opens full at once
+        EmojiData.load(context) {}
     }
 
     // ------------------------------------------------------------ LatinIME's EmojiPalettesView API

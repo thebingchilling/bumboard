@@ -56,6 +56,8 @@ public final class AudioAndHapticFeedbackManager {
     private void initInternal(final Context context) {
         mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         mVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+        // LYCHEE: Lychee's own key sounds, when one is chosen in Settings
+        app.lychee.ui.KeySounds.init(context);
     }
 
     public void performHapticAndAudioFeedback(final int code,
@@ -88,6 +90,12 @@ public final class AudioAndHapticFeedbackManager {
             return;
         }
         if (!mSoundOn) {
+            return;
+        }
+        // LYCHEE: Lychee's own key sounds (Settings > Preferences > Key sound)
+        final int lycheeKind = code == Constants.CODE_SPACE ? 1 : code == Constants.CODE_ENTER ? 2
+                : code == Constants.CODE_DELETE ? 3 : 0;
+        if (app.lychee.ui.KeySounds.play(lycheeKind, mSettingsValues.mKeypressSoundVolume)) {
             return;
         }
         final int sound;

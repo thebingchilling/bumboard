@@ -46,8 +46,9 @@ class ToolbarView @JvmOverloads constructor(
     private val row = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        layoutTransition = LayoutTransition()
     }
+    /** Shortcuts slide aside while being dragged in edit mode; otherwise the bar switches at once. */
+    private val editTransition = LayoutTransition()
 
     /** The shortcuts button: opens the gallery, or closes it. */
     var onGallery: () -> Unit = {}
@@ -60,6 +61,7 @@ class ToolbarView @JvmOverloads constructor(
         set(value) {
             if (field != value) {
                 field = value
+                row.layoutTransition = if (value == Mode.EDIT) editTransition else null
                 rebuild()
                 // the strip hides its suggestions and mic while a title shows here
                 (parent as? com.android.inputmethod.latin.suggestions.SuggestionStripView)?.lycheeRefresh()

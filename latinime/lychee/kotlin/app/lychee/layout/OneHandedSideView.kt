@@ -11,8 +11,8 @@ import app.lychee.ui.M3Colors
 import com.android.inputmethod.latin.R
 
 /**
- * The free side in one-handed mode, like Gboard's: a button back to the full-width keyboard
- * and one that moves the keys to the other side.
+ * The free side in one-handed mode, like Gboard's: a button back to the full-width keyboard,
+ * one that moves the keys to the other side and one that resizes them.
  */
 class OneHandedSideView @JvmOverloads constructor(
     context: Context,
@@ -22,12 +22,15 @@ class OneHandedSideView @JvmOverloads constructor(
     private val palette = M3Colors.of(context)
     private val expand = button(R.drawable.ic_sym_open_with, R.string.lychee_one_handed_exit)
     private val swap = button(R.drawable.ic_sym_keyboard_arrow_left, R.string.lychee_one_handed_swap)
+    private val resize = button(R.drawable.ic_sym_open_in_full, R.string.lychee_sc_resize)
 
     init {
         orientation = VERTICAL
         gravity = Gravity.CENTER
         addView(expand, LayoutParams(dp(48), dp(48)))
         addView(swap, LayoutParams(dp(48), dp(48)).apply { topMargin = dp(16) })
+        addView(resize, LayoutParams(dp(48), dp(48)).apply { topMargin = dp(16) })
+        resize.setOnClickListener { lycheeHost()?.lycheeRunShortcut(app.lychee.toolbar.Shortcut.RESIZE) }
         expand.setOnClickListener {
             LycheeLayout.get(context).setMode(LycheeLayout.Mode.NORMAL)
             lycheeHost()?.lycheeReloadLayout()

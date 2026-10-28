@@ -69,6 +69,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private Context mThemeContext;
     // LYCHEE: the colour style (neutral or wallpaper) applied over the keyboard theme
     private int mLycheeColorOverlay;
+    // LYCHEE: light/dark/time of day, key borders and roundness (app.lychee.ui.KeyStyle)
+    private String mLycheeKeyStyle;
+    private android.content.res.Resources mLycheeBaseResources;
 
     private static final KeyboardSwitcher sInstance = new KeyboardSwitcher();
 
@@ -104,12 +107,24 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
     private boolean updateKeyboardThemeAndContextThemeWrapper(final Context context,
             final KeyboardTheme keyboardTheme) {
         final int colorOverlay = app.lychee.ui.LycheeColorStyle.overlay(context);
+        // LYCHEE: the keyboard's menus in its own language (zh_HK, zh_CN, ja, ko ...)
+        final java.util.Locale menuLocale = mRichImm != null ? mRichImm.getCurrentSubtypeLocale() : null;
+        final String keyStyle = app.lychee.ui.KeyStyle.load(context) + ":" + menuLocale;
         if (mThemeContext == null || !keyboardTheme.equals(mKeyboardTheme)
                 || colorOverlay != mLycheeColorOverlay
-                || !mThemeContext.getResources().equals(context.getResources())) {
+                || !keyStyle.equals(mLycheeKeyStyle)
+                || !context.getResources().equals(mLycheeBaseResources)) {
             mKeyboardTheme = keyboardTheme;
             mLycheeColorOverlay = colorOverlay;
-            mThemeContext = new ContextThemeWrapper(context, keyboardTheme.mStyleId);
+            mLycheeKeyStyle = keyStyle;
+            mLycheeBaseResources = context.getResources();
+            final ContextThemeWrapper themed = new ContextThemeWrapper(context, keyboardTheme.mStyleId);
+            // LYCHEE: light or dark regardless of the system, when chosen in Settings > Theme,
+            // and the keyboard's language
+            final android.content.res.Configuration override =
+                    app.lychee.ui.KeyStyle.override(context, menuLocale);
+            if (override != null) themed.applyOverrideConfiguration(override);
+            mThemeContext = themed;
             mThemeContext.getTheme().applyStyle(colorOverlay, true);
             KeyboardLayoutSet.onKeyboardThemeChanged();
             return true;

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Keyboard menus in the keyboard's own language (the keyboard's views use its locale). -->
+<resources>
+    <string name="lychee_sc_gallery">모든 바로가기</string>
+    <string name="lychee_sc_language">다음 언어</string>
+    <string name="lychee_sc_text_edit">텍스트 편집</string>
+    <string name="lychee_sc_one_handed">한 손 모드</string>
+    <string name="lychee_sc_floating">플로팅</string>
+    <string name="lychee_sc_resize">크기 조절</string>
+    <string name="lychee_sc_numpad">숫자 패드</string>
+    <string name="lychee_sc_emoji">이모티콘</string>
+    <string name="lychee_sc_undo">실행 취소</string>
+    <string name="lychee_sc_redo">다시 실행</string>
+    <string name="lychee_sc_settings">설정</string>
+    <string name="lychee_gallery_title">바로가기</string>
+    <string name="lychee_gallery_edit">편집</string>
+    <string name="lychee_gallery_all_on_bar">모든 바로가기가 바에 있습니다. 연필을 탭하여 변경하세요.</string>
+    <string name="lychee_gallery_hint">길게 눌러 드래그하여 사용자 지정</string>
+    <string name="lychee_gallery_close">닫기</string>
+    <string name="lychee_edit_select">선택</string>
+    <string name="lychee_edit_select_all">모두 선택</string>
+    <string name="lychee_edit_cut">잘라내기</string>
+    <string name="lychee_edit_copy">복사</string>
+    <string name="lychee_edit_paste">붙여넣기</string>
+    <string name="lychee_edit_up">위</string>
+    <string name="lychee_edit_down">아래</string>
+    <string name="lychee_edit_left">왼쪽</string>
+    <string name="lychee_edit_right">오른쪽</string>
+    <string name="lychee_edit_line_start">줄 시작</string>
+    <string name="lychee_edit_line_end">줄 끝</string>
+    <string name="lychee_one_handed_exit">전체 너비 키보드</string>
+    <string name="lychee_one_handed_swap">키보드를 반대쪽으로 이동</string>
+    <string name="lychee_float_dock">키보드 고정</string>
+    <string name="lychee_resize_reset">초기화</string>
+    <string name="lychee_resize_done">완료</string>
+    <string name="lychee_numpad_space">스페이스</string>
+    <string name="lychee_numpad_enter">엔터</string>
+    <string name="lychee_emoji_search">이모티콘 검색</string>
+    <string name="lychee_emoji_none">이모티콘을 찾을 수 없음</string>
+    <string name="lychee_emoji_recents">최근 사용</string>
+    <string name="lychee_emoji_smileys">스마일리 및 감정</string>
+    <string name="lychee_emoji_people">사람</string>
+    <string name="lychee_emoji_animals">동물 및 자연</string>
+    <string name="lychee_emoji_food">음식 및 음료</string>
+    <string name="lychee_emoji_travel">여행 및 장소</string>
+    <string name="lychee_emoji_activities">활동</string>
+    <string name="lychee_emoji_objects">사물</string>
+    <string name="lychee_emoji_symbols">기호</string>
+    <string name="lychee_emoji_flags">깃발</string>
+    <string name="lychee_emoji_kaomoji">카오모지</string>
+    <string name="lychee_emoji_delete">삭제</string>
+    <string name="lychee_hw_space">스페이스</string>
+    <string name="lychee_hw_enter">엔터</string>
+    <string name="lychee_candidates_all">모든 후보</string>
+    <string name="lychee_tone_type">이 이모티콘 입력</string>
+</resources>

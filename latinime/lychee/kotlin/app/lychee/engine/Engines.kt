@@ -36,6 +36,9 @@ class Engines(ime: InputMethodService, prefs: SharedPreferences) {
 
     fun reset() = chinese.reset()
 
+    /** Handwriting guesses or next characters in the candidate bar. */
+    fun showGuesses(guesses: List<String>, onPick: (Int) -> Unit) = chinese.showGuesses(guesses, onPick)
+
     /** The current keyboard's engine: "yue", "cmn", "ja", "ko", or null for LatinIME's own. */
     val currentEngine: String?
         get() = chinese.currentEngine

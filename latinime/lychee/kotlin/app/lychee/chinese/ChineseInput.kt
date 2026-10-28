@@ -52,7 +52,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         popup = DictionaryPopup(inputView.context)
         keyboardFrame = inputView.findViewById(R.id.main_keyboard_frame)
         preedit = inputView.findViewById<android.widget.TextView>(R.id.lychee_preedit)?.also {
-            it.setTextColor(ime.getColor(R.color.lychee_m3_on_key_variant))
+            it.setTextColor(inputView.context.getColor(R.color.lychee_m3_on_key_variant))
             it.typeface = app.lychee.fonts.LycheeFonts.ui(ime, 400)
         }
         this.inputView = inputView
@@ -60,8 +60,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             p.onPick = { index -> pick(index); updateMoreButton() }
         }
         moreButton = inputView.findViewById<android.widget.ImageView>(R.id.lychee_candidate_more)?.also { b ->
-            b.imageTintList = android.content.res.ColorStateList.valueOf(ime.getColor(R.color.lychee_m3_on_key_variant))
-            b.background = ime.getDrawable(R.drawable.lychee_m3_suggestion)
+            b.imageTintList = android.content.res.ColorStateList.valueOf(inputView.context.getColor(R.color.lychee_m3_on_key_variant))
+            b.background = inputView.context.getDrawable(R.drawable.lychee_m3_suggestion)
             b.setOnClickListener { togglePanel() }
         }
         bar?.onPick = { index -> if (showingGuesses) onGuess(index) else pick(index) }
