@@ -684,9 +684,6 @@ private fun PreferencesPage() {
     }
     val popup = prefs.boolPref(Settings.PREF_POPUP_ON) { Settings.readKeyPreviewPopupEnabled(prefs, res) }
     val voice = prefs.boolPref(Settings.PREF_VOICE_INPUT_KEY) { prefs.getBoolean(Settings.PREF_VOICE_INPUT_KEY, true) }
-    val voiceOffline = prefs.boolPref(app.lychee.voice.VoicePanelView.PREF_OFFLINE) {
-        prefs.getBoolean(app.lychee.voice.VoicePanelView.PREF_OFFLINE, true)
-    }
     val numberRow = prefs.boolPref(LycheeLayout.PREF_NUMBER_ROW) { prefs.getBoolean(LycheeLayout.PREF_NUMBER_ROW, true) }
     val commaKey = prefs.stringPref(LycheeLayout.PREF_COMMA_KEY) { prefs.getString(LycheeLayout.PREF_COMMA_KEY, null) ?: "combined" }
     val hasVibrator = AudioAndHapticFeedbackManager.getInstance().hasVibrator()
@@ -772,12 +769,6 @@ private fun PreferencesPage() {
             row { SwitchRow(it, stringResource(R.string.popup_on_keypress), null, popup.value, popup::set) }
         }
         row { SwitchRow(it, stringResource(R.string.voice_input), null, voice.value, voice::set) }
-        row {
-            SwitchRow(
-                it, stringResource(R.string.lychee_pref_voice_offline), stringResource(R.string.lychee_pref_voice_offline_summary),
-                voiceOffline.value, voiceOffline::set,
-            )
-        }
     }
 }
 

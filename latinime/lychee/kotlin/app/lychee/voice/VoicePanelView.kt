@@ -26,10 +26,9 @@ import app.lychee.ui.M3Colors
 import com.android.inputmethod.latin.R
 
 /**
- * Voice typing in the bar above the keys, like Gboard's. With "offline" on (the default) and
- * Android 12+, speech is recognised on the phone by the system's on-device recogniser; otherwise
- * it goes to Google's recognition service when the phone has it (Speech Services by Google,
- * then the Google app), or to the system default. Lychee itself never uses the network. The
+ * Voice typing in the bar above the keys, like Gboard's. Speech goes to Google's recognition
+ * service when the phone has it (Speech Services by Google, then the Google app), or to the
+ * system default; that service does its own networking, Lychee itself never does. The
  * panel shows what is heard as it is heard and hands the final text to [onText]; nothing is
  * typed until the recogniser is done, so LatinIME's own composing state is never disturbed.
  */
@@ -177,9 +176,12 @@ class VoicePanelView @JvmOverloads constructor(
         .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, offlinePreferred())
         .apply { language?.let { putExtra(RecognizerIntent.EXTRA_LANGUAGE, it) } }
 
-    @Suppress("DEPRECATION")
-    private fun offlinePreferred() =
-        android.preference.PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREF_OFFLINE, true)
+    /**
+     * Voice typing uses Google's recogniser (Speech Services by Google, or the Google app),
+     * which does its own networking: Lychee has no network permission. On-device recognition
+     * is off for now.
+     */
+    private fun offlinePreferred() = false
 
     /**
      * The on-device recogniser lacks this language. Nothing is downloaded unless asked: the
