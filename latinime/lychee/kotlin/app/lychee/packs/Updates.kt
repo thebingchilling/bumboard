@@ -15,8 +15,8 @@ import org.json.JSONObject
  * ever checked or updated.
  */
 object Updates {
-    /** The packs page (GitHub Pages of the public lychee repository; data/packs/site). */
-    const val PAGE = "https://lychee-keyboard.github.io/lychee/"
+    /** The packs page (lychee-keyboard's GitHub Pages site; data/packs/site). */
+    const val PAGE = "https://lychee-keyboard.github.io/"
     private const val PREF_LATEST = "lychee_pack_latest"
     private const val PREF_CHECKED = "lychee_pack_checked"
     /** A quiet reminder to check shows after this long without a check. */

@@ -128,21 +128,27 @@ jobs:
           fi
           gh release upload packs out/site/manifest.json --repo "$REPO" --clobber
 
-      # The packs page (index.html, manifest.json, its font) on the lychee repository's gh-pages
-      # branch, which GitHub Pages serves at https://lychee-keyboard.github.io/lychee/.
+      # The packs page (index.html, manifest.json, its font) at https://lychee-keyboard.github.io/:
+      # the main branch of lychee-keyboard/lychee-keyboard.github.io, which GitHub Pages serves.
+      # The packs repository's own page (/lychee/, where earlier builds look) forwards there.
       - name: Publish the packs page
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.PACKS_TOKEN }}
+          SITE_REPO: lychee-keyboard/lychee-keyboard.github.io
         run: |
           if [ -z "$GH_TOKEN" ]; then
             echo "::warning::PACKS_TOKEN is not set; the page was not published"
             exit 0
           fi
-          cd out/site
-          git init -q -b gh-pages
-          git config user.name "Lychee packs"
-          git config user.email "noreply@users.noreply.github.com"
-          git add -A
-          git commit -q -m "Lychee packs page"
-          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" gh-pages
+          publish() {  # folder, repository, branch
+            (cd "$1" && git init -q -b "$3" && git config user.name "Lychee packs" &&
+             git config user.email "noreply@users.noreply.github.com" && git add -A &&
+             git commit -q -m "Lychee packs page" &&
+             git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/$2.git" "$3")
+          }
+          publish out/site "$SITE_REPO" main
+          mkdir -p out/forward
+          cp data/packs/site/forward.html out/forward/index.html
+          touch out/forward/.nojekyll
+          publish out/forward "$REPO" gh-pages

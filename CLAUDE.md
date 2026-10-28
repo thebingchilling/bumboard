@@ -20,14 +20,15 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
 Public facing, so be careful:
 
 - Only the pack zips (`lychee-*.zip`) and `manifest.json` go on the `packs` pre-release, and
-  only the packs page (`data/packs/site`: index.html, manifest.json, Google Sans Flex) on its
-  `gh-pages` branch. No app code, APKs, internal notes or anything else from this repository.
+  only the packs page (`data/packs/site`: index.html, manifest.json, Google Sans Flex) on
+  `lychee-keyboard.github.io`. No app code, APKs, internal notes or anything else from this repository.
 - `packs.yml` publishes by itself on `main` (weekly, and when the pack builders change): it
   rebuilds every pack from its sources' newest data and uploads only the packs whose contents
   changed, with a date version (`data/packs/publish.py`). It uses a token of the
   lychee-keyboard account (`PACKS_TOKEN` secret), so uploads appear as lychee-keyboard's.
-- The packs page (https://lychee-keyboard.github.io/lychee/) is pushed to the `gh-pages`
-  branch by the same runs; GitHub Pages serves it from there.
+- The packs page (https://lychee-keyboard.github.io/) is pushed by the same runs to the
+  `lychee-keyboard/lychee-keyboard.github.io` repository (main branch), which GitHub Pages
+  serves; the `lychee` repository's `gh-pages` only forwards /lychee/ there.
 - Release notes and file names say Lychee, never BumBoard or Claude.
 
 ## Product constraints
