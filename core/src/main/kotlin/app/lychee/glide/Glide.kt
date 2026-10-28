@@ -93,15 +93,23 @@ class GlideDecoder(private val words: GlideWords) {
      * usual key width. Returns at most [limit] matches, best first (score: higher is better).
      */
     fun decode(xs: IntArray, ys: IntArray, count: Int, keys: Map<Char, KeyCenter>, keyWidth: Float, limit: Int = 18): List<GlideMatch> {
+        val strict = decode(xs, ys, count, keys, keyWidth, limit, 1f)
+        // a sloppy glide: rather a looser guess than nothing at all
+        return strict.ifEmpty { decode(xs, ys, count, keys, keyWidth, limit, LOOSE) }
+    }
+
+    private fun decode(
+        xs: IntArray, ys: IntArray, count: Int, keys: Map<Char, KeyCenter>, keyWidth: Float, limit: Int, slack: Float,
+    ): List<GlideMatch> {
         if (count < 2 || keys.isEmpty() || keyWidth <= 0f) return emptyList()
         val path = simplify(xs, ys, count, keyWidth * 0.15f)
         if (path.size < 2) return emptyList()
-        val reach = keyWidth * REACH
+        val reach = keyWidth * REACH * slack
         // how close the path comes to each letter key, and where
         val nearest = HashMap<Char, Float>(keys.size)
         for ((c, k) in keys) nearest[c] = path.minOf { hypot(it.x - k.x, it.y - k.y) }
-        val starts = closestKeys(path.first(), keys, keyWidth * END_REACH)
-        val ends = closestKeys(path.last(), keys, keyWidth * END_REACH)
+        val starts = closestKeys(path.first(), keys, keyWidth * END_REACH * slack)
+        val ends = closestKeys(path.last(), keys, keyWidth * END_REACH * slack)
         val pathLength = length(path)
         val sampledPath = resample(path, SAMPLES)
         val normalizedPath = normalize(sampledPath)
@@ -116,7 +124,8 @@ class GlideDecoder(private val words: GlideWords) {
                 val ideal = idealPath(letters, keys) ?: continue
                 // a word much shorter or longer than the glide is unlikely
                 val idealLength = length(ideal)
-                if (idealLength > pathLength * 1.8f + keyWidth || idealLength * 1.8f + keyWidth < pathLength) continue
+                val ratio = 1.8f * slack
+                if (idealLength > pathLength * ratio + keyWidth || idealLength * ratio + keyWidth < pathLength) continue
                 if (!inOrder(letters, keys, path, reach)) continue
                 val sampledIdeal = resample(ideal, SAMPLES)
                 val location = meanDistance(sampledPath, sampledIdeal) / keyWidth
@@ -248,5 +257,7 @@ class GlideDecoder(private val words: GlideWords) {
         /** How far the glide may start or end from the first or last letter's key. */
         const val END_REACH = 1.25f
         const val SHAPE_WEIGHT = 0.6f
+        /** How much further a second, looser pass reaches when the first finds nothing. */
+        const val LOOSE = 1.6f
     }
 }

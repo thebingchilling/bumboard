@@ -1147,7 +1147,8 @@ public final class InputLogic {
                     // best thing is to leave it to whatever it thinks is best.
                     sendDownUpKeyEvent(KeyEvent.KEYCODE_DEL);
                     int totalDeletedLength = 1;
-                    if (mDeleteCount > Constants.DELETE_ACCELERATE_AT) {
+                    // LYCHEE: two at a time only while the key is held, never for quick taps
+                    if (mDeleteCount > Constants.DELETE_ACCELERATE_AT && event.isKeyRepeat()) {
                         // If this is an accelerated (i.e., double) deletion, then we need to
                         // consider unlearning here because we may have already reached
                         // the previous word, and will lose it after next deletion.
@@ -1174,7 +1175,8 @@ public final class InputLogic {
                             Character.isSupplementaryCodePoint(codePointBeforeCursor) ? 2 : 1;
                     mConnection.deleteTextBeforeCursor(lengthToDelete);
                     int totalDeletedLength = lengthToDelete;
-                    if (mDeleteCount > Constants.DELETE_ACCELERATE_AT) {
+                    // LYCHEE: two at a time only while the key is held, never for quick taps
+                    if (mDeleteCount > Constants.DELETE_ACCELERATE_AT && event.isKeyRepeat()) {
                         // If this is an accelerated (i.e., double) deletion, then we need to
                         // consider unlearning here because we may have already reached
                         // the previous word, and will lose it after next deletion.

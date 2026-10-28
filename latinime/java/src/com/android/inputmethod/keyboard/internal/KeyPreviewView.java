@@ -94,6 +94,11 @@ public class KeyPreviewView extends TextView {
         if (background == null) {
             return;
         }
+        // LYCHEE: the round bubble is a shape with no size of its own (intrinsic width -1),
+        // which made the scale negative and the letter vanish; such a bubble fits its text
+        if (background.getIntrinsicWidth() <= 0) {
+            return;
+        }
         background.getPadding(mBackgroundPadding);
         final int maxWidth = background.getIntrinsicWidth() - mBackgroundPadding.left
                 - mBackgroundPadding.right;

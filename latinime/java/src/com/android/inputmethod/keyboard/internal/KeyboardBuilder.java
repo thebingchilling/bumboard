@@ -196,7 +196,7 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
         // LYCHEE: the symbols pages' taller rows (see parseKeyboardAttributes) keep the text
         // size of the usual rows, which is worked out from the most common key height
         if (mParams.mId.mLycheeNumberRow && isLycheeSymbols(mParams.mId)) {
-            mParams.mMostCommonKeyHeight = mParams.mMostCommonKeyHeight * 4 / 5;
+            mParams.mMostCommonKeyHeight = mParams.mMostCommonKeyHeight * 3 / 4;
         }
         return new Keyboard(mParams);
     }
@@ -296,7 +296,9 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
                     params.mOccupiedHeight = height + params.mDefaultRowHeight;
                 } else if (isLycheeSymbols(params.mId)) {
                     params.mOccupiedHeight = height + params.mDefaultRowHeight;
-                    params.mDefaultRowHeight = params.mDefaultRowHeight * 5 / 4;
+                    // the bottom row keeps the letters' height (rowHeight="25%" in
+                    // rows_symbols*), so the three rows above share the extra height
+                    params.mDefaultRowHeight = params.mDefaultRowHeight * 4 / 3;
                 }
             }
 

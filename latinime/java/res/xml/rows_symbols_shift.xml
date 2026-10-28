@@ -53,8 +53,11 @@
     </Row>
     <!-- LYCHEE: no row-wide functional background, so the bottom row looks the same as
          on the letters. -->
+    <!-- LYCHEE: the bottom row is as tall as on the letters (a quarter of the usual
+         four-row height), whatever the rows above do -->
     <Row
         latin:keyWidth="10%p"
+        latin:rowHeight="25%"
     >
         <Key
             latin:keyStyle="toAlphaKeyStyle"
