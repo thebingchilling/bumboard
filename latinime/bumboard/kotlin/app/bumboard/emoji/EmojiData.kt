@@ -3,6 +3,7 @@ package app.bumboard.emoji
 import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Typeface
+import app.bumboard.fonts.BumFonts
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -56,7 +57,7 @@ object EmojiData {
         val app = context.applicationContext
         executor.execute {
             try {
-                typeface = app.bumboard.fonts.BumFonts.bundledEmoji(app)
+                typeface = BumFonts.bundledEmoji(app)
                 val json = app.assets.open("bumboard/emoji.json").bufferedReader().use { it.readText() }
                 groups = parse(JSONObject(json))
                 byForm = buildMap {
