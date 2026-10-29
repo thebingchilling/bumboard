@@ -35,6 +35,13 @@ import com.android.inputmethod.latin.R
  * its entry up to the room above. Plain Views in Material 3 colours.
  */
 class DictionaryPopup(private val ctx: Context) {
+    companion object {
+        /** What the card's speak buttons say Chinese in: "auto" (the keyboard's), "yue" or "cmn". */
+        const val PREF_SPEAK_LANG = "lychee_card_speak_lang"
+        /** The other script under the headword: "hyphens" (only what differs), "full" or "off". */
+        const val PREF_OTHER_SCRIPT = "lychee_card_other_script"
+    }
+
     private var host: FrameLayout? = null
 
     fun dismiss() {
@@ -186,13 +193,32 @@ class DictionaryPopup(private val ctx: Context) {
         /** The word's language ("ja", "ko"; null for Chinese), which picks the font. */
         var fontLang: String? = null
 
+        @Suppress("DEPRECATION")
+        private val settings = android.preference.PreferenceManager.getDefaultSharedPreferences(ctx)
+
+        /**
+         * The language the speak buttons use on a Chinese card: Cantonese or Mandarin, from
+         * Settings (the keyboard's language by default), switched with the 粵/普 chip.
+         */
+        private var speakLang: Lang? = null
+        private val speakChips = ArrayList<TextView>()
+
         fun fill(text: String, r: Resolved) {
             val main = r.headwords.firstOrNull()
-            // headword: Traditional · Simplified, and tap to hear it
-            val forms = if (main != null && !r.composed && main.traditional != main.simplified)
-                "${main.traditional} · ${main.simplified}" else text
-            heading(forms, null)
-            // one official reading per language, each with its own listen button
+            speakLang = when (settings.getString(PREF_SPEAK_LANG, "auto")) {
+                "yue" -> Lang.Cantonese
+                "cmn" -> Lang.Mandarin
+                else -> if (r.lang == Lang.Mandarin) Lang.Mandarin else Lang.Cantonese
+            }
+            // headword: in the candidates' script, large; the other script smaller under it
+            if (main != null && !r.composed && main.traditional != main.simplified) {
+                val first = if (prefs.simplified) main.simplified else main.traditional
+                val second = if (prefs.simplified) main.traditional else main.simplified
+                heading(first, text, otherForm(first, second))
+            } else {
+                heading(text, text, null)
+            }
+            // both languages' readings, always
             readingRows(r, main, text)
             if (main != null && !r.composed) facts(main)
             strokes(text)
@@ -208,7 +234,9 @@ class DictionaryPopup(private val ctx: Context) {
             r.headwords.forEachIndexed { i, hw ->
                 if (i > 0) {
                     body.addView(divider())
-                    body.addView(textView("${hw.traditional} · ${hw.simplified}", 22f, c.onSurface).apply {
+                    val first = if (prefs.simplified) hw.simplified else hw.traditional
+                    val other = otherForm(first, if (prefs.simplified) hw.traditional else hw.simplified)
+                    body.addView(textView(if (other != null) "$first  ($other)" else first, 22f, c.onSurface).apply {
                         app.lychee.fonts.LycheeFonts.forText(ctx, hw.traditional)?.let { typeface = it }
                     })
                     readingRows(Resolved(r.lang, null, null, null, listOf(hw), false), hw, null)
@@ -218,9 +246,27 @@ class DictionaryPopup(private val ctx: Context) {
         }
 
         /**
-         * The word's reading in Cantonese and in Mandarin: only the one that fits (the one typed,
-         * else the most common), in the romanisation and tone style chosen in Settings, each with
-         * a listen button (YUE, PU) when [spoken] is given.
+         * The other script's form of the word, as chosen in Settings: in full, with hyphens for
+         * the characters that are the same (學生 → 学-), or not at all; null when they match.
+         */
+        private fun otherForm(first: String, other: String): String? {
+            if (first == other) return null
+            return when (settings.getString(PREF_OTHER_SCRIPT, "hyphens")) {
+                "off" -> null
+                "full" -> other
+                else -> {
+                    val a = first.codePoints().toArray()
+                    val b = other.codePoints().toArray()
+                    if (a.size != b.size) other
+                    else b.indices.joinToString("") { i -> if (a[i] == b[i]) "-" else String(Character.toChars(b[i])) }
+                }
+            }
+        }
+
+        /**
+         * The word's reading in Cantonese and in Mandarin, always both when the dictionary has
+         * them (the one typed, else the most common), in the romanisation and tone style chosen
+         * in Settings. The card's one speak button says the word.
          */
         private fun readingRows(r: Resolved, hw: Headword?, spoken: String?) {
             val yue = (if (r.lang == Lang.Cantonese) r.reading else r.otherReading)
@@ -238,51 +284,60 @@ class DictionaryPopup(private val ctx: Context) {
                 }
                 row.addView(labelled(ctx.getString(label), Annotator.format(reading, lang, prefs)),
                     LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                if (spoken != null) onSpeak?.let { speak ->
-                    row.addView(listen(if (lang == Lang.Cantonese) R.string.lychee_card_yue else R.string.lychee_card_pu) {
-                        speak(spoken, lang)
-                    })
-                }
                 body.addView(row)
             }
         }
 
-        /** A listen button: the speaker and the language's short name, raised like a key. */
-        private fun listen(label: Int, onClick: () -> Unit) = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setPadding(dp(10), dp(4), dp(12), dp(4))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(16).toFloat()
-                setColor(c.primaryContainer)
-            }
-            elevation = dp(2).toFloat()
-            contentDescription = ctx.getString(R.string.lychee_card_listen)
-            addView(android.widget.ImageView(ctx).apply {
-                setImageResource(R.drawable.lychee_ic_volume)
-                imageTintList = android.content.res.ColorStateList.valueOf(c.onPrimaryContainer)
-            }, LinearLayout.LayoutParams(dp(18), dp(18)))
-            addView(textView(ctx.getString(label), 13f, c.onPrimaryContainer).apply {
-                typeface = app.lychee.fonts.LycheeFonts.ui(ctx, 600)
-                setPadding(dp(4), 0, 0, 0)
-            })
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(32)).apply {
-                marginStart = dp(8); topMargin = dp(4)
-            }
-            setOnClickListener { onClick() }
-        }
-
-        /** The word, large, with a button to hear [spoken]. */
-        fun heading(shown: String, spoken: String?) {
+        /**
+         * The word, large, with [other] (the other script's form) smaller under it, and the
+         * card's speak button for [spoken]; on a Chinese card the 粵/普 chip beside it switches
+         * which language every speak button uses.
+         */
+        fun heading(shown: String, spoken: String?, other: String? = null) {
             val head = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
-            head.addView(textView(shown, 34f, c.onSurface).apply {
+            val words = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+            words.addView(textView(shown, 34f, c.onSurface).apply {
                 app.lychee.fonts.LycheeFonts.forText(ctx, shown, fontLang)?.let { typeface = it }
-            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-            if (spoken != null) onSpeak?.let { speak -> head.addView(speaker { speak(spoken, null) }) }
+            })
+            if (other != null) {
+                words.addView(textView(other, 18f, c.onSurfaceVariant).apply {
+                    app.lychee.fonts.LycheeFonts.forText(ctx, shown, fontLang)?.let { typeface = it }
+                    letterSpacing = 0.1f
+                })
+            }
+            head.addView(words, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            if (spoken != null) onSpeak?.let { speak ->
+                if (speakLang != null) head.addView(speakChip())
+                head.addView(speaker { speak(spoken, speakLang) })
+            }
             body.addView(head)
+        }
+
+        /** 粵 or 普: the language the speak buttons use; a tap switches it. */
+        private fun speakChip() = TextView(ctx).apply {
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            typeface = app.lychee.fonts.LycheeFonts.chinese(ctx) ?: Typeface.DEFAULT_BOLD
+            setTextColor(c.onSecondaryContainer)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                cornerRadius = dp(16).toFloat()
+                setColor(c.secondaryContainer)
+            }
+            contentDescription = ctx.getString(R.string.lychee_card_speak_language)
+            layoutParams = LinearLayout.LayoutParams(dp(44), dp(32)).apply { marginEnd = dp(8) }
+            speakChips += this
+            updateChip(this)
+            setOnClickListener {
+                speakLang = if (speakLang == Lang.Mandarin) Lang.Cantonese else Lang.Mandarin
+                speakChips.forEach { updateChip(it) }
+            }
+        }
+
+        private fun updateChip(chip: TextView) {
+            chip.text = ChineseScript.ui(if (speakLang == Lang.Mandarin) "普" else "粵", ctx)
         }
 
         /** Stroke order and breakdown of each character (up to four), when the pack is installed. */
@@ -318,7 +373,7 @@ class DictionaryPopup(private val ctx: Context) {
                 col.addView(textView(english, 13f, c.onSurfaceVariant))
                 row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                 onSpeak?.let { speak ->
-                    row.addView(speaker { speak(sentence, null) }.apply {
+                    row.addView(speaker { speak(sentence, speakLang) }.apply {
                         layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
                         setPadding(dp(8), dp(8), dp(8), dp(8))
                     })
@@ -329,7 +384,7 @@ class DictionaryPopup(private val ctx: Context) {
 
         fun plainSense(n: Int, gloss: String) {
             val sb = SpannableStringBuilder()
-            sb.append("$n  ", ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            sb.append("$n", NumberBadge(c.primaryContainer, c.onPrimaryContainer, dp(20).toFloat(), dp(8).toFloat()), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             sb.append(gloss)
             body.addView(textView(sb, 15f, c.onSurface).apply { setPadding(0, dp(4), 0, dp(2)) })
         }
@@ -377,9 +432,8 @@ class DictionaryPopup(private val ctx: Context) {
         }
 
         private fun sense(n: Int, s: Sense) {
-            val muted = c.onSurfaceVariant
             val sb = SpannableStringBuilder()
-            sb.append("$n  ", ForegroundColorSpan(muted), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            sb.append("$n", NumberBadge(c.primaryContainer, c.onPrimaryContainer, dp(20).toFloat(), dp(8).toFloat()), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             sb.append(s.gloss)
             // the meaning alone: no reading, part of speech or register beside it
             body.addView(textView(sb, 15f, c.onSurface).apply { setPadding(0, dp(4), 0, dp(2)) })
@@ -391,12 +445,14 @@ class DictionaryPopup(private val ctx: Context) {
             }
         }
 
+        /** One character or word of a composed candidate: both languages' readings, and its meaning. */
         private fun part(hw: Headword, lang: Lang) {
-            val reading = hw.readings[lang]?.firstOrNull()?.let {
-                Annotator.format(it, lang, prefs)
-            } ?: ""
+            val langs = if (lang == Lang.Mandarin) listOf(Lang.Mandarin, Lang.Cantonese) else listOf(Lang.Cantonese, Lang.Mandarin)
+            val readings = langs.mapNotNull { l -> hw.readings[l]?.firstOrNull()?.let { Annotator.format(it, l, prefs) } }
+                .joinToString("  ·  ")
             val gloss = hw.senses.firstOrNull { it.partOfSpeech != "cl" }?.gloss?.let { Annotator.shorten(it, 80) } ?: ""
-            body.addView(textView("${hw.traditional}  $reading  —  $gloss", 15f, c.onSurface).apply {
+            val form = if (prefs.simplified) hw.simplified else hw.traditional
+            body.addView(textView("$form  $readings  —  $gloss", 15f, c.onSurface).apply {
                 setPadding(0, dp(4), 0, dp(2))
             })
         }
@@ -452,5 +508,34 @@ class DictionaryPopup(private val ctx: Context) {
                 "yue" to "Cantonese", "cmn" to "Mandarin",
             )
         }
+    }
+}
+
+/** A sense's number in a filled circle, before its meaning. */
+private class NumberBadge(private val fill: Int, private val ink: Int, private val size: Float, private val gap: Float) :
+    android.text.style.ReplacementSpan() {
+    override fun getSize(paint: android.graphics.Paint, text: CharSequence, start: Int, end: Int, fm: android.graphics.Paint.FontMetricsInt?): Int =
+        (size + gap).toInt()
+
+    override fun draw(
+        canvas: android.graphics.Canvas, text: CharSequence, start: Int, end: Int,
+        x: Float, top: Int, y: Int, bottom: Int, paint: android.graphics.Paint,
+    ) {
+        val oldColor = paint.color
+        val oldSize = paint.textSize
+        val oldFace = paint.typeface
+        val cy = (top + bottom) / 2f
+        paint.color = fill
+        canvas.drawCircle(x + size / 2, cy, size / 2, paint)
+        paint.color = ink
+        paint.textSize = size * 0.6f
+        paint.typeface = Typeface.create(oldFace, Typeface.BOLD)
+        val label = text.subSequence(start, end).toString()
+        val w = paint.measureText(label)
+        val fm = paint.fontMetrics
+        canvas.drawText(label, x + (size - w) / 2, cy - (fm.ascent + fm.descent) / 2, paint)
+        paint.color = oldColor
+        paint.textSize = oldSize
+        paint.typeface = oldFace
     }
 }

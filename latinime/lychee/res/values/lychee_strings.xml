@@ -94,6 +94,14 @@
     <string name="lychee_speech_unavailable">Text-to-speech isn\'t available on this phone</string>
     <string name="lychee_speech_no_voice">No voice for this language yet: install one in the phone\'s Settings, Text-to-speech output</string>
     <string name="lychee_card_listen">Listen</string>
+    <string name="lychee_card_speak_language">Speak in</string>
+    <string name="lychee_card_speak_summary">What the word card\'s speak buttons use; 粵/普 on the card switches it</string>
+    <string name="lychee_card_speak_auto">Keyboard\'s language</string>
+    <string name="lychee_card_other_script">Other script on the word card</string>
+    <string name="lychee_card_other_script_summary">Under the word, smaller: 學生 with 学- or 学生</string>
+    <string name="lychee_card_other_hyphens">What differs</string>
+    <string name="lychee_card_other_full">In full</string>
+    <string name="lychee_card_other_off">Hidden</string>
     <string name="lychee_card_level">Level</string>
     <string name="lychee_card_examples">Examples</string>
     <string name="lychee_card_romanisation">Romanisation</string>

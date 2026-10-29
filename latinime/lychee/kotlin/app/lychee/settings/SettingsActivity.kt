@@ -569,6 +569,36 @@ private fun ChinesePage() {
             )
         }
         row {
+            val other = prefs.stringPref(app.lychee.chinese.DictionaryPopup.PREF_OTHER_SCRIPT) {
+                prefs.getString(app.lychee.chinese.DictionaryPopup.PREF_OTHER_SCRIPT, null) ?: "hyphens"
+            }
+            ChoiceRow(
+                it, stringResource(R.string.lychee_card_other_script), stringResource(R.string.lychee_card_other_script_summary),
+                options = listOf(
+                    "hyphens" to stringResource(R.string.lychee_card_other_hyphens),
+                    "full" to stringResource(R.string.lychee_card_other_full),
+                    "off" to stringResource(R.string.lychee_card_other_off),
+                ),
+                selected = other.value,
+                onSelect = other::set,
+            )
+        }
+        row {
+            val speak = prefs.stringPref(app.lychee.chinese.DictionaryPopup.PREF_SPEAK_LANG) {
+                prefs.getString(app.lychee.chinese.DictionaryPopup.PREF_SPEAK_LANG, null) ?: "auto"
+            }
+            ChoiceRow(
+                it, stringResource(R.string.lychee_card_speak_language), stringResource(R.string.lychee_card_speak_summary),
+                options = listOf(
+                    "auto" to stringResource(R.string.lychee_card_speak_auto),
+                    "yue" to stringResource(R.string.lychee_card_cantonese),
+                    "cmn" to stringResource(R.string.lychee_card_mandarin),
+                ),
+                selected = speak.value,
+                onSelect = speak::set,
+            )
+        }
+        row {
             ChoiceRow(
                 it, stringResource(R.string.lychee_cantonese_input),
                 options = listOf(
