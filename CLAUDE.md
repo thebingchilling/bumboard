@@ -60,7 +60,8 @@ packs page). Public facing, so be careful:
 
 - `latinime/` — the app. LatinIME's Java in `java/`; Lychee's own code in `lychee/kotlin/app/lychee`,
   resources in `lychee/res`, native bridges (Rime, Zinnia) in `lychee/cpp`. LatinIME changes
-  are marked `// LYCHEE`.
+  are marked `// LYCHEE`. The app icon (two lychees) is drawn in `java/res/drawable/lychee_icon_*`
+  with PNG launchers in `java/res/mipmap-*`; its SVG sources and store PNGs are in `lychee/icon`.
 - `core/` — pure Kotlin logic with JVM unit tests (romanisation, glide decoder, symbols ...).
 - `data/` — build scripts for bundled data (Rime schemas and dictionaries, emoji, Korean word
   list) and for packs (`data/packs/`: Japanese dictionary, handwriting, font mirrors).
