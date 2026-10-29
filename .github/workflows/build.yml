@@ -44,6 +44,11 @@ jobs:
       - name: Fetch Google Sans Flex (interface font)
         run: scripts/fetch-fonts.sh
 
+      # handwriting, the Japanese and Korean dictionaries, stroke order and examples come with
+      # the app (the newest published packs); only fonts and emoji are downloads
+      - name: Bundle the packs that come with Lychee
+        run: python3 scripts/bundle-packs.py data/out/assets/lychee/bundled
+
       - name: Rime schema tests (host librime)
         run: data/test/run.sh
 

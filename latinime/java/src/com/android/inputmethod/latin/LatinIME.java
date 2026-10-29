@@ -620,6 +620,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         KeyboardSwitcher.init(this);
         super.onCreate();
         app.lychee.chinese.ChineseScript.init(this); // LYCHEE
+        // LYCHEE: the packs that come with Lychee, unpacked in the background the first time
+        final android.content.Context lycheeApp = getApplicationContext();
+        new Thread(() -> app.lychee.packs.BundledPacks.installAll(lycheeApp), "LycheeBundled").start();
 
         mHandler.onCreate();
 

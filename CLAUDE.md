@@ -64,6 +64,9 @@ packs page). Public facing, so be careful:
 - `core/` — pure Kotlin logic with JVM unit tests (romanisation, glide decoder, symbols ...).
 - `data/` — build scripts for bundled data (Rime schemas and dictionaries, emoji, Korean word
   list) and for packs (`data/packs/`: Japanese dictionary, handwriting, font mirrors).
+- Packs that come with the app: handwriting, the Japanese and Korean dictionaries, stroke order
+  and example sentences are bundled in the APK (`scripts/bundle-packs.py` fetches the newest
+  published ones; `packs/BundledPacks.kt` unpacks them). Only fonts and emoji are downloads.
 - `latinime/lychee/assets/lychee/packs.json` — the downloads catalogue; `previews/` holds the
   pictures of emoji fonts shown before they are downloaded (`data/packs/fonts/render_preview.js`).
 - Pack updates: Lychee can't go online, so "Check for updates" opens the packs page with the

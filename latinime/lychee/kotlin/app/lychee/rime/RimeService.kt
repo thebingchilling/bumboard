@@ -40,6 +40,8 @@ object RimeService {
                 val shared = File(root, "shared")
                 val user = File(root, "user").apply { mkdirs() }
                 val changed = installAssets(app, shared)
+                // the packs that come with Lychee (the Japanese dictionary among them) first
+                app.lychee.packs.BundledPacks.installAll(app)
                 installPacks(app, shared)
                 Rime.start(shared.path, user.path, fullCheck = changed)
                 stagePackBuilds(app, user)

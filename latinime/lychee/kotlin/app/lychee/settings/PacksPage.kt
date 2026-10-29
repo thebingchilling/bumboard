@@ -236,7 +236,8 @@ object PackRefresh {
 @Composable
 fun PackGroup(title: String, kinds: Set<PackKind>, actions: PackActions) {
     val context = LocalContext.current
-    val packs = remember { Packs.catalog(context).filter { it.kind in kinds && !it.custom } }
+    // the packs that come with Lychee are not downloads
+    val packs = remember { Packs.catalog(context).filter { it.kind in kinds && !it.custom && !app.lychee.packs.BundledPacks.isBundled(context, it.id) } }
     if (packs.isEmpty()) return
     Group(title) {
         packs.forEach { pack -> row { PackRow(it, pack, actions) } }

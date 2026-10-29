@@ -212,7 +212,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                 RimeService.refreshPacks(ime) { changed -> if (changed || schemaMissing) selectSchema() }
             }
             if (newEngine == "yue" || newEngine == "cmn") Readings.open(ime) { if (isComposing) show(shown) }
-            if (newEngine == "ja" && !app.lychee.packs.Packs.isInstalled(ime, "rime_ja")) {
+            if (newEngine == "ja" && !app.lychee.packs.Packs.isInstalled(ime, "rime_ja") &&
+                !app.lychee.packs.BundledPacks.isBundled(ime, "rime_ja")) {
                 android.widget.Toast.makeText(ime, R.string.lychee_ja_needs_pack, android.widget.Toast.LENGTH_LONG).show()
             }
         }

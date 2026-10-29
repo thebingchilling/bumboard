@@ -27,7 +27,7 @@ object Updates {
 
     /** Installed packs that came from the catalogue (your own fonts have no updates). */
     fun installed(context: Context): List<Pack> =
-        Packs.catalog(context).filter { !it.custom && Packs.isInstalled(context, it.id) }
+        Packs.catalog(context).filter { !it.custom && Packs.isInstalled(context, it.id) && !BundledPacks.isBundled(context, it.id) }
 
     /**
      * The page's address for the installed packs; with [all], the page starts downloading every
