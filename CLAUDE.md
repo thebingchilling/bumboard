@@ -10,7 +10,8 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
 - Don't compile locally: GitHub Actions builds and tests (`build.yml`, `packs.yml`). Check
   the runs on `main` after pushing and fix any red build.
 - Every build on `main` is published by `build.yml` as a pre-release of this private repository
-  (`lychee-0.1.0-dev.N`, the APK attached, notes from the commit), like Quartz's releases.
+  (`lychee-0.1.0-dev.N`, the APK attached, notes from the commit), like Quartz's releases;
+  a manual run with "Publish a release" ticked does the same.
   Never publish the Lychee app anywhere else (public repositories, stores) until the owner says so.
 - Packs may be published to the public `lychee-keyboard/lychee` repository (see below).
 - This repository is the private workspace. Lychee's code is not released publicly (the owner
@@ -62,7 +63,8 @@ packs page). Public facing, so be careful:
 
 - `latinime/` — the app. LatinIME's Java in `java/`; Lychee's own code in `lychee/kotlin/app/lychee`,
   resources in `lychee/res`, native bridges (Rime, Zinnia) in `lychee/cpp`. LatinIME changes
-  are marked `// LYCHEE`.
+  are marked `// LYCHEE`. The app icon (two lychees) is drawn in `java/res/drawable/lychee_icon_*`
+  with PNG launchers in `java/res/mipmap-*`; its SVG sources and store PNGs are in `lychee/icon`.
 - `core/` — pure Kotlin logic with JVM unit tests (romanisation, glide decoder, symbols ...).
 - `data/` — build scripts for bundled data (Rime schemas and dictionaries, emoji, Korean word
   list) and for packs (`data/packs/`: Japanese dictionary, handwriting, font mirrors).

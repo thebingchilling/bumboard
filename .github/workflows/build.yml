@@ -3,7 +3,12 @@ name: Build Lychee
 on:
   push:
     branches: [main, 'claude/**']
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      release:
+        type: boolean
+        description: "Publish a release (pushes to main always do; pre-release on this private repo)"
+        default: false
 
 permissions:
   contents: write
@@ -85,7 +90,7 @@ jobs:
       # Each build on main is a pre-release of this (private) repository with its APK, like
       # Quartz's releases, instead of an artifact that expires
       - name: Publish the build as a pre-release
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || inputs.release)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
