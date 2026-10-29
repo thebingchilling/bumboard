@@ -197,7 +197,7 @@ public final class Suggest {
                 (SHOULD_AUTO_CORRECT_USING_NON_WHITE_LISTED_SUGGESTION || whitelistedWord != null)
                 || (consideredWord.length() > 1 && (sourceDictionaryOfRemovedWord == null));
 
-        final boolean hasAutoCorrection;
+        boolean hasAutoCorrection;
         // If correction is not enabled, we never auto-correct. This is for example for when
         // the setting "Auto-correction" is "off": we still suggest, but we don't auto-correct.
         if (!isCorrectionEnabled
@@ -246,6 +246,25 @@ public final class Suggest {
                 hasAutoCorrection = isAllowedByAutoCorrectionWithSpaceFilter(firstSuggestion);
             }
         }
+        // LYCHEE: firmer with jumbled words, gentler with word-like words the dictionary lacks
+        // ("bruh", "nah"): see app.lychee.typing.AutoCorrectPolicy
+        boolean lycheeKeepsTyped = false;
+        if (isCorrectionEnabled && allowsToBeAutoCorrected && !resultsArePredictions
+                && !suggestionResults.isEmpty() && !wordComposer.hasDigits()
+                && !wordComposer.isMostlyCaps() && !wordComposer.isResumed()
+                && mDictionaryFacilitator.hasAtLeastOneInitializedMainDictionary()
+                && !suggestionResults.first().isKindOf(SuggestedWordInfo.KIND_SHORTCUT)) {
+            final app.lychee.typing.AutoCorrectPolicy.Decision decision =
+                    app.lychee.typing.AutoCorrectPolicy.INSTANCE.decide(consideredWord,
+                            suggestionResults.first().mWord);
+            if (decision == app.lychee.typing.AutoCorrectPolicy.Decision.KEEP) {
+                hasAutoCorrection = false;
+                lycheeKeepsTyped = true;
+            } else if (decision == app.lychee.typing.AutoCorrectPolicy.Decision.CORRECT) {
+                hasAutoCorrection = isAllowedByAutoCorrectionWithSpaceFilter(
+                        suggestionResults.first());
+            }
+        }
 
         final SuggestedWordInfo typedWordInfo = new SuggestedWordInfo(typedWordString,
                 "" /* prevWordsContext */, SuggestedWordInfo.MAX_SCORE,
@@ -276,7 +295,7 @@ public final class Suggest {
         }
 
         final boolean isTypedWordValid = firstOcurrenceOfTypedWordInSuggestions > -1
-                || (!resultsArePredictions && !allowsToBeAutoCorrected);
+                || (!resultsArePredictions && !allowsToBeAutoCorrected) || lycheeKeepsTyped;
         callback.onGetSuggestedWords(new SuggestedWords(suggestionsList,
                 suggestionResults.mRawSuggestions, typedWordInfo,
                 isTypedWordValid,
@@ -287,17 +306,48 @@ public final class Suggest {
     // Retrieves suggestions for the batch input
     // and calls the callback function with the suggestions.
     // LYCHEE: the glide decoder's words as suggestion results, best first.
+    // LYCHEE: what usually comes next after the words before the cursor (the dictionaries'
+    // predictions), so a glide that fits two words picks the one that fits the sentence.
+    private java.util.Map<String, Integer> lycheePredictions(final NgramContext ngramContext,
+            final Keyboard keyboard, final SettingsValuesForSuggestion settings) {
+        final java.util.HashMap<String, Integer> rank = new java.util.HashMap<>();
+        try {
+            final SuggestionResults predictions = mDictionaryFacilitator.getSuggestionResults(
+                    new WordComposer().getComposedDataSnapshot(), ngramContext, keyboard,
+                    settings, SESSION_ID_GESTURE, SuggestedWords.INPUT_STYLE_PREDICTION);
+            int i = 0;
+            for (final SuggestedWordInfo info : predictions) {
+                rank.put(info.mWord.toLowerCase(java.util.Locale.ROOT), i++);
+            }
+        } catch (final RuntimeException e) {
+            // no context then
+        }
+        return rank;
+    }
+
     private static SuggestionResults lycheeGlideResults(final WordComposer wordComposer,
-            final Keyboard keyboard, final NgramContext ngramContext) {
+            final Keyboard keyboard, final NgramContext ngramContext,
+            final java.util.Map<String, Integer> predicted) {
         final SuggestionResults results = new SuggestionResults(SuggestedWords.MAX_SUGGESTIONS,
                 ngramContext.isBeginningOfSentenceContext(), false);
         if (keyboard == null) {
             return results;
         }
-        final java.util.List<app.lychee.glide.GlideMatch> matches =
-                app.lychee.glide.GlideTyping.decode(wordComposer.getInputPointers(), keyboard);
+        final java.util.List<app.lychee.glide.GlideMatch> matches = new java.util.ArrayList<>(
+                app.lychee.glide.GlideTyping.decode(wordComposer.getInputPointers(), keyboard));
+        // a word the sentence predicts moves up, by up to three places for the likeliest
+        final java.util.ArrayList<Double> order = new java.util.ArrayList<>();
+        for (int i = 0; i < matches.size(); i++) {
+            final Integer p = predicted.get(matches.get(i).getWord().toLowerCase(java.util.Locale.ROOT));
+            order.add(i - (p == null ? 0.0 : Math.max(0.5, 3.0 - p * 0.25)));
+        }
+        final java.util.ArrayList<Integer> indices = new java.util.ArrayList<>();
+        for (int i = 0; i < matches.size(); i++) indices.add(i);
+        indices.sort((a, b) -> Double.compare(order.get(a), order.get(b)));
+        final java.util.ArrayList<app.lychee.glide.GlideMatch> sorted = new java.util.ArrayList<>();
+        for (final int i : indices) sorted.add(matches.get(i));
         int rank = 0;
-        for (final app.lychee.glide.GlideMatch match : matches) {
+        for (final app.lychee.glide.GlideMatch match : sorted) {
             // strictly falling scores keep the decoder's order
             final int score = SuggestedWordInfo.MAX_SCORE / 2 - rank * 1000;
             results.add(new SuggestedWordInfo(match.getWord(), "" /* prevWordsContext */, score,
@@ -318,7 +368,7 @@ public final class Suggest {
         // LYCHEE: LatinIME's native gesture decoder was never open source (its policy is
         // empty), so glides are decoded by app.lychee.glide instead.
         final SuggestionResults suggestionResults = lycheeGlideResults(wordComposer, keyboard,
-                ngramContext);
+                ngramContext, lycheePredictions(ngramContext, keyboard, settingsValuesForSuggestion));
         // For transforming words that don't come from a dictionary, because it's our best bet
         final Locale locale = mDictionaryFacilitator.getLocale();
         final ArrayList<SuggestedWordInfo> suggestionsContainer =

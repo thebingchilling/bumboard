@@ -725,7 +725,7 @@ private fun PreferencesPage() {
     val vibrate = prefs.boolPref(Settings.PREF_VIBRATE_ON) { Settings.readVibrationEnabled(prefs, res) }
     val sound = prefs.boolPref(Settings.PREF_SOUND_ON) { Settings.readKeypressSoundEnabled(prefs, res) }
     val keySound = prefs.stringPref(app.lychee.ui.KeySounds.PREF) {
-        prefs.getString(app.lychee.ui.KeySounds.PREF, null) ?: app.lychee.ui.KeySounds.SYSTEM
+        prefs.getString(app.lychee.ui.KeySounds.PREF, null) ?: app.lychee.ui.KeySounds.DEFAULT
     }
     val popup = prefs.boolPref(Settings.PREF_POPUP_ON) { Settings.readKeyPreviewPopupEnabled(prefs, res) }
     val voice = prefs.boolPref(Settings.PREF_VOICE_INPUT_KEY) { prefs.getBoolean(Settings.PREF_VOICE_INPUT_KEY, true) }

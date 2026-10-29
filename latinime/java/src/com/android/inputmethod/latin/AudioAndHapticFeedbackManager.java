@@ -23,6 +23,7 @@ import android.view.HapticFeedbackConstants;
 import android.view.View;
 
 import com.android.inputmethod.latin.common.Constants;
+import com.android.inputmethod.latin.settings.Settings;
 import com.android.inputmethod.latin.settings.SettingsValues;
 
 /**
@@ -58,6 +59,37 @@ public final class AudioAndHapticFeedbackManager {
         mVibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
         // LYCHEE: Lychee's own key sounds, when one is chosen in Settings
         app.lychee.ui.KeySounds.init(context);
+        // LYCHEE: sound and vibration follow Settings at once, not from the next text field
+        mResources = context.getResources();
+        final android.content.SharedPreferences prefs =
+                android.preference.PreferenceManager.getDefaultSharedPreferences(context);
+        mPrefs = prefs;
+        readLycheeFeedback(prefs);
+        prefs.registerOnSharedPreferenceChangeListener(mFeedbackListener);
+    }
+
+    // LYCHEE: the sound and vibration settings, read live
+    private android.content.SharedPreferences mPrefs;
+    private android.content.res.Resources mResources;
+    private boolean mLycheeVibrateOn;
+    private boolean mLycheeSoundOn;
+    private int mLycheeVibrationMs = -1;
+    private float mLycheeVolume = -1f;
+    private final android.content.SharedPreferences.OnSharedPreferenceChangeListener mFeedbackListener =
+            (prefs, key) -> {
+                if (key == null || key.equals(Settings.PREF_VIBRATE_ON) || key.equals(Settings.PREF_SOUND_ON)
+                        || key.equals(Settings.PREF_VIBRATION_DURATION_SETTINGS)
+                        || key.equals(Settings.PREF_KEYPRESS_SOUND_VOLUME)) {
+                    readLycheeFeedback(prefs);
+                }
+            };
+
+    private void readLycheeFeedback(final android.content.SharedPreferences prefs) {
+        mLycheeVibrateOn = Settings.readVibrationEnabled(prefs, mResources);
+        mLycheeSoundOn = Settings.readKeypressSoundEnabled(prefs, mResources);
+        mLycheeVibrationMs = Settings.readKeypressVibrationDuration(prefs, mResources);
+        mLycheeVolume = Settings.readKeypressSoundVolume(prefs, mResources);
+        mSoundOn = reevaluateIfSoundIsOn();
     }
 
     public void performHapticAndAudioFeedback(final int code,
@@ -74,11 +106,18 @@ public final class AudioAndHapticFeedbackManager {
         if (mVibrator == null) {
             return;
         }
-        mVibrator.vibrate(milliseconds);
+        // LYCHEE: a vibration of Lychee's own, so it works whatever the phone's touch feedback
+        // setting is
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            mVibrator.vibrate(android.os.VibrationEffect.createOneShot(milliseconds,
+                    android.os.VibrationEffect.DEFAULT_AMPLITUDE));
+        } else {
+            mVibrator.vibrate(milliseconds);
+        }
     }
 
     private boolean reevaluateIfSoundIsOn() {
-        if (mSettingsValues == null || !mSettingsValues.mSoundOn || mAudioManager == null) {
+        if (!mLycheeSoundOn || mAudioManager == null) {
             return false;
         }
         return mAudioManager.getRingerMode() == AudioManager.RINGER_MODE_NORMAL;
@@ -95,7 +134,7 @@ public final class AudioAndHapticFeedbackManager {
         // LYCHEE: Lychee's own key sounds (Settings > Preferences > Key sound)
         final int lycheeKind = code == Constants.CODE_SPACE ? 1 : code == Constants.CODE_ENTER ? 2
                 : code == Constants.CODE_DELETE ? 3 : 0;
-        if (app.lychee.ui.KeySounds.play(lycheeKind, mSettingsValues.mKeypressSoundVolume)) {
+        if (app.lychee.ui.KeySounds.play(lycheeKind, mLycheeVolume)) {
             return;
         }
         final int sound;
@@ -113,26 +152,24 @@ public final class AudioAndHapticFeedbackManager {
             sound = AudioManager.FX_KEYPRESS_STANDARD;
             break;
         }
-        mAudioManager.playSoundEffect(sound, mSettingsValues.mKeypressSoundVolume);
+        mAudioManager.playSoundEffect(sound, mLycheeVolume);
     }
 
     public void performHapticFeedback(final View viewToPerformHapticFeedbackOn) {
-        if (!mSettingsValues.mVibrateOn) {
+        if (!mLycheeVibrateOn) {
             return;
         }
-        if (mSettingsValues.mKeypressVibrationDuration >= 0) {
-            vibrate(mSettingsValues.mKeypressVibrationDuration);
-            return;
-        }
-        // Go ahead with the system default
-        if (viewToPerformHapticFeedbackOn != null) {
-            viewToPerformHapticFeedbackOn.performHapticFeedback(
-                    HapticFeedbackConstants.KEYBOARD_TAP);
-        }
+        // LYCHEE: always Lychee's own short tap (the system's KEYBOARD_TAP is silent when the
+        // phone's touch feedback is off)
+        vibrate(mLycheeVibrationMs >= 0 ? mLycheeVibrationMs : DEFAULT_VIBRATION_MS);
     }
+
+    // LYCHEE: a light tap, like Gboard's
+    private static final int DEFAULT_VIBRATION_MS = 12;
 
     public void onSettingsChanged(final SettingsValues settingsValues) {
         mSettingsValues = settingsValues;
+        if (mPrefs != null) readLycheeFeedback(mPrefs);
         mSoundOn = reevaluateIfSoundIsOn();
     }
 

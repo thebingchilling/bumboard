@@ -20,17 +20,19 @@ import kotlin.math.sin
 object KeySounds {
     const val PREF = "lychee_key_sound"
     const val SYSTEM = "system"
+    /** Lychee's own soft click by default: the phone's is silent when its touch sounds are off. */
+    const val DEFAULT = "soft"
     val STYLES = listOf(SYSTEM, "soft", "click", "typewriter", "bubble")
 
     private const val RATE = 44100
     private val worker = Executors.newSingleThreadExecutor()
     private var pool: SoundPool? = null
-    private var style = SYSTEM
+    private var style = DEFAULT
     /** sound ids by kind: 0 letter, 1 space, 2 enter, 3 delete */
     private val ids = IntArray(4)
     private var app: Context? = null
     private val listener = SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
-        if (key == PREF) load(p.getString(PREF, SYSTEM) ?: SYSTEM)
+        if (key == PREF) load(p.getString(PREF, DEFAULT) ?: DEFAULT)
     }
 
     @Suppress("DEPRECATION")
@@ -40,7 +42,7 @@ object KeySounds {
         app = context.applicationContext
         val prefs = PreferenceManager.getDefaultSharedPreferences(context)
         prefs.registerOnSharedPreferenceChangeListener(listener)
-        load(prefs.getString(PREF, SYSTEM) ?: SYSTEM)
+        load(prefs.getString(PREF, DEFAULT) ?: DEFAULT)
     }
 
     private fun load(newStyle: String) {
