@@ -205,7 +205,7 @@ class ToolbarView @JvmOverloads constructor(
         background = if (highlighted) android.graphics.drawable.InsetDrawable(GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setColor(palette.primaryContainer)
-        }, dp(6), dp(2), dp(6), dp(2)) else context.getDrawable(R.drawable.lychee_m3_suggestion)
+        }, dp(6), dp(2), dp(6), dp(2)) else app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_suggestion)
         setOnClickListener { onClick() }
         layoutParams = LinearLayout.LayoutParams(dp(48), dp(40)).apply { gravity = Gravity.CENTER_VERTICAL }
     }

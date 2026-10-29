@@ -50,7 +50,7 @@ object LanguageCard {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(20), 0, dp(20), 0)
-            background = context.getDrawable(R.drawable.lychee_m3_suggestion)
+            background = app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_suggestion)
             addView(TextView(context).apply {
                 this.text = text
                 setTextColor(palette.onSurface)
@@ -80,7 +80,7 @@ object LanguageCard {
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
 
         // the keys fade behind the card; a tap on them closes it
-        val background = context.getColor(R.color.lychee_m3_kb_background)
+        val background = app.lychee.ui.LycheeColorStyle.color(context, R.attr.lycheeColorBackground)
         val scrim = FrameLayout(context).apply {
             setBackgroundColor((background and 0x00FFFFFF) or 0xB3000000.toInt())
             setOnClickListener { dismiss() }

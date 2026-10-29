@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Generated: Lychee Material 3 keys. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_active="true" android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="@color/lychee_m3_primary_pressed" /><corners android:radius="8dp" /></shape></item>
-    <item android:state_active="true"><shape android:shape="rectangle"><solid android:color="@color/lychee_m3_primary" /><corners android:radius="8dp" /></shape></item>
+    <item android:state_active="true" android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="?attr/lycheeColorAccentPressed" /><corners android:radius="8dp" /></shape></item>
+    <item android:state_active="true"><shape android:shape="rectangle"><solid android:color="?attr/lycheeColorAccent" /><corners android:radius="8dp" /></shape></item>
     <item android:state_checkable="true" android:state_checked="true" android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="@color/lychee_m3_primary_container_pressed" /><corners android:radius="8dp" /></shape></item>
     <item android:state_checkable="true" android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="?attr/lycheeColorFunctionalPressed" /><corners android:radius="8dp" /></shape></item>
     <item android:state_checkable="true" android:state_checked="true"><shape android:shape="rectangle"><solid android:color="@color/lychee_m3_primary_container" /><corners android:radius="8dp" /></shape></item>
     <item android:state_checkable="true"><shape android:shape="rectangle"><solid android:color="?attr/lycheeColorFunctional" /><corners android:radius="8dp" /></shape></item>
-    <item android:state_empty="true" android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="@color/lychee_m3_key_pressed" /><corners android:radius="8dp" /></shape></item>
+    <item android:state_empty="true" android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="?attr/lycheeColorKeyPressed" /><corners android:radius="8dp" /></shape></item>
     <item android:state_empty="true" android:drawable="@android:color/transparent" />
-    <item android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="@color/lychee_m3_key_pressed" /><corners android:radius="8dp" /></shape></item>
-    <item><shape android:shape="rectangle"><solid android:color="@color/lychee_m3_key" /><corners android:radius="8dp" /></shape></item>
+    <item android:state_pressed="true"><shape android:shape="rectangle"><solid android:color="?attr/lycheeColorKeyPressed" /><corners android:radius="8dp" /></shape></item>
+    <item><shape android:shape="rectangle"><solid android:color="?attr/lycheeColorKey" /><corners android:radius="8dp" /></shape></item>
 </selector>

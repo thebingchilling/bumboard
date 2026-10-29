@@ -106,12 +106,17 @@ object LycheeFonts {
     fun uiIsSystem(context: Context) = choice(context, PREF_UI) == SYSTEM
 
     /**
-     * The app's font at [weight] (400 regular, 500 medium, ...): Google Sans Flex, or the
-     * phone's sans-serif when chosen (or when the font is not in the APK).
+     * The font of the keyboard's own panels and menus at [weight] (400 regular, 500 medium,
+     * ...): the keyboard font when one is chosen in Settings > Fonts (so it is the whole
+     * keyboard's, not only the keys'), otherwise the app's: Google Sans Flex, or the phone's
+     * sans-serif when chosen (or when the font is not in the APK).
      */
     @JvmStatic
-    fun ui(context: Context, weight: Int = 400): Typeface =
-        if (uiIsSystem(context)) system(weight) else gsf(context, weight)
+    fun ui(context: Context, weight: Int = 400): Typeface = when {
+        choice(context, PREF_KEYS).isNotEmpty() -> keysLatin(context, weight)
+        uiIsSystem(context) -> system(weight)
+        else -> gsf(context, weight)
+    }
 
     /** The app's font in place of [face]: medium for bold, regular otherwise. */
     @JvmStatic

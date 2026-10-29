@@ -204,9 +204,9 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mVoiceKey.setOnClickListener(this);
         // LYCHEE: the mic is a raised round key with a soft shadow, like 繁/简
         mVoiceKey.setImageTintList(android.content.res.ColorStateList.valueOf(
-                context.getColor(R.color.lychee_m3_on_key)));
+                app.lychee.ui.LycheeColorStyle.color(context, R.attr.lycheeColorOnKey)));
         mVoiceKey.setBackground(lycheeRoundRaisedButton(context,
-                context.getColor(R.color.lychee_m3_key)));
+                app.lychee.ui.LycheeColorStyle.color(context, R.attr.lycheeColorKey)));
         setLycheeScriptKey(null, null);
     }
 
@@ -255,10 +255,10 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mLycheeZhongKey.setOnClickListener(onClick);
         if (shown) {
             final Context context = getContext();
-            mLycheeZhongKey.setBackground(lycheeRoundRaisedButton(context, context.getColor(active
-                    ? R.color.lychee_m3_primary : R.color.lychee_m3_key)));
-            mLycheeZhongKey.setTextColor(context.getColor(active
-                    ? R.color.lychee_m3_on_primary : R.color.lychee_m3_on_key));
+            mLycheeZhongKey.setBackground(lycheeRoundRaisedButton(context, app.lychee.ui.LycheeColorStyle.color(context, active
+                    ? R.attr.lycheeColorAccent : R.attr.lycheeColorKey)));
+            mLycheeZhongKey.setTextColor(app.lychee.ui.LycheeColorStyle.color(context, active
+                    ? R.attr.lycheeColorOnAccent : R.attr.lycheeColorOnKey));
             mLycheeZhongKey.setContentDescription(context.getString(active
                     ? R.string.lychee_zhong_key_on : R.string.lychee_zhong_key_off));
         }

@@ -15,26 +15,105 @@
         <item name="lycheeColorFunctional">@color/lychee_m3_key_functional_neutral</item>
         <item name="lycheeColorFunctionalPressed">@color/lychee_m3_key_functional_pressed_neutral</item>
         <item name="lycheeColorOnFunctional">@color/lychee_m3_on_key_functional_neutral</item>
-    </style>
-    <style name="LycheeColors.Rose" parent="">
-        <item name="lycheeColorFunctional">@color/lychee_palette_rose</item>
-        <item name="lycheeColorFunctionalPressed">@color/lychee_palette_rose_pressed</item>
-        <item name="lycheeColorOnFunctional">@color/lychee_palette_rose_on</item>
-    </style>
-    <style name="LycheeColors.Ocean" parent="">
-        <item name="lycheeColorFunctional">@color/lychee_palette_ocean</item>
-        <item name="lycheeColorFunctionalPressed">@color/lychee_palette_ocean_pressed</item>
-        <item name="lycheeColorOnFunctional">@color/lychee_palette_ocean_on</item>
-    </style>
-    <style name="LycheeColors.Forest" parent="">
-        <item name="lycheeColorFunctional">@color/lychee_palette_forest</item>
-        <item name="lycheeColorFunctionalPressed">@color/lychee_palette_forest_pressed</item>
-        <item name="lycheeColorOnFunctional">@color/lychee_palette_forest_on</item>
+        <item name="lycheeColorBackground">@color/lychee_m3_kb_background</item>
+        <item name="lycheeColorKey">@color/lychee_m3_key</item>
+        <item name="lycheeColorKeyPressed">@color/lychee_m3_key_pressed</item>
+        <item name="lycheeColorOnKey">@color/lychee_m3_on_key</item>
+        <item name="lycheeColorOnKeyVariant">@color/lychee_m3_on_key_variant</item>
+        <item name="lycheeColorAccent">@color/lychee_m3_primary</item>
+        <item name="lycheeColorAccentPressed">@color/lychee_m3_primary_pressed</item>
+        <item name="lycheeColorOnAccent">@color/lychee_m3_on_primary</item>
     </style>
     <style name="LycheeColors.Wallpaper" parent="">
         <item name="lycheeColorFunctional">@color/lychee_m3_key_functional</item>
         <item name="lycheeColorFunctionalPressed">@color/lychee_m3_key_functional_pressed</item>
         <item name="lycheeColorOnFunctional">@color/lychee_m3_on_key_functional</item>
+        <item name="lycheeColorBackground">@color/lychee_m3_kb_background</item>
+        <item name="lycheeColorKey">@color/lychee_m3_key</item>
+        <item name="lycheeColorKeyPressed">@color/lychee_m3_key_pressed</item>
+        <item name="lycheeColorOnKey">@color/lychee_m3_on_key</item>
+        <item name="lycheeColorOnKeyVariant">@color/lychee_m3_on_key_variant</item>
+        <item name="lycheeColorAccent">@color/lychee_m3_primary</item>
+        <item name="lycheeColorAccentPressed">@color/lychee_m3_primary_pressed</item>
+        <item name="lycheeColorOnAccent">@color/lychee_m3_on_primary</item>
+    </style>
+    <style name="LycheeColors.Rose" parent="">
+        <item name="lycheeColorBackground">@color/lychee_palette_rose_bg</item>
+        <item name="lycheeColorKey">@color/lychee_palette_rose_key</item>
+        <item name="lycheeColorKeyPressed">@color/lychee_palette_rose_key_pressed</item>
+        <item name="lycheeColorOnKey">@color/lychee_palette_rose_on_key</item>
+        <item name="lycheeColorOnKeyVariant">@color/lychee_palette_rose_on_key_variant</item>
+        <item name="lycheeColorFunctional">@color/lychee_palette_rose_functional</item>
+        <item name="lycheeColorFunctionalPressed">@color/lychee_palette_rose_functional_pressed</item>
+        <item name="lycheeColorOnFunctional">@color/lychee_palette_rose_on_functional</item>
+        <item name="lycheeColorAccent">@color/lychee_palette_rose_accent</item>
+        <item name="lycheeColorAccentPressed">@color/lychee_palette_rose_accent_pressed</item>
+        <item name="lycheeColorOnAccent">@color/lychee_palette_rose_on_accent</item>
+    </style>
+    <style name="LycheeColors.Ocean" parent="">
+        <item name="lycheeColorBackground">@color/lychee_palette_ocean_bg</item>
+        <item name="lycheeColorKey">@color/lychee_palette_ocean_key</item>
+        <item name="lycheeColorKeyPressed">@color/lychee_palette_ocean_key_pressed</item>
+        <item name="lycheeColorOnKey">@color/lychee_palette_ocean_on_key</item>
+        <item name="lycheeColorOnKeyVariant">@color/lychee_palette_ocean_on_key_variant</item>
+        <item name="lycheeColorFunctional">@color/lychee_palette_ocean_functional</item>
+        <item name="lycheeColorFunctionalPressed">@color/lychee_palette_ocean_functional_pressed</item>
+        <item name="lycheeColorOnFunctional">@color/lychee_palette_ocean_on_functional</item>
+        <item name="lycheeColorAccent">@color/lychee_palette_ocean_accent</item>
+        <item name="lycheeColorAccentPressed">@color/lychee_palette_ocean_accent_pressed</item>
+        <item name="lycheeColorOnAccent">@color/lychee_palette_ocean_on_accent</item>
+    </style>
+    <style name="LycheeColors.Forest" parent="">
+        <item name="lycheeColorBackground">@color/lychee_palette_forest_bg</item>
+        <item name="lycheeColorKey">@color/lychee_palette_forest_key</item>
+        <item name="lycheeColorKeyPressed">@color/lychee_palette_forest_key_pressed</item>
+        <item name="lycheeColorOnKey">@color/lychee_palette_forest_on_key</item>
+        <item name="lycheeColorOnKeyVariant">@color/lychee_palette_forest_on_key_variant</item>
+        <item name="lycheeColorFunctional">@color/lychee_palette_forest_functional</item>
+        <item name="lycheeColorFunctionalPressed">@color/lychee_palette_forest_functional_pressed</item>
+        <item name="lycheeColorOnFunctional">@color/lychee_palette_forest_on_functional</item>
+        <item name="lycheeColorAccent">@color/lychee_palette_forest_accent</item>
+        <item name="lycheeColorAccentPressed">@color/lychee_palette_forest_accent_pressed</item>
+        <item name="lycheeColorOnAccent">@color/lychee_palette_forest_on_accent</item>
+    </style>
+    <style name="LycheeColors.Lavender" parent="">
+        <item name="lycheeColorBackground">@color/lychee_palette_lavender_bg</item>
+        <item name="lycheeColorKey">@color/lychee_palette_lavender_key</item>
+        <item name="lycheeColorKeyPressed">@color/lychee_palette_lavender_key_pressed</item>
+        <item name="lycheeColorOnKey">@color/lychee_palette_lavender_on_key</item>
+        <item name="lycheeColorOnKeyVariant">@color/lychee_palette_lavender_on_key_variant</item>
+        <item name="lycheeColorFunctional">@color/lychee_palette_lavender_functional</item>
+        <item name="lycheeColorFunctionalPressed">@color/lychee_palette_lavender_functional_pressed</item>
+        <item name="lycheeColorOnFunctional">@color/lychee_palette_lavender_on_functional</item>
+        <item name="lycheeColorAccent">@color/lychee_palette_lavender_accent</item>
+        <item name="lycheeColorAccentPressed">@color/lychee_palette_lavender_accent_pressed</item>
+        <item name="lycheeColorOnAccent">@color/lychee_palette_lavender_on_accent</item>
+    </style>
+    <style name="LycheeColors.Sunset" parent="">
+        <item name="lycheeColorBackground">@color/lychee_palette_sunset_bg</item>
+        <item name="lycheeColorKey">@color/lychee_palette_sunset_key</item>
+        <item name="lycheeColorKeyPressed">@color/lychee_palette_sunset_key_pressed</item>
+        <item name="lycheeColorOnKey">@color/lychee_palette_sunset_on_key</item>
+        <item name="lycheeColorOnKeyVariant">@color/lychee_palette_sunset_on_key_variant</item>
+        <item name="lycheeColorFunctional">@color/lychee_palette_sunset_functional</item>
+        <item name="lycheeColorFunctionalPressed">@color/lychee_palette_sunset_functional_pressed</item>
+        <item name="lycheeColorOnFunctional">@color/lychee_palette_sunset_on_functional</item>
+        <item name="lycheeColorAccent">@color/lychee_palette_sunset_accent</item>
+        <item name="lycheeColorAccentPressed">@color/lychee_palette_sunset_accent_pressed</item>
+        <item name="lycheeColorOnAccent">@color/lychee_palette_sunset_on_accent</item>
+    </style>
+    <style name="LycheeColors.Mono" parent="">
+        <item name="lycheeColorBackground">@color/lychee_palette_mono_bg</item>
+        <item name="lycheeColorKey">@color/lychee_palette_mono_key</item>
+        <item name="lycheeColorKeyPressed">@color/lychee_palette_mono_key_pressed</item>
+        <item name="lycheeColorOnKey">@color/lychee_palette_mono_on_key</item>
+        <item name="lycheeColorOnKeyVariant">@color/lychee_palette_mono_on_key_variant</item>
+        <item name="lycheeColorFunctional">@color/lychee_palette_mono_functional</item>
+        <item name="lycheeColorFunctionalPressed">@color/lychee_palette_mono_functional_pressed</item>
+        <item name="lycheeColorOnFunctional">@color/lychee_palette_mono_on_functional</item>
+        <item name="lycheeColorAccent">@color/lychee_palette_mono_accent</item>
+        <item name="lycheeColorAccentPressed">@color/lychee_palette_mono_accent_pressed</item>
+        <item name="lycheeColorOnAccent">@color/lychee_palette_mono_on_accent</item>
     </style>
 
     <style name="KeyboardIcons.LycheeM3" parent="KeyboardIcons.LXX_Light">
@@ -50,6 +129,17 @@
     </style>
 
     <style name="KeyboardTheme.LycheeM3" parent="KeyboardIcons.LycheeM3">
+        <item name="lycheeColorFunctional">@color/lychee_m3_key_functional_neutral</item>
+        <item name="lycheeColorFunctionalPressed">@color/lychee_m3_key_functional_pressed_neutral</item>
+        <item name="lycheeColorOnFunctional">@color/lychee_m3_on_key_functional_neutral</item>
+        <item name="lycheeColorBackground">?attr/lycheeColorBackground</item>
+        <item name="lycheeColorKey">@color/lychee_m3_key</item>
+        <item name="lycheeColorKeyPressed">@color/lychee_m3_key_pressed</item>
+        <item name="lycheeColorOnKey">?attr/lycheeColorOnKey</item>
+        <item name="lycheeColorOnKeyVariant">?attr/lycheeColorOnKeyVariant</item>
+        <item name="lycheeColorAccent">?attr/lycheeColorAccent</item>
+        <item name="lycheeColorAccentPressed">@color/lychee_m3_primary_pressed</item>
+        <item name="lycheeColorOnAccent">?attr/lycheeColorOnAccent</item>
         <item name="inputViewStyle">@style/InputView.LXX</item>
         <item name="keyboardViewStyle">@style/KeyboardView.LycheeM3</item>
         <item name="mainKeyboardViewStyle">@style/MainKeyboardView.LycheeM3</item>
@@ -99,22 +189,22 @@
     </style>
 
     <style name="KeyboardView.LycheeM3" parent="KeyboardView.LXX">
-        <item name="android:background">@color/lychee_m3_kb_background</item>
+        <item name="android:background">?attr/lycheeColorBackground</item>
         <item name="keyBackground">?attr/lycheeKeyBackground</item>
         <item name="functionalKeyBackground">?attr/lycheeFunctionalKeyBackground</item>
         <item name="spacebarBackground">?attr/lycheeKeyBackground</item>
-        <item name="keyTextColor">@color/lychee_m3_on_key</item>
-        <item name="keyTextInactivatedColor">@color/lychee_m3_on_key_variant</item>
+        <item name="keyTextColor">?attr/lycheeColorOnKey</item>
+        <item name="keyTextInactivatedColor">?attr/lycheeColorOnKeyVariant</item>
         <item name="functionalTextColor">?attr/lycheeColorOnFunctional</item>
-        <item name="keyHintLetterColor">@color/lychee_m3_on_key_variant</item>
-        <item name="keyHintLabelColor">@color/lychee_m3_on_key_variant</item>
-        <item name="keyShiftedLetterHintInactivatedColor">@color/lychee_m3_on_key_variant</item>
-        <item name="keyShiftedLetterHintActivatedColor">@color/lychee_m3_on_key</item>
-        <item name="keyPreviewTextColor">@color/lychee_m3_on_key</item>
+        <item name="keyHintLetterColor">?attr/lycheeColorOnKeyVariant</item>
+        <item name="keyHintLabelColor">?attr/lycheeColorOnKeyVariant</item>
+        <item name="keyShiftedLetterHintInactivatedColor">?attr/lycheeColorOnKeyVariant</item>
+        <item name="keyShiftedLetterHintActivatedColor">?attr/lycheeColorOnKey</item>
+        <item name="keyPreviewTextColor">?attr/lycheeColorOnKey</item>
         <item name="keyPreviewTextRatio">52%</item>
-        <item name="lycheeIconColor">@color/lychee_m3_on_key</item>
+        <item name="lycheeIconColor">?attr/lycheeColorOnKey</item>
         <item name="lycheeFunctionalIconColor">?attr/lycheeColorOnFunctional</item>
-        <item name="lycheeActionColor">@color/lychee_m3_on_primary</item>
+        <item name="lycheeActionColor">?attr/lycheeColorOnAccent</item>
         <item name="lycheeStickyOnColor">@color/lychee_m3_on_primary_container</item>
     </style>
     <style name="MainKeyboardView.LycheeM3" parent="KeyboardView.LycheeM3">
@@ -124,9 +214,9 @@
         <item name="keyPreviewOffset">@dimen/lychee_key_preview_offset</item>
         <item name="keyPreviewShowUpAnimator">@anim/lychee_key_preview_show</item>
         <item name="keyPreviewDismissAnimator">@anim/lychee_key_preview_dismiss</item>
-        <item name="gestureFloatingPreviewTextColor">@color/lychee_m3_on_key</item>
+        <item name="gestureFloatingPreviewTextColor">?attr/lycheeColorOnKey</item>
         <item name="gestureFloatingPreviewColor">@color/lychee_m3_surface_high</item>
-        <item name="gestureTrailColor">@color/lychee_m3_primary</item>
+        <item name="gestureTrailColor">?attr/lycheeColorAccent</item>
         <!-- Gboard's trail: thick, fading away from its tail -->
         <item name="gestureTrailStartWidth">12dp</item>
         <item name="gestureTrailEndWidth">3dp</item>
@@ -134,7 +224,7 @@
         <item name="gestureTrailFadeoutStartDelay">100</item>
         <item name="gestureTrailFadeoutDuration">300</item>
         <item name="slidingKeyInputPreviewColor">@color/lychee_m3_sliding_preview</item>
-        <item name="languageOnSpacebarTextColor">@color/lychee_m3_on_key</item>
+        <item name="languageOnSpacebarTextColor">?attr/lycheeColorOnKey</item>
         <item name="languageOnSpacebarTextShadowRadius">-1.0</item>
         <!-- the language name stays fully dark, like Gboard's -->
         <item name="languageOnSpacebarFinalAlpha">255</item>
@@ -164,20 +254,20 @@
         <item name="keyTypeface">normal</item>
         <!-- round keys: the selected one is a filled circle with its symbol in white -->
         <item name="keyLabelFlags">keepBackgroundAspectRatio</item>
-        <item name="lycheePressedTextColor">@color/lychee_m3_on_primary</item>
+        <item name="lycheePressedTextColor">?attr/lycheeColorOnAccent</item>
         <item name="verticalCorrection">@dimen/config_more_keys_keyboard_vertical_correction_holo</item>
         <!-- popup keys have no functional fill, so their icons use the plain key colour -->
-        <item name="lycheeFunctionalIconColor">@color/lychee_m3_on_key</item>
+        <item name="lycheeFunctionalIconColor">?attr/lycheeColorOnKey</item>
     </style>
     <style name="MoreKeysKeyboardView.LycheeM3.Action">
         <item name="android:background">@android:color/transparent</item>
         <item name="keyBackground">@drawable/lychee_m3_key_popup_action</item>
         <item name="functionalKeyBackground">@drawable/lychee_m3_key_popup_action</item>
         <item name="keyLabelFlags">keepBackgroundAspectRatio</item>
-        <item name="keyTextColor">@color/lychee_m3_on_primary</item>
-        <item name="functionalTextColor">@color/lychee_m3_on_primary</item>
-        <item name="lycheeIconColor">@color/lychee_m3_on_primary</item>
-        <item name="lycheeFunctionalIconColor">@color/lychee_m3_on_primary</item>
+        <item name="keyTextColor">?attr/lycheeColorOnAccent</item>
+        <item name="functionalTextColor">?attr/lycheeColorOnAccent</item>
+        <item name="lycheeIconColor">?attr/lycheeColorOnAccent</item>
+        <item name="lycheeFunctionalIconColor">?attr/lycheeColorOnAccent</item>
     </style>
 
     <style name="SuggestionStripView.LycheeM3" parent="KeyboardView.LycheeM3">
@@ -185,18 +275,18 @@
         <item name="centerSuggestionPercentile">@fraction/config_center_suggestion_percentile</item>
         <item name="maxMoreSuggestionsRow">@integer/config_max_more_suggestions_row</item>
         <item name="minMoreSuggestionsWidth">@fraction/config_min_more_suggestions_width</item>
-        <item name="android:background">@color/lychee_m3_kb_background</item>
+        <item name="android:background">?attr/lycheeColorBackground</item>
         <item name="android:src">@drawable/lychee_m3_strip_divider</item>
         <item name="suggestionStripOptions">autoCorrectBold|validTypedWordBold</item>
-        <item name="colorValidTypedWord">@color/lychee_m3_on_key</item>
-        <item name="colorTypedWord">@color/lychee_m3_on_key</item>
+        <item name="colorValidTypedWord">?attr/lycheeColorOnKey</item>
+        <item name="colorTypedWord">?attr/lycheeColorOnKey</item>
         <!-- like Gboard's: plain dark words; the autocorrection is shown in bold -->
-        <item name="colorAutoCorrect">@color/lychee_m3_on_key</item>
-        <item name="colorSuggested">@color/lychee_m3_on_key</item>
+        <item name="colorAutoCorrect">?attr/lycheeColorOnKey</item>
+        <item name="colorSuggested">?attr/lycheeColorOnKey</item>
         <item name="alphaObsoleted">70%</item>
     </style>
     <style name="SuggestionWord.LycheeM3" parent="SuggestionWord">
         <item name="android:background">@drawable/lychee_m3_suggestion</item>
-        <item name="android:textColor">@color/lychee_m3_on_key</item>
+        <item name="android:textColor">?attr/lycheeColorOnKey</item>
     </style>
 </resources>

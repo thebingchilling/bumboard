@@ -25,14 +25,4 @@
     <color name="lychee_m3_key_functional_neutral">#444A51</color>
     <color name="lychee_m3_key_functional_pressed_neutral">#5A6169</color>
     <color name="lychee_m3_on_key_functional_neutral">#E2E6EB</color>
-    <!-- Accent palettes for the functional keys (Settings > Theme) -->
-    <color name="lychee_palette_rose">#5A2E39</color>
-    <color name="lychee_palette_rose_pressed">#6E3A47</color>
-    <color name="lychee_palette_rose_on">#FFD9E1</color>
-    <color name="lychee_palette_ocean">#2A4258</color>
-    <color name="lychee_palette_ocean_pressed">#36536D</color>
-    <color name="lychee_palette_ocean_on">#D1E4FF</color>
-    <color name="lychee_palette_forest">#2F4630</color>
-    <color name="lychee_palette_forest_pressed">#3C583D</color>
-    <color name="lychee_palette_forest_on">#D2EED0</color>
 </resources>

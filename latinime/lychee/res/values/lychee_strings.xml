@@ -138,6 +138,9 @@
     <string name="lychee_pref_colors_rose">Rose</string>
     <string name="lychee_pref_colors_ocean">Ocean</string>
     <string name="lychee_pref_colors_forest">Forest</string>
+    <string name="lychee_pref_colors_lavender">Lavender</string>
+    <string name="lychee_pref_colors_sunset">Sunset</string>
+    <string name="lychee_pref_colors_mono">Mono</string>
     <string name="lychee_pref_key_borders">Key borders</string>
     <string name="lychee_pref_key_borders_summary">A background behind each letter key</string>
     <string name="lychee_pref_key_roundness">Corner roundness</string>

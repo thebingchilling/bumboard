@@ -897,8 +897,11 @@ private fun ThemePage() {
             app.lychee.ui.LycheeColorStyle.ROSE to R.string.lychee_pref_colors_rose,
             app.lychee.ui.LycheeColorStyle.OCEAN to R.string.lychee_pref_colors_ocean,
             app.lychee.ui.LycheeColorStyle.FOREST to R.string.lychee_pref_colors_forest,
+            app.lychee.ui.LycheeColorStyle.LAVENDER to R.string.lychee_pref_colors_lavender,
+            app.lychee.ui.LycheeColorStyle.SUNSET to R.string.lychee_pref_colors_sunset,
+            app.lychee.ui.LycheeColorStyle.MONO to R.string.lychee_pref_colors_mono,
         ).forEach { (id, name) ->
-            row { shape -> RadioRow(shape, stringResource(name), colors.value == id) { colors.set(id) } }
+            row { shape -> PaletteRow(shape, stringResource(name), id, colors.value == id) { colors.set(id) } }
         }
     }
     Group(stringResource(R.string.lychee_group_key_style)) {
@@ -954,6 +957,39 @@ private fun ThemePage() {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 32.dp, vertical = 4.dp),
     )
+}
+
+/** A palette to choose: its name, and a swatch of its colours (background, keys, accent). */
+@Composable
+private fun PaletteRow(shape: androidx.compose.ui.graphics.Shape, title: String, style: String, selected: Boolean, onClick: () -> Unit) {
+    val context = LocalContext.current
+    // in the phone's light or dark, like these settings
+    val swatch = remember(style) { app.lychee.ui.LycheeColorStyle.swatch(context, style) }
+    Surface(
+        shape = shape,
+        color = androidx.compose.ui.graphics.Color.Transparent,
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        ListItem(
+            headlineContent = { Text(title) },
+            leadingContent = { RadioButton(selected = selected, onClick = onClick) },
+            trailingContent = {
+                androidx.compose.foundation.Canvas(Modifier.size(width = 88.dp, height = 28.dp)) {
+                    val h = size.height
+                    // the background as a pill, with a letter key, a functional key and the accent on it
+                    drawRoundRect(androidx.compose.ui.graphics.Color(swatch[0]),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(h / 2, h / 2))
+                    val r = h * 0.32f
+                    listOf(swatch[1], swatch[2], swatch[3]).forEachIndexed { i, c ->
+                        drawCircle(androidx.compose.ui.graphics.Color(c), r,
+                            androidx.compose.ui.geometry.Offset(h * 0.55f + i * (r * 2.4f), h / 2))
+                    }
+                }
+            },
+            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        )
+    }
 }
 
 @Composable

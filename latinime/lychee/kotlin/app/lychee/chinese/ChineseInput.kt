@@ -59,11 +59,11 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             p.onLongPick = { index, anchor -> showDictionary(index, anchor) }
         }
         moreButton = inputView.findViewById<android.widget.ImageView>(R.id.lychee_candidate_more)?.also { b ->
-            b.imageTintList = android.content.res.ColorStateList.valueOf(inputView.context.getColor(R.color.lychee_m3_on_key_variant))
+            b.imageTintList = android.content.res.ColorStateList.valueOf(app.lychee.ui.LycheeColorStyle.color(inputView.context, R.attr.lycheeColorOnKeyVariant))
             // a divider keeps it apart from the candidates; it presses as a pill beside it
             val ctx = inputView.context
             b.background = android.graphics.drawable.LayerDrawable(arrayOf(
-                ctx.getDrawable(R.drawable.lychee_m3_strip_divider)!!, ctx.getDrawable(R.drawable.lychee_m3_suggestion)!!,
+                ctx.getDrawable(R.drawable.lychee_m3_strip_divider)!!, app.lychee.ui.LycheeColorStyle.themed(ctx).getDrawable(R.drawable.lychee_m3_suggestion)!!,
             )).apply {
                 setLayerGravity(0, android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL)
                 setLayerInsetStart(1, (ctx.resources.displayMetrics.density * 3).toInt())

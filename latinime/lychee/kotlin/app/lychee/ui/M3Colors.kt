@@ -35,14 +35,14 @@ data class M3Colors(
             fun c(id: Int) = ctx.getColor(id)
             val functional = LycheeColorStyle.functionalColors(ctx)
             return M3Colors(
-                surface = c(R.color.lychee_m3_kb_background),
-                surfaceContainer = c(R.color.lychee_m3_key),
-                surfaceContainerPressed = c(R.color.lychee_m3_key_pressed),
+                surface = LycheeColorStyle.color(ctx, R.attr.lycheeColorBackground),
+                surfaceContainer = LycheeColorStyle.color(ctx, R.attr.lycheeColorKey),
+                surfaceContainerPressed = LycheeColorStyle.color(ctx, R.attr.lycheeColorKeyPressed),
                 surfaceContainerHigh = c(R.color.lychee_m3_surface_high),
-                onSurface = c(R.color.lychee_m3_on_key),
-                onSurfaceVariant = c(R.color.lychee_m3_on_key_variant),
-                primary = c(R.color.lychee_m3_primary),
-                onPrimary = c(R.color.lychee_m3_on_primary),
+                onSurface = LycheeColorStyle.color(ctx, R.attr.lycheeColorOnKey),
+                onSurfaceVariant = LycheeColorStyle.color(ctx, R.attr.lycheeColorOnKeyVariant),
+                primary = LycheeColorStyle.color(ctx, R.attr.lycheeColorAccent),
+                onPrimary = LycheeColorStyle.color(ctx, R.attr.lycheeColorOnAccent),
                 primaryContainer = c(R.color.lychee_m3_primary_container),
                 onPrimaryContainer = c(R.color.lychee_m3_on_primary_container),
                 secondaryContainer = functional[0],

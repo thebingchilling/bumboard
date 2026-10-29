@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Long-press popup panel (more keys): a white card with fully rounded ends, like Gboard's. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="@color/lychee_m3_key" />
+    <solid android:color="?attr/lycheeColorKey" />
     <corners android:radius="28dp" />
     <padding android:left="8dp" android:top="6dp" android:right="8dp" android:bottom="6dp" />
 </shape>

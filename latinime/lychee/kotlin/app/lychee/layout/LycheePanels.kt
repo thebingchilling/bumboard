@@ -115,8 +115,8 @@ object LycheePanels {
             setColor(color)
         }
         val keys = android.graphics.drawable.StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_pressed), shape(context.getColor(R.color.lychee_m3_primary_pressed)))
-            addState(intArrayOf(), shape(context.getColor(R.color.lychee_m3_primary)))
+            addState(intArrayOf(android.R.attr.state_pressed), shape(app.lychee.ui.LycheeColorStyle.color(context, R.attr.lycheeColorAccentPressed)))
+            addState(intArrayOf(), shape(app.lychee.ui.LycheeColorStyle.color(context, R.attr.lycheeColorAccent)))
         }
         return app.lychee.ui.KeyStyle.round(context, keys) ?: keys
     }

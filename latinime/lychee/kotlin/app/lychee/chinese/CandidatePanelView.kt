@@ -126,7 +126,7 @@ class CandidatePanelView @JvmOverloads constructor(
                 gravity = Gravity.CENTER
                 setPadding(dp(4), 0, dp(4), 0)
                 layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(54))
-                background = context.getDrawable(R.drawable.lychee_m3_suggestion)
+                background = app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_suggestion)
                 repeat(3) { i ->
                     addView(TextView(context).apply {
                         gravity = Gravity.CENTER

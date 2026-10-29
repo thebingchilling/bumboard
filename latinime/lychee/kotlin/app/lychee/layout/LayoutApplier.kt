@@ -26,7 +26,7 @@ object LayoutApplier {
         val right = inputView.findViewById<OneHandedSideView>(R.id.lychee_one_hand_right)
         val topBar = inputView.findViewById<View>(R.id.lychee_top_bar)
         val emoji = inputView.findViewById<View>(R.id.emoji_palettes_view)
-        val background = ctx.getColor(R.color.lychee_m3_kb_background)
+        val background = app.lychee.ui.LycheeColorStyle.color(ctx, R.attr.lycheeColorBackground)
         val full = ResourceUtils.getDefaultKeyboardWidth(ctx)
         val keys = layout.keyboardWidth(full)
         val oneHanded = layout.mode == LycheeLayout.Mode.ONE_HANDED

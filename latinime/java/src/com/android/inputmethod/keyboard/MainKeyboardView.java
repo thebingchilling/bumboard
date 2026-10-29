@@ -672,7 +672,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     protected void onDraw(final Canvas canvas) {
         super.onDraw(canvas);
         if (isShowingMoreKeysPanel()) {
-            final int background = getContext().getColor(R.color.lychee_m3_kb_background);
+            final int background = app.lychee.ui.LycheeColorStyle.color(getContext(), R.attr.lycheeColorBackground);
             mLycheeScrimPaint.setColor((background & 0x00FFFFFF) | 0xB3000000);
             canvas.drawRect(0, 0, getWidth(), getHeight(), mLycheeScrimPaint);
         }

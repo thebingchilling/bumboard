@@ -18,9 +18,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -170,6 +167,10 @@ fun ReorderSwitchRow(
     }
 }
 
+/**
+ * A setting with a few choices: its title, and the current choice under it in full; a tap
+ * opens every choice as a list (labels are never squeezed into cells).
+ */
 @Composable
 fun <T> ChoiceRow(
     shape: Shape, title: String, summary: String? = null, options: List<Pair<T, String>>, selected: T,
@@ -177,31 +178,58 @@ fun <T> ChoiceRow(
     @DrawableRes icons: List<Int>? = null,
     onSelect: (T) -> Unit,
 ) {
-    RowSurface(shape, null) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (summary != null) {
-                Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(Modifier.height(10.dp))
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                options.forEachIndexed { i, (value, label) ->
-                    SegmentedButton(
-                        selected = value == selected,
-                        onClick = { onSelect(value) },
-                        shape = SegmentedButtonDefaults.itemShape(i, options.size),
-                        icon = {
-                            val res = icons?.getOrNull(i)
-                            if (res != null) {
-                                Icon(painterResource(res), contentDescription = null, modifier = Modifier.size(18.dp))
-                            } else {
-                                SegmentedButtonDefaults.Icon(value == selected)
-                            }
-                        },
-                    ) { Text(label, maxLines = 1) }
+    var open by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    val current = options.indexOfFirst { it.first == selected }
+    RowSurface(shape, { open = true }) {
+        ListItem(
+            headlineContent = { Text(title) },
+            supportingContent = {
+                Column {
+                    if (summary != null) Text(summary)
+                    Text(
+                        options.getOrNull(current)?.second.orEmpty(),
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                 }
-            }
-        }
+            },
+            leadingContent = icons?.getOrNull(current)?.let { res -> { IconBadge(res) } },
+            trailingContent = {
+                Icon(painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_keyboard_arrow_down), contentDescription = null)
+            },
+            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        )
+    }
+    if (open) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text(title) },
+            text = {
+                Column {
+                    options.forEachIndexed { i, (value, label) ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onSelect(value); open = false }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            androidx.compose.material3.RadioButton(selected = value == selected, onClick = { onSelect(value); open = false })
+                            icons?.getOrNull(i)?.let { res ->
+                                Icon(painterResource(res), contentDescription = null, modifier = Modifier.padding(start = 4.dp).size(20.dp))
+                            }
+                            Text(label, modifier = Modifier.padding(start = 12.dp), style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { open = false }) {
+                    Text(androidx.compose.ui.res.stringResource(com.android.inputmethod.latin.R.string.lychee_close))
+                }
+            },
+        )
     }
 }
 

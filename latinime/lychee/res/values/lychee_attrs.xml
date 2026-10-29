@@ -9,6 +9,15 @@
     <attr name="lycheeColorFunctional" format="color|reference" />
     <attr name="lycheeColorFunctionalPressed" format="color|reference" />
     <attr name="lycheeColorOnFunctional" format="color|reference" />
+    <!-- The rest of the keyboard in the chosen palette: background, letter keys, accent (Enter). -->
+    <attr name="lycheeColorBackground" format="color|reference" />
+    <attr name="lycheeColorKey" format="color|reference" />
+    <attr name="lycheeColorKeyPressed" format="color|reference" />
+    <attr name="lycheeColorOnKey" format="color|reference" />
+    <attr name="lycheeColorOnKeyVariant" format="color|reference" />
+    <attr name="lycheeColorAccent" format="color|reference" />
+    <attr name="lycheeColorAccentPressed" format="color|reference" />
+    <attr name="lycheeColorOnAccent" format="color|reference" />
 
     <!-- Icon tints for KeyboardView; when lycheeIconColor is unset, icons are drawn as they are. -->
     <declare-styleable name="LycheeKeyboardView">

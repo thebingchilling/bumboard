@@ -167,7 +167,7 @@ class EmojiSearchBar @JvmOverloads constructor(
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 30f)
             gravity = Gravity.CENTER
             includeFontPadding = false
-            background = context.getDrawable(R.drawable.lychee_m3_suggestion)
+            background = app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_suggestion)
         }
     }
 
