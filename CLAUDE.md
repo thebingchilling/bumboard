@@ -10,6 +10,8 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
 - Don't compile locally: GitHub Actions builds and tests (`build.yml`, `packs.yml`). Check
   the runs on `main` after pushing and fix any red build.
 - Never publish the Lychee app (APK or a release of it) anywhere until the owner says so.
+  The one exception: private pre-releases on this repository, made only when the owner
+  starts `build.yml` by hand with "Publish a release" ticked (tag `lychee-<version>`).
 - Packs may be published to the public `lychee-keyboard/lychee` repository (see below).
 - This repository is the private workspace. Lychee's code is not released publicly (the owner
   may decide later what to release); only the public-facing parts (packs, the packs page) go

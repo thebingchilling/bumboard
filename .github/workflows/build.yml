@@ -3,7 +3,12 @@ name: Build Lychee
 on:
   push:
     branches: [main, 'claude/**']
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      release:
+        type: boolean
+        description: "Publish a release (pre-release on this private repo, APK attached)"
+        default: false
 
 concurrency:
   group: lychee-${{ github.ref }}
@@ -84,3 +89,30 @@ jobs:
           name: lychee-${{ env.BUILD_VERSION_NAME }}
           path: latinime/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+  # Only when started by hand with "Publish a release" ticked. Releases go on this private
+  # repository only, never on lychee-keyboard's public ones.
+  release:
+    needs: apk
+    if: github.event_name == 'workflow_dispatch' && inputs.release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      BUILD_VERSION_NAME: 0.1.0-dev.${{ github.run_number }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: lychee-${{ env.BUILD_VERSION_NAME }}
+          path: dist
+
+      - name: Publish release
+        run: |
+          for f in dist/*.apk; do mv "$f" "dist/lychee-$BUILD_VERSION_NAME.apk"; done
+          gh release create "lychee-$BUILD_VERSION_NAME" dist/*.apk \
+            --target "$GITHUB_SHA" \
+            --title "Lychee $BUILD_VERSION_NAME" \
+            --prerelease \
+            --notes "Lychee $BUILD_VERSION_NAME (debug build)."
