@@ -139,11 +139,12 @@ public class RichInputMethodSubtype {
         final String native_;
         final String english;
         if (isLycheeChinese()) {
+            // the Chinese names in Lychee's script (粤语 when Simplified is chosen)
             switch (String.valueOf(mSubtype.getExtraValueOf("LycheeEngine"))) {
-                case "yue": native_ = "粵語"; english = "Cantonese"; break;
+                case "yue": native_ = app.lychee.chinese.ChineseScript.ui("粵語"); english = "Cantonese"; break;
                 case "ja": native_ = "日本語"; english = "Japanese"; break;
                 case "ko": native_ = "한국어"; english = "Korean"; break;
-                default: native_ = "普通話"; english = "Mandarin"; break;
+                default: native_ = app.lychee.chinese.ChineseScript.ui("普通話"); english = "Mandarin"; break;
             }
         } else {
             return null;

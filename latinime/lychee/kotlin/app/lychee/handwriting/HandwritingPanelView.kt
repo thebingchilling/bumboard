@@ -286,8 +286,8 @@ class HandwritingPanelView @JvmOverloads constructor(
     private fun showNext(typed: String) {
         val last = typed.codePointBefore(typed.length).let { String(Character.toChars(it)) }
         @Suppress("DEPRECATION")
-        val simplified = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
-            .getString(app.lychee.chinese.ChineseInput.PREF_SCRIPT, "traditional") == "simplified"
+        val simplified = app.lychee.chinese.ChineseScript.candidatesSimplified(
+            android.preference.PreferenceManager.getDefaultSharedPreferences(context))
         val next = runCatching { app.lychee.chinese.Readings.db?.continuations(last, simplified) }.getOrNull().orEmpty()
         lycheeHost()?.lycheeShowGuesses(next) { i ->
             next.getOrNull(i)?.let { text ->

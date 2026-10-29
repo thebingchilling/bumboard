@@ -59,19 +59,21 @@ object RimeService {
 
     /**
      * Copies imported Rime packs (e.g. the Japanese dictionary: schema, dictionary and its
-     * precompiled build/) into Rime's shared data, then runs [then] on the main thread.
+     * precompiled build/) into Rime's shared data, then runs [then] on the main thread with
+     * whether anything changed.
      */
-    fun refreshPacks(context: Context, then: () -> Unit = {}) {
+    fun refreshPacks(context: Context, then: (Boolean) -> Unit = {}) {
         val app = context.applicationContext
         executor.execute {
+            var changed = false
             try {
                 val root = File(app.filesDir, "rime")
-                installPacks(app, File(root, "shared"))
+                changed = installPacks(app, File(root, "shared"))
                 stagePackBuilds(app, File(root, "user"))
             } catch (t: Throwable) {
                 Log.e(TAG, "Rime packs failed to install", t)
             }
-            main.post(then)
+            main.post { then(changed) }
         }
     }
 

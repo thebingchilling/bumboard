@@ -870,7 +870,7 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         if (engine != null) {
             final String name;
             switch (engine) {
-                case "yue": name = "\u7CB5\u62FC"; break;      // 粵拼
+                case "yue": name = app.lychee.chinese.ChineseScript.ui("\u7CB5\u62FC", getContext()); break; // 粵拼
                 case "cmn": name = "\u62FC\u97F3"; break;      // 拼音
                 case "ja": name = "\u65E5\u672C\u8A9E"; break; // 日本語
                 case "ko": name = "\uD55C\uAD6D\uC5B4"; break; // 한국어

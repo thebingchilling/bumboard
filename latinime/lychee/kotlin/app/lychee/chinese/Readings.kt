@@ -80,7 +80,7 @@ object Readings {
         },
         showOtherLanguage = prefs.getBoolean(PREF_OTHER_LANGUAGE, false),
         showMeaning = prefs.getBoolean(PREF_MEANING, true),
-        simplified = prefs.getString(ChineseInput.PREF_SCRIPT, "traditional") == "simplified",
+        simplified = ChineseScript.candidatesSimplified(prefs),
         jyutpingTones = tones(prefs, PREF_JYUTPING_TONES, app.lychee.core.ToneStyle.Numbers),
         yaleTones = tones(prefs, PREF_YALE_TONES, app.lychee.core.ToneStyle.Marks),
         pinyinTones = tones(prefs, PREF_PINYIN_TONES, app.lychee.core.ToneStyle.Marks),

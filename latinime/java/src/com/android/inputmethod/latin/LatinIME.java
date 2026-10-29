@@ -619,6 +619,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         mDisplayContext = getDisplayContext();
         KeyboardSwitcher.init(this);
         super.onCreate();
+        app.lychee.chinese.ChineseScript.init(this); // LYCHEE
 
         mHandler.onCreate();
 

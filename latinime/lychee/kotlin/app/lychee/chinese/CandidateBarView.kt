@@ -19,7 +19,8 @@ import com.android.inputmethod.latin.R
 import java.util.concurrent.Executors
 
 /**
- * A scrolling row of Chinese candidates in the strip: each with its characters, its readings
+ * A row of Chinese candidates in the strip, as many as fit whole (it never scrolls; the rest
+ * are in the panel the ⌄ opens): each with its characters, its readings
  * and, on one line, as many words of its meaning as fit the candidate's own width (the meaning
  * never widens a candidate; hold one for the full dictionary entry). Characters appear at
  * once; readings and meanings are looked up off the main thread and filled in as they arrive.
@@ -69,9 +70,6 @@ class CandidateBarView @JvmOverloads constructor(
     init {
         isHorizontalScrollBarEnabled = false
         isFillViewport = true
-        // candidates running on past the edge fade out before the ⌄, rather than being cut by it
-        isHorizontalFadingEdgeEnabled = true
-        setFadingEdgeLength(dp(20))
         addView(row, LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT))
         val a = context.obtainStyledAttributes(
             null, R.styleable.SuggestionStripView, R.attr.suggestionStripViewStyle, R.style.SuggestionStripView,
@@ -146,8 +144,40 @@ class CandidateBarView @JvmOverloads constructor(
                 }
             }
         }
-        return super.onInterceptTouchEvent(ev)
+        // no scrolling: the candidates keep their taps
+        return false
     }
+
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(ev: android.view.MotionEvent): Boolean = false
+
+    /** Candidates past the bar's width are left out of it (they are in the panel). */
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        val available = measuredWidth - paddingLeft - paddingRight
+        if (available <= 0) return
+        // where the bar is full, from each candidate's own width (shown or not), so a second
+        // pass changes nothing
+        var used = 0
+        var cut = row.childCount
+        for (i in 0 until row.childCount) {
+            val child = row.getChildAt(i)
+            child.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.makeMeasureSpec(measuredHeight, MeasureSpec.EXACTLY))
+            used += child.measuredWidth
+            // always the first, even when it alone is too wide
+            if (i > 0 && used > available) { cut = i; break }
+        }
+        var changed = false
+        for (i in 0 until row.childCount) {
+            val want = if (i < cut) VISIBLE else GONE
+            if (row.getChildAt(i).visibility != want) { row.getChildAt(i).visibility = want; changed = true }
+        }
+        if (changed) super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
+
+    /** How many candidates the bar shows (the rest wait in the panel). */
+    val shownCount: Int
+        get() = (0 until row.childCount).count { row.getChildAt(it).visibility != GONE }
 
     /** The notch: a small pill at the bottom of the row; swipe down on the row to open it out. */
     private val notch = Paint(Paint.ANTI_ALIAS_FLAG)

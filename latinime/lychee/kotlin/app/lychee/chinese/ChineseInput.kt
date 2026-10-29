@@ -94,7 +94,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /** Handwriting reads Cantonese, or Mandarin when typing Simplified. */
     private fun guessMode() =
-        if (prefs.getString(PREF_SCRIPT, "traditional") == "simplified") InputMode.Mandarin else InputMode.Cantonese
+        if (ChineseScript.candidatesSimplified(prefs)) InputMode.Mandarin else InputMode.Cantonese
 
     /** What the bar shows: the keyboard's own candidates, or handwriting guesses. */
     private fun barMode() = if (showingGuesses) guessMode() else inputMode()
@@ -114,14 +114,14 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val frame = keyboardFrame?.takeIf { it.height > 0 } ?: return
         val peek = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
         val voice = if (guessing) (if (guessMode() == InputMode.Cantonese) "yue" else "cmn") else engine
-        val locales = app.lychee.speech.Speech.localesFor(voice, prefs.getString(PREF_SCRIPT, "traditional") == "simplified")
+        val locales = app.lychee.speech.Speech.localesFor(voice, ChineseScript.candidatesSimplified(prefs))
         popup?.show(frame, candidate.text, resolved, Readings.displayPrefs(prefs), peek,
             onSpeak = { text, lang ->
                 // YUE and PU: the word in Cantonese or in Mandarin, whichever keyboard this is
                 val voices = when (lang) {
                     app.lychee.core.Lang.Cantonese -> app.lychee.speech.Speech.localesFor("yue", false)
                     app.lychee.core.Lang.Mandarin -> app.lychee.speech.Speech.localesFor("cmn",
-                        prefs.getString(PREF_SCRIPT, "traditional") == "simplified")
+                        ChineseScript.candidatesSimplified(prefs))
                     else -> locales
                 }
                 app.lychee.speech.Speech.speak(ime, text, voices)
@@ -203,8 +203,14 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         reset()
         engine = newEngine
         if (newEngine != null) {
-            // imported Rime packs (the Japanese dictionary) join Rime's data first
-            RimeService.start(ime) { RimeService.refreshPacks(ime) { selectSchema() } }
+            // the schema at once when Rime is running (letters typed straight away reach it);
+            // imported Rime packs (the Japanese dictionary) are checked afterwards, and the
+            // schema is chosen again only if they changed
+            RimeService.start(ime) {
+                if (selectedEngine != engine) selectSchema()
+                replayPending()
+                RimeService.refreshPacks(ime) { changed -> if (changed || schemaMissing) selectSchema() }
+            }
             if (newEngine == "yue" || newEngine == "cmn") Readings.open(ime) { if (isComposing) show(shown) }
             if (newEngine == "ja" && !app.lychee.packs.Packs.isInstalled(ime, "rime_ja")) {
                 android.widget.Toast.makeText(ime, R.string.lychee_ja_needs_pack, android.widget.Toast.LENGTH_LONG).show()
@@ -244,9 +250,13 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         show(null)
     }
 
+    /** The engine whose schema the session has (null before the first). */
+    private var selectedEngine: String? = null
+
     private fun selectSchema() {
         val engine = engine ?: return
         if (session == 0L) session = Rime.createSession()
+        selectedEngine = engine
         if (engine == "ja" || engine == "ko") {
             // without its schema (the Japanese pack missing or unreadable) the letters type as
             // they are rather than vanishing into Rime
@@ -262,7 +272,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             else -> "lychee_cmn$fuzzy"
         }
         Rime.selectSchema(session, schema)
-        val simplified = prefs.getString(PREF_SCRIPT, "traditional") == "simplified"
+        val simplified = ChineseScript.candidatesSimplified(prefs)
         Rime.setOption(session, "simplification", simplified)
         Rime.setOption(session, "traditionalization", !simplified)
     }
@@ -274,13 +284,33 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     fun onEvent(event: Event): Boolean {
         if (!isActive || schemaMissing) return false
         val code = event.mCodePoint
-        if (!RimeService.ready || session == 0L) {
-            // Rime is still loading: letters go to LatinIME, but punctuation is Chinese already
+        if (!RimeService.ready || session == 0L || selectedEngine != engine) {
+            // Rime is still loading: letters wait (shown as typed) and go to Rime once it is
+            // ready, so nothing typed in the first moment is lost; punctuation is Chinese already
+            val ic = ime.currentInputConnection
+            when {
+                code in 'a'.code..'z'.code || (engine == "ko" && code in 'A'.code..'Z'.code) ||
+                    (pending.isNotEmpty() && (code in '0'.code..'9'.code || code == '\''.code)) -> {
+                    pending.appendCodePoint(if (code in 'A'.code..'Z'.code) code + 32 else code)
+                    ic?.setComposingText(pending, 1)
+                    return true
+                }
+                event.mKeyCode == Constants.CODE_DELETE && pending.isNotEmpty() -> {
+                    pending.setLength(pending.length - 1)
+                    ic?.setComposingText(pending, 1)
+                    return true
+                }
+            }
+            // anything else first keeps the waiting letters as they are
+            if (pending.isNotEmpty()) {
+                ic?.finishComposingText()
+                pending.setLength(0)
+            }
             val mark = when {
                 code in PUNCTUATION || code == '"'.code || code == '\''.code -> fullWidth(code)
                 else -> return false
             }
-            ime.currentInputConnection?.commitText(mark, 1)
+            ic?.commitText(mark, 1)
             return true
         }
         val handled = when {
@@ -337,6 +367,18 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         return handled
     }
 
+    /** Letters typed while Rime was starting, given to it once it is ready. */
+    private val pending = StringBuilder()
+
+    private fun replayPending() {
+        if (pending.isEmpty() || session == 0L) return
+        val letters = pending.toString()
+        pending.setLength(0)
+        ime.currentInputConnection?.setComposingText("", 1)
+        letters.forEach { Rime.processKey(session, it.code) }
+        sync()
+    }
+
     /** Called before LatinIME types text directly (e.g. a key with a label of several characters). */
     fun beforeExternalText() {
         if (isComposing) commitFirst()
@@ -388,6 +430,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** Drops any composition, e.g. when the text field changes. */
     fun reset() {
         popup?.dismiss()
+        pending.setLength(0)
         if (session != 0L) Rime.clearComposition(session)
         if (isComposing) ime.currentInputConnection?.finishComposingText()
         isComposing = false
@@ -509,7 +552,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         } else {
             stripView.setLycheeZhongKey(null, null)
         }
-        val simplified = prefs.getString(PREF_SCRIPT, "traditional") == "simplified"
+        val simplified = ChineseScript.candidatesSimplified(prefs)
         stripView.setLycheeScriptKey(simplified) {
             prefs.edit().putString(PREF_SCRIPT, if (simplified) "traditional" else "simplified").apply()
             if (RimeService.ready && session != 0L) selectSchema()

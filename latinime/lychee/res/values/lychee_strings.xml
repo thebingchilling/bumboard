@@ -57,7 +57,9 @@
     <string name="lychee_ja_needs_pack">Japanese needs its dictionary: get it in Lychee Settings &gt; Downloads.</string>
     <string name="lychee_chinese">Chinese</string>
     <string name="lychee_chinese_summary">Cantonese and Mandarin typing</string>
-    <string name="lychee_script">Characters</string>
+    <string name="lychee_script">Candidates</string>
+    <string name="lychee_script_ui">Everywhere in Lychee</string>
+    <string name="lychee_script_ui_summary">Menus, names and labels with Chinese in them; the candidates follow until set below or with the 繁/简 key</string>
     <string name="lychee_script_traditional">Traditional 繁</string>
     <string name="lychee_script_simplified">Simplified 简</string>
     <string name="lychee_cantonese_input">Cantonese romanisation (typing and readings)</string>

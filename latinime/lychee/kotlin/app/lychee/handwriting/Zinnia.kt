@@ -46,7 +46,7 @@ class Zinnia private constructor(private var handle: Long) {
         fun modelsFor(context: Context, engine: String?): List<File> {
             @Suppress("DEPRECATION")
             val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-            val simplified = prefs.getString(ChineseInput.PREF_SCRIPT, "traditional") == "simplified"
+            val simplified = app.lychee.chinese.ChineseScript.candidatesSimplified(prefs)
             fun models(id: String): List<File> {
                 if (!Packs.isInstalled(context, id)) return emptyList()
                 val files = Packs.dir(context, id).walkTopDown().filter { it.isFile && it.name.endsWith(".model") }.toList()
