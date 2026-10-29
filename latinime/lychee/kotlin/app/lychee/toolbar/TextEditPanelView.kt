@@ -135,7 +135,7 @@ class TextEditPanelView @JvmOverloads constructor(
         anchor = -1
         // on: the primary colour, like a key that is switched on
         selectKey.setTextColor(if (on) palette.onPrimary else palette.onSecondaryContainer)
-        selectKey.background = if (on) context.getDrawable(R.drawable.lychee_m3_key_popup_action) else LycheePanels.functionalKey(context)
+        selectKey.background = if (on) LycheePanels.accentKey(context) else LycheePanels.functionalKey(context)
         if (::selectAllKey.isInitialized) {
             (selectAllKey.getChildAt(0) as ImageView).setImageResource(if (on) R.drawable.ic_sym_content_cut else R.drawable.ic_sym_select_all)
             (selectAllKey.getChildAt(1) as TextView).setText(if (on) R.string.lychee_edit_cut else R.string.lychee_edit_select_all)

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
@@ -98,12 +97,10 @@ class NumpadPanelView @JvmOverloads constructor(
         (if (vertical) LayoutParams(LayoutParams.MATCH_PARENT, 0, weight) else LayoutParams(0, LayoutParams.MATCH_PARENT, weight))
             .apply { setMargins(dp(3), dp(3), dp(3), dp(3)) }
 
-    /** ABC back to the letters: a pill, like the ?123 key. */
+    /** ABC back to the letters, like the keyboard's ?123 key. */
     private fun abcKey() = key(context.getString(R.string.lychee_emoji_abc), letter = false, size = 15f) {
         visibility = GONE
         lycheeHost()?.lycheeSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
-    }.apply {
-        background = app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_key_pill_flat)
     }
 
     override fun setVisibility(visibility: Int) {
@@ -123,11 +120,8 @@ class NumpadPanelView @JvmOverloads constructor(
         imageTintList = ColorStateList.valueOf(palette.onPrimary)
         scaleType = ImageView.ScaleType.CENTER
         contentDescription = context.getString(R.string.lychee_numpad_enter)
-        // a pill in the accent colour, like the keyboard's Enter
-        background = GradientDrawable().apply {
-            cornerRadius = dp(100).toFloat()
-            setColor(palette.primary)
-        }
+        // in the accent colour, like the keyboard's Enter
+        background = LycheePanels.accentKey(context)
         setOnClickListener { send(Constants.CODE_ENTER) }
     }
 

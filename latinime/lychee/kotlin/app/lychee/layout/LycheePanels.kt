@@ -91,15 +91,34 @@ object LycheePanels {
         }
     }
 
+    // Every panel's keys look like the keyboard's: the same fills, the same corners (Settings >
+    // Theme), Enter in the accent colour, and ?123 / ABC as plain functional keys, not pills.
+
     /** The background of a functional key in the selected key style (flat or raised). */
-    fun functionalKey(context: Context): Drawable? = app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(
-        if (raised(context)) R.drawable.lychee_m3_key_functional_raised else R.drawable.lychee_m3_key_functional_flat
-    )
+    fun functionalKey(context: Context): Drawable? = app.lychee.ui.KeyStyle.round(context,
+        app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(
+            if (raised(context)) R.drawable.lychee_m3_key_functional_raised else R.drawable.lychee_m3_key_functional_flat
+        ))
 
     /** The background of a letter key in the selected key style. */
-    fun letterKey(context: Context): Drawable? = app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(
-        if (raised(context)) R.drawable.lychee_m3_key_raised else R.drawable.lychee_m3_key_flat
-    )
+    fun letterKey(context: Context): Drawable? = app.lychee.ui.KeyStyle.round(context,
+        app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(
+            if (raised(context)) R.drawable.lychee_m3_key_raised else R.drawable.lychee_m3_key_flat
+        ))
+
+    /** Enter, or a key that is switched on: the keyboard's accent-coloured key. */
+    fun accentKey(context: Context): Drawable {
+        val radius = context.resources.displayMetrics.density * 8
+        fun shape(color: Int) = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = radius
+            setColor(color)
+        }
+        val keys = android.graphics.drawable.StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_pressed), shape(context.getColor(R.color.lychee_m3_primary_pressed)))
+            addState(intArrayOf(), shape(context.getColor(R.color.lychee_m3_primary)))
+        }
+        return app.lychee.ui.KeyStyle.round(context, keys) ?: keys
+    }
 
     private fun raised(context: Context) =
         KeyboardTheme.getKeyboardTheme(context).mThemeId == KeyboardTheme.THEME_ID_LYCHEE_RAISED

@@ -41,10 +41,15 @@ static int dump(const char *schema, const char *input, char *opts) {
   RIME_STRUCT(RimeContext, ctx);
   if (rime->get_context(s, &ctx)) {
     printf("preedit: %s\n", ctx.composition.preedit ? ctx.composition.preedit : "");
-    for (int i = 0; i < ctx.menu.num_candidates; i++)
-      printf("%d. %s\t%s\n", i + 1, ctx.menu.candidates[i].text,
-             ctx.menu.candidates[i].comment ? ctx.menu.candidates[i].comment : "");
     rime->free_context(&ctx);
+  }
+  // past the first page, as the app fetches them (up to 40)
+  RimeCandidateListIterator it = {0};
+  if (rime->candidate_list_begin(s, &it)) {
+    for (int i = 0; i < 40 && rime->candidate_list_next(&it); i++)
+      printf("%d. %s\t%s\n", i + 1, it.candidate.text,
+             it.candidate.comment ? it.candidate.comment : "");
+    rime->candidate_list_end(&it);
   }
   rime->destroy_session(s);
   return 0;

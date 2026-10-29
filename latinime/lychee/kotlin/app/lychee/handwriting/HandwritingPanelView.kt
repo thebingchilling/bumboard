@@ -7,7 +7,6 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
@@ -369,12 +368,8 @@ class HandwritingPanelView @JvmOverloads constructor(
         }
         view.contentDescription = context.getString(label)
         view.background = when {
-            // Enter and ?123 are pills, like the keyboard's
-            enter -> GradientDrawable().apply {
-                cornerRadius = dp(100).toFloat()
-                setColor(palette.primary)
-            }
-            pill -> app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_key_pill_flat)
+            // Enter and ?123 like the keyboard's: the accent key and a functional key
+            enter -> LycheePanels.accentKey(context)
             isSpace -> LycheePanels.letterKey(context)
             else -> LycheePanels.functionalKey(context)
         }

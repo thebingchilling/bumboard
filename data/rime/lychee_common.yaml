@@ -19,6 +19,8 @@ chinese_engine:
   translators:
     - punct_translator
     - script_translator
+    # words going on from what is typed ("zhong": 中国), see build_data.py
+    - table_translator@phrase_completion
     # the user's own words (Settings > Personal dictionary)
     - table_translator@custom_phrase
   filters:

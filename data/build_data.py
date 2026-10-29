@@ -487,6 +487,64 @@ def compile_rime(rime_dir: Path):
         shutil.rmtree(p, ignore_errors=True) if p.is_dir() else p.unlink()
 
 
+# ---------------------------------------------------------------- phrase completion
+# Rime only offers words whose every syllable has been typed: "zhong" never shows 中国. Each
+# Chinese schema has a second translator (phrase_completion) over a table of the words keyed by
+# their first syllable (中国 under "zhong1"), so typing a syllable offers the commonest words
+# that go on from there, among the characters as frequent as them. (Two syllables or more are
+# Rime's own: "zhongg" completes to 中国.)
+
+# Schema -> (phrase dictionary, prism); the Yale schema reads the Cantonese words in Yale.
+PHRASE_PRISMS = {
+    "lychee_cmn": ("lychee_cmn_phrases", "lychee_cmn_phrases"),
+    "lychee_yue": ("lychee_yue_phrases", "lychee_yue_phrases"),
+    "lychee_yue_yale": ("lychee_yue_phrases", "lychee_yue_yale_phrases"),
+}
+# words offered per typed syllable
+PHRASES_PER_CODE = 20
+
+
+def write_phrase_dict(rime_dir: Path, name: str, words, weight: float, note: str) -> int:
+    """words: (text, toned syllables, frequency), keyed by their first syllable (Rime's table
+    translator looks a typed syllable up whole). [weight] scales the frequencies against the
+    characters' (lower: the words come after more of the characters), tuned by hand with
+    data/test/run.sh -d (zhong: 中 中国 种 重 众 重要; sik: 食 識 色 熄 式 適合 食飯)."""
+    by_code: dict[str, dict[str, int]] = defaultdict(dict)
+    for text, sylls, freq in words:
+        if len(sylls) < 2 or freq <= 0:
+            continue
+        d = by_code[sylls[0]]
+        d[text] = max(d.get(text, 0), freq)
+    lines = []
+    for code, d in sorted(by_code.items()):
+        for text, freq in sorted(d.items(), key=lambda x: -x[1])[:PHRASES_PER_CODE]:
+            lines.append(f"{text}\t{code}\t{max(1, int(freq * weight))}")
+    write_dict(rime_dir / f"{name}.dict.yaml", name, lines, note=note)
+    return len(lines)
+
+
+def compile_phrase_prisms(rime_dir: Path):
+    """Precompiles each phrase table and prism with its schema's spellings (Rime would only
+    build them on the phone, slowly, the first time)."""
+    build = rime_dir / "build"
+    tmp = rime_dir.parent.parent / "rime-phrases"
+    shutil.rmtree(tmp, ignore_errors=True)
+    tmp.mkdir()
+    for schema_id, (dictionary, prism) in PHRASE_PRISMS.items():
+        text = (rime_dir / f"{schema_id}.schema.yaml").read_text(encoding="utf-8")
+        text = text.replace(f"schema_id: {schema_id}\n", f"schema_id: {prism}\n", 1)
+        text = re.sub(r"^(  dictionary: )\S+$", rf"\g<1>{dictionary}", text, count=1, flags=re.M)
+        text = re.sub(r"^(  prism: )\S+$", rf"\g<1>{prism}", text, count=1, flags=re.M)
+        schema = tmp / f"{prism}.schema.yaml"
+        schema.write_text(text, encoding="utf-8")
+        run(["rime_deployer", "--compile", str(schema), str(tmp), str(rime_dir), str(build)])
+        # only the table and prism are used: the schema is not one to choose
+        (build / f"{prism}.schema.yaml").unlink(missing_ok=True)
+    for p in build.glob("*.txt"):
+        p.unlink()
+    shutil.rmtree(tmp, ignore_errors=True)
+
+
 def write_stamp(rime_dir: Path):
     h = hashlib.sha256()
     for f in sorted(p for p in rime_dir.rglob("*") if p.is_file()):
@@ -797,6 +855,13 @@ def main():
                      "  - jyut6ping3.phrase\n  - jyut6ping3.lettered\n",
                note="Cantonese entries come from rime-cantonese (CC BY 4.0), "
                     "https://github.com/rime/rime-cantonese")
+    n = write_phrase_dict(rime_dir, "lychee_yue_phrases",
+                          ((row[0], row[1].split(" "), yue_freq.get(row[0], 0))
+                           for row in dict_body(rc / "jyut6ping3.words.dict.yaml")
+                           if len(row) >= 2 and all(JYUT_SYL.match(s) for s in row[1].split(" "))),
+                          1.5, note="Words of rime-cantonese (CC BY 4.0) by their first syllables "
+                               "(phrase completion).")
+    print(f"lychee_yue_phrases: {n} entries", file=sys.stderr)
 
     # -------- Rime: Mandarin (CC-CEDICT words, Unihan characters, jieba frequencies)
     simp_chars = set()
@@ -852,6 +917,10 @@ def main():
                note="Words: CC-CEDICT (CC BY-SA 4.0); characters: Unihan (Unicode License v3); "
                     "weights: jieba dict.txt (MIT).")
     print(f"lychee_cmn: {len(entries)} entries", file=sys.stderr)
+    n = write_phrase_dict(rime_dir, "lychee_cmn_phrases",
+                          ((t, c.split(" "), w) for (t, c), w in entries.items()), 0.3,
+                          note="Words of lychee_cmn by their first syllables (phrase completion).")
+    print(f"lychee_cmn_phrases: {n} entries", file=sys.stderr)
 
     # -------- Rime: English -> Chinese
     yue_words = set(yue_freq)
@@ -903,6 +972,7 @@ def main():
 
     if not args.no_compile:
         compile_rime(rime_dir)
+        compile_phrase_prisms(rime_dir)
         print("rime-data compiled", file=sys.stderr)
     if args.opencc:
         # Rime's simplifier filter reads these from <shared data>/opencc (Apache-2.0).

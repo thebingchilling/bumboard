@@ -4,6 +4,9 @@ lychee_yue	nei5hou2	-	你好	1	nei5 hou2
 lychee_yue	nh	-	你好	5
 lychee_yue	syutgwai	-	雪櫃	3	syut3 gwai6
 lychee_yue	hai	-	係	3	hai6
+lychee_yue	sik	-	食	1
+lychee_yue	sik	-	食飯	10
+lychee_yue	zung	-	鍾意	5
 lychee_yue	ngodei	-	我哋	3
 lychee_yue	ngo5dei6	-	我哋	3
 lychee_yue_yale	yut6	-	月	5
@@ -19,6 +22,9 @@ lychee_cmn	ni3hao3	-	你好	1	ni3 hao3
 lychee_cmn	ma1	-	妈	1
 lychee_cmn	ma3	-	马	1
 lychee_cmn	zhongguo	-	中国	1
+lychee_cmn	zhong	-	中	1
+lychee_cmn	zhong	-	中国	3
+lychee_cmn	xue	-	学生	10
 lychee_cmn	nv	-	女	3
 lychee_cmn	lvse	-	绿色	1
 lychee_cmn	toufa	traditionalization=1	頭髮	1

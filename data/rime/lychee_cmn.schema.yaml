@@ -64,3 +64,14 @@ custom_phrase:
   enable_completion: false
   enable_sentence: false
   initial_quality: 1
+
+# words going on from the syllables typed (中国 for "zhong"), ranked with the characters;
+# the table and prism are built by build_data.py with this schema's spellings
+phrase_completion:
+  dictionary: lychee_cmn_phrases
+  prism: lychee_cmn_phrases
+  enable_completion: false
+  enable_sentence: false
+  enable_user_dict: false
+  enable_encoder: false
+  initial_quality: 0
