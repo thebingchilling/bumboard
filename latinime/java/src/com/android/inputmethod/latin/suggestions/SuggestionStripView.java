@@ -266,16 +266,15 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         updateLycheeMiddle();
     }
 
-    /** How much of the strip's right edge the locked 繁/简 key takes. */
+    /** How much of the strip's right edge the locked 英 and 繁/简 keys take. */
     public int getLycheeEdgeWidth() {
         final int key = getResources().getDimensionPixelSize(R.dimen.lychee_script_key_width);
-        return mLycheeScriptShown ? key : 0;
+        return (mLycheeScriptShown ? key : 0) + (mLycheeZhongShown ? key : 0);
     }
 
-    /** How much of the strip's left edge the pinned 中 key takes. */
+    /** How much of the strip's left edge is locked (nothing now: 英 moved to the right). */
     public int getLycheeStartWidth() {
-        final int key = getResources().getDimensionPixelSize(R.dimen.lychee_script_key_width);
-        return mLycheeZhongShown ? key : 0;
+        return 0;
     }
 
     /** A round key with a soft shadow under it, like the raised keys. */
@@ -336,7 +335,7 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
             mSuggestionsStrip.setVisibility(mLycheeHasSuggestions && !mLycheeCandidatesShowing && !panel
                     ? VISIBLE : INVISIBLE);
         }
-        // the edges: 中 on the left and 繁/简 on the right (Chinese keyboards), and the mic
+        // the edges: 英 and 繁/简 on the right (Chinese keyboards), and the mic
         final int start = getLycheeStartWidth();
         final int script = getLycheeEdgeWidth();
         final int mic = getResources().getDimensionPixelSize(

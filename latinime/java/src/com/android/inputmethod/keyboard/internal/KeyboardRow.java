@@ -98,7 +98,10 @@ public final class KeyboardRow {
         mParams = params;
         final TypedArray keyboardAttr = res.obtainAttributes(Xml.asAttributeSet(parser),
                 R.styleable.Keyboard);
-        mRowHeight = (int)ResourceUtils.getDimensionOrFraction(keyboardAttr,
+        // LYCHEE: the first row takes the rounding left over on the symbols pages
+        final int extra = params.mLycheeFirstRowExtra;
+        params.mLycheeFirstRowExtra = 0;
+        mRowHeight = extra + (int)ResourceUtils.getDimensionOrFraction(keyboardAttr,
                 R.styleable.Keyboard_rowHeight, params.mBaseHeight, params.mDefaultRowHeight);
         keyboardAttr.recycle();
         final TypedArray keyAttr = res.obtainAttributes(Xml.asAttributeSet(parser),

@@ -780,11 +780,25 @@ private fun CommaMenuGroup(commaKey: String) {
     var chosen by remember(commaKey) { mutableStateOf(layout.chosenCommaMenu()) }
     Group(stringResource(R.string.lychee_pref_comma_menu)) {
         row { NavRow(it, stringResource(R.string.lychee_sc_settings), stringResource(R.string.lychee_pref_comma_menu_settings), R.drawable.ic_sym_settings) {} }
-        Shortcut.entries.filter { it != Shortcut.SETTINGS }.forEach { sc ->
+        // the chosen shortcuts in their popup order (the arrows move them), then the rest
+        val rest = Shortcut.entries.filter { it != Shortcut.SETTINGS && it !in chosen }
+        fun save(list: List<Shortcut>) {
+            chosen = list
+            layout.setCommaMenu(list)
+        }
+        chosen.forEachIndexed { i, sc ->
             row {
-                IconSwitchRow(it, stringResource(sc.label), null, sc in chosen, sc.icon) { on ->
-                    chosen = if (on) Shortcut.entries.filter { e -> e in chosen || e == sc } else chosen - sc
-                    layout.setCommaMenu(chosen)
+                ReorderSwitchRow(
+                    it, stringResource(sc.label), true, sc.icon,
+                    onUp = if (i > 0) ({ save(chosen.toMutableList().apply { add(i - 1, removeAt(i)) }) }) else null,
+                    onDown = if (i < chosen.size - 1) ({ save(chosen.toMutableList().apply { add(i + 1, removeAt(i)) }) }) else null,
+                ) { on -> if (!on) save(chosen - sc) }
+            }
+        }
+        rest.forEach { sc ->
+            row {
+                IconSwitchRow(it, stringResource(sc.label), null, false, sc.icon) { on ->
+                    if (on) save(chosen + sc)
                 }
             }
         }

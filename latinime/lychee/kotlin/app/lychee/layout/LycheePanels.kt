@@ -8,7 +8,7 @@ import android.widget.FrameLayout
 import com.android.inputmethod.keyboard.KeyboardTheme
 import com.android.inputmethod.latin.R
 
-/** Helpers for the panels drawn over the keys (voice, shortcuts, text editing, number pad). */
+/** Helpers for the panels drawn over the keys (voice, shortcuts, text editing, number pad, resizing). */
 object LycheePanels {
 
     /** Places [panel] (a child of the input view) exactly over the keyboard view. */
@@ -48,6 +48,7 @@ object LycheePanels {
     private val PANELS = intArrayOf(
         R.id.lychee_voice_panel, R.id.lychee_gallery_panel, R.id.lychee_text_edit_panel,
         R.id.lychee_numpad_panel, R.id.lychee_candidate_panel, R.id.lychee_handwriting_panel,
+        R.id.lychee_resize_panel,
     )
 
     /**

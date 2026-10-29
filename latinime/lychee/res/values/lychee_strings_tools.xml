@@ -6,6 +6,7 @@
     <string name="lychee_sc_language">Next language</string>
     <string name="lychee_sc_text_edit">Text editing</string>
     <string name="lychee_sc_one_handed">One-handed</string>
+    <string name="lychee_sc_resize">Resize</string>
     <string name="lychee_sc_numpad">Number pad</string>
     <string name="lychee_sc_emoji">Emoji</string>
     <string name="lychee_sc_undo">Undo</string>
@@ -37,7 +38,12 @@
     <!-- Layout modes -->
     <string name="lychee_one_handed_exit">Full-width keyboard</string>
     <string name="lychee_one_handed_swap">Move keyboard to the other side</string>
+    <string name="lychee_resize_reset">Reset</string>
+    <string name="lychee_move_up">Move up</string>
+    <string name="lychee_move_down">Move down</string>
     <string name="lychee_resize_done">Done</string>
+    <!-- The keyboard's height while resizing, in pixels. -->
+    <string name="lychee_resize_size_h">Height %1$d px</string>
 
     <!-- Number pad -->
     <string name="lychee_numpad_space">Space</string>

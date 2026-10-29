@@ -136,6 +136,40 @@ fun IconSwitchRow(
     }
 }
 
+/** A switch row whose item can also move up or down a list (the arrows show when it can). */
+@Composable
+fun ReorderSwitchRow(
+    shape: Shape, title: String, checked: Boolean, @DrawableRes icon: Int?,
+    onUp: (() -> Unit)?, onDown: (() -> Unit)?, onChange: (Boolean) -> Unit,
+) {
+    RowSurface(shape, { onChange(!checked) }) {
+        ListItem(
+            headlineContent = { Text(title) },
+            leadingContent = if (icon != null) {
+                { IconBadge(icon) }
+            } else null,
+            trailingContent = {
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.material3.IconButton(onClick = { onUp?.invoke() }, enabled = onUp != null) {
+                        androidx.compose.material3.Icon(
+                            androidx.compose.ui.res.painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_keyboard_arrow_up),
+                            contentDescription = androidx.compose.ui.res.stringResource(com.android.inputmethod.latin.R.string.lychee_move_up),
+                        )
+                    }
+                    androidx.compose.material3.IconButton(onClick = { onDown?.invoke() }, enabled = onDown != null) {
+                        androidx.compose.material3.Icon(
+                            androidx.compose.ui.res.painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_keyboard_arrow_down),
+                            contentDescription = androidx.compose.ui.res.stringResource(com.android.inputmethod.latin.R.string.lychee_move_down),
+                        )
+                    }
+                    Switch(checked = checked, onCheckedChange = onChange)
+                }
+            },
+            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        )
+    }
+}
+
 @Composable
 fun <T> ChoiceRow(
     shape: Shape, title: String, summary: String? = null, options: List<Pair<T, String>>, selected: T,

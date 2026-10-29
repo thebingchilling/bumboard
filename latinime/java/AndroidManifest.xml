@@ -161,7 +161,7 @@
              android:label="@string/english_ime_name"
              android:icon="@mipmap/ic_launcher"
              android:launchMode="singleTask"
-             android:windowSoftInputMode="adjustResize"
+             android:windowSoftInputMode="adjustResize|stateAlwaysHidden"
              android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

@@ -130,7 +130,13 @@ object LycheeFonts {
         gsfFaces[weight]?.let { return it }
         val app = app(context)
         val face = if (gsfMissing) null else runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // the phone's font for what Google Sans Flex lacks (⅙, ∞, ★, ✓ ...), not blanks
+                val font = Font.Builder(app.assets, UI_FONT)
+                    .setFontVariationSettings("'wght' $weight").setWeight(weight.coerceIn(1, 1000)).build()
+                Typeface.CustomFallbackBuilder(FontFamily.Builder(font).build())
+                    .setSystemFallback("sans-serif").build()
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 Typeface.Builder(app.assets, UI_FONT).setFontVariationSettings("'wght' $weight").build()
             } else {
                 Typeface.createFromAsset(app.assets, UI_FONT)
@@ -191,8 +197,23 @@ object LycheeFonts {
             forText(context, label)?.let { return it }
             return Typeface.DEFAULT
         }
-        return keysLatin(context, weight)
+        val face = keysLatin(context, weight)
+        // symbols the keyboard font lacks (⅙, ⅐, ⁿ ...) in the phone's font, rather than blank
+        if (label != null && label.isNotEmpty() && !hasGlyph(face, label)) {
+            return if (weight >= 500) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+        }
+        return face
     }
+
+    private val glyphPaint = Paint()
+    private val glyphCache = HashMap<Pair<Typeface, String>, Boolean>()
+
+    @Synchronized
+    private fun hasGlyph(face: Typeface, label: CharSequence): Boolean =
+        glyphCache.getOrPut(face to label.toString()) {
+            glyphPaint.typeface = face
+            glyphPaint.hasGlyph(label.toString())
+        }
 
     // ------------------------------------------------------------------ Chinese, Japanese, Korean
 

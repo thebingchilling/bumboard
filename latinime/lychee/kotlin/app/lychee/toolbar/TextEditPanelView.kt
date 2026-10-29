@@ -73,18 +73,20 @@ class TextEditPanelView @JvmOverloads constructor(
         addView(left, LayoutParams(0, LayoutParams.MATCH_PARENT, 3f))
         // right: select all, copy, paste and delete
         val right = LinearLayout(context).apply { orientation = VERTICAL }
-        // select all; cut in its place while selecting
+        // select all; cut in its place while text is selected (by Select, or Select all)
         selectAllKey = labelled(R.drawable.ic_sym_select_all, R.string.lychee_edit_select_all) {
-            if (selecting) {
+            if (cutShown) {
                 menu(android.R.id.cut)
                 setSelecting(false)
+                showCut(false)
             } else {
                 menu(android.R.id.selectAll)
+                showCut(true)
             }
         }
         right.addView(selectAllKey, keyParams())
         right.addView(labelled(R.drawable.ic_sym_content_copy, R.string.lychee_edit_copy) { menu(android.R.id.copy); setSelecting(false) }, keyParams())
-        right.addView(labelled(R.drawable.ic_sym_content_paste, R.string.lychee_edit_paste) { menu(android.R.id.paste); setSelecting(false) }, keyParams())
+        right.addView(labelled(R.drawable.ic_sym_content_paste, R.string.lychee_edit_paste) { menu(android.R.id.paste); setSelecting(false); showCut(false) }, keyParams())
         right.addView(icon(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete, repeats = true) {
             lycheeHost()?.lycheeSendCode(Constants.CODE_DELETE)
         }, keyParams())
@@ -136,11 +138,21 @@ class TextEditPanelView @JvmOverloads constructor(
         // on: the primary colour, like a key that is switched on
         selectKey.setTextColor(if (on) palette.onPrimary else palette.onSecondaryContainer)
         selectKey.background = if (on) LycheePanels.accentKey(context) else LycheePanels.functionalKey(context)
-        if (::selectAllKey.isInitialized) {
-            (selectAllKey.getChildAt(0) as ImageView).setImageResource(if (on) R.drawable.ic_sym_content_cut else R.drawable.ic_sym_select_all)
-            (selectAllKey.getChildAt(1) as TextView).setText(if (on) R.string.lychee_edit_cut else R.string.lychee_edit_select_all)
-        }
+        showCut(on || hasSelection())
     }
+
+    /** Whether the select all key is Cut (there is a selection to cut). */
+    private var cutShown = false
+
+    private fun showCut(on: Boolean) {
+        cutShown = on
+        if (!::selectAllKey.isInitialized) return
+        (selectAllKey.getChildAt(0) as ImageView).setImageResource(if (on) R.drawable.ic_sym_content_cut else R.drawable.ic_sym_select_all)
+        (selectAllKey.getChildAt(1) as TextView).setText(if (on) R.string.lychee_edit_cut else R.string.lychee_edit_select_all)
+    }
+
+    private fun hasSelection(): Boolean =
+        lycheeHost()?.lycheeInputConnection()?.getSelectedText(0)?.isNotEmpty() == true
 
     /** Where a selection started (absolute offset), while Select is on; -1 until the first move. */
     private var anchor = -1
@@ -175,6 +187,7 @@ class TextEditPanelView @JvmOverloads constructor(
             (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
         val target = if (collapse) focus else newOffset(text, focus, keyCode)
         if (selecting) ic.setSelection(anchor, target) else ic.setSelection(target, target)
+        showCut(selecting)
     }
 
     /** The offset after moving [from] by one step in [keyCode]'s direction. */

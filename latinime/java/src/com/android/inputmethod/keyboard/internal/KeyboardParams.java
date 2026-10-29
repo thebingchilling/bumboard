@@ -55,6 +55,8 @@ public class KeyboardParams {
     public int mDefaultRowHeight;
     // LYCHEE: the letters' row height when the rows here are taller (0 when they are not)
     public int mLycheeLetterRowHeight;
+    // LYCHEE: pixels the first row takes on top of its height (see KeyboardBuilder)
+    public int mLycheeFirstRowExtra;
     public int mDefaultKeyWidth;
     public int mHorizontalGap;
     public int mVerticalGap;

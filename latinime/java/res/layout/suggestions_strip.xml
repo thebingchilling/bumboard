@@ -72,14 +72,15 @@
         android:layout_alignParentBottom="true"
         android:gravity="center"
         android:visibility="gone" />
-    <!-- LYCHEE: 中, pinned on the left on the Chinese keyboards (it stays while candidates
-         show): when on, English words typed come back as Chinese candidates. -->
+    <!-- LYCHEE: 英, pinned on the right beside 繁/简 on the Chinese keyboards (it stays while
+         candidates show): when on, English words typed come back as Chinese candidates. -->
     <TextView
         android:id="@+id/lychee_zhong_key"
         android:layout_width="@dimen/lychee_script_key_width"
         android:layout_height="@dimen/config_suggestions_strip_height"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentLeft="true"
+        android:layout_toStartOf="@id/lychee_script_key"
+        android:layout_toLeftOf="@id/lychee_script_key"
+        android:layout_alignWithParentIfMissing="true"
         android:layout_alignParentBottom="true"
         android:gravity="center"
         android:visibility="gone" />
@@ -87,8 +88,8 @@
         android:id="@+id/suggestions_strip_voice_key"
         android:layout_width="@dimen/config_suggestions_strip_height"
         android:layout_height="@dimen/config_suggestions_strip_height"
-        android:layout_toStartOf="@id/lychee_script_key"
-        android:layout_toLeftOf="@id/lychee_script_key"
+        android:layout_toStartOf="@id/lychee_zhong_key"
+        android:layout_toLeftOf="@id/lychee_zhong_key"
         android:layout_alignWithParentIfMissing="true"
         android:layout_alignParentBottom="true"
         android:contentDescription="@string/spoken_description_mic"

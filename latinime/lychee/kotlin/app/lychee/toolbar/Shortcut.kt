@@ -10,6 +10,7 @@ enum class Shortcut(val id: String, @DrawableRes val icon: Int, @StringRes val l
     LANGUAGE("language", R.drawable.ic_sym_language, R.string.lychee_sc_language),
     TEXT_EDIT("text_edit", R.drawable.ic_sym_text_select_start, R.string.lychee_sc_text_edit),
     ONE_HANDED("one_handed", R.drawable.ic_sym_front_hand, R.string.lychee_sc_one_handed),
+    RESIZE("resize", R.drawable.ic_sym_height, R.string.lychee_sc_resize),
     EMOJI("emoji", R.drawable.ic_sym_mood, R.string.lychee_sc_emoji),
     UNDO("undo", R.drawable.ic_sym_undo, R.string.lychee_sc_undo),
     REDO("redo", R.drawable.ic_sym_redo, R.string.lychee_sc_redo),

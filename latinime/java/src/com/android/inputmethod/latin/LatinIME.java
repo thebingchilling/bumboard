@@ -1431,6 +1431,12 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             } else {
                 outInsets.touchableRegion.set(frame.getLeft(), frameTop,
                         mInputView.getWidth(), frame.getBottom());
+                // resizing reaches above the keys
+                final View resize = mInputView.findViewById(R.id.lychee_resize_panel);
+                if (resize != null && resize.getVisibility() == View.VISIBLE) {
+                    outInsets.touchableRegion.union(new android.graphics.Rect(resize.getLeft(),
+                            resize.getTop(), resize.getRight(), resize.getBottom()));
+                }
                 // the dictionary card sits above the keyboard, over the app
                 final View dictionary = mInputView.findViewById(R.id.lychee_dictionary_panel);
                 if (dictionary != null && dictionary.getVisibility() == View.VISIBLE) {
@@ -2155,6 +2161,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         case TEXT_EDIT:
             showLycheePanel(R.id.lychee_text_edit_panel);
             break;
+        case RESIZE:
+            showLycheePanel(R.id.lychee_resize_panel);
+            break;
         case ONE_HANDED:
             layout.setMode(mode == app.lychee.layout.LycheeLayout.Mode.ONE_HANDED
                     ? app.lychee.layout.LycheeLayout.Mode.NORMAL
@@ -2251,7 +2260,17 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         app.lychee.layout.LycheePanels.hideOthers(mInputView, panel);
         app.lychee.layout.LycheePanels.cover(panel, mInputView);
         panel.bringToFront();
-        if (panel instanceof app.lychee.toolbar.ShortcutGalleryView) {
+        if (panel instanceof app.lychee.layout.ResizePanelView) {
+            // taller than the keys, so the outline can grow upwards
+            final android.widget.FrameLayout.LayoutParams lp =
+                    (android.widget.FrameLayout.LayoutParams) panel.getLayoutParams();
+            final int keysWidth = lp.width;
+            final int keysHeight = lp.height;
+            lp.height = Math.min((int) (keysHeight * app.lychee.layout.ResizePanelView.ROOM),
+                    mInputView.getHeight() - lp.bottomMargin);
+            panel.setLayoutParams(lp);
+            ((app.lychee.layout.ResizePanelView) panel).show(keysWidth, keysHeight);
+        } else if (panel instanceof app.lychee.toolbar.ShortcutGalleryView) {
             ((app.lychee.toolbar.ShortcutGalleryView) panel).show();
         } else if (panel instanceof app.lychee.toolbar.TextEditPanelView) {
             ((app.lychee.toolbar.TextEditPanelView) panel).show();
