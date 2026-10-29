@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import app.lychee.packs.BundledPacks
 import app.lychee.packs.PackKind
 import app.lychee.packs.Packs
 import java.io.File
@@ -41,7 +42,7 @@ object RimeService {
                 val user = File(root, "user").apply { mkdirs() }
                 val changed = installAssets(app, shared)
                 // the packs that come with Lychee (the Japanese dictionary among them) first
-                app.lychee.packs.BundledPacks.installAll(app)
+                BundledPacks.installAll(app)
                 installPacks(app, shared)
                 Rime.start(shared.path, user.path, fullCheck = changed)
                 stagePackBuilds(app, user)
