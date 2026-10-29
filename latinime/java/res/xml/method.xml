@@ -173,14 +173,4 @@
             android:imeSubtypeExtraValue="KeyboardLayoutSet=qwerty,AsciiCapable,EmojiCapable,LycheeEngine=ja"
             android:isAsciiCapable="true"
     />
-    <!-- LYCHEE: handwriting as a keyboard of its own (the pad in place of the letters). -->
-    <subtype android:icon="@drawable/ic_ime_switcher_dark"
-            android:label="@string/lychee_subtype_hw"
-            android:subtypeId="0x42756d06"
-            android:imeSubtypeLocale="zh_TW"
-            android:languageTag="zh-Hant"
-            android:imeSubtypeMode="keyboard"
-            android:imeSubtypeExtraValue="KeyboardLayoutSet=qwerty,AsciiCapable,EmojiCapable,LycheeHandwriting=1"
-            android:isAsciiCapable="true"
-    />
 </input-method>

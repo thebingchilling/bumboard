@@ -904,7 +904,6 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                 lycheeWindow.setNavigationBarContrastEnforced(false);
             }
         }
-        updateLycheeHandwriting();
         mLycheeVoice =(app.lychee.voice.VoicePanelView) view.findViewById(R.id.lychee_voice_panel);
         if (mLycheeVoice != null) {
             mLycheeVoice.setOnText(text -> {
@@ -912,16 +911,6 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                 return kotlin.Unit.INSTANCE;
             });
         }
-    }
-
-    // LYCHEE: on the Handwriting keyboard (LycheeHandwriting) the pad stands in for the letters.
-    private void updateLycheeHandwriting() {
-        if (mInputView == null) return;
-        final app.lychee.handwriting.HandwritingPanelView pad =
-                (app.lychee.handwriting.HandwritingPanelView) mInputView.findViewById(R.id.lychee_handwriting_panel);
-        if (pad == null) return;
-        final InputMethodSubtype subtype = mRichImm.getCurrentSubtype().getRawSubtype();
-        pad.setKeyboardMode(subtype != null && subtype.getExtraValueOf("LycheeHandwriting") != null);
     }
 
     // LYCHEE: the mic key starts voice typing in the current keyboard's language.
@@ -1014,7 +1003,6 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         StatsUtils.onSubtypeChanged(oldSubtype, subtype);
         mRichImm.onSubtypeChanged(subtype);
         if (mLycheeChinese != null) mLycheeChinese.onSubtypeChanged(subtype);
-        updateLycheeHandwriting();
         mInputLogic.onSubtypeChanged(SubtypeLocaleUtils.getCombiningRulesExtraValue(subtype),
                 mSettings.getCurrent());
         loadKeyboard();
@@ -1042,7 +1030,6 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         super.onStartInputView(editorInfo, restarting);
         mLycheeChinese.reset();
         mLycheeChinese.onSubtypeChanged(mRichImm.getCurrentSubtype().getRawSubtype());
-        updateLycheeHandwriting();
         mLycheeChinese.onSettingsChanged();
 
         mDictionaryFacilitator.onStartInput();
@@ -2063,6 +2050,15 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                     getApplicationContext().getResources());
         }
         mEmojiAltPhysicalKeyDetector.onKeyDown(keyEvent);
+        // LYCHEE: Back closes a panel over the keys (text editing, handwriting, ...) before
+        // it closes the keyboard
+        if (keyCode == KeyEvent.KEYCODE_BACK && mInputView != null
+                && app.lychee.layout.LycheePanels.anyShown(mInputView)) {
+            if (keyEvent.getRepeatCount() == 0) {
+                app.lychee.layout.LycheePanels.hideOthers(mInputView, null);
+            }
+            return true;
+        }
         if (!ProductionFlags.IS_HARDWARE_KEYBOARD_SUPPORTED) {
             return super.onKeyDown(keyCode, keyEvent);
         }

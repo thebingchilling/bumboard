@@ -34,10 +34,9 @@ import java.util.concurrent.Executors
  * what usually follows it (校, 生, 習 after 學), from the readings dictionary's words.
  * ⌫ takes back the last stroke while writing, otherwise deletes.
  *
- * Two ways in: the Handwriting shortcut opens it over any keyboard (with Back), and the
- * 手寫 Handwriting keyboard ([keyboardMode], subtype extra `LycheeHandwriting`) is this pad in place
- * of the letters, with Gboard's bottom row: ?123, emoji, space, ⌫ and Enter. ?123 shows the
- * symbols underneath; ABC there brings the pad back.
+ * A mode, like text editing: the Handwriting shortcut (Chinese and Japanese keyboards only)
+ * opens it over the keys, and Back (its own button, or the phone's) closes it. Its bottom row:
+ * Back, ?123 (the symbols, closing the pad), space, ⌫ and Enter.
  *
  * Recognition is Zinnia with a handwriting pack's model, opened only while the pane is open.
  */
@@ -86,89 +85,25 @@ class HandwritingPanelView @JvmOverloads constructor(
         }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { setMargins(dp(8), dp(6), dp(8), dp(4)) })
         addView(bottom, LayoutParams(LayoutParams.MATCH_PARENT, dp(52)).apply { setMargins(dp(4), 0, dp(4), dp(4)) })
         buildBottomRow()
-        // the keyboard's own bottom row (space, ?123, comma, Enter) stays below the pad
-        bottom.visibility = GONE
         visibility = GONE
     }
 
-    /** True on the 手寫 Handwriting keyboard: the pad stands in for the letters. */
-    var keyboardMode = false
-        set(value) {
-            if (field == value) return
-            field = value
-            buildBottomRow()
-            if (!value && visibility == VISIBLE) visibility = GONE
-            follow()
-        }
-
     private fun buildBottomRow() {
         bottom.removeAllViews()
-        if (keyboardMode) {
-            // Gboard's handwriting row: ?123, emoji, space, ⌫, Enter
-            bottom.addView(key(null, R.string.lychee_hw_symbols, pill = true) {
-                commitPending()
-                lycheeHost()?.lycheeSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
-            }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.5f))
-            bottom.addView(key(R.drawable.ic_sym_mood, R.string.lychee_sc_emoji) {
-                commitPending()
-                lycheeHost()?.lycheeSendCode(Constants.CODE_EMOJI)
-            }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
-            bottom.addView(key(null, R.string.lychee_hw_space_label, isSpace = true) { space() }, LayoutParams(0, LayoutParams.MATCH_PARENT, 4f))
-        } else {
-            bottom.addView(LycheePanels.backButton(context) { this@HandwritingPanelView.visibility = GONE }, LayoutParams(dp(56), LayoutParams.MATCH_PARENT))
-            bottom.addView(key(null, R.string.lychee_hw_space, isSpace = true) { space() }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
-        }
-        val weight = if (keyboardMode) 1.25f else 0f
+        bottom.addView(LycheePanels.backButton(context) { this@HandwritingPanelView.visibility = GONE },
+            LayoutParams(dp(56), LayoutParams.MATCH_PARENT))
+        // the symbols: the pad closes and the keyboard shows its symbols page
+        bottom.addView(key(null, R.string.lychee_hw_symbols, pill = true) {
+            commitPending()
+            this@HandwritingPanelView.visibility = GONE
+            lycheeHost()?.lycheeSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
+        }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
+        bottom.addView(key(null, R.string.lychee_hw_space, isSpace = true) { space() }, LayoutParams(0, LayoutParams.MATCH_PARENT, 4f))
         bottom.addView(key(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete) { backspace() },
-            if (keyboardMode) LayoutParams(0, LayoutParams.MATCH_PARENT, weight) else LayoutParams(dp(72), LayoutParams.MATCH_PARENT))
+            LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
         bottom.addView(key(R.drawable.ic_sym_keyboard_return, R.string.lychee_hw_enter, enter = true) {
             commitPending(); lycheeHost()?.lycheeSendCode(Constants.CODE_ENTER)
-        }, if (keyboardMode) LayoutParams(0, LayoutParams.MATCH_PARENT, weight) else LayoutParams(dp(72), LayoutParams.MATCH_PARENT))
-    }
-
-    private val layoutListener = android.view.ViewTreeObserver.OnGlobalLayoutListener { follow() }
-
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
-    }
-
-    override fun onDetachedFromWindow() {
-        viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
-        super.onDetachedFromWindow()
-    }
-
-    /**
-     * On the Handwriting keyboard: covers the letters exactly while they show (not the symbols,
-     * the emoji panel or another panel).
-     */
-    private fun follow() {
-        if (!keyboardMode) return
-        val root = parent as? View ?: return
-        val keys = root.findViewById<View>(R.id.keyboard_view)
-        val letters = com.android.inputmethod.keyboard.KeyboardSwitcher.getInstance().keyboard?.mId?.isAlphabetKeyboard == true
-        val show = keys != null && keys.isShown && keys.height > 0 && letters && !LycheePanels.anyOtherShown(root, this)
-        if (!show) {
-            if (visibility == VISIBLE) visibility = GONE
-            return
-        }
-        leaveBottomRow()
-        if (visibility != VISIBLE) show()
-    }
-
-    /** Shrinks the pad (already covering the keys) to the rows above the space bar. */
-    fun leaveBottomRow() {
-        val root = parent as? View ?: return
-        val keys = root.findViewById<com.android.inputmethod.keyboard.MainKeyboardView>(R.id.keyboard_view) ?: return
-        val space = keys.keyboard?.sortedKeys?.firstOrNull { it.code == Constants.CODE_SPACE } ?: return
-        // from the keys' full area each time, so it never shrinks twice
-        LycheePanels.cover(this, root)
-        val lp = layoutParams as? FrameLayout.LayoutParams ?: return
-        val below = keys.height - space.y
-        if (below <= 0 || lp.height <= below) return
-        lp.height = keys.height - below
-        lp.bottomMargin += below
-        layoutParams = lp
+        }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
     }
 
     /** Types the character still on the pad, before a key of the keyboard does anything. */
@@ -177,7 +112,6 @@ class HandwritingPanelView @JvmOverloads constructor(
     }
 
     fun show() {
-        leaveBottomRow()
         visibility = VISIBLE
         pad.clear()
         updateHint()
@@ -218,9 +152,24 @@ class HandwritingPanelView @JvmOverloads constructor(
         val strokes = normalise(pad.strokes())
         if (strokes.isEmpty()) return
         worker.execute {
-            val result = runCatching { z.classify(BOX, BOX, strokes) }.getOrDefault(emptyList())
+            val result = runCatching { rerank(z.classify(BOX, BOX, strokes, 20)).take(10) }.getOrDefault(emptyList())
             main.post { if (pad.hasInk) showGuesses(result) }
         }
+    }
+
+    /**
+     * Zinnia's guesses with common characters moved up a little: its shape scores often put a
+     * rare look-alike first (己 已 巳), so a guess may rise up to three places for how common it
+     * is (the readings dictionary's frequency).
+     */
+    private fun rerank(guesses: List<String>): List<String> {
+        val db = app.lychee.chinese.Readings.db ?: return guesses
+        val freq = guesses.map { g ->
+            runCatching { db.lookup(g).maxOfOrNull { it.frequency } ?: 0L }.getOrDefault(0L)
+        }
+        val top = freq.maxOrNull()?.takeIf { it > 0 } ?: return guesses
+        val logTop = kotlin.math.ln(top + 1.0)
+        return guesses.indices.sortedBy { i -> i - 3.0 * kotlin.math.ln(freq[i] + 1.0) / logTop }.map { guesses[it] }
     }
 
     /**

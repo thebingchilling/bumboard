@@ -866,10 +866,6 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         // input method's, like Gboard's 拼音
         final boolean methodName = "method".equals(android.preference.PreferenceManager
                 .getDefaultSharedPreferences(getContext()).getString(PREF_LYCHEE_SPACEBAR, "language"));
-        if (methodName && subtype.getRawSubtype().getExtraValueOf("LycheeHandwriting") != null
-                && fitsTextIntoWidth(width, "\u624B\u5BEB", paint)) {
-            return "\u624B\u5BEB"; // 手寫
-        }
         final String engine = methodName ? subtype.getRawSubtype().getExtraValueOf("LycheeEngine") : null;
         if (engine != null) {
             final String name;

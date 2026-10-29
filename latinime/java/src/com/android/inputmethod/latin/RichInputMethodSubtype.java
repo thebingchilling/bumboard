@@ -138,10 +138,7 @@ public class RichInputMethodSubtype {
     private String lycheeDisplayName(final boolean full) {
         final String native_;
         final String english;
-        if (mSubtype.containsExtraValueKey("LycheeHandwriting")) {
-            native_ = "手寫";
-            english = "Handwriting";
-        } else if (isLycheeChinese()) {
+        if (isLycheeChinese()) {
             switch (String.valueOf(mSubtype.getExtraValueOf("LycheeEngine"))) {
                 case "yue": native_ = "粵語"; english = "Cantonese"; break;
                 case "ja": native_ = "日本語"; english = "Japanese"; break;
