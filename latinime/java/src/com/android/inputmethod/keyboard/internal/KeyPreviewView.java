@@ -66,7 +66,10 @@ public class KeyPreviewView extends TextView {
         setTextSize(TypedValue.COMPLEX_UNIT_PX, key.selectPreviewTextSize(drawParams));
         setTypeface(app.lychee.fonts.LycheeFonts.keyFace(getContext(), key.getPreviewLabel(), key.selectPreviewTypeface(drawParams)));
         // TODO Should take care of temporaryShiftLabel here.
-        setTextAndScaleX(key.getPreviewLabel());
+        // LYCHEE: a vulgar fraction as Google Sans Flex's own (1⁄6 with 'frac')
+        final String fraction = app.lychee.fonts.LycheeFonts.fractionLabel(getContext(), key.getPreviewLabel());
+        setFontFeatureSettings(fraction != null ? "'frac'" : null);
+        setTextAndScaleX(fraction != null ? fraction : key.getPreviewLabel());
         setMaxLines(1);
     }
 

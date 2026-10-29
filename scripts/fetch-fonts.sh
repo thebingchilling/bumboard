@@ -2,7 +2,9 @@
 # Fetches Lychee's bundled fonts into the APK's assets:
 #   Google Sans Flex (SIL Open Font License 1.1), the interface font, from google/fonts;
 #   LXGW WenKai (SIL Open Font License 1.1), the default Chinese font (it also covers kana and
-#   Hangul), from its pinned release.
+#   Hangul), from its pinned release;
+#   the symbols Google Sans Flex lacks (⅙ ∞ ★ ✓ ‰ ← ♥ ...), cut from Google's Noto Sans, Noto Sans
+#   Math and Noto Sans Symbols 2 (SIL Open Font License 1.1) by scripts/subset-symbols.py.
 # Without them Lychee falls back to the system's fonts.
 set -euo pipefail
 
@@ -30,4 +32,15 @@ if [ ! -f "$OUT/LXGWWenKai-Regular.ttf" ]; then
         "https://github.com/lxgw/LxgwWenKai/releases/download/$WENKAI_VERSION/LXGWWenKai-Regular.ttf"
     mv "$OUT/LXGWWenKai-Regular.ttf.part" "$OUT/LXGWWenKai-Regular.ttf"
     echo "lxgw wenkai: $WENKAI_VERSION"
+fi
+
+if [ ! -f "$OUT/LycheeSymbols0.ttf" ]; then
+    TMP2="$(mktemp -d)"
+    git clone -q --depth 1 --filter=blob:none --sparse https://github.com/google/fonts "$TMP2/fonts"
+    git -C "$TMP2/fonts" sparse-checkout set ofl/notosans ofl/notosansmath ofl/notosanssymbols2
+    sans="$(find "$TMP2/fonts/ofl/notosans" -maxdepth 1 -name 'NotoSans*.ttf' ! -iname '*italic*' | sort | head -1)"
+    python3 "$ROOT/scripts/subset-symbols.py" "$OUT/GoogleSansFlex.ttf" "$OUT" "$ROOT/latinime/java/res/xml" \
+        "$sans" "$TMP2/fonts/ofl/notosansmath/NotoSansMath-Regular.ttf" \
+        "$TMP2/fonts/ofl/notosanssymbols2/NotoSansSymbols2-Regular.ttf"
+    rm -rf "$TMP2"
 fi

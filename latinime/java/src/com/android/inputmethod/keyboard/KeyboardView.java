@@ -502,6 +502,12 @@ public class KeyboardView extends View {
                 canvas.drawText(label, 0, label.length(),
                         labelX - mLycheeInkBounds.exactCenterX(), labelBaseline, paint);
                 paint.setTextAlign(Align.CENTER);
+            } else if (app.lychee.fonts.LycheeFonts.fractionLabel(getContext(), label) != null) {
+                // LYCHEE: ⅙ as Google Sans Flex's own fraction (1⁄6 with 'frac'); it types ⅙
+                final String fraction = app.lychee.fonts.LycheeFonts.fractionLabel(getContext(), label);
+                paint.setFontFeatureSettings("'frac'");
+                canvas.drawText(fraction, 0, fraction.length(), labelX, labelBaseline, paint);
+                paint.setFontFeatureSettings(null);
             } else {
                 canvas.drawText(label, 0, label.length(), labelX, labelBaseline, paint);
             }

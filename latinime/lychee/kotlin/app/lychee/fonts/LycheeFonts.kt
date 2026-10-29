@@ -136,11 +136,18 @@ object LycheeFonts {
         val app = app(context)
         val face = if (gsfMissing) null else runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // what Google Sans Flex lacks (⅙ ⅓ ∞ ★ ✓ ...) from LXGW WenKai, which has them all
-                // (many phones' fonts don't), then the phone's fonts
+                // what Google Sans Flex lacks (∞ ★ ✓ ‰ ← ♥ ...) from Google's Noto fonts, cut to
+                // just those symbols (scripts/subset-symbols.py), then WenKai and the phone's fonts
+                // (vulgar fractions are drawn with Google Sans Flex's own 'frac': fractionLabel)
                 val font = Font.Builder(app.assets, UI_FONT)
                     .setFontVariationSettings("'wght' $weight").setWeight(weight.coerceIn(1, 1000)).build()
                 val builder = Typeface.CustomFallbackBuilder(FontFamily.Builder(font).build())
+                for (n in 0 until 3) {
+                    runCatching {
+                        Font.Builder(app.assets, "lychee/LycheeSymbols$n.ttf")
+                            .setFontVariationSettings("'wght' $weight").setWeight(weight.coerceIn(1, 1000)).build()
+                    }.getOrNull()?.let { builder.addCustomFallback(FontFamily.Builder(it).build()) }
+                }
                 runCatching { Font.Builder(app.assets, BUNDLED_WENKAI).build() }.getOrNull()?.let {
                     builder.addCustomFallback(FontFamily.Builder(it).build())
                 }
@@ -212,6 +219,24 @@ object LycheeFonts {
             return wenkai(context) ?: if (weight >= 500) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
         }
         return face
+    }
+
+    /** Vulgar fractions as Google Sans Flex draws them with its 'frac' feature. */
+    private val FRACTIONS = mapOf(
+        '⅐' to "1⁄7", '⅑' to "1⁄9", '⅒' to "1⁄10", '⅓' to "1⁄3", '⅔' to "2⁄3", '⅕' to "1⁄5",
+        '⅖' to "2⁄5", '⅗' to "3⁄5", '⅘' to "4⁄5", '⅙' to "1⁄6", '⅚' to "5⁄6", '⅛' to "1⁄8",
+        '⅜' to "3⁄8", '⅝' to "5⁄8", '⅞' to "7⁄8",
+    )
+
+    /**
+     * The digits and fraction slash to draw for a vulgar fraction key ([label] "⅙" -> "1⁄6",
+     * drawn with the font feature 'frac'), so it is Google Sans Flex's own fraction; null for
+     * any other label, or when another keyboard font is chosen.
+     */
+    @JvmStatic
+    fun fractionLabel(context: Context, label: CharSequence?): String? {
+        if (label == null || label.length != 1 || choice(context, PREF_KEYS).isNotEmpty()) return null
+        return FRACTIONS[label[0]]
     }
 
     private val glyphPaint = Paint()

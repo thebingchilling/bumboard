@@ -19,6 +19,7 @@ Lychee software — open-source components and licences
   * Material Symbols — Apache License 2.0. (c) Google LLC.
   * Noto Color Emoji — SIL Open Font License 1.1. (c) Google LLC.
   * Google Sans Flex (interface font) — SIL Open Font License 1.1. (c) The Google Sans Flex Project Authors.
+  * Noto Sans, Noto Sans Math, Noto Sans Symbols 2 (the key symbols Google Sans Flex lacks, cut to those characters) — SIL Open Font License 1.1. (c) Google LLC.
   * LXGW WenKai (default Chinese font) — SIL Open Font License 1.1. (c) LXGW. https://github.com/lxgw/LxgwWenKai
   * Kotlin standard library — Apache License 2.0. (c) JetBrains s.r.o.
 

@@ -22,7 +22,7 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends librime-bin librime-dev libopencc-data
-          pip install --quiet opencc
+          pip install --quiet opencc fonttools
 
       - name: Fetch prebuilt librime
         run: scripts/fetch-prebuilt.sh
