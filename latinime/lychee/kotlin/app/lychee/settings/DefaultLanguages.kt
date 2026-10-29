@@ -10,10 +10,10 @@ import java.util.Locale
 
 /**
  * Lychee's languages out of the box: English (UK English where the phone's region uses it,
- * otherwise US) and 普通話 Mandarin; nothing else until turned on under Languages.
+ * otherwise US), 粵語 Cantonese and 普通話 Mandarin; the rest until turned on under Languages.
  */
 object DefaultLanguages {
-    private const val PREF_DONE = "lychee_default_languages_done"
+    private const val PREF_DONE = "lychee_default_languages_done_2"
     /** LatinIME's old predefined input styles (German QWERTY, French QWERTZ), no longer offered. */
     private const val OLD_PREDEFINED = "de:qwerty:AsciiCapable;fr:qwertz:AsciiCapable"
     private val UK_REGIONS = setOf("GB", "IE", "AU", "NZ", "ZA", "IN", "SG", "HK", "MY")
@@ -28,7 +28,10 @@ object DefaultLanguages {
         }
     }
 
-    /** Once: turns on English (US or UK) and Mandarin only. Needs Android 14 or later. */
+    /**
+     * Once: turns on English (US or UK), Cantonese and Mandarin, keeping any keyboards already
+     * on. Needs Android 14 or later.
+     */
     @JvmStatic
     fun applyOnce(context: Context) {
         @Suppress("DEPRECATION")
@@ -37,9 +40,10 @@ object DefaultLanguages {
         val imm = context.getSystemService(InputMethodManager::class.java) ?: return
         val imi = UncachedInputMethodManagerUtils.getInputMethodInfoOf(context.packageName, imm) ?: return
         val english = if (Locale.getDefault().country.uppercase() in UK_REGIONS) "en_GB" else "en_US"
-        val hashes = (0 until imi.subtypeCount).map { imi.getSubtypeAt(it) }
-            .filter { it.locale == english || it.getExtraValueOf("LycheeEngine") == "cmn" }
-            .map { it.hashCode() }
+        val defaults = (0 until imi.subtypeCount).map { imi.getSubtypeAt(it) }
+            .filter { it.locale == english || it.getExtraValueOf("LycheeEngine") in setOf<String?>("yue", "cmn") }
+        val already = runCatching { imm.getEnabledInputMethodSubtypeList(imi, false) }.getOrDefault(emptyList())
+        val hashes = (already + defaults).map { it.hashCode() }.distinct()
         if (hashes.isEmpty()) return
         try {
             imm.setExplicitlyEnabledInputMethodSubtypes(imi.id, hashes.toIntArray())

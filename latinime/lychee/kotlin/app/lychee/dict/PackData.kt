@@ -93,6 +93,18 @@ object PackData {
 
     fun hasStrokes(context: Context) = db(context, "strokes_zh", "strokes.db") != null
 
+    /** Every character's stroke shapes (medians, as stored), for the handwriting stroke matcher. */
+    fun allMedians(context: Context): List<Pair<String, String>> {
+        val db = db(context, "strokes_zh", "strokes.db") ?: return emptyList()
+        return runCatching {
+            db.rawQuery("SELECT ch, medians FROM char", null).use { c ->
+                val out = ArrayList<Pair<String, String>>(c.count)
+                while (c.moveToNext()) out += c.getString(0) to c.getString(1)
+                out
+            }
+        }.getOrDefault(emptyList())
+    }
+
     fun strokes(context: Context, char: String): CharStrokes? {
         val db = db(context, "strokes_zh", "strokes.db") ?: return null
         return runCatching {

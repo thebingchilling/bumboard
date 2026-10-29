@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import app.lychee.fonts.LycheeFonts
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -118,9 +119,19 @@ private fun googleSansFlex(): FontFamily? {
     }
 }
 
-/** Material 3's type scale in [family]. */
+/**
+ * Material 3's type scale in [family], a step smaller for the settings' lists (the stock body
+ * text made every row oversized).
+ */
 private fun typography(family: FontFamily?): Typography {
-    val base = Typography()
+    val stock = Typography()
+    val base = stock.copy(
+        bodyLarge = stock.bodyLarge.copy(fontSize = 15.sp, lineHeight = 20.sp),
+        bodyMedium = stock.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp),
+        bodySmall = stock.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
+        labelLarge = stock.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+        headlineMedium = stock.headlineMedium.copy(fontSize = 24.sp),
+    )
     if (family == null) return base
     fun TextStyle.f() = copy(fontFamily = family)
     return base.copy(

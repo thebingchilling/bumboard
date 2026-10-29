@@ -74,6 +74,14 @@ public final class InputLogic {
     // punctuation) is off; backspace always deletes a single character.
     private static final boolean LYCHEE_REVERT_ON_BACKSPACE = false;
 
+    /**
+     * LYCHEE: text typed by voice is not a multi-character key: backspace then deletes one
+     * character at a time, not the whole sentence.
+     */
+    public void lycheeForgetEnteredText() {
+        mEnteredText = null;
+    }
+
     private static final String TAG = InputLogic.class.getSimpleName();
 
     // TODO : Remove this member when we can.

@@ -55,9 +55,10 @@ class LycheeLayout private constructor(private val prefs: SharedPreferences) {
     fun chosenCommaMenu(): List<Shortcut> {
         val saved = prefs.getString(PREF_COMMA_MENU, null)
         if (saved != null) return saved.split(',').mapNotNull { Shortcut.byId(it) }.filter { it != Shortcut.SETTINGS }
+        // emoji first when the comma carries it (the popup opens on the first), like Gboard
         return buildList {
-            add(Shortcut.ONE_HANDED)
             if (commaKey != "emoji") add(Shortcut.EMOJI)
+            add(Shortcut.ONE_HANDED)
             if (commaKey != "language") add(Shortcut.LANGUAGE)
         }
     }
@@ -66,12 +67,13 @@ class LycheeLayout private constructor(private val prefs: SharedPreferences) {
         prefs.edit().putString(PREF_COMMA_MENU, shortcuts.joinToString(",") { it.id }).apply()
 
     /**
-     * The comma's popup as LatinIME more-keys: Settings, then each chosen shortcut that belongs
+     * The comma's popup as LatinIME more-keys: each chosen shortcut, then Settings that belongs
      * on the keyboard ([engine]: null for English, which has no handwriting).
      */
     fun commaMoreKeys(@Suppress("UNUSED_PARAMETER") languageKey: Boolean, engine: String?): String =
-        (listOf("!text/keyspec_settings") + commaMenu().filter { app.lychee.toolbar.Shortcuts.available(it, engine) }
-            .map { "!icon/lychee_sc_${it.id}|!code/key_lychee_sc_${it.id}" })
+        // the chosen shortcuts first (the popup opens on the first of them), Settings last
+        (commaMenu().filter { app.lychee.toolbar.Shortcuts.available(it, engine) }
+            .map { "!icon/lychee_sc_${it.id}|!code/key_lychee_sc_${it.id}" } + "!text/keyspec_settings")
             .joinToString(",")
 
     fun keyboardWidth(fullWidth: Int): Int = when (mode) {

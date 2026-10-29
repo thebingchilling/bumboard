@@ -18,8 +18,9 @@ import app.lychee.ui.M3Colors
 import com.android.inputmethod.latin.R
 
 /**
- * Every candidate over the keys, like Gboard's expanded candidates, with the room the row
- * lacks: a scrolling grid of the words with their readings and meanings, each candidate as wide
+ * The candidates the row has no room for, over the keys, like Gboard's expanded candidates:
+ * it goes on from the row's last candidate (none repeated), a scrolling grid of the words with
+ * all their readings and meanings, as on the row, each candidate as wide
  * as it needs (1 to 3 columns), thin dividers between. Opened and closed with the ⌄ / ⌃ at the
  * end of the candidate row, or a swipe down on the row (the notch); tap one to type it.
  * Candidates the phone cannot draw are left out.
@@ -76,9 +77,11 @@ class CandidatePanelView @JvmOverloads constructor(
         scale: Float,
         annotate: ((Candidate) -> Annotation?)? = null,
         style: CandidateBarView.Style = CandidateBarView.Style(),
+        /** Rime's index of the last candidate the bar shows: the panel goes on from the next. */
+        after: Int = -1,
     ) {
         val gen = ++generation
-        adapter.items = candidates.withIndex().filter { CandidateBarView.renderable(it.value.text) }
+        adapter.items = candidates.withIndex().filter { it.index > after && CandidateBarView.renderable(it.value.text) }
         adapter.scale = scale
         adapter.style = style
         adapter.annotations.clear()
@@ -143,21 +146,29 @@ class CandidatePanelView @JvmOverloads constructor(
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             val (index, candidate) = items[position]
             val cell = holder.itemView as LinearLayout
-            cell.layoutParams.height = dp(if (annotated) 76 else 54)
+            cell.layoutParams.height = dp(if (annotated) 84 else 54)
             val word = cell.getChildAt(0) as TextView
             val reading = cell.getChildAt(1) as TextView
             val meaning = cell.getChildAt(2) as TextView
-            val color = if (position == 0) palette.primary else palette.onSurface
+            val color = if (index == 0) palette.primary else palette.onSurface
             word.text = candidate.text
             word.typeface = app.lychee.fonts.LycheeFonts.forText(cell.context, candidate.text, style.fontLang)
                 ?: android.graphics.Typeface.DEFAULT
             word.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f * scale)
             word.setTextColor(color)
             val a = annotations[position]
-            val line = a?.lines?.firstOrNull()
-            reading.visibility = if (line != null) VISIBLE else GONE
-            if (line != null && a != null) {
-                reading.text = if (style.toneColours) ToneColours.apply(line, a.tones.firstOrNull(), palette.onSurface) else line
+            // every reading the bar shows (Jyutping or Yale, and the other language's when on), in full
+            val lines = a?.lines.orEmpty()
+            reading.visibility = if (lines.isNotEmpty()) VISIBLE else GONE
+            if (a != null && lines.isNotEmpty()) {
+                val text = android.text.SpannableStringBuilder()
+                lines.forEachIndexed { i, line ->
+                    if (i > 0) text.append('\n')
+                    text.append(if (style.toneColours) ToneColours.apply(line, a.tones.getOrNull(i), palette.onSurface) else line)
+                }
+                reading.isSingleLine = false
+                reading.maxLines = lines.size
+                reading.text = text
                 reading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * scale)
                 reading.setTextColor(palette.onSurfaceVariant)
             }

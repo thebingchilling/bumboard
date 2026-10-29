@@ -196,7 +196,8 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
         // LYCHEE: the symbols pages' taller rows (see parseKeyboardAttributes) keep the text
         // size of the letters' rows exactly, which is worked out from the most common key height
         if (mParams.mLycheeLetterRowHeight > 0) {
-            mParams.mMostCommonKeyHeight = mParams.mLycheeLetterRowHeight - mParams.mVerticalGap;
+            // (the most common height counts the gap, which KeyboardView takes off again)
+            mParams.mMostCommonKeyHeight = mParams.mLycheeLetterRowHeight;
         }
         return new Keyboard(mParams);
     }

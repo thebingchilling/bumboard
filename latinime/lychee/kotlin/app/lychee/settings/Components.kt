@@ -2,6 +2,8 @@ package app.lychee.settings
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
@@ -50,24 +53,33 @@ class GroupScope internal constructor(private val rows: MutableList<@Composable 
 fun Group(title: String? = null, build: GroupScope.() -> Unit) {
     val rows = mutableListOf<@Composable (Shape) -> Unit>()
     GroupScope(rows).build()
-    Column(Modifier.padding(top = if (title != null) 16.dp else 8.dp, bottom = 4.dp)) {
+    Column(Modifier.padding(start = 16.dp, end = 16.dp, top = if (title != null) 18.dp else 10.dp, bottom = 2.dp)) {
         if (title != null) {
             Text(
                 title,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 4.dp),
+                modifier = Modifier.padding(start = 12.dp, bottom = 6.dp),
             )
         }
-        rows.forEachIndexed { i, row ->
-            if (i > 0) {
-                HorizontalDivider(
-                    Modifier.padding(horizontal = 20.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                )
+        // the group's rows on one rounded card, set apart from the page behind
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column {
+                rows.forEachIndexed { i, row ->
+                    if (i > 0) {
+                        HorizontalDivider(
+                            Modifier.padding(start = 60.dp, end = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                        )
+                    }
+                    row(RectangleShape)
+                }
             }
-            row(RectangleShape)
         }
     }
 }
@@ -77,34 +89,81 @@ private fun RowSurface(shape: Shape, onClick: (() -> Unit)?, content: @Composabl
     Box(
         Modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 4.dp),
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     ) { content() }
+}
+
+/**
+ * Every row's layout, compact: an icon in a tinted circle (or room for one, so titles line up),
+ * the title and a short summary, and whatever goes at the end.
+ */
+@Composable
+fun CompactRow(
+    @DrawableRes icon: Int?,
+    title: String,
+    summary: String? = null,
+    leading: (@Composable () -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null,
+    summaryColor: androidx.compose.ui.graphics.Color? = null,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp)
+            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+            when {
+                leading != null -> leading()
+                icon != null -> IconBadge(icon)
+            }
+        }
+        Column(
+            Modifier
+                .weight(1f)
+                .padding(start = 12.dp, end = 8.dp),
+        ) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            if (summary != null) {
+                Text(
+                    summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = summaryColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        trailing?.invoke()
+    }
 }
 
 @Composable
 fun IconBadge(@DrawableRes icon: Int) {
-    // a plain icon: compact, like the system settings' lists
-    Icon(
-        painterResource(icon), contentDescription = null,
-        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.size(24.dp),
-    )
+    // a tinted circle, so each row stands out at a glance
+    Box(
+        Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.secondaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painterResource(icon), contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.size(18.dp),
+        )
+    }
 }
 
 @Composable
 fun NavRow(shape: Shape, title: String, summary: String? = null, @DrawableRes icon: Int? = null, onClick: () -> Unit) {
     RowSurface(shape, onClick) {
-        ListItem(
-            headlineContent = { Text(title) },
-            supportingContent = if (summary != null) {
-                { Text(summary) }
-            } else null,
-            leadingContent = if (icon != null) {
-                { IconBadge(icon) }
-            } else null,
-            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-        )
+        CompactRow(icon, title, summary, trailing = {
+            Icon(
+                painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_chevron_right), contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp),
+            )
+        })
     }
 }
 
@@ -119,17 +178,7 @@ fun IconSwitchRow(
     @DrawableRes icon: Int?, onChange: (Boolean) -> Unit,
 ) {
     RowSurface(shape, { onChange(!checked) }) {
-        ListItem(
-            headlineContent = { Text(title) },
-            supportingContent = if (summary != null) {
-                { Text(summary) }
-            } else null,
-            leadingContent = if (icon != null) {
-                { IconBadge(icon) }
-            } else null,
-            trailingContent = { Switch(checked = checked, onCheckedChange = onChange) },
-            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-        )
+        CompactRow(icon, title, summary, trailing = { Switch(checked = checked, onCheckedChange = onChange) })
     }
 }
 
@@ -140,36 +189,29 @@ fun ReorderSwitchRow(
     onUp: (() -> Unit)?, onDown: (() -> Unit)?, onChange: (Boolean) -> Unit,
 ) {
     RowSurface(shape, { onChange(!checked) }) {
-        ListItem(
-            headlineContent = { Text(title) },
-            leadingContent = if (icon != null) {
-                { IconBadge(icon) }
-            } else null,
-            trailingContent = {
-                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    androidx.compose.material3.IconButton(onClick = { onUp?.invoke() }, enabled = onUp != null) {
-                        androidx.compose.material3.Icon(
-                            androidx.compose.ui.res.painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_keyboard_arrow_up),
-                            contentDescription = androidx.compose.ui.res.stringResource(com.android.inputmethod.latin.R.string.lychee_move_up),
-                        )
-                    }
-                    androidx.compose.material3.IconButton(onClick = { onDown?.invoke() }, enabled = onDown != null) {
-                        androidx.compose.material3.Icon(
-                            androidx.compose.ui.res.painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_keyboard_arrow_down),
-                            contentDescription = androidx.compose.ui.res.stringResource(com.android.inputmethod.latin.R.string.lychee_move_down),
-                        )
-                    }
-                    Switch(checked = checked, onCheckedChange = onChange)
+        CompactRow(icon, title, trailing = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.IconButton(onClick = { onUp?.invoke() }, enabled = onUp != null) {
+                    Icon(
+                        painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_keyboard_arrow_up),
+                        contentDescription = androidx.compose.ui.res.stringResource(com.android.inputmethod.latin.R.string.lychee_move_up),
+                    )
                 }
-            },
-            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-        )
+                androidx.compose.material3.IconButton(onClick = { onDown?.invoke() }, enabled = onDown != null) {
+                    Icon(
+                        painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_keyboard_arrow_down),
+                        contentDescription = androidx.compose.ui.res.stringResource(com.android.inputmethod.latin.R.string.lychee_move_down),
+                    )
+                }
+                Switch(checked = checked, onCheckedChange = onChange)
+            }
+        })
     }
 }
 
 /**
- * A setting with a few choices: its title, and the current choice under it in full; a tap
- * opens every choice as a list (labels are never squeezed into cells).
+ * A setting with a few choices: its title and the current choice in full; a tap opens the
+ * choices right under it (an expanding list, no dialog), and picking one closes it again.
  */
 @Composable
 fun <T> ChoiceRow(
@@ -180,56 +222,59 @@ fun <T> ChoiceRow(
 ) {
     var open by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     val current = options.indexOfFirst { it.first == selected }
-    RowSurface(shape, { open = true }) {
-        ListItem(
-            headlineContent = { Text(title) },
-            supportingContent = {
-                Column {
-                    if (summary != null) Text(summary)
-                    Text(
-                        options.getOrNull(current)?.second.orEmpty(),
-                        color = MaterialTheme.colorScheme.primary,
-                        style = MaterialTheme.typography.bodyMedium,
+    val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, label = "turn")
+    Column {
+        RowSurface(shape, { open = !open }) {
+            CompactRow(
+                icons?.getOrNull(current), title,
+                listOfNotNull(options.getOrNull(current)?.second, summary?.takeIf { open }).joinToString("\n").ifEmpty { null },
+                summaryColor = MaterialTheme.colorScheme.primary,
+                trailing = {
+                    Icon(
+                        painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_keyboard_arrow_down), contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .size(22.dp)
+                            .graphicsLayer { rotationZ = turn },
                     )
-                }
-            },
-            leadingContent = icons?.getOrNull(current)?.let { res -> { IconBadge(res) } },
-            trailingContent = {
-                Icon(painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_keyboard_arrow_down), contentDescription = null)
-            },
-            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-        )
-    }
-    if (open) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { open = false },
-            title = { Text(title) },
-            text = {
-                Column {
-                    options.forEachIndexed { i, (value, label) ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .clickable { onSelect(value); open = false }
-                                .padding(vertical = 10.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            androidx.compose.material3.RadioButton(selected = value == selected, onClick = { onSelect(value); open = false })
-                            icons?.getOrNull(i)?.let { res ->
-                                Icon(painterResource(res), contentDescription = null, modifier = Modifier.padding(start = 4.dp).size(20.dp))
-                            }
-                            Text(label, modifier = Modifier.padding(start = 12.dp), style = MaterialTheme.typography.bodyLarge)
+                },
+            )
+        }
+        androidx.compose.animation.AnimatedVisibility(open) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = 56.dp, end = 12.dp, bottom = 8.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            ) {
+                options.forEachIndexed { i, (value, label) ->
+                    val chosen = value == selected
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(value); open = false }
+                            .background(if (chosen) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent)
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        icons?.getOrNull(i)?.let { res ->
+                            Icon(painterResource(res), contentDescription = null, modifier = Modifier.padding(end = 10.dp).size(18.dp))
+                        }
+                        Text(
+                            label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium,
+                            color = if (chosen) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface,
+                        )
+                        if (chosen) {
+                            Icon(
+                                painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_check), contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(18.dp),
+                            )
                         }
                     }
                 }
-            },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = { open = false }) {
-                    Text(androidx.compose.ui.res.stringResource(com.android.inputmethod.latin.R.string.lychee_close))
-                }
-            },
-        )
+            }
+        }
     }
 }
 
@@ -240,7 +285,7 @@ fun SliderRow(
 ) {
     var current by remember(value) { mutableFloatStateOf(value.toFloat()) }
     RowSurface(shape, null) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Column(Modifier.padding(start = 60.dp, end = 16.dp, top = 10.dp, bottom = 4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 Text(format(current.roundToInt()), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
@@ -259,9 +304,9 @@ fun SliderRow(
 @Composable
 fun TextRow(shape: Shape, title: String, body: String) {
     RowSurface(shape, null) {
-        Column(Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Spacer(Modifier.height(2.dp))
             Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

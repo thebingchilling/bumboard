@@ -94,14 +94,28 @@ class CandidateBarView @JvmOverloads constructor(
         val gen = ++generation
         row.removeAllViews()
         cells.clear()
-        val shown = candidates.withIndex().filter { renderable(it.value.text) }
-        shown.forEach { (index, candidate) ->
-            val cell = cell(index, candidate, first = cells.isEmpty())
-            cells[index] = cell
+        // only the candidates that fit are made (the rest are in the panel): far less work for
+        // each key typed than building every one
+        val available = width - paddingLeft - paddingRight
+        val shown = ArrayList<IndexedValue<Candidate>>()
+        var used = 0
+        for (item in candidates.withIndex()) {
+            if (!renderable(item.value.text)) continue
+            val cell = cell(item.index, item.value, first = cells.isEmpty())
+            if (available > 0) {
+                cell.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
+                if (shown.isNotEmpty() && used + cell.measuredWidth > available) break
+                used += cell.measuredWidth
+            } else if (shown.size >= FALLBACK_COUNT) {
+                break
+            }
+            cells[item.index] = cell
+            shown += item
             row.addView(cell, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT,
             ))
         }
+        lastShown = shown.lastOrNull()?.index ?: -1
         scrollTo(0, 0)
         if (annotate == null || shown.isEmpty()) return
         annotator.execute {
@@ -175,9 +189,25 @@ class CandidateBarView @JvmOverloads constructor(
         if (changed) super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
 
+    /** Rime's index of the last candidate the bar shows; the panel goes on after it. */
+    var lastShown = -1
+        private set
+
     /** How many candidates the bar shows (the rest wait in the panel). */
     val shownCount: Int
         get() = (0 until row.childCount).count { row.getChildAt(it).visibility != GONE }
+
+    /** Rime's index of the last candidate actually visible (after fitting). */
+    val lastVisible: Int
+        get() {
+            var last = -1
+            for (i in 0 until row.childCount) {
+                val child = row.getChildAt(i)
+                if (child.visibility == GONE) break
+                cells.entries.firstOrNull { it.value === child }?.let { last = it.key }
+            }
+            return last
+        }
 
     /** The notch: a small pill at the bottom of the row; swipe down on the row to open it out. */
     private val notch = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -253,6 +283,15 @@ class CandidateBarView @JvmOverloads constructor(
 
     /** The bar's exact height for [lines], measured from a sample candidate. */
     fun heightFor(lines: Lines): Int {
+        // the same for every key typed: measured once per size and lines
+        val key = "$lines:$scale:${style.fontLang}"
+        heights[key]?.let { return it }
+        return measureHeight(lines).also { heights[key] = it }
+    }
+
+    private val heights = HashMap<String, Int>()
+
+    private fun measureHeight(lines: Lines): Int {
         val sample = cell(0, Candidate("漢字", ""), first = false)
         fill(sample, Annotation(List(lines.readings) { "hon3 zi6" }, if (lines.meaning) "Chinese characters" else null, null))
         sample.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
@@ -348,6 +387,8 @@ class CandidateBarView @JvmOverloads constructor(
         private val annotator = Executors.newSingleThreadExecutor()
         private val glyphs = Paint()
         const val CHAR_SP = 20f
+        /** Candidates made before the bar has a width. */
+        private const val FALLBACK_COUNT = 8
         const val READING_SP = 11.5f
         const val MEANING_SP = 10.5f
 

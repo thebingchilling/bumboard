@@ -912,6 +912,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         if (mLycheeVoice != null) {
             mLycheeVoice.setOnText(text -> {
                 onTextInput(text);
+                // backspace deletes a character at a time, not the whole sentence
+                mInputLogic.lycheeForgetEnteredText();
                 return kotlin.Unit.INSTANCE;
             });
         }
@@ -1007,6 +1009,15 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         StatsUtils.onSubtypeChanged(oldSubtype, subtype);
         mRichImm.onSubtypeChanged(subtype);
         if (mLycheeChinese != null) mLycheeChinese.onSubtypeChanged(subtype);
+        // LYCHEE: the bar's shortcuts belong to the keyboard showing (no handwriting on English)
+        if (mInputView != null) {
+            final View pad = mInputView.findViewById(R.id.lychee_handwriting_panel);
+            if (pad != null && lycheeEngine() == null) pad.setVisibility(View.GONE);
+            final View toolbar = mInputView.findViewById(R.id.lychee_toolbar);
+            if (toolbar instanceof app.lychee.toolbar.ToolbarView) {
+                ((app.lychee.toolbar.ToolbarView) toolbar).refresh();
+            }
+        }
         mInputLogic.onSubtypeChanged(SubtypeLocaleUtils.getCombiningRulesExtraValue(subtype),
                 mSettings.getCurrent());
         loadKeyboard();
@@ -1032,9 +1043,17 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     @SuppressWarnings("deprecation")
     void onStartInputViewInternal(final EditorInfo editorInfo, final boolean restarting) {
         super.onStartInputView(editorInfo, restarting);
-        mLycheeChinese.reset();
+        // LYCHEE: an app restarting its input in the same field (some do after every change)
+        // keeps what is being typed: the letters live in Rime, not in the field
+        if (!restarting) mLycheeChinese.reset();
         mLycheeChinese.onSubtypeChanged(mRichImm.getCurrentSubtype().getRawSubtype());
         mLycheeChinese.onSettingsChanged();
+        if (mInputView != null) {
+            final View lycheeToolbar = mInputView.findViewById(R.id.lychee_toolbar);
+            if (lycheeToolbar instanceof app.lychee.toolbar.ToolbarView) {
+                ((app.lychee.toolbar.ToolbarView) lycheeToolbar).refresh();
+            }
+        }
 
         mDictionaryFacilitator.onStartInput();
         // Switch to the null consumer to handle cases leading to early exit below, for which we
@@ -2196,7 +2215,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                     : mInputView.findViewById(R.id.lychee_handwriting_panel);
             if (pad != null && pad.getVisibility() == View.VISIBLE) {
                 pad.setVisibility(View.GONE);
-            } else {
+            } else if (lycheeEngine() != null && !"ko".equals(lycheeEngine())) {
+                // never on the English (or Korean) keyboards
                 showLycheePanel(R.id.lychee_handwriting_panel);
             }
             break;

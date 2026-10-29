@@ -356,7 +356,11 @@ public class KeyboardView extends View {
         canvas.translate(keyDrawX, keyDrawY);
 
         final KeyVisualAttributes attr = key.getVisualAttributes();
-        final KeyDrawParams params = mKeyDrawParams.mayCloneAndUpdateParams(key.getHeight(), attr);
+        // LYCHEE: a taller key (the symbols pages' rows) keeps the letters' text size
+        final Keyboard drawn = getKeyboard();
+        final int labelHeight = drawn == null ? key.getHeight()
+                : Math.min(key.getHeight(), drawn.mMostCommonKeyHeight - drawn.mVerticalGap);
+        final KeyDrawParams params = mKeyDrawParams.mayCloneAndUpdateParams(labelHeight, attr);
         params.mAnimAlpha = Constants.Color.ALPHA_OPAQUE;
 
         if (!key.isSpacer()) {

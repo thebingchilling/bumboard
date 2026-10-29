@@ -35,10 +35,13 @@ import java.util.concurrent.Executors
  * ⌫ takes back the last stroke while writing, otherwise deletes.
  *
  * A mode, like text editing: the Handwriting shortcut (Chinese and Japanese keyboards only)
- * opens it over the keys, and Back (its own button, or the phone's) closes it. Its bottom row:
- * Back, ?123 (the symbols, closing the pad), space, ⌫ and Enter.
+ * opens it over the keys, with Back and its name in the bar above (Back, or the phone's,
+ * closes it). Its bottom row: ?123 (the symbols, closing the pad), space, ⌫ and Enter.
  *
- * Recognition is Zinnia with a handwriting pack's model, opened only while the pane is open.
+ * Recognition is Zinnia with a handwriting pack's model (opened only while the pane is open)
+ * together with [app.lychee.handwriting.StrokeMatcher], which compares the strokes with every
+ * character's stroke shapes from the stroke-order data; their guesses are merged, and common
+ * characters move up.
  */
 class HandwritingPanelView @JvmOverloads constructor(
     context: Context,
@@ -90,8 +93,6 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     private fun buildBottomRow() {
         bottom.removeAllViews()
-        bottom.addView(LycheePanels.backButton(context) { this@HandwritingPanelView.visibility = GONE },
-            LayoutParams(dp(56), LayoutParams.MATCH_PARENT))
         // the symbols: the pad closes and the keyboard shows its symbols page
         bottom.addView(key(null, R.string.lychee_hw_symbols, pill = true) {
             commitPending()
@@ -111,17 +112,31 @@ class HandwritingPanelView @JvmOverloads constructor(
         if (visibility == VISIBLE) commitPending()
     }
 
+    private fun toolbar(): app.lychee.toolbar.ToolbarView? = rootView.findViewById(R.id.lychee_toolbar)
+
     fun show() {
         visibility = VISIBLE
+        // the bar above shows Back and "Handwriting", like text editing
+        toolbar()?.showTitle(R.string.lychee_sc_handwriting) { visibility = GONE }
         pad.clear()
         updateHint()
         lastTyped = null
         showGuesses(emptyList())
         release()
         app.lychee.chinese.Readings.open(context)
-        val models = Zinnia.modelsFor(context, lycheeHost()?.lycheeEngine())
+        val engine = lycheeHost()?.lycheeEngine()
+        val models = Zinnia.modelsFor(context, engine)
         zinnia = Zinnia.openAll(models)
-        message.visibility = if (zinnia == null) VISIBLE else GONE
+        loadMatcher(context)
+        if (models.isEmpty() && !unpacking) {
+            // the handwriting that comes with Lychee, unpacked now that it is wanted
+            unpacking = true
+            worker.execute {
+                app.lychee.packs.BundledPacks.installAll(context, engine)
+                main.post { if (visibility == VISIBLE && zinnia == null) show() }
+            }
+        }
+        message.visibility = if (!ready) VISIBLE else GONE
         updateHint()
         message.text = context.getString(if (models.isEmpty()) R.string.lychee_hw_no_pack else R.string.lychee_hw_bad_pack)
         message.setOnClickListener { lycheeHost()?.lycheeOpenSettings("Packs") }
@@ -134,6 +149,9 @@ class HandwritingPanelView @JvmOverloads constructor(
             release()
             guesses = emptyList()
             lycheeHost()?.lycheeShowGuesses(emptyList()) {}
+            toolbar()?.let {
+                if (it.mode == app.lychee.toolbar.ToolbarView.Mode.TITLE) it.mode = app.lychee.toolbar.ToolbarView.Mode.NORMAL
+            }
         }
         super.setVisibility(visibility)
     }
@@ -147,14 +165,37 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     // ------------------------------------------------------------------ recognition
 
+    /** Whether something can recognise the ink: Zinnia's model, or the stroke shapes. */
+    private val ready: Boolean
+        get() = zinnia != null || matcher != null || app.lychee.dict.PackData.hasStrokes(context)
+
+    private var unpacking = false
+
     private fun recognise() {
-        val z = zinnia ?: return
+        val z = zinnia
         val strokes = normalise(pad.strokes())
         if (strokes.isEmpty()) return
+        val ink = pad.strokeList()
+        val m = matcher
         worker.execute {
-            val result = runCatching { rerank(z.classify(BOX, BOX, strokes, 20)).take(10) }.getOrDefault(emptyList())
+            val result = runCatching {
+                val fromZinnia = z?.classify(BOX, BOX, strokes, 20).orEmpty()
+                val fromShapes = m?.match(ink, 20)?.map { it.first }.orEmpty()
+                rerank(merge(fromZinnia, fromShapes)).take(10)
+            }.getOrDefault(emptyList())
             main.post { if (pad.hasInk) showGuesses(result) }
         }
+    }
+
+    /**
+     * Zinnia's and the stroke matcher's guesses as one list: each scores by its place in each
+     * list (a guess both agree on rises to the top).
+     */
+    private fun merge(zinnia: List<String>, shapes: List<String>): List<String> {
+        val score = LinkedHashMap<String, Double>()
+        zinnia.forEachIndexed { i, g -> score[g] = (score[g] ?: 0.0) + ZINNIA_WEIGHT / (i + 1) }
+        shapes.forEachIndexed { i, g -> score[g] = (score[g] ?: 0.0) + SHAPES_WEIGHT / (i + 1) }
+        return score.entries.sortedByDescending { it.value }.map { it.key }.take(20)
     }
 
     /**
@@ -273,7 +314,7 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     /** "Write here" while the pad is empty and ready. */
     private fun updateHint() {
-        hint.visibility = if (zinnia != null && !pad.hasInk) VISIBLE else GONE
+        hint.visibility = if (ready && !pad.hasInk) VISIBLE else GONE
     }
 
     /** The recogniser's guesses for the ink on the pad, in the candidate bar. */
@@ -359,6 +400,9 @@ class HandwritingPanelView @JvmOverloads constructor(
             invalidate()
         }
 
+        /** Each stroke as x, y pairs. */
+        fun strokeList(): List<FloatArray> = points.toList()
+
         /** All strokes as x, y pairs with (-1, -1) after each. */
         fun strokes(): FloatArray {
             val total = points.sumOf { it.size + 2 }
@@ -375,7 +419,7 @@ class HandwritingPanelView @JvmOverloads constructor(
 
         @SuppressLint("ClickableViewAccessibility")
         override fun onTouchEvent(event: MotionEvent): Boolean {
-            if (zinnia == null) return false
+            if (!ready) return false
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     hint.visibility = GONE
@@ -417,6 +461,27 @@ class HandwritingPanelView @JvmOverloads constructor(
         const val AUTO_COMMIT_MS = 750L
         /** The square Zinnia sees each character in. */
         const val BOX = 300
+        const val ZINNIA_WEIGHT = 1.0
+        const val SHAPES_WEIGHT = 0.9
         val worker = Executors.newSingleThreadExecutor()
+
+        /** The stroke matcher, built once from the stroke-order data (a second or so). */
+        @Volatile
+        var matcher: app.lychee.handwriting.StrokeMatcher? = null
+        @Volatile
+        private var matcherLoading = false
+
+        fun loadMatcher(context: Context) {
+            if (matcher != null || matcherLoading) return
+            matcherLoading = true
+            val appContext = context.applicationContext
+            worker.execute {
+                val refs = app.lychee.dict.PackData.allMedians(appContext).map { (ch, json) ->
+                    ch to app.lychee.handwriting.StrokeMatcher.parseMedians(json)
+                }
+                if (refs.isNotEmpty()) matcher = app.lychee.handwriting.StrokeMatcher(refs)
+                matcherLoading = false
+            }
+        }
     }
 }

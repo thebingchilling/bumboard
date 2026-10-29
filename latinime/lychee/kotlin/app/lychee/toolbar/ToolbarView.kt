@@ -71,6 +71,21 @@ class ToolbarView @JvmOverloads constructor(
     private var title = 0
     private var onBack: () -> Unit = {}
 
+    /** Rebuilds the shortcuts for the keyboard now showing (handwriting only on Chinese and Japanese). */
+    fun refresh() = rebuild()
+
+    /**
+     * The title of a panel's bar shows, or only its Back (while candidates, such as handwriting
+     * guesses, take the rest of the bar).
+     */
+    var titleShown = true
+        set(value) {
+            if (field != value) {
+                field = value
+                if (mode == Mode.TITLE) rebuild()
+            }
+        }
+
     /** Shows Back and [title] for an open panel; Back runs [back]. NORMAL mode ends it. */
     fun showTitle(title: Int, back: () -> Unit) {
         this.title = title
@@ -105,7 +120,7 @@ class ToolbarView @JvmOverloads constructor(
         row.removeAllViews()
         if (mode == Mode.TITLE) {
             row.addView(button(R.drawable.ic_sym_arrow_back, R.string.lychee_back, highlighted = true) { onBack() })
-            row.addView(titleText(title), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+            if (titleShown) row.addView(titleText(title), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
             return
         }
         when (mode) {

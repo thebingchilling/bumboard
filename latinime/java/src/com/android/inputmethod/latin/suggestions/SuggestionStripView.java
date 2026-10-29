@@ -272,9 +272,13 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         return (mLycheeScriptShown ? key : 0) + (mLycheeZhongShown ? key : 0);
     }
 
-    /** How much of the strip's left edge is locked (nothing now: 英 moved to the right). */
+    /**
+     * How much of the strip's left edge is locked: a panel's Back (handwriting's, while its
+     * guesses take the rest of the bar), else nothing (英 is on the right).
+     */
     public int getLycheeStartWidth() {
-        return 0;
+        return mLycheeToolbar.getMode() == app.lychee.toolbar.ToolbarView.Mode.TITLE
+                ? (int) (getResources().getDisplayMetrics().density * 48) : 0;
     }
 
     /** A round key with a soft shadow under it, like the raised keys. */
@@ -325,6 +329,8 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         final boolean notice = mStripVisibilityGroup.isShowingImportantNoticeStrip();
         // a panel's title (shortcuts gallery, text editing) takes the bar over suggestions
         final boolean panel = mLycheeToolbar.getMode() != app.lychee.toolbar.ToolbarView.Mode.NORMAL;
+        // a panel's title gives way to candidates (handwriting guesses); its Back stays
+        mLycheeToolbar.setTitleShown(!mLycheeCandidatesShowing);
         final boolean idle = panel || (!mLycheeHasSuggestions && !mLycheeCandidatesShowing && !notice);
         mLycheeToolbar.setVisibility(idle ? VISIBLE : INVISIBLE);
         // the mic belongs to the toolbar, like the menu button: it goes when suggestions or

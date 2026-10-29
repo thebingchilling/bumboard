@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -171,8 +172,13 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            LargeTopAppBar(
+            // a medium bar (the large one took a third of the screen), on the page's colour
+            androidx.compose.material3.MediumTopAppBar(
                 title = { Text(stringResource(page.title)) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                ),
                 navigationIcon = {
                     if (page != Page.Home) {
                         IconButton(onClick = back) {
@@ -817,14 +823,13 @@ private fun PreferencesPage() {
     }
 }
 
-/** What the comma's long-press shows: Settings always, then the shortcuts switched on here. */
+/** What the comma's long-press shows: the shortcuts switched on here, in order (the first is where it opens), then Settings. */
 @Composable
 private fun CommaMenuGroup(commaKey: String) {
     val context = LocalContext.current
     val layout = remember(commaKey) { LycheeLayout.get(context) }
     var chosen by remember(commaKey) { mutableStateOf(layout.chosenCommaMenu()) }
     Group(stringResource(R.string.lychee_pref_comma_menu)) {
-        row { NavRow(it, stringResource(R.string.lychee_sc_settings), stringResource(R.string.lychee_pref_comma_menu_settings), R.drawable.ic_sym_settings) {} }
         // the chosen shortcuts in their popup order (the arrows move them), then the rest
         val rest = Shortcut.entries.filter { it != Shortcut.SETTINGS && it !in chosen }
         fun save(list: List<Shortcut>) {
@@ -847,6 +852,8 @@ private fun CommaMenuGroup(commaKey: String) {
                 }
             }
         }
+        // Settings is always there, last
+        row { NavRow(it, stringResource(R.string.lychee_sc_settings), stringResource(R.string.lychee_pref_comma_menu_settings), R.drawable.ic_sym_settings) {} }
     }
 }
 
@@ -965,17 +972,12 @@ private fun PaletteRow(shape: androidx.compose.ui.graphics.Shape, title: String,
     val context = LocalContext.current
     // in the phone's light or dark, like these settings
     val swatch = remember(style) { app.lychee.ui.LycheeColorStyle.swatch(context, style) }
-    Surface(
-        shape = shape,
-        color = androidx.compose.ui.graphics.Color.Transparent,
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        ListItem(
-            headlineContent = { Text(title) },
-            leadingContent = { RadioButton(selected = selected, onClick = onClick) },
-            trailingContent = {
-                androidx.compose.foundation.Canvas(Modifier.size(width = 88.dp, height = 28.dp)) {
+    Box(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        CompactRow(
+            null, title,
+            leading = { RadioButton(selected = selected, onClick = onClick) },
+            trailing = {
+                androidx.compose.foundation.Canvas(Modifier.size(width = 80.dp, height = 26.dp)) {
                     val h = size.height
                     // the background as a pill, with a letter key, a functional key and the accent on it
                     drawRoundRect(androidx.compose.ui.graphics.Color(swatch[0]),
@@ -987,24 +989,14 @@ private fun PaletteRow(shape: androidx.compose.ui.graphics.Shape, title: String,
                     }
                 }
             },
-            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         )
     }
 }
 
 @Composable
 private fun RadioRow(shape: androidx.compose.ui.graphics.Shape, title: String, selected: Boolean, onClick: () -> Unit) {
-    Surface(
-        shape = shape,
-        color = androidx.compose.ui.graphics.Color.Transparent,
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        ListItem(
-            headlineContent = { Text(title) },
-            leadingContent = { RadioButton(selected = selected, onClick = onClick) },
-            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
-        )
+    Box(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        CompactRow(null, title, leading = { RadioButton(selected = selected, onClick = onClick) })
     }
 }
 

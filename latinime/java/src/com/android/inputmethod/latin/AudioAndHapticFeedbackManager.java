@@ -159,8 +159,15 @@ public final class AudioAndHapticFeedbackManager {
         if (!mLycheeVibrateOn) {
             return;
         }
-        // LYCHEE: always Lychee's own short tap (the system's KEYBOARD_TAP is silent when the
-        // phone's touch feedback is off)
+        // LYCHEE: always Lychee's own tap (the system's KEYBOARD_TAP is silent when the
+        // phone's touch feedback is off): the phone's crisp predefined click when no length is
+        // set, like Gboard's, else a short pulse of the chosen length
+        if (mLycheeVibrationMs < 0 && mVibrator != null
+                && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            mVibrator.vibrate(android.os.VibrationEffect.createPredefined(
+                    android.os.VibrationEffect.EFFECT_CLICK));
+            return;
+        }
         vibrate(mLycheeVibrationMs >= 0 ? mLycheeVibrationMs : DEFAULT_VIBRATION_MS);
     }
 

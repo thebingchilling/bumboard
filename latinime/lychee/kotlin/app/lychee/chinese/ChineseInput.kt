@@ -209,7 +209,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             RimeService.start(ime) {
                 if (selectedEngine != engine) selectSchema()
                 replayPending()
-                RimeService.refreshPacks(ime) { changed -> if (changed || schemaMissing) selectSchema() }
+                RimeService.refreshPacks(ime, engine) { changed -> if (changed || schemaMissing) selectSchema() }
             }
             if (newEngine == "yue" || newEngine == "cmn") Readings.open(ime) { if (isComposing) show(shown) }
             if (newEngine == "ja" && !app.lychee.packs.Packs.isInstalled(ime, "rime_ja") &&
@@ -247,9 +247,21 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /** Re-reads schema and Traditional/Simplified settings, e.g. after the settings changed. */
     fun onSettingsChanged() {
-        if (isActive && RimeService.ready) selectSchema()
-        show(null)
+        // only when something Rime reads changed: choosing the schema again drops what is being
+        // typed, and costs time just as typing starts (this runs every time the keyboard opens)
+        val signature = schemaSettings()
+        if (isActive && RimeService.ready && (signature != appliedSettings || selectedEngine != engine)) selectSchema()
+        if (!isComposing) show(null)
     }
+
+    /** The settings the schema choice depends on. */
+    private fun schemaSettings(): String = listOf(
+        engine, ChineseScript.candidatesSimplified(prefs), englishMode,
+        prefs.getBoolean(PREF_FUZZY + engine, false), prefs.getString(PREF_CANTONESE_INPUT, "jyutping"),
+    ).joinToString("|")
+
+    /** [schemaSettings] when the schema was last chosen. */
+    private var appliedSettings: String? = null
 
     /** The engine whose schema the session has (null before the first). */
     private var selectedEngine: String? = null
@@ -258,6 +270,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val engine = engine ?: return
         if (session == 0L) session = Rime.createSession()
         selectedEngine = engine
+        appliedSettings = schemaSettings()
         if (engine == "ja" || engine == "ko") {
             // without its schema (the Japanese pack missing or unreadable) the letters type as
             // they are rather than vanishing into Rime
@@ -418,7 +431,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             app.lychee.layout.LycheePanels.hideOthers(view, panel)
             app.lychee.layout.LycheePanels.cover(panel, view)
             panel.bringToFront()
-            panel.show(candidates, candidateScale(), annotation(), Readings.barStyle(prefs, inputMode().lang))
+            panel.show(candidates, candidateScale(), annotation(), Readings.barStyle(prefs, inputMode().lang),
+                after = bar?.lastVisible ?: -1)
         }
         updateMoreButton()
     }
@@ -505,7 +519,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         bar.visibility = View.VISIBLE
         moreButton?.visibility = if (guessing) View.GONE else View.VISIBLE
         // the open dropdown follows the typing
-        if (panel?.visibility == View.VISIBLE) panel?.show(candidates, candidateScale(), annotation(), bar.style)
+        if (panel?.visibility == View.VISIBLE) {
+            bar.post { panel?.show(candidates, candidateScale(), annotation(), bar.style, after = bar.lastVisible) }
+        }
         updateMoreButton()
         stripView?.setLycheeCandidatesShowing(true)
     }

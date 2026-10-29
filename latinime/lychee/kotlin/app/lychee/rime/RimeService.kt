@@ -41,8 +41,6 @@ object RimeService {
                 val shared = File(root, "shared")
                 val user = File(root, "user").apply { mkdirs() }
                 val changed = installAssets(app, shared)
-                // the packs that come with Lychee (the Japanese dictionary among them) first
-                BundledPacks.installAll(app)
                 installPacks(app, shared)
                 Rime.start(shared.path, user.path, fullCheck = changed)
                 stagePackBuilds(app, user)
@@ -65,11 +63,13 @@ object RimeService {
      * precompiled build/) into Rime's shared data, then runs [then] on the main thread with
      * whether anything changed.
      */
-    fun refreshPacks(context: Context, then: (Boolean) -> Unit = {}) {
+    fun refreshPacks(context: Context, engine: String? = null, then: (Boolean) -> Unit = {}) {
         val app = context.applicationContext
         executor.execute {
             var changed = false
             try {
+                // the bundled packs this keyboard needs first (waits for an unpacking under way)
+                BundledPacks.installAll(app, engine)
                 val root = File(app.filesDir, "rime")
                 changed = installPacks(app, File(root, "shared"))
                 stagePackBuilds(app, File(root, "user"))
