@@ -383,10 +383,41 @@ class DictionaryPopup(private val ctx: Context) {
         }
 
         fun plainSense(n: Int, gloss: String) {
-            val sb = SpannableStringBuilder()
-            sb.append("$n", NumberBadge(c.primaryContainer, c.onPrimaryContainer, dp(20).toFloat(), dp(8).toFloat()), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            sb.append(gloss)
-            body.addView(textView(sb, 15f, c.onSurface).apply { setPadding(0, dp(4), 0, dp(2)) })
+            senseBlock(n, gloss, emptyList())
+        }
+
+        /**
+         * One definition, set apart from the next: its own tinted block, the number in an
+         * accent-coloured circle beside it, then the meaning and any notes under it.
+         */
+        private fun senseBlock(n: Int, gloss: String, notes: List<String>) {
+            val block = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(dp(10), dp(10), dp(12), dp(10))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(14).toFloat()
+                    setColor(c.surfaceContainer)
+                }
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { topMargin = dp(6) }
+            }
+            block.addView(TextView(ctx).apply {
+                text = n.toString()
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                typeface = app.lychee.fonts.LycheeFonts.ui(ctx, 700)
+                setTextColor(c.onPrimary)
+                gravity = Gravity.CENTER
+                includeFontPadding = false
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(c.primary)
+                }
+            }, LinearLayout.LayoutParams(dp(24), dp(24)).apply { marginEnd = dp(12) })
+            val column = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+            column.addView(textView(gloss, 15f, c.onSurface).apply { setLineSpacing(0f, 1.1f) })
+            notes.forEach { column.addView(textView(it, 13f, c.onSurfaceVariant).apply { setPadding(0, dp(4), 0, 0) }) }
+            block.addView(column, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            body.addView(block)
         }
 
         /** The measure words (levels and parts of speech stay off the card). */
@@ -432,17 +463,11 @@ class DictionaryPopup(private val ctx: Context) {
         }
 
         private fun sense(n: Int, s: Sense) {
-            val sb = SpannableStringBuilder()
-            sb.append("$n", NumberBadge(c.primaryContainer, c.onPrimaryContainer, dp(20).toFloat(), dp(8).toFloat()), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            sb.append(s.gloss)
             // the meaning alone: no reading, part of speech or register beside it
-            body.addView(textView(sb, 15f, c.onSurface).apply { setPadding(0, dp(4), 0, dp(2)) })
-            s.written?.takeIf { it.isNotBlank() }?.let {
-                body.addView(note("${ctx.getString(R.string.lychee_card_written)} $it"))
-            }
-            s.vernacular?.takeIf { it.isNotBlank() }?.let {
-                body.addView(note("${ctx.getString(R.string.lychee_card_vernacular)} $it"))
-            }
+            senseBlock(n, s.gloss, listOfNotNull(
+                s.written?.takeIf { it.isNotBlank() }?.let { "${ctx.getString(R.string.lychee_card_written)} $it" },
+                s.vernacular?.takeIf { it.isNotBlank() }?.let { "${ctx.getString(R.string.lychee_card_vernacular)} $it" },
+            ))
         }
 
         /** One character or word of a composed candidate: both languages' readings, and its meaning. */
@@ -508,34 +533,5 @@ class DictionaryPopup(private val ctx: Context) {
                 "yue" to "Cantonese", "cmn" to "Mandarin",
             )
         }
-    }
-}
-
-/** A sense's number in a filled circle, before its meaning. */
-private class NumberBadge(private val fill: Int, private val ink: Int, private val size: Float, private val gap: Float) :
-    android.text.style.ReplacementSpan() {
-    override fun getSize(paint: android.graphics.Paint, text: CharSequence, start: Int, end: Int, fm: android.graphics.Paint.FontMetricsInt?): Int =
-        (size + gap).toInt()
-
-    override fun draw(
-        canvas: android.graphics.Canvas, text: CharSequence, start: Int, end: Int,
-        x: Float, top: Int, y: Int, bottom: Int, paint: android.graphics.Paint,
-    ) {
-        val oldColor = paint.color
-        val oldSize = paint.textSize
-        val oldFace = paint.typeface
-        val cy = (top + bottom) / 2f
-        paint.color = fill
-        canvas.drawCircle(x + size / 2, cy, size / 2, paint)
-        paint.color = ink
-        paint.textSize = size * 0.6f
-        paint.typeface = Typeface.create(oldFace, Typeface.BOLD)
-        val label = text.subSequence(start, end).toString()
-        val w = paint.measureText(label)
-        val fm = paint.fontMetrics
-        canvas.drawText(label, x + (size - w) / 2, cy - (fm.ascent + fm.descent) / 2, paint)
-        paint.color = oldColor
-        paint.textSize = oldSize
-        paint.typeface = oldFace
     }
 }
