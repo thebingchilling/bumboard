@@ -126,10 +126,10 @@ private fun googleSansFlex(): FontFamily? {
 private fun typography(family: FontFamily?): Typography {
     val stock = Typography()
     val base = stock.copy(
-        bodyLarge = stock.bodyLarge.copy(fontSize = 15.sp, lineHeight = 20.sp),
-        bodyMedium = stock.bodyMedium.copy(fontSize = 13.sp, lineHeight = 18.sp),
+        bodyLarge = stock.bodyLarge.copy(fontSize = 16.sp, lineHeight = 22.sp),
+        bodyMedium = stock.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp),
         bodySmall = stock.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
-        labelLarge = stock.labelLarge.copy(fontSize = 13.sp, fontWeight = FontWeight.SemiBold),
+        labelLarge = stock.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.2.sp),
         headlineMedium = stock.headlineMedium.copy(fontSize = 24.sp),
     )
     if (family == null) return base

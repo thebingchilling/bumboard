@@ -250,10 +250,17 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
      * up and come back as Chinese candidates; it is then filled in the accent colour.
      */
     public void setLycheeZhongKey(final Boolean active, final OnClickListener onClick) {
+        setLycheeZhongKey(active, onClick, "\u82F1");
+    }
+
+    /** The English-mode key with its label: 英 (Chinese, Japanese) or 영 (Korean). */
+    public void setLycheeZhongKey(final Boolean active, final OnClickListener onClick,
+            final String label) {
         final boolean shown = active != null;
         mLycheeZhongKey.setVisibility(shown ? VISIBLE : GONE);
         mLycheeZhongKey.setOnClickListener(onClick);
         if (shown) {
+            if (!label.contentEquals(mLycheeZhongKey.getText())) mLycheeZhongKey.setText(label);
             final Context context = getContext();
             mLycheeZhongKey.setBackground(lycheeRoundRaisedButton(context, app.lychee.ui.LycheeColorStyle.color(context, active
                     ? R.attr.lycheeColorAccent : R.attr.lycheeColorKey)));
@@ -346,7 +353,9 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         final int script = getLycheeEdgeWidth();
         final int mic = getResources().getDimensionPixelSize(
                 R.dimen.config_suggestions_strip_height);
-        setLycheeMargins(mLycheeToolbar, start, script + (voice ? mic : 0));
+        // the toolbar holds a panel's Back itself, so it always starts at the left edge (only
+        // what shows beside Back, the candidates and suggestions, keeps clear of it)
+        setLycheeMargins(mLycheeToolbar, 0, script + (voice ? mic : 0));
         setLycheeMargins(mSuggestionsStrip, start, script + (voice ? mic : 0));
     }
 

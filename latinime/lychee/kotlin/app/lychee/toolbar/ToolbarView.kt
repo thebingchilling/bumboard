@@ -26,7 +26,7 @@ import com.android.inputmethod.latin.R
  *
  * - Normal: the menu button, then the shortcuts on the bar spread across it like Gboard's (by
  *   default next language, text editing and undo).
- * - Menu open: the menu button turns into ✕ in a circle (it closes the menu); the shortcuts stay.
+ * - Menu open: the menu button fills in, in a circle (it closes the menu); the shortcuts stay.
  * - Editing: ✓ in a circle ends it; the shortcuts on the bar sit in an outlined pill, take
  *   shortcuts dragged up from the menu and can be dragged back down into it or along the bar.
  * - Title: a panel over the keys (text editing) is open; Back and the panel's name, like the
@@ -63,6 +63,12 @@ class ToolbarView @JvmOverloads constructor(
                 field = value
                 row.layoutTransition = if (value == Mode.EDIT) editTransition else null
                 rebuild()
+                // the bar's new contents fade in (a panel's Back and title, the menu's buttons)
+                if (app.lychee.layout.LycheePanels.animate(context)) {
+                    row.alpha = 0f
+                    row.translationX = resources.displayMetrics.density * -6
+                    row.animate().alpha(1f).translationX(0f).setDuration(180).start()
+                }
                 // the strip hides its suggestions and mic while a title shows here
                 (parent as? com.android.inputmethod.latin.suggestions.SuggestionStripView)?.lycheeRefresh()
             }
@@ -124,8 +130,9 @@ class ToolbarView @JvmOverloads constructor(
             return
         }
         when (mode) {
-            Mode.NORMAL -> row.addView(button(R.drawable.ic_sym_apps_filled, R.string.lychee_sc_gallery) { onGallery() })
-            Mode.GALLERY -> row.addView(button(R.drawable.ic_sym_close, R.string.lychee_gallery_close, highlighted = true) { onGallery() })
+            // the menu button: outlined while the menu is closed, filled while it is open
+            Mode.NORMAL -> row.addView(button(R.drawable.ic_sym_apps_outlined, R.string.lychee_sc_gallery) { onGallery() }.also { pop(it) })
+            Mode.GALLERY -> row.addView(button(R.drawable.ic_sym_apps_filled, R.string.lychee_gallery_close, highlighted = true) { onGallery() }.also { pop(it) })
             Mode.EDIT -> row.addView(button(R.drawable.ic_sym_check, R.string.lychee_resize_done, highlighted = true) { onEditToggle() })
             Mode.TITLE -> Unit
         }
@@ -162,6 +169,19 @@ class ToolbarView @JvmOverloads constructor(
         shortcuts.forEach { sc ->
             row.addView(button(sc.icon, sc.label) { lycheeHost()?.lycheeRunShortcut(sc) }, shortcutParams())
         }
+    }
+
+    /** The menu button springs in as it fills or empties. */
+    private var lastMenuMode: Mode? = null
+
+    private fun pop(view: View) {
+        if (lastMenuMode != null && lastMenuMode != mode) {
+            view.scaleX = 0.6f
+            view.scaleY = 0.6f
+            view.animate().scaleX(1f).scaleY(1f).setDuration(220)
+                .setInterpolator(android.view.animation.OvershootInterpolator(2.5f)).start()
+        }
+        lastMenuMode = mode
     }
 
     private fun titleText(text: Int) = TextView(context).apply {

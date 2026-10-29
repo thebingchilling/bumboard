@@ -170,7 +170,7 @@ class DictionaryPopup(private val ctx: Context) {
     private fun button(label: String, c: M3Colors, filled: Boolean, onClick: () -> Unit) = TextView(ctx).apply {
         text = label
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-        typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
+        typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
         setTextColor(if (filled) c.onPrimary else c.primary)
         setPadding(dp(24), dp(10), dp(24), dp(10))
         background = GradientDrawable().apply {
@@ -404,7 +404,7 @@ class DictionaryPopup(private val ctx: Context) {
             block.addView(TextView(ctx).apply {
                 text = n.toString()
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
-                typeface = app.lychee.fonts.LycheeFonts.ui(ctx, 700)
+                typeface = app.lychee.fonts.LycheeFonts.appFont(ctx, 700)
                 setTextColor(c.onPrimary)
                 gravity = Gravity.CENTER
                 includeFontPadding = false
@@ -484,7 +484,7 @@ class DictionaryPopup(private val ctx: Context) {
 
         private fun section(title: String) {
             body.addView(textView(title, 14f, c.primary).apply {
-                typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
+                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
                 setPadding(0, dp(16), 0, dp(4))
             })
         }

@@ -1664,13 +1664,23 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // a card over the faded keys, like Gboard's
         final View keys = mKeyboardSwitcher.getMainKeyboardView();
         if (keys == null || keys.getWidth() == 0) return;
+        // it springs up out of the space bar
+        int anchorX = -1;
+        int anchorTop = -1;
+        final Keyboard keyboard = mKeyboardSwitcher.getKeyboard();
+        final com.android.inputmethod.keyboard.Key space =
+                keyboard == null ? null : keyboard.getKey(Constants.CODE_SPACE);
+        if (space != null) {
+            anchorX = keys.getPaddingLeft() + space.getX() + space.getWidth() / 2;
+            anchorTop = keys.getPaddingTop() + space.getY();
+        }
         app.lychee.layout.LanguageCard.show(keys, names, checked, position -> {
             switchToLycheeSubtype(subtypes.get(position));
             return kotlin.Unit.INSTANCE;
         }, () -> {
             launchLycheeSettingsPage("Languages");
             return kotlin.Unit.INSTANCE;
-        });
+        }, anchorX, anchorTop);
     }
 
     // TODO: Instead of checking for alphabetic keyboard here, separate keycodes for
@@ -2298,6 +2308,10 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             ((app.lychee.handwriting.HandwritingPanelView) panel).show();
         } else {
             panel.setVisibility(View.VISIBLE);
+        }
+        // it rises gently over the keys
+        if (!(panel instanceof app.lychee.layout.ResizePanelView)) {
+            app.lychee.layout.LycheePanels.reveal(panel);
         }
     }
 

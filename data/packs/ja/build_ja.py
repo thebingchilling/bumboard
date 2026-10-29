@@ -28,6 +28,9 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from english_lookup import write_english_schema  # noqa: E402
+
 HERE = Path(__file__).resolve().parent
 RIME = HERE.parent.parent / "rime"
 MOZC = "https://raw.githubusercontent.com/google/mozc/master/src/data/dictionary_oss/dictionary{:02d}.txt"
@@ -138,8 +141,10 @@ def schema_with_kana_preedit() -> str:
     return text.replace("  spelling_hints: 0\n", "  spelling_hints: 0\n" + block, 1)
 
 
-def build_meanings(cache: Path, path: Path) -> int:
-    """data/ja.db from JMdict: every kanji and kana form of an entry -> its meanings."""
+def build_meanings(cache: Path, path: Path, english: list | None = None) -> int:
+    """data/ja.db from JMdict: every kanji and kana form of an entry -> its meanings. [english]
+    collects (word, glosses, weight) for the English lookup: the word as it is usually written
+    (kana when JMdict says so), common words weighing more."""
     src = cache / "JMdict_e.gz"
     if not src.exists():
         urllib.request.urlretrieve(JMDICT, src)
@@ -162,6 +167,8 @@ def build_meanings(cache: Path, path: Path) -> int:
             common = any(p.text and p.text[:4] in ("news", "ichi", "spec")
                          for p in e.iter() if p.tag in ("ke_pri", "re_pri"))
             senses, pos = [], None
+            kana_usually = any(m.text and "usually written using kana" in m.text
+                               for m in e.iter("misc"))
             for s in e.findall("sense"):
                 gl = [g.text for g in s.findall("gloss") if g.text][:3]
                 if gl:
@@ -175,6 +182,8 @@ def build_meanings(cache: Path, path: Path) -> int:
             r = rank if common else rank + 1_000_000
             gloss = "\n".join(senses[:8])
             lemma = kanji[0] if kanji else kana[0]
+            if english is not None:
+                english.append((kana[0] if kana_usually or not kanji else kanji[0], senses[:8], 1.0 if common else 0.4))
             for form in dict.fromkeys(kanji + kana):
                 rows.append((form, lemma, kana[0], None, pos, gloss, r))
     db.executemany("INSERT INTO word VALUES(?,?,?,?,?,?,?)", rows)
@@ -261,11 +270,26 @@ def main():
     shared.mkdir(parents=True)
     (shared / "lychee_ja.schema.yaml").write_text(schema_with_kana_preedit(), encoding="utf-8")
     shutil.copy(RIME / "lychee_common.yaml", shared)
-    (shared / "default.yaml").write_text('config_version: "lychee.ja.1"\nschema_list:\n  - schema: lychee_ja\n', encoding="utf-8")
+    (shared / "default.yaml").write_text('config_version: "lychee.ja.1"\nschema_list:\n  - schema: lychee_ja\n'
+                                         '  - schema: lychee_en_ja\n', encoding="utf-8")
     with open(shared / "lychee_ja.dict.yaml", "w", encoding="utf-8") as f:
         f.write("# Rime dictionary: Japanese, from Mozc's open-source dictionary (BSD-3-Clause; IPAdic licence).\n")
         f.write(f"---\nname: lychee_ja\nversion: \"{PACK_VERSION}\"\nsort: by_weight\nuse_preset_vocabulary: false\n...\n")
         f.write("\n".join(lines) + "\n")
+    meanings = work / "ja.db"
+    english: list = []
+    n = build_meanings(args.cache, meanings, english)
+    print(f"ja.db: {n} forms", file=sys.stderr)
+    # English -> Japanese (英 on the Japanese keyboard): how common a word is, from Mozc
+    common: dict[str, int] = {}
+    for (word, reading), cost in entries:
+        w = max(1, int(1e6 * math.exp(-cost / 700.0)))
+        common[word] = max(common.get(word, 0), w)
+    # words JMdict marks common, or that Mozc knows (rare entries would only bloat the pack)
+    english = [e for e in english if e[2] == 1.0 or e[0] in common]
+    n = write_english_schema(shared, "lychee_en_ja", "英→日", "Japanese", english, lambda t: common.get(t, 0) / 1000)
+    print(f"lychee_en_ja: {n} entries", file=sys.stderr)
+
     user = work / "user"
     user.mkdir()
     build = shared / "build"
@@ -273,18 +297,14 @@ def main():
     for p in build.glob("*.userdb*"):
         shutil.rmtree(p, ignore_errors=True) if p.is_dir() else p.unlink()
 
-    meanings = work / "ja.db"
-    n = build_meanings(args.cache, meanings)
-    print(f"ja.db: {n} forms", file=sys.stderr)
-
     pack = args.out / "lychee-rime-ja.zip"
     pack.unlink(missing_ok=True)
     with zipfile.ZipFile(pack, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("pack.json", json.dumps({"id": "rime_ja", "name": "Japanese dictionary", "version": PACK_VERSION}))
-        for name in ["lychee_ja.schema.yaml", "lychee_ja.dict.yaml"]:
+        for name in ["lychee_ja.schema.yaml", "lychee_ja.dict.yaml", "lychee_en_ja.schema.yaml", "lychee_en_ja.dict.yaml"]:
             z.write(shared / name, f"rime/{name}")
         for f in sorted(build.iterdir()):
-            if f.name.startswith("lychee_ja."):
+            if f.name.startswith(("lychee_ja.", "lychee_en_ja.")):
                 z.write(f, f"rime/build/{f.name}")
         z.write(meanings, "data/ja.db")
         z.writestr("LICENSE.txt", "Japanese dictionary from Mozc (https://github.com/google/mozc), "

@@ -19,6 +19,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.clickable
@@ -190,7 +191,20 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
             )
         },
     ) { padding ->
-        AnimatedContent(targetState = page, label = "page", modifier = Modifier.padding(padding)) { shown ->
+        // pages slide in from the side they lead to (deeper to the right), fading as they go
+        AnimatedContent(
+            targetState = page, label = "page", modifier = Modifier.padding(padding),
+            transitionSpec = {
+                val deeper = targetState.ordinal > initialState.ordinal && initialState != Page.Licences
+                val sign = if (deeper) 1 else -1
+                (androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(280)) { sign * it / 4 } +
+                    androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220, delayMillis = 60)))
+                    .togetherWith(
+                        androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(280)) { -sign * it / 4 } +
+                            androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(160)),
+                    )
+            },
+        ) { shown ->
             Column(
                 Modifier
                     .fillMaxSize()

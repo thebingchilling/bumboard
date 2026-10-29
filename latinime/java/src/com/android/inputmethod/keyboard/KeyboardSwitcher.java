@@ -341,6 +341,8 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
                 mKeyboardTextsSet.getText(KeyboardTextsSet.SWITCH_TO_ALPHA_KEY_LABEL),
                 mKeyboardView.getKeyVisualAttribute(), keyboard.mIconsSet);
         mEmojiPalettesView.setVisibility(View.VISIBLE);
+        // LYCHEE: the emoji rise in gently
+        app.lychee.layout.LycheePanels.reveal(mEmojiPalettesView);
     }
 
     public enum KeyboardSwitchState {

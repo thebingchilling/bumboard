@@ -6,6 +6,8 @@
     <dimen name="lychee_script_key_width">44dp</dimen>
     <!-- The ⌄ that opens every candidate: a full finger's width, apart from the candidates. -->
     <dimen name="lychee_candidate_more_width">48dp</dimen>
+    <!-- the typed letters' line at the top of the bar on the Rime keyboards -->
+    <dimen name="lychee_preedit_height">16dp</dimen>
     <!-- Right of the candidates: the ⌄ (48dp) and the 繁/简 button (44dp). -->
     <dimen name="lychee_candidate_bar_end">92dp</dimen>
     <!-- The line above the candidates showing what is being typed. -->

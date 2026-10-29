@@ -26,6 +26,22 @@ object LycheePanels {
         panel.layoutParams = lp
     }
 
+    /** A panel opening over the keys: it fades in, rising a little, unless motion is off. */
+    @JvmStatic
+    fun reveal(panel: View) {
+        if (!animate(panel.context)) return
+        panel.animate().cancel()
+        panel.alpha = 0f
+        panel.translationY = panel.resources.displayMetrics.density * 12
+        panel.animate().alpha(1f).translationY(0f).setDuration(200)
+            .setInterpolator(android.view.animation.DecelerateInterpolator(2f)).start()
+    }
+
+    /** Whether the phone wants animations (Settings > Accessibility > Remove animations). */
+    @JvmStatic
+    fun animate(context: Context): Boolean = android.provider.Settings.Global.getFloat(
+        context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
+
     /** Hides every panel over the keys except [except]. */
     @JvmStatic
     fun hideOthers(inputView: View, except: View?) {

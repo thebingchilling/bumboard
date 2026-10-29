@@ -18,7 +18,9 @@ from __future__ import annotations
 import argparse
 import bz2
 import json
+import shutil
 import sqlite3
+import subprocess
 import sys
 import tarfile
 import urllib.request
@@ -26,7 +28,12 @@ import zipfile
 from collections import defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from english_lookup import write_english_schema  # noqa: E402
+
 HERE = Path(__file__).resolve().parent
+RIME = HERE.parent.parent / "rime"
+KO_WORDS = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/ko/ko_50k.txt"
 KAIKKI_KO = "https://kaikki.org/dictionary/Korean/kaikki.org-dictionary-Korean.jsonl"
 HANZI = "https://raw.githubusercontent.com/skishore/makemeahanzi/bddc96d41bef78427ed0e034e9f7e31d71fd1b92/{}"
 TATOEBA = "https://downloads.tatoeba.org/exports/per_language/{0}/{1}"
@@ -58,12 +65,15 @@ def finish(db: sqlite3.Connection):
     db.close()
 
 
-def write_pack(out: Path, file: str, pack_id: str, name: str, db: Path, licences: dict[str, str]):
+def write_pack(out: Path, file: str, pack_id: str, name: str, db: Path, licences: dict[str, str],
+               extra: dict[str, Path] | None = None):
     pack = out / file
     pack.unlink(missing_ok=True)
     with zipfile.ZipFile(pack, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("pack.json", json.dumps({"id": pack_id, "name": name, "version": PACK_VERSION}))
         z.write(db, f"data/{db.name}")
+        for arc, f in (extra or {}).items():
+            z.write(f, arc)
         for n, text in licences.items():
             z.writestr(n, text)
     print(f"{pack}: {pack.stat().st_size >> 20} MB", file=sys.stderr)
@@ -88,6 +98,7 @@ def build_ko(out: Path, cache: Path, work: Path):
     db_path = work / "ko.db"
     db = new_db(db_path, WORD_SCHEMA)
     rows = []
+    english = []
     rank = 0
     with open(src, encoding="utf-8") as f:
         for line in f:
@@ -110,6 +121,17 @@ def build_ko(out: Path, cache: Path, work: Path):
             gloss = "\n".join(glosses[:8])
             rank += 1
             rows.append((word, word, roman, hanja, KO_POS.get(pos, pos), gloss, rank))
+            # the English lookup leaves out vulgar, offensive and old meanings
+            clean = []
+            for sense in e.get("senses", []):
+                if BAD_TAGS & set(sense.get("tags", [])):
+                    continue
+                g = "; ".join(sense.get("glosses", [])[:1]).strip()
+                if g and "form of" not in g and g not in clean:
+                    clean.append(g)
+            if clean and pos not in ("suffix", "prefix", "name", "proverb"):
+                conjugated = [x.get("form", "") for x in e.get("forms", []) if x.get("source") == "conjugation"]
+                english.append((word, clean[:8], 1.0, conjugated))
             # conjugated forms find their dictionary form (먹어요 -> 먹다)
             seen = {word}
             for x in forms:
@@ -120,13 +142,52 @@ def build_ko(out: Path, cache: Path, work: Path):
     db.executemany("INSERT INTO word VALUES(?,?,?,?,?,?,?)", rows)
     db.execute("CREATE INDEX word_form ON word(form)")
     finish(db)
-    write_pack(out, "lychee-dict-ko.zip", "dict_ko", "Korean dictionary", db_path, {
+    rime = english_to_korean(english, cache, work)
+    write_pack(out, "lychee-dict-ko.zip", "dict_ko", "Korean dictionary", db_path, extra=rime, licences={
         "LICENSE.txt": "Korean dictionary data from Wiktionary (https://en.wiktionary.org), extracted by "
                        "kaikki.org (Tatu Ylonen, Wiktextract). Licensed CC BY-SA 4.0 and GFDL; this pack "
                        "is shared under CC BY-SA 4.0: https://creativecommons.org/licenses/by-sa/4.0/\n"
                        "Changes: entries were reduced to their first meanings, Hanja and conjugated forms, "
-                       "and converted to SQLite.\n",
+                       "and converted to SQLite.\n"
+                       "The English lookup (rime/lychee_en_ko) is made from the same meanings, ordered by "
+                       "FrequencyWords (Hermit Dave, from OpenSubtitles 2018), CC BY-SA 4.0.\n",
     })
+
+
+BAD_TAGS = {"vulgar", "offensive", "derogatory", "slur", "obsolete", "archaic", "dialectal", "rare"}
+
+
+def english_to_korean(english, cache: Path, work: Path) -> dict[str, Path]:
+    """The English -> Korean Rime schema (영 on the Korean keyboard), compiled: zip path -> file.
+    How common a word is comes from FrequencyWords (OpenSubtitles 2018, CC BY-SA 4.0), with
+    its conjugated forms counted too (subtitles say 먹어, rarely 먹다)."""
+    counts: dict[str, int] = {}
+    for line in fetch(KO_WORDS, cache).read_text(encoding="utf-8").splitlines():
+        parts = line.split()
+        if len(parts) == 2 and parts[1].isdigit():
+            counts[parts[0]] = int(parts[1])
+    freq: dict[str, int] = {}
+    for word, _, _, conjugated in english:
+        freq[word] = max(freq.get(word, 0), counts.get(word, 0) + sum(counts.get(f, 0) for f in set(conjugated)))
+    english = [(w, g, s) for w, g, s, _ in english]
+    shared = work / "rime-ko"
+    shutil.rmtree(shared, ignore_errors=True)
+    shared.mkdir(parents=True)
+    shutil.copy(RIME / "lychee_common.yaml", shared)
+    (shared / "default.yaml").write_text('config_version: "lychee.ko.1"\nschema_list:\n  - schema: lychee_en_ko\n',
+                                         encoding="utf-8")
+    n = write_english_schema(shared, "lychee_en_ko", "영→한", "Korean", english, lambda t: freq.get(t, 0) / 10)
+    print(f"lychee_en_ko: {n} entries", file=sys.stderr)
+    user = work / "rime-ko-user"
+    shutil.rmtree(user, ignore_errors=True)
+    user.mkdir()
+    build = shared / "build"
+    subprocess.run(["rime_deployer", "--build", str(user), str(shared), str(build)], check=True)
+    files = {f"rime/{n}": shared / n for n in ("lychee_en_ko.schema.yaml", "lychee_en_ko.dict.yaml")}
+    for f in sorted(build.iterdir()):
+        if f.name.startswith("lychee_en_ko."):
+            files[f"rime/build/{f.name}"] = f
+    return files
 
 
 # ---------------------------------------------------------------- stroke order

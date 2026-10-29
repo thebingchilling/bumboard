@@ -13,6 +13,16 @@ interface Sql {
 /** [Dictionary] over readings.db (schema: lychee/data/build_data.py, Readings.write). */
 class ReadingsDb(private val sql: Sql) : Dictionary {
 
+    /** How common [form] is: its most common headword's frequency (0 when unknown). */
+    fun frequency(form: String): Long = sql.query(
+        "SELECT MAX(hw.freq) FROM form JOIN hw ON hw.id = form.hw WHERE form.form = ?", arrayOf(form)
+    ) { it.long(0) }.firstOrNull() ?: 0L
+
+    /** The highest frequency of any headword. */
+    val maxFrequency: Long by lazy {
+        sql.query("SELECT MAX(freq) FROM hw", emptyArray()) { it.long(0) }.firstOrNull() ?: 0L
+    }
+
     override fun lookup(form: String): List<Headword> {
         val heads = sql.query(
             "SELECT hw.id, hw.trad, hw.simp, hw.freq FROM form JOIN hw ON hw.id = form.hw WHERE form.form = ?",

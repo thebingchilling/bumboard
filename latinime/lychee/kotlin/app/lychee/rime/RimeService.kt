@@ -5,7 +5,6 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import app.lychee.packs.BundledPacks
-import app.lychee.packs.PackKind
 import app.lychee.packs.Packs
 import java.io.File
 import java.util.concurrent.Executors
@@ -59,6 +58,17 @@ object RimeService {
     }
 
     /**
+     * Whether [schema]'s compiled files are in place (a pack's schema arrives only once its pack
+     * is unpacked). Rime must never be asked for a schema before then: it remembers the failure,
+     * and the schema then stays without a dictionary until the app restarts.
+     */
+    fun hasSchema(context: Context, schema: String): Boolean {
+        val root = File(context.applicationContext.filesDir, "rime")
+        fun built(name: String) = File(root, "user/build/$name").exists() || File(root, "shared/build/$name").exists()
+        return built("$schema.schema.yaml") && built("$schema.table.bin") && built("$schema.prism.bin")
+    }
+
+    /**
      * Copies imported Rime packs (e.g. the Japanese dictionary: schema, dictionary and its
      * precompiled build/) into Rime's shared data, then runs [then] on the main thread with
      * whether anything changed.
@@ -88,8 +98,7 @@ object RimeService {
      */
     private fun stagePackBuilds(context: Context, user: File) {
         val staging = File(user, "build").apply { mkdirs() }
-        for (pack in Packs.ofKind(context, PackKind.RIME)) {
-            if (!Packs.isInstalled(context, pack.id)) continue
+        for (pack in rimePacks(context)) {
             val build = File(File(Packs.dir(context, pack.id), "rime"), "build")
             build.listFiles()?.forEach { f ->
                 val dest = File(staging, f.name)
@@ -100,10 +109,17 @@ object RimeService {
         }
     }
 
+    /**
+     * The installed packs with Rime data: the Japanese dictionary, and the Korean dictionary's
+     * English lookup.
+     */
+    private fun rimePacks(context: Context) = Packs.catalog(context).filter {
+        Packs.isInstalled(context, it.id) && File(Packs.dir(context, it.id), "rime").isDirectory
+    }
+
     /** Copies the installed Rime packs into [shared] when they changed. Returns whether they did. */
     private fun installPacks(context: Context, shared: File): Boolean {
-        val packs = Packs.ofKind(context, PackKind.RIME)
-            .filter { Packs.isInstalled(context, it.id) }
+        val packs = rimePacks(context)
         val stamp = packs.joinToString(",") {
             val dir = Packs.dir(context, it.id)
             "${it.id}:${Packs.installedVersion(context, it.id)}:${dir.lastModified()}"

@@ -86,7 +86,7 @@ fun FontsPage() {
         stringResource(R.string.lychee_fonts_keyboard), LycheeFonts.PREF_KEYS, stringResource(R.string.lychee_fonts_sample_keys), actions,
         listOf(
             FontOption("", gsf, gsfSummary, face = { LycheeFonts.gsf(it) }),
-            FontOption(LycheeFonts.WENKAI, wenkai, wenkaiSummary, face = { LycheeFonts.wenkai(it) }),
+            FontOption(LycheeFonts.WENKAI, wenkai, stringResource(R.string.lychee_fonts_wenkai_keys_summary), face = { LycheeFonts.wenkaiKeys(it) }),
         ) + ownFont(context, PackKind.FONT_KEYS),
     )
     for ((title, pref, sample, kind) in listOf(

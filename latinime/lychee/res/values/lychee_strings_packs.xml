@@ -59,6 +59,7 @@
     <string name="lychee_fonts_gsf_summary">Built in</string>
     <string name="lychee_fonts_wenkai">LXGW WenKai</string>
     <string name="lychee_fonts_wenkai_summary">Built in · Kai style</string>
+    <string name="lychee_fonts_wenkai_keys_summary">Built in · Kai style, a little bolder, for the whole keyboard (candidates keep their own font)</string>
     <string name="lychee_fonts_system">Phone\'s font</string>
     <string name="lychee_fonts_system_summary">Whatever font this phone uses</string>
     <string name="lychee_fonts_own">Your own font</string>

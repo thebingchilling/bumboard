@@ -263,7 +263,7 @@ class CandidateBarView @JvmOverloads constructor(
             cell.addView(ShrinkToFitView(context, READING_SP * scale).apply {
                 text = shown
                 setTextColor(readingColor)
-                typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
+                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
                 includeFontPadding = false
                 gravity = Gravity.CENTER
                 setPadding(dp(2), 0, dp(2), 0)

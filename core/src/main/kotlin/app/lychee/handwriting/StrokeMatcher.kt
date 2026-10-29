@@ -10,19 +10,22 @@ import kotlin.math.min
  * shapes (Make Me a Hanzi's medians, from the bundled stroke-order data), in the spirit of
  * HanziLookup: each stroke is reduced to a few evenly spaced points in the character's own
  * box, every written stroke is paired with the reference stroke it most resembles (so a
- * stroke written out of order or backwards still counts, at a small cost), and a character
- * scores by how far apart its paired strokes are and how many strokes go unpaired.
+ * stroke written out of order or backwards still counts, at a small cost; one written joined
+ * up may stand for two neighbouring reference strokes), and a character scores by how far
+ * apart its paired strokes are and how many strokes go unpaired.
  * It complements Zinnia's learnt models: it knows every character the stroke data has, in
  * both scripts, and it tolerates messy proportions.
  */
 class StrokeMatcher(references: List<Pair<String, List<FloatArray>>>) {
 
-    private class Ref(val char: String, val strokes: Array<FloatArray>)
+    /** A reference: its strokes, and each two neighbouring strokes as one (written joined up). */
+    private class Ref(val char: String, val strokes: Array<FloatArray>, val joined: Array<FloatArray>)
 
     /** References by stroke count. */
     private val byCount: Map<Int, List<Ref>> = references.mapNotNull { (char, strokes) ->
-        val shaped = shape(strokes) ?: return@mapNotNull null
-        Ref(char, shaped)
+        val boxed = boxed(strokes) ?: return@mapNotNull null
+        val joined = Array(maxOf(0, boxed.size - 1)) { k -> resample(boxed[k] + boxed[k + 1]) }
+        Ref(char, Array(boxed.size) { resample(boxed[it]) }, joined)
     }.groupBy { it.strokes.size }
 
     val size: Int = byCount.values.sumOf { it.size }
@@ -36,42 +39,55 @@ class StrokeMatcher(references: List<Pair<String, List<FloatArray>>>) {
         val n = input.size
         val slack = if (n <= 4) 1 else 2 + n / 8
         val results = ArrayList<Pair<String, Float>>()
-        for (m in max(1, n - slack)..(n + slack)) {
+        // up to two more reference strokes: strokes written joined up count as one
+        for (m in max(1, n - slack)..(n + slack + 2)) {
             val refs = byCount[m] ?: continue
-            for (ref in refs) results += ref.char to score(input, ref.strokes)
+            for (ref in refs) results += ref.char to score(input, ref)
         }
         results.sortBy { it.second }
         return results.take(limit)
     }
 
-    /** How unlike [a] (written) and [b] (reference) are: 0 for the same shape. */
-    private fun score(a: Array<FloatArray>, b: Array<FloatArray>): Float {
+    /** How unlike [a] (written) and [ref] are: 0 for the same shape. */
+    private fun score(a: Array<FloatArray>, ref: Ref): Float {
+        val b = ref.strokes
         val n = a.size
         val m = b.size
-        // every pair's cost: how far apart their points are, a little more when backwards, and
-        // a little more the further apart they come in the writing order
-        val costs = ArrayList<Triple<Int, Int, Float>>(n * m)
-        for (i in 0 until n) for (j in 0 until m) {
-            val forward = distance(a[i], b[j], false)
-            val backward = distance(a[i], b[j], true) + BACKWARDS
-            val order = ORDER * abs(i.toFloat() / max(1, n - 1) - j.toFloat() / max(1, m - 1))
-            costs += Triple(i, j, min(forward, backward) + order)
+        // every pairing's cost: how far apart the points are, a little more when backwards, and
+        // a little more the further apart they come in the writing order; a written stroke may
+        // also take two neighbouring reference strokes at once (口 written in two strokes)
+        val pairs = ArrayList<Pairing>(n * m * 2)
+        for (i in 0 until n) {
+            val oi = i.toFloat() / max(1, n - 1)
+            for (j in 0 until m) {
+                val order = ORDER * abs(oi - j.toFloat() / max(1, m - 1))
+                pairs += Pairing(i, j, 1, cost(a[i], b[j]) + order)
+            }
+            if (n < m) for (j in 0 until m - 1) {
+                val order = ORDER * abs(oi - (j + 0.5f) / max(1, m - 1))
+                pairs += Pairing(i, j, 2, cost(a[i], ref.joined[j]) + order + JOIN)
+            }
         }
-        costs.sortBy { it.third }
+        pairs.sortBy { it.cost }
         val usedA = BooleanArray(n)
         val usedB = BooleanArray(m)
         var total = 0f
-        var paired = 0
-        for ((i, j, c) in costs) {
-            if (usedA[i] || usedB[j]) continue
-            usedA[i] = true
-            usedB[j] = true
-            total += c
-            if (++paired == min(n, m)) break
+        var left = n
+        for (p in pairs) {
+            if (usedA[p.i] || usedB[p.j] || (p.span == 2 && usedB[p.j + 1])) continue
+            usedA[p.i] = true
+            for (k in 0 until p.span) usedB[p.j + k] = true
+            total += p.cost * p.span
+            if (--left == 0) break
         }
-        total += UNPAIRED * (max(n, m) - paired)
+        total += UNPAIRED * (usedA.count { !it } + usedB.count { !it })
         return total / max(n, m)
     }
+
+    private class Pairing(val i: Int, val j: Int, val span: Int, val cost: Float)
+
+    /** The distance between two strokes, written either way round (backwards costs a little). */
+    private fun cost(a: FloatArray, b: FloatArray) = min(distance(a, b, false), distance(a, b, true) + BACKWARDS)
 
     private fun distance(a: FloatArray, b: FloatArray, reversed: Boolean): Float {
         var sum = 0f
@@ -88,12 +104,17 @@ class StrokeMatcher(references: List<Pair<String, List<FloatArray>>>) {
         private const val BACKWARDS = 0.08f
         private const val ORDER = 0.06f
         private const val UNPAIRED = 0.45f
+        /** The extra cost of two reference strokes written as one. */
+        private const val JOIN = 0.05f
 
         /**
          * Strokes scaled into a unit box (keeping their proportions, centred) and resampled to
          * [POINTS] evenly spaced points each; null when there is nothing to see.
          */
-        fun shape(strokes: List<FloatArray>): Array<FloatArray>? {
+        fun shape(strokes: List<FloatArray>): Array<FloatArray>? = boxed(strokes)?.map { resample(it) }?.toTypedArray()
+
+        /** Strokes scaled into a unit box, keeping their proportions, centred; null when empty. */
+        private fun boxed(strokes: List<FloatArray>): List<FloatArray>? {
             val kept = strokes.filter { it.size >= 2 }
             if (kept.isEmpty()) return null
             var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE
@@ -109,8 +130,7 @@ class StrokeMatcher(references: List<Pair<String, List<FloatArray>>>) {
             val side = max(max(maxX - minX, maxY - minY), 1e-3f)
             val offX = (side - (maxX - minX)) / 2 - minX
             val offY = (side - (maxY - minY)) / 2 - minY
-            return Array(kept.size) { i ->
-                val s = kept[i]
+            return kept.map { s ->
                 val pts = FloatArray(s.size)
                 var k = 0
                 while (k + 1 < s.size) {
@@ -118,7 +138,7 @@ class StrokeMatcher(references: List<Pair<String, List<FloatArray>>>) {
                     pts[k + 1] = (s[k + 1] + offY) / side
                     k += 2
                 }
-                resample(pts)
+                pts
             }
         }
 

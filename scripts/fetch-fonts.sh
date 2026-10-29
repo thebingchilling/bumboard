@@ -2,7 +2,7 @@
 # Fetches Lychee's bundled fonts into the APK's assets:
 #   Google Sans Flex (SIL Open Font License 1.1), the interface font, from google/fonts;
 #   LXGW WenKai (SIL Open Font License 1.1), the default Chinese font (it also covers kana and
-#   Hangul), from its pinned release;
+#   Hangul), from its pinned release, and its Medium weight cut to the keys' letters and symbols;
 #   the symbols Google Sans Flex lacks (⅙ ∞ ★ ✓ ‰ ← ♥ ...), cut from Google's Noto Sans, Noto Sans
 #   Math and Noto Sans Symbols 2 (SIL Open Font License 1.1) by scripts/subset-symbols.py.
 # Without them Lychee falls back to the system's fonts.
@@ -32,6 +32,19 @@ if [ ! -f "$OUT/LXGWWenKai-Regular.ttf" ]; then
         "https://github.com/lxgw/LxgwWenKai/releases/download/$WENKAI_VERSION/LXGWWenKai-Regular.ttf"
     mv "$OUT/LXGWWenKai-Regular.ttf.part" "$OUT/LXGWWenKai-Regular.ttf"
     echo "lxgw wenkai: $WENKAI_VERSION"
+fi
+
+# WenKai Medium, cut to the letters, digits and symbols of the keys and panels: the keyboard
+# font "LXGW WenKai" is this slightly bolder weight (Chinese characters come from the Regular)
+if [ ! -f "$OUT/LXGWWenKaiKeys.ttf" ]; then
+    TMP3="$(mktemp -d)"
+    curl -fsSL -o "$TMP3/medium.ttf" \
+        "https://github.com/lxgw/LxgwWenKai/releases/download/$WENKAI_VERSION/LXGWWenKai-Medium.ttf"
+    python3 -m fontTools.subset "$TMP3/medium.ttf" --output-file="$OUT/LXGWWenKaiKeys.ttf" \
+        --unicodes="U+0020-024F,U+0300-036F,U+0370-03FF,U+0400-04FF,U+1E00-1EFF,U+2000-206F,U+20A0-20CF,U+2100-218F,U+2190-21FF,U+2200-22FF,U+2460-24FF,U+25A0-25FF,U+2600-26FF,U+2700-27BF,U+3000-303F,U+3040-30FF,U+FF00-FFEF" \
+        --layout-features='*' --name-IDs='*' --notdef-outline
+    rm -rf "$TMP3"
+    echo "lxgw wenkai medium (keys): $(du -h "$OUT/LXGWWenKaiKeys.ttf" | cut -f1)"
 fi
 
 if [ ! -f "$OUT/LycheeSymbols0.ttf" ]; then

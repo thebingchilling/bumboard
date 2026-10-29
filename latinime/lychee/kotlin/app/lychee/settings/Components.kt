@@ -1,6 +1,7 @@
 package app.lychee.settings
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.background
@@ -15,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -40,8 +40,9 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
 /**
- * Rows inside a [Group]: a compact list, full width, with thin dividers between the rows (the
- * shape each row is given is kept for callers but no longer drawn).
+ * Rows inside a [Group]: each row on its own rounded segment, the segments stacked with a small
+ * gap (the group's outer corners round, the inner ones nearly square), like Android's own
+ * settings. Each row is given its segment's shape.
  */
 class GroupScope internal constructor(private val rows: MutableList<@Composable (Shape) -> Unit>) {
     fun row(content: @Composable (Shape) -> Unit) {
@@ -49,36 +50,42 @@ class GroupScope internal constructor(private val rows: MutableList<@Composable 
     }
 }
 
+/** The shape of row [i] of [n] in a group: round outer corners, small inner ones. */
+private fun segment(i: Int, n: Int): Shape {
+    val outer = 24.dp
+    val inner = 6.dp
+    return RoundedCornerShape(
+        topStart = if (i == 0) outer else inner, topEnd = if (i == 0) outer else inner,
+        bottomStart = if (i == n - 1) outer else inner, bottomEnd = if (i == n - 1) outer else inner,
+    )
+}
+
 @Composable
 fun Group(title: String? = null, build: GroupScope.() -> Unit) {
     val rows = mutableListOf<@Composable (Shape) -> Unit>()
     GroupScope(rows).build()
-    Column(Modifier.padding(start = 16.dp, end = 16.dp, top = if (title != null) 18.dp else 10.dp, bottom = 2.dp)) {
+    Column(
+        Modifier
+            .padding(start = 16.dp, end = 16.dp, top = if (title != null) 24.dp else 12.dp, bottom = 4.dp)
+            .animateContentSize(),
+    ) {
         if (title != null) {
             Text(
                 title,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 12.dp, bottom = 6.dp),
+                modifier = Modifier.padding(start = 16.dp, bottom = 10.dp),
             )
         }
-        // the group's rows on one rounded card, set apart from the page behind
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Column {
-                rows.forEachIndexed { i, row ->
-                    if (i > 0) {
-                        HorizontalDivider(
-                            Modifier.padding(start = 60.dp, end = 16.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                        )
-                    }
-                    row(RectangleShape)
-                }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            rows.forEachIndexed { i, row ->
+                val shape = segment(i, rows.size)
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(shape)
+                        .background(MaterialTheme.colorScheme.surfaceContainer),
+                ) { row(shape) }
             }
         }
     }
@@ -89,13 +96,14 @@ private fun RowSurface(shape: Shape, onClick: (() -> Unit)?, content: @Composabl
     Box(
         Modifier
             .fillMaxWidth()
+            .clip(shape)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     ) { content() }
 }
 
 /**
- * Every row's layout, compact: an icon in a tinted circle (or room for one, so titles line up),
- * the title and a short summary, and whatever goes at the end.
+ * Every row's layout: an icon in a tinted badge when it has one (rows without one start at the
+ * edge, no empty space), the title and a short summary, and whatever goes at the end.
  */
 @Composable
 fun CompactRow(
@@ -109,26 +117,30 @@ fun CompactRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 52.dp)
-            .padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 8.dp),
+            .heightIn(min = 64.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-            when {
-                leading != null -> leading()
-                icon != null -> IconBadge(icon)
+        if (leading != null || icon != null) {
+            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                when {
+                    leading != null -> leading()
+                    icon != null -> IconBadge(icon)
+                }
             }
+            Spacer(Modifier.size(16.dp))
         }
         Column(
             Modifier
                 .weight(1f)
-                .padding(start = 12.dp, end = 8.dp),
+                .padding(end = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
             if (summary != null) {
                 Text(
                     summary,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = summaryColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -139,18 +151,24 @@ fun CompactRow(
 
 @Composable
 fun IconBadge(@DrawableRes icon: Int) {
-    // a tinted circle, so each row stands out at a glance
+    // a rounded, tinted badge; the three accent families take turns so the list has some colour
+    val scheme = MaterialTheme.colorScheme
+    val (back, fore) = when (Math.floorMod(icon, 3)) {
+        0 -> scheme.primaryContainer to scheme.onPrimaryContainer
+        1 -> scheme.secondaryContainer to scheme.onSecondaryContainer
+        else -> scheme.tertiaryContainer to scheme.onTertiaryContainer
+    }
     Box(
         Modifier
-            .size(32.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.secondaryContainer),
+            .size(40.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(back),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             painterResource(icon), contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSecondaryContainer,
-            modifier = Modifier.size(18.dp),
+            tint = fore,
+            modifier = Modifier.size(22.dp),
         )
     }
 }
@@ -244,8 +262,8 @@ fun <T> ChoiceRow(
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .padding(start = 56.dp, end = 12.dp, bottom = 8.dp)
-                    .clip(RoundedCornerShape(14.dp))
+                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
+                    .clip(RoundedCornerShape(16.dp))
                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
             ) {
                 options.forEachIndexed { i, (value, label) ->
@@ -255,7 +273,7 @@ fun <T> ChoiceRow(
                             .fillMaxWidth()
                             .clickable { onSelect(value); open = false }
                             .background(if (chosen) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent)
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         icons?.getOrNull(i)?.let { res ->
@@ -285,7 +303,7 @@ fun SliderRow(
 ) {
     var current by remember(value) { mutableFloatStateOf(value.toFloat()) }
     RowSurface(shape, null) {
-        Column(Modifier.padding(start = 60.dp, end = 16.dp, top = 10.dp, bottom = 4.dp)) {
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 Text(format(current.roundToInt()), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
@@ -304,9 +322,9 @@ fun SliderRow(
 @Composable
 fun TextRow(shape: Shape, title: String, body: String) {
     RowSurface(shape, null) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(4.dp))
             Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

@@ -55,6 +55,17 @@
             android:layout_height="@dimen/config_suggestions_strip_height"
             android:layout_marginEnd="@dimen/lychee_candidate_bar_end"
             android:visibility="gone" />
+        <!-- What is being typed (pinyin, Jyutping, romaji ...), small at the top left of the bar,
+             like Gboard's; the bar keeps room for it on the Rime keyboards. -->
+        <TextView
+            android:id="@+id/lychee_preedit"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/lychee_preedit_height"
+            android:layout_gravity="top|start"
+            android:gravity="center_vertical"
+            android:singleLine="true"
+            android:textSize="12sp"
+            android:visibility="gone" />
         <!-- Opens every candidate, with readings and meanings, over the keys. -->
         <ImageView
             android:id="@+id/lychee_candidate_more"

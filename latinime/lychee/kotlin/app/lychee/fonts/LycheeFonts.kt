@@ -46,6 +46,8 @@ object LycheeFonts {
 
     private const val BUNDLED_EMOJI = "lychee/NotoColorEmoji.ttf"
     private const val BUNDLED_WENKAI = "lychee/LXGWWenKai-Regular.ttf"
+    /** WenKai Medium, cut to the keys' letters and symbols: the keyboard font "LXGW WenKai". */
+    private const val KEYS_WENKAI = "lychee/LXGWWenKaiKeys.ttf"
     /** Google Sans Flex, the interface font (fetched at build time; see scripts/fetch-fonts.sh). */
     const val UI_FONT = "lychee/GoogleSansFlex.ttf"
 
@@ -118,6 +120,15 @@ object LycheeFonts {
         else -> gsf(context, weight)
     }
 
+    /**
+     * The app's own font at [weight], whatever the keyboard font: for what goes with the
+     * candidates (their readings and meanings, the word card), which keep their look when the
+     * keyboard takes another font.
+     */
+    @JvmStatic
+    fun appFont(context: Context, weight: Int = 400): Typeface =
+        if (uiIsSystem(context)) system(weight) else gsf(context, weight)
+
     /** The app's font in place of [face]: medium for bold, regular otherwise. */
     @JvmStatic
     fun uiLike(context: Context?, face: Typeface?): Typeface? {
@@ -189,7 +200,7 @@ object LycheeFonts {
         val bold = weight >= 500
         return when (val c = choice(context, PREF_KEYS)) {
             "" -> gsf(context, weight)
-            WENKAI -> wenkai(context)?.let { styledLike(it, bold) } ?: gsf(context, weight)
+            WENKAI -> wenkaiKeys(context)?.let { styledLike(it, bold) } ?: gsf(context, weight)
             else -> packFace(context, c)?.let { styledLike(it, bold) } ?: gsf(context, weight)
         }
     }
@@ -256,6 +267,26 @@ object LycheeFonts {
     fun wenkai(context: Context): Typeface? = load(BUNDLED_WENKAI) {
         runCatching { Typeface.createFromAsset(app(context).assets, BUNDLED_WENKAI) }.getOrNull()
     }
+
+    /**
+     * The keyboard font "LXGW WenKai": its Medium weight (a little bolder than the candidates'
+     * Regular, so the keys read clearly), with the Regular for the characters the cut lacks.
+     */
+    @JvmStatic
+    fun wenkaiKeys(context: Context): Typeface? = load(KEYS_WENKAI) {
+        val app = app(context)
+        runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val builder = Typeface.CustomFallbackBuilder(FontFamily.Builder(Font.Builder(app.assets, KEYS_WENKAI).build()).build())
+                runCatching { Font.Builder(app.assets, BUNDLED_WENKAI).build() }.getOrNull()?.let {
+                    builder.addCustomFallback(FontFamily.Builder(it).build())
+                }
+                builder.setSystemFallback("sans-serif").build()
+            } else {
+                Typeface.createFromAsset(app.assets, KEYS_WENKAI)
+            }
+        }.getOrNull()
+    } ?: wenkai(context)
 
     private fun prefOf(lang: String?) = when (lang) {
         "ja" -> PREF_JAPANESE

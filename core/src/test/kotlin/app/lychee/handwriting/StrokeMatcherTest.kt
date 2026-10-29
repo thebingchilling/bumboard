@@ -45,4 +45,10 @@ class StrokeMatcherTest {
         val bottom = stroke(10f, 150f, 190f, 148f)
         assertEquals("二", matcher.match(listOf(top, bottom)).first().first)
     }
+
+    @Test
+    fun twoLinesJoinedUpAreTwo() {
+        // 二 written in one go: the top line, then on to the bottom line without lifting
+        assertEquals("二", matcher.match(listOf(stroke(50f, 50f, 150f, 50f, 10f, 150f, 190f, 150f))).first().first)
+    }
 }

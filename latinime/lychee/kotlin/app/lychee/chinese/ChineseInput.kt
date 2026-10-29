@@ -32,7 +32,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private var popup: DictionaryPopup? = null
     private var keyboardFrame: View? = null
     private var shown: Composition? = null
-    private var preedit: PreeditPopup? = null
+    private var preedit: android.widget.TextView? = null
 
     /** True while Rime holds a composition, so LatinIME must leave the composing text alone. */
     var isComposing = false
@@ -51,8 +51,11 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         popup?.dismiss()
         popup = DictionaryPopup(inputView.context)
         keyboardFrame = inputView.findViewById(R.id.main_keyboard_frame)
-        preedit?.dismiss()
-        preedit = PreeditPopup(inputView.context)
+        preedit = inputView.findViewById<android.widget.TextView>(R.id.lychee_preedit)?.also { p ->
+            p.setTextColor(app.lychee.ui.LycheeColorStyle.color(inputView.context, R.attr.lycheeColorOnKeyVariant))
+            p.typeface = app.lychee.fonts.LycheeFonts.ui(inputView.context, 500)
+            p.includeFontPadding = false
+        }
         this.inputView = inputView
         panel = inputView.findViewById<CandidatePanelView>(R.id.lychee_candidate_panel)?.also { p ->
             p.onPick = { index -> pick(index); updateMoreButton() }
@@ -202,6 +205,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         if (newEngine == engine) return
         reset()
         engine = newEngine
+        schemaMissing = false
         if (newEngine != null) {
             // the schema at once when Rime is running (letters typed straight away reach it);
             // imported Rime packs (the Japanese dictionary) are checked afterwards, and the
@@ -209,7 +213,21 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             RimeService.start(ime) {
                 if (selectedEngine != engine) selectSchema()
                 replayPending()
-                RimeService.refreshPacks(ime, engine) { changed -> if (changed || schemaMissing) selectSchema() }
+                RimeService.refreshPacks(ime, engine) { changed ->
+                    if (engine != newEngine) return@refreshPacks
+                    // a changed pack matters only to the schemas that come from packs (Japanese,
+                    // and the English lookups of Japanese and Korean):
+                    // choosing the schema again drops what is being typed
+                    if ((changed && (engine == "ja" || engine == "ko")) || selectedEngine != engine) selectSchema()
+                    if (selectedEngine == engine) {
+                        replayPending()
+                    } else {
+                        // the pack never came: what was typed stays as it is, and keys type as is
+                        schemaMissing = true
+                        flushPending()
+                        show(null)
+                    }
+                }
             }
             if (newEngine == "yue" || newEngine == "cmn") Readings.open(ime) { if (isComposing) show(shown) }
             if (newEngine == "ja" && !app.lychee.packs.Packs.isInstalled(ime, "rime_ja") &&
@@ -224,9 +242,23 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private val isChinese: Boolean
         get() = engine == "yue" || engine == "cmn"
 
-    /** Whether 中 is on: English words typed come back as Chinese candidates. */
+    /**
+     * Whether 英 (영 on Korean) is on: English words typed come back as Chinese, Japanese or
+     * Korean candidates.
+     */
     private val englishMode: Boolean
-        get() = engine.let { it == "yue" || it == "cmn" } && prefs.getBoolean(PREF_ENGLISH_MODE + engine, false)
+        get() = englishAvailable && prefs.getBoolean(PREF_ENGLISH_MODE + engine, false)
+
+    /**
+     * Whether this keyboard has an English lookup: Chinese always; Japanese and Korean once
+     * their dictionary packs carry one (lychee_en_ja, lychee_en_ko).
+     */
+    private val englishAvailable: Boolean
+        get() = when (engine) {
+            "yue", "cmn" -> app.lychee.Features.isEnabled(app.lychee.Feature.ENGLISH_TO_CHINESE)
+            "ja", "ko" -> RimeService.hasSchema(ime, "lychee_en_$engine")
+            else -> false
+        }
 
     private fun inputMode() = when {
         !isChinese -> InputMode.Other
@@ -268,13 +300,18 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     private fun selectSchema() {
         val engine = engine ?: return
+        if ((engine == "ja" || engine == "ko") && !RimeService.hasSchema(ime, "lychee_$engine")) {
+            // not yet: the Japanese dictionary is still unpacking (letters wait, see onEvent),
+            // or it isn't there at all (letters type as they are rather than vanishing)
+            selectedEngine = null
+            schemaMissing = !packComing(engine)
+            return
+        }
         if (session == 0L) session = Rime.createSession()
         selectedEngine = engine
         appliedSettings = schemaSettings()
         if (engine == "ja" || engine == "ko") {
-            // without its schema (the Japanese pack missing or unreadable) the letters type as
-            // they are rather than vanishing into Rime
-            schemaMissing = !Rime.selectSchema(session, "lychee_$engine")
+            schemaMissing = !Rime.selectSchema(session, if (englishMode) "lychee_en_$engine" else "lychee_$engine")
             return
         }
         schemaMissing = false
@@ -293,6 +330,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /** The keyboard's Rime schema couldn't be selected: keys go to LatinIME. */
     private var schemaMissing = false
+
+    /** Whether [engine]'s schema is on its way (its pack comes with Lychee, or is installed). */
+    private fun packComing(engine: String): Boolean = engine == "ja" &&
+        (app.lychee.packs.BundledPacks.isBundled(ime, "rime_ja") || app.lychee.packs.Packs.isInstalled(ime, "rime_ja"))
 
     /** Returns true when the event was used for Chinese input. */
     fun onEvent(event: Event): Boolean {
@@ -384,6 +425,13 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** Letters typed while Rime was starting, given to it once it is ready. */
     private val pending = StringBuilder()
 
+    /** Leaves the waiting letters in the text as they are. */
+    private fun flushPending() {
+        if (pending.isEmpty()) return
+        ime.currentInputConnection?.finishComposingText()
+        pending.setLength(0)
+    }
+
     private fun replayPending() {
         if (pending.isEmpty() || session == 0L) return
         val letters = pending.toString()
@@ -433,13 +481,21 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             panel.bringToFront()
             panel.show(candidates, candidateScale(), annotation(), Readings.barStyle(prefs, inputMode().lang),
                 after = bar?.lastVisible ?: -1)
+            app.lychee.layout.LycheePanels.reveal(panel)
         }
         updateMoreButton()
     }
 
     private fun updateMoreButton() {
         val open = panel?.visibility == View.VISIBLE
-        moreButton?.setImageResource(if (open) R.drawable.ic_sym_keyboard_arrow_up else R.drawable.ic_sym_keyboard_arrow_down)
+        val b = moreButton ?: return
+        // one arrow that turns over as the dropdown opens and closes
+        b.setImageResource(R.drawable.ic_sym_keyboard_arrow_down)
+        val angle = if (open) 180f else 0f
+        if (b.rotation != angle) {
+            if (b.isShown && app.lychee.layout.LycheePanels.animate(b.context)) b.animate().rotation(angle).setDuration(200).start()
+            else b.rotation = angle
+        }
     }
 
     /** Drops any composition, e.g. when the text field changes. */
@@ -494,14 +550,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         // the candidates get the whole bar: 中 and 繁/简 wait until nothing is typed
         updateScriptKey(stripView, hidden = showing)
         updateBarHeight(stripView, showing)
+        // in the bar's own top line (a window over the app for it cost time on every key)
         val typed = if (isActive) composition?.preedit.orEmpty() else ""
-        // over the candidates, or over the strip while nothing is found for the letters yet
-        val anchor: View? = if (showing) bar else stripView
-        if (typed.isNotEmpty() && anchor != null) {
-            // after the bar has its new height and place
-            anchor.post { if (shown === composition) preedit?.show(anchor, typed) }
-        } else {
-            preedit?.dismiss()
+        preedit?.let { p ->
+            if (typed.isNotEmpty()) {
+                if (p.text.toString() != typed) p.text = typed
+                p.visibility = View.VISIBLE
+            } else {
+                p.visibility = View.GONE
+            }
         }
         val bar = bar ?: return
         if ((!isActive && !guessing) || candidates.isEmpty()) {
@@ -533,19 +590,24 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     }
 
     /**
-     * The top bar keeps the usual strip height (the same as on the English keyboards) and only
-     * grows while candidates show, to fit a candidate with its readings and one line of meaning
-     * (measured, at the candidate size setting). The keys at its edges stay at the bottom.
+     * On the Rime keyboards the top bar is always as tall as a candidate with its readings and
+     * one line of meaning (measured, at the candidate size setting), with a line above for the
+     * letters typed: it never changes height while typing (the whole keyboard moved under the
+     * finger, and keys pressed just then went astray). Elsewhere it is the usual strip height.
+     * The keys at its edges stay at the bottom.
      */
     private fun updateBarHeight(stripView: SuggestionStripView?, candidates: Boolean) {
         val res = ime.resources
         val standard = res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+        val line = res.getDimensionPixelSize(R.dimen.lychee_preedit_height)
         val bar = bar
-        val height = if (!candidates || bar == null) standard
+        val rime = isActive && !schemaMissing
+        val height = if (bar == null || (!rime && !candidates)) standard
         else {
             bar.setScale(candidateScale())
-            maxOf(standard, bar.heightFor(annotationLines()))
+            maxOf(standard, bar.heightFor(annotationLines()) + if (rime) line else 0)
         }
+        bar?.let { if (it.paddingTop != (if (rime) line else 0)) it.setPadding(0, if (rime) line else 0, 0, 0) }
         for (view in listOfNotNull(stripView, bar)) {
             val lp = view.layoutParams ?: continue
             if (lp.height != height) {
@@ -558,16 +620,21 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** 繁 or 简 on the strip's left edge on the Chinese keyboards; a tap switches. */
     private fun updateScriptKey(stripView: SuggestionStripView?, hidden: Boolean = false) {
         stripView ?: return
-        if (!isActive || !isChinese || hidden) {
+        if (!isActive || hidden || schemaMissing) {
             stripView.setLycheeScriptKey(null, null)
             stripView.setLycheeZhongKey(null, null)
             updateEdges(stripView)
             return
         }
-        if ((engine == "yue" || engine == "cmn") && app.lychee.Features.isEnabled(app.lychee.Feature.ENGLISH_TO_CHINESE)) {
-            stripView.setLycheeZhongKey(englishMode) { toggleEnglishMode() }
+        if (englishAvailable) {
+            stripView.setLycheeZhongKey(englishMode, { toggleEnglishMode() }, if (engine == "ko") "영" else "英")
         } else {
             stripView.setLycheeZhongKey(null, null)
+        }
+        if (!isChinese) {
+            stripView.setLycheeScriptKey(null, null)
+            updateEdges(stripView)
+            return
         }
         val simplified = ChineseScript.candidatesSimplified(prefs)
         stripView.setLycheeScriptKey(simplified) {
@@ -589,6 +656,13 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             }
         }
         val start = stripView.lycheeStartWidth
+        (preedit?.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
+            val want = start + (ime.resources.displayMetrics.density * 12).toInt()
+            if (lp.marginStart != want) {
+                lp.marginStart = want
+                preedit?.layoutParams = lp
+            }
+        }
         (bar?.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
             if (lp.marginEnd != edge + more || lp.marginStart != start) {
                 lp.marginEnd = edge + more
@@ -635,7 +709,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         const val PREF_CANTONESE_INPUT = "lychee_cantonese_input"
         /** Per keyboard ("…yue", "…cmn"): fuzzy spellings (zh/z, n/l, ng ...). */
         const val PREF_FUZZY = "lychee_fuzzy_"
-        /** Per keyboard ("…yue", "…cmn"): 中 is on. */
+        /** Per keyboard ("…yue", "…cmn", "…ja", "…ko"): 英 (영) is on. */
         const val PREF_ENGLISH_MODE = "lychee_english_mode_"
         private const val KEY_BACKSPACE = 0xff08
         /** Candidates fetched per keystroke; the bar scrolls through these. */
