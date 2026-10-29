@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Two lychees on one twig with two leaves. Scaled into the 66dp safe zone of adaptive icons.
-     Sources and PNGs (Play Store 512px, round 1024px) are in lychee/icon. -->
+     Sources and PNGs (square, 512px and 1024px) are in lychee/icon. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
