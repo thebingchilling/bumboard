@@ -9,8 +9,8 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
 - Push straight to `main`. No feature branches, no pull requests unless asked.
 - Don't compile locally: GitHub Actions builds and tests (`build.yml`, `packs.yml`). Check
   the runs on `main` after pushing and fix any red build.
-- Every build on `main` is published by `build.yml` as a pre-release of this private repository
-  (`lychee-0.1.0-dev.N`, the APK attached, notes from the commit), like Quartz's releases;
+- Every build on `main` is published by `build.yml` as a debug release (a full release, not a
+  pre-release) of this private repository (`lychee-0.1.0-dev.N`, the APK attached, notes from the commit), like Quartz's releases;
   a manual run with "Publish a release" ticked does the same.
   Never publish the Lychee app anywhere else (public repositories, stores) until the owner says so.
 - Packs may be published to the public `lychee-keyboard/lychee` repository (see below).
