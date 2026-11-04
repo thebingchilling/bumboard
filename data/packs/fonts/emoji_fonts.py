@@ -14,6 +14,7 @@ from pathlib import Path
 
 # characters new in each Emoji version (single code points; any one counts), newest first
 VERSIONS = [
+    ("18.0", [0x1F6D9, 0x1FADD, 0x1FAEB, 0x1FA8B]),
     ("17.0", [0x1FAEA, 0x1F6D8, 0x1FA8A, 0x1FAC8]),
     ("16.0", [0x1FAE9, 0x1FA89, 0x1FADF]),
     ("15.0", [0x1FAE8, 0x1FA75]),

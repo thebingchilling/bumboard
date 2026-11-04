@@ -102,15 +102,13 @@ fun FontsPage() {
             ) + ownFont(context, kind),
         )
     }
-    val emojiPacks = remember { Packs.ofKind(context, PackKind.FONT_EMOJI) }
+    // one emoji font: Noto Color Emoji, built in at its newest
     FontSection(
         stringResource(R.string.lychee_fonts_emoji), LycheeFonts.PREF_EMOJI, stringResource(R.string.lychee_fonts_sample_emoji), actions,
         listOf(
             FontOption("", stringResource(R.string.lychee_fonts_noto), stringResource(R.string.lychee_fonts_noto_summary),
                 face = { LycheeFonts.bundledEmoji(it) }, emoji = true),
-            FontOption(LycheeFonts.SYSTEM, stringResource(R.string.lychee_fonts_system_emoji),
-                stringResource(R.string.lychee_fonts_system_emoji_summary), face = { Typeface.DEFAULT }, emoji = true),
-        ) + emojiPacks.map { pack -> FontOption(pack.id, pack.name, pack.summary, pack = pack, emoji = true) },
+        ),
     )
 }
 

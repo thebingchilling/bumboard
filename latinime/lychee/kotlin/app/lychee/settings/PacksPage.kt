@@ -324,7 +324,6 @@ fun PacksPage() {
     UpdatesCard()
     PackGroup(stringResource(R.string.lychee_packs_handwriting), setOf(PackKind.HANDWRITING), actions)
     PackGroup(stringResource(R.string.lychee_packs_dictionaries), setOf(PackKind.RIME, PackKind.DATA), actions)
-    PackGroup(stringResource(R.string.lychee_packs_fonts_emoji), setOf(PackKind.FONT_EMOJI), actions)
     PackGroup(stringResource(R.string.lychee_packs_voice), setOf(PackKind.VOICE), actions)
     Group(stringResource(R.string.lychee_section_more)) {
         if (app.lychee.packs.Updates.installed(context).isNotEmpty()) {

@@ -70,9 +70,10 @@ packs page). Public facing, so be careful:
   list) and for packs (`data/packs/`: Japanese dictionary, handwriting, font mirrors).
 - Packs that come with the app: handwriting, the Japanese and Korean dictionaries, stroke order
   and example sentences are bundled in the APK (`scripts/bundle-packs.py` fetches the newest
-  published ones; `packs/BundledPacks.kt` unpacks them). Only fonts and emoji are downloads.
-- `latinime/lychee/assets/lychee/packs.json` — the downloads catalogue; `previews/` holds the
-  pictures of emoji fonts shown before they are downloaded (`data/packs/fonts/render_preview.js`).
+  published ones; `packs/BundledPacks.kt` unpacks them). Only fonts are downloads. Emoji are
+  always the bundled Noto Color Emoji (`data/emoji_sources.json`, the newest release); there
+  are no other emoji fonts.
+- `latinime/lychee/assets/lychee/packs.json` — the downloads catalogue (fonts and data packs).
 - Pack updates: Lychee can't go online, so "Check for updates" opens the packs page with the
   installed versions after the `#`; the page hands the newest back via `lychee://updates`
   (`packs/Updates.kt`, `PackImportActivity`). Only installed packs are checked.

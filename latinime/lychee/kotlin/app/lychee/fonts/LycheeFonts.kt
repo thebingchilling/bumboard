@@ -22,7 +22,7 @@ import java.io.File
  *    LXGW WenKai or the user's own;
  *  - a font each for Chinese, Japanese and Korean (candidates, the word card, CJK key labels):
  *    LXGW WenKai, the phone's font or the user's own;
- *  - the emoji font: Lychee's Noto Color Emoji, the phone's emoji or a downloaded one.
+ *  - emoji: always Lychee's own Noto Color Emoji (the newest release).
  * They only change how Lychee shows text; apps draw what is typed in their own fonts.
  *
  * Typefaces are loaded once per choice and kept (the font files are memory-mapped by Android);
@@ -361,36 +361,15 @@ object LycheeFonts {
     } ?: Typeface.DEFAULT
 
     /**
-     * The chosen emoji font: Lychee's Noto, the phone's emoji ([Typeface.DEFAULT]) or a
-     * downloaded one. On Android 10+ Lychee's Noto stands in for any emoji a downloaded font
-     * lacks; earlier, the font is used as it is.
+     * The emoji font: Lychee's own Noto Color Emoji (the newest, Emoji 18), the only one; it
+     * draws every emoji the keyboard offers the same on every phone.
      */
     @JvmStatic
-    fun emoji(context: Context): Typeface {
-        if (!Features.isEnabled(Feature.CUSTOM_EMOJI_FONTS)) return bundledEmoji(context)
-        val c = choice(context, PREF_EMOJI)
-        if (c == SYSTEM) return Typeface.DEFAULT
-        if (c.isEmpty()) return bundledEmoji(context)
-        val file = packFile(context, c) ?: return bundledEmoji(context)
-        return load("${file.path}:${file.lastModified()}:emoji") {
-            withNotoFallback(context, file) ?: PackImporter.loadFont(file)
-        } ?: bundledEmoji(context)
-    }
-
-    private fun withNotoFallback(context: Context, file: File): Typeface? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
-        return try {
-            val chosen = FontFamily.Builder(Font.Builder(file).build()).build()
-            val noto = FontFamily.Builder(Font.Builder(app(context).assets, BUNDLED_EMOJI).build()).build()
-            Typeface.CustomFallbackBuilder(chosen).addCustomFallback(noto).build()
-        } catch (e: Exception) {
-            Log.w(TAG, "emoji font fallback unavailable", e)
-            null
-        }
-    }
+    fun emoji(context: Context): Typeface = bundledEmoji(context)
 
     /** Emoji new in each Emoji version, newest first (data/packs/fonts/emoji_fonts.py checks the same). */
     private val EMOJI_VERSIONS = listOf(
+        "18.0" to listOf("\uD83D\uDED9", "\uD83E\uDEDD", "\uD83E\uDEEB", "\uD83E\uDE8B"),
         "17.0" to listOf("🫪", "🛘", "🪊", "🫈"),
         "16.0" to listOf("🫩", "🪉", "🫟"),
         "15.1" to listOf("🐦‍🔥", "🙂‍↔️"),
