@@ -612,14 +612,18 @@ public class KeyboardView extends View {
 
     private final Rect mLycheeInkBounds = new Rect();
 
-    /** LYCHEE: true when the emoji key is folded into the comma key (LycheeLayout "combined"). */
-    public static boolean sLycheeEmojiOnComma = true;
+    /**
+     * LYCHEE: the icon on the comma key: its long-press menu's first shortcut, the one a
+     * long-press opens on (the emoji face, the globe for next language ...); 0 for none.
+     */
+    public static int sLycheeCommaIcon = R.drawable.ic_sym_mood;
     private Drawable mLycheeEmojiFace;
+    private int mLycheeEmojiFaceId;
 
-    /** The comma key of a letters keyboard, when it carries the emoji face. */
+    /** The comma key of a letters keyboard, when it carries a shortcut's icon. */
     private boolean isLycheeEmojiComma(@Nonnull final Key key) {
         // not in popups (the period's popup has a comma too)
-        if (!sLycheeEmojiOnComma || this instanceof MoreKeysKeyboardView) return false;
+        if (sLycheeCommaIcon == 0 || this instanceof MoreKeysKeyboardView) return false;
         final Keyboard keyboard = getKeyboard();
         if (keyboard == null || !keyboard.mId.isAlphabetKeyboard()) return false;
         final int code = key.getCode();
@@ -628,10 +632,11 @@ public class KeyboardView extends View {
 
     private void drawLycheeEmojiFace(@Nonnull final Key key, @Nonnull final Canvas canvas,
             @Nonnull final KeyDrawParams params) {
-        if (mLycheeEmojiFace == null) {
-            final Drawable face = getContext().getDrawable(R.drawable.ic_sym_mood);
+        if (mLycheeEmojiFace == null || mLycheeEmojiFaceId != sLycheeCommaIcon) {
+            final Drawable face = getContext().getDrawable(sLycheeCommaIcon);
             if (face == null) return;
             mLycheeEmojiFace = face.mutate();
+            mLycheeEmojiFaceId = sLycheeCommaIcon;
         }
         final int color = mLycheeFunctionalIconColor != 0 ? mLycheeFunctionalIconColor
                 : key.selectTextColor(params);

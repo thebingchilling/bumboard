@@ -166,8 +166,14 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
             requested.value = null
         }
     }
-    val back = { page = if (page == Page.Licences) Page.About else Page.Home }
-    BackHandler(enabled = page != Page.Home) { back() }
+    // a setting's choices open on a page of their own over the current one
+    var submenu by remember { mutableStateOf<Submenu?>(null) }
+    LaunchedEffect(page) { submenu = null }
+    val back = {
+        if (submenu != null) submenu = null
+        else page = if (page == Page.Licences) Page.About else Page.Home
+    }
+    BackHandler(enabled = page != Page.Home || submenu != null) { back() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
@@ -175,13 +181,13 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
         topBar = {
             // a medium bar (the large one took a third of the screen), on the page's colour
             androidx.compose.material3.MediumTopAppBar(
-                title = { Text(stringResource(page.title)) },
+                title = { Text(submenu?.title ?: stringResource(page.title)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
                 ),
                 navigationIcon = {
-                    if (page != Page.Home) {
+                    if (page != Page.Home || submenu != null) {
                         IconButton(onClick = back) {
                             Icon(painterResource(R.drawable.ic_sym_arrow_back), stringResource(R.string.lychee_back))
                         }
@@ -191,41 +197,53 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
             )
         },
     ) { padding ->
-        // pages slide in from the side they lead to (deeper to the right), fading as they go
-        AnimatedContent(
-            targetState = page, label = "page", modifier = Modifier.padding(padding),
-            transitionSpec = {
-                val deeper = targetState.ordinal > initialState.ordinal && initialState != Page.Licences
-                val sign = if (deeper) 1 else -1
-                (androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(280)) { sign * it / 4 } +
-                    androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220, delayMillis = 60)))
-                    .togetherWith(
-                        androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(280)) { -sign * it / 4 } +
-                            androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(160)),
-                    )
-            },
-        ) { shown ->
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .navigationBarsPadding()
-                    .padding(bottom = 24.dp),
-            ) {
-                when (shown) {
-                    Page.Home -> HomePage(status.value) { page = it }
-                    Page.Languages -> LanguagesPage()
-                    Page.Chinese -> ChinesePage()
-                    Page.Personal -> PersonalDictionaryPage()
-                    Page.Preferences -> PreferencesPage()
-                    Page.Theme -> ThemePage()
-                    Page.Correction -> CorrectionPage()
-                    Page.Gesture -> GesturePage()
-                    Page.Advanced -> AdvancedPage()
-                    Page.Fonts -> FontsPage()
-                    Page.Packs -> PacksPage()
-                    Page.About -> AboutPage { page = Page.Licences }
-                    Page.Licences -> LicencesPage()
+        // pages (and submenus) slide in from the side they lead to (deeper to the right),
+        // fading as they go
+        val shownMenu = submenu
+        androidx.compose.runtime.CompositionLocalProvider(LocalSubmenu provides { submenu = it }) {
+            AnimatedContent(
+                targetState = page to shownMenu, label = "page", modifier = Modifier.padding(padding),
+                transitionSpec = {
+                    val (fromPage, fromMenu) = initialState
+                    val (toPage, toMenu) = targetState
+                    val deeper = when {
+                        toMenu != null && fromMenu == null -> true
+                        toMenu == null && fromMenu != null -> false
+                        else -> toPage.ordinal > fromPage.ordinal && fromPage != Page.Licences
+                    }
+                    val sign = if (deeper) 1 else -1
+                    (androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(280)) { sign * it / 4 } +
+                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220, delayMillis = 60)))
+                        .togetherWith(
+                            androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(280)) { -sign * it / 4 } +
+                                androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(160)),
+                        )
+                },
+            ) { (shown, menu) ->
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .navigationBarsPadding()
+                        .padding(bottom = 24.dp),
+                ) {
+                    if (menu != null) {
+                        SubmenuPage(menu) { if (submenu === menu) submenu = null }
+                    } else when (shown) {
+                        Page.Home -> HomePage(status.value) { page = it }
+                        Page.Languages -> LanguagesPage()
+                        Page.Chinese -> ChinesePage()
+                        Page.Personal -> PersonalDictionaryPage()
+                        Page.Preferences -> PreferencesPage()
+                        Page.Theme -> ThemePage()
+                        Page.Correction -> CorrectionPage()
+                        Page.Gesture -> GesturePage()
+                        Page.Advanced -> AdvancedPage()
+                        Page.Fonts -> FontsPage()
+                        Page.Packs -> PacksPage()
+                        Page.About -> AboutPage { page = Page.Licences }
+                        Page.Licences -> LicencesPage()
+                    }
                 }
             }
         }
@@ -386,13 +404,10 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
 @Composable
 private fun CrashCard(log: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    Surface(
+    RaisedCard(
         shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.lychee_crash_title), style = MaterialTheme.typography.titleLarge)
@@ -422,15 +437,11 @@ private fun CrashCard(log: String, onDismiss: () -> Unit) {
 
 @Composable
 private fun Card(highlight: Boolean = false, content: @Composable () -> Unit) {
-    Surface(
+    // raised, never a flat grey block
+    RaisedCard(
+        color = if (highlight) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        contentColor = if (highlight) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
         shape = RoundedCornerShape(28.dp),
-        color = if (highlight) MaterialTheme.colorScheme.primaryContainer
-        else MaterialTheme.colorScheme.surfaceContainerHigh,
-        contentColor = if (highlight) MaterialTheme.colorScheme.onPrimaryContainer
-        else MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
     }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -37,27 +38,17 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * Rows inside a [Group]: each row on its own rounded segment, the segments stacked with a small
- * gap (the group's outer corners round, the inner ones nearly square), like Android's own
- * settings. Each row is given its segment's shape.
+ * Rows inside a [Group]: a plain Material 3 list on the page itself (no grey blocks), the rows
+ * set apart by thin dividers.
  */
 class GroupScope internal constructor(private val rows: MutableList<@Composable (Shape) -> Unit>) {
     fun row(content: @Composable (Shape) -> Unit) {
         rows += content
     }
-}
-
-/** The shape of row [i] of [n] in a group: round outer corners, small inner ones. */
-private fun segment(i: Int, n: Int): Shape {
-    val outer = 24.dp
-    val inner = 6.dp
-    return RoundedCornerShape(
-        topStart = if (i == 0) outer else inner, topEnd = if (i == 0) outer else inner,
-        bottomStart = if (i == n - 1) outer else inner, bottomEnd = if (i == n - 1) outer else inner,
-    )
 }
 
 @Composable
@@ -66,7 +57,7 @@ fun Group(title: String? = null, build: GroupScope.() -> Unit) {
     GroupScope(rows).build()
     Column(
         Modifier
-            .padding(start = 16.dp, end = 16.dp, top = if (title != null) 24.dp else 12.dp, bottom = 4.dp)
+            .padding(top = if (title != null) 20.dp else 8.dp, bottom = 4.dp)
             .animateContentSize(),
     ) {
         if (title != null) {
@@ -74,21 +65,44 @@ fun Group(title: String? = null, build: GroupScope.() -> Unit) {
                 title,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 16.dp, bottom = 10.dp),
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 4.dp),
             )
         }
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            rows.forEachIndexed { i, row ->
-                val shape = segment(i, rows.size)
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(shape)
-                        .background(MaterialTheme.colorScheme.surfaceContainer),
-                ) { row(shape) }
+        rows.forEachIndexed { i, row ->
+            if (i > 0) {
+                HorizontalDivider(
+                    Modifier.padding(horizontal = 24.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
             }
+            row(RectangleShape)
         }
     }
+}
+
+/**
+ * A raised card for what isn't a list (setup, notices, messages): the page's own colour (or
+ * [color]) lifted by a soft shadow, never a flat grey block.
+ */
+@Composable
+fun RaisedCard(
+    modifier: Modifier = Modifier,
+    color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
+    contentColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
+    shape: Shape = RoundedCornerShape(24.dp),
+    content: @Composable () -> Unit,
+) {
+    Surface(
+        shape = shape,
+        color = color,
+        contentColor = contentColor,
+        shadowElevation = 3.dp,
+        tonalElevation = 0.dp,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) { content() }
 }
 
 @Composable
@@ -118,7 +132,7 @@ fun CompactRow(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 64.dp)
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+            .padding(start = 24.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (leading != null || icon != null) {
@@ -227,9 +241,22 @@ fun ReorderSwitchRow(
     }
 }
 
+/** A submenu: a setting's choices on a page of their own (see [ChoiceRow]). */
+class Submenu(
+    val title: String,
+    val summary: String?,
+    val options: List<String>,
+    @DrawableRes val icons: List<Int>?,
+    val selected: Int,
+    val onSelect: (Int) -> Unit,
+)
+
+/** Opens a [Submenu] over the current page (provided by the settings screen). */
+val LocalSubmenu = androidx.compose.runtime.staticCompositionLocalOf<(Submenu) -> Unit> { {} }
+
 /**
- * A setting with a few choices: its title and the current choice in full; a tap opens the
- * choices right under it (an expanding list, no dialog), and picking one closes it again.
+ * A setting with a few choices: its title and the current choice; a tap opens a submenu, a
+ * page of its own listing the choices (no dropdowns), and picking one comes back.
  */
 @Composable
 fun <T> ChoiceRow(
@@ -238,58 +265,58 @@ fun <T> ChoiceRow(
     @DrawableRes icons: List<Int>? = null,
     onSelect: (T) -> Unit,
 ) {
-    var open by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    val open = LocalSubmenu.current
     val current = options.indexOfFirst { it.first == selected }
-    val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, label = "turn")
-    Column {
-        RowSurface(shape, { open = !open }) {
-            CompactRow(
-                icons?.getOrNull(current), title,
-                listOfNotNull(options.getOrNull(current)?.second, summary?.takeIf { open }).joinToString("\n").ifEmpty { null },
-                summaryColor = MaterialTheme.colorScheme.primary,
-                trailing = {
-                    Icon(
-                        painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_keyboard_arrow_down), contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .size(22.dp)
-                            .graphicsLayer { rotationZ = turn },
-                    )
-                },
-            )
-        }
-        androidx.compose.animation.AnimatedVisibility(open) {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-            ) {
-                options.forEachIndexed { i, (value, label) ->
-                    val chosen = value == selected
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(value); open = false }
-                            .background(if (chosen) MaterialTheme.colorScheme.secondaryContainer else androidx.compose.ui.graphics.Color.Transparent)
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        icons?.getOrNull(i)?.let { res ->
-                            Icon(painterResource(res), contentDescription = null, modifier = Modifier.padding(end = 10.dp).size(18.dp))
-                        }
-                        Text(
-                            label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium,
-                            color = if (chosen) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface,
-                        )
-                        if (chosen) {
-                            Icon(
-                                painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_check), contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(18.dp),
-                            )
-                        }
+    RowSurface(shape, {
+        open(Submenu(title, summary, options.map { it.second }, icons, current) { i ->
+            options.getOrNull(i)?.let { onSelect(it.first) }
+        })
+    }) {
+        CompactRow(
+            icons?.getOrNull(current), title, options.getOrNull(current)?.second,
+            summaryColor = MaterialTheme.colorScheme.primary,
+            trailing = {
+                Icon(
+                    painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_chevron_right), contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp),
+                )
+            },
+        )
+    }
+}
+
+/**
+ * A submenu's page: what the setting does, then its choices as a list of radio buttons with
+ * dividers; picking one ticks it and goes back.
+ */
+@Composable
+fun SubmenuPage(menu: Submenu, onDone: () -> Unit) {
+    var picked by remember(menu) { androidx.compose.runtime.mutableIntStateOf(menu.selected) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    if (menu.summary != null) {
+        Text(
+            menu.summary,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 8.dp),
+        )
+    }
+    Group {
+        menu.options.forEachIndexed { i, label ->
+            row {
+                RowSurface(it, {
+                    picked = i
+                    menu.onSelect(i)
+                    // the tick shows for a moment before going back
+                    scope.launch {
+                        kotlinx.coroutines.delay(180)
+                        onDone()
                     }
+                }) {
+                    CompactRow(
+                        menu.icons?.getOrNull(i), label,
+                        trailing = { androidx.compose.material3.RadioButton(selected = picked == i, onClick = null) },
+                    )
                 }
             }
         }
@@ -303,7 +330,7 @@ fun SliderRow(
 ) {
     var current by remember(value) { mutableFloatStateOf(value.toFloat()) }
     RowSurface(shape, null) {
-        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 6.dp)) {
+        Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 Text(format(current.roundToInt()), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
@@ -322,7 +349,7 @@ fun SliderRow(
 @Composable
 fun TextRow(shape: Shape, title: String, body: String) {
     RowSurface(shape, null) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Column(Modifier.padding(horizontal = 24.dp, vertical = 14.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(4.dp))
             Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

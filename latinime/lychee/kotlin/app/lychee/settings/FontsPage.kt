@@ -234,10 +234,12 @@ private fun FontCard(
         }
     }
     val colors = MaterialTheme.colorScheme
+    // a raised tile; the chosen one tinted and outlined
     Surface(
         onClick = select,
         shape = RoundedCornerShape(20.dp),
-        color = if (selected) colors.secondaryContainer else colors.surfaceContainerHigh,
+        color = if (selected) colors.secondaryContainer else colors.surface,
+        shadowElevation = if (selected) 1.dp else 3.dp,
         border = if (selected) BorderStroke(2.dp, colors.primary) else null,
         modifier = Modifier
             .fillMaxWidth()

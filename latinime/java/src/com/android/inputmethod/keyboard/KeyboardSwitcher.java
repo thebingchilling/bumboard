@@ -146,7 +146,9 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
         final boolean languageKey = mLatinIME.shouldShowLanguageSwitchKey();
         builder.setLycheeOptions(lycheeLayout.getNumberRow(),
                 lycheeLayout.getEmojiKey() || !languageKey, lycheeLayout.getSideKey());
-        KeyboardView.sLycheeEmojiOnComma = lycheeLayout.getEmojiOnComma();
+        // the comma shows the icon of what its long-press opens on (emoji, next language ...)
+        KeyboardView.sLycheeCommaIcon = lycheeLayout.commaIcon(mRichImm.getCurrentSubtype()
+                .getRawSubtype().getExtraValueOf("LycheeEngine"));
         // the comma's popup comes from Settings; a change makes cached keyboards stale
         if (com.android.inputmethod.keyboard.internal.KeyboardTextsSet.setLycheeCommaMoreKeys(
                 lycheeLayout.commaMoreKeys(languageKey, mRichImm.getCurrentSubtype()

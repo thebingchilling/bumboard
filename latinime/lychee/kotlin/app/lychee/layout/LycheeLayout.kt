@@ -76,6 +76,15 @@ class LycheeLayout private constructor(private val prefs: SharedPreferences) {
             .map { "!icon/lychee_sc_${it.id}|!code/key_lychee_sc_${it.id}" } + "!text/keyspec_settings")
             .joinToString(",")
 
+    /**
+     * The icon the comma key shows: its popup's first shortcut (the one a long-press opens on),
+     * the emoji face for emoji, the globe for next language ...; 0 when the popup has none.
+     */
+    fun commaIcon(engine: String?): Int {
+        val first = commaMenu().firstOrNull { app.lychee.toolbar.Shortcuts.available(it, engine) } ?: return 0
+        return if (first == Shortcut.EMOJI) com.android.inputmethod.latin.R.drawable.ic_sym_mood else first.icon
+    }
+
     fun keyboardWidth(fullWidth: Int): Int = when (mode) {
         Mode.NORMAL -> fullWidth
         Mode.ONE_HANDED -> (fullWidth * ONE_HANDED_WIDTH).toInt()

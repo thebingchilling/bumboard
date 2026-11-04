@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -103,12 +104,10 @@ fun PackMessage(actions: PackActions) {
         actions.busy -> stringResource(R.string.lychee_packs_importing)
         else -> actions.message
     } ?: return
-    Surface(
+    RaisedCard(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentColor = MaterialTheme.colorScheme.contentColorFor(MaterialTheme.colorScheme.secondaryContainer),
     ) {
         Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
@@ -205,12 +204,10 @@ fun PackPending(actions: PackActions) {
     val context = LocalContext.current
     @Suppress("UNUSED_VARIABLE") val refresh = actions.version + PackRefresh.tick
     val pack = Packs.pending(context) ?: return
-    Surface(
+    RaisedCard(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentColor = MaterialTheme.colorScheme.contentColorFor(MaterialTheme.colorScheme.secondaryContainer),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(stringResource(R.string.lychee_packs_pending_title, pack.name), style = MaterialTheme.typography.titleMedium)
@@ -256,12 +253,10 @@ fun UpdatesCard() {
     val updates = app.lychee.packs.Updates.available(context)
     val remind = updates.isEmpty() && app.lychee.packs.Updates.shouldRemind(context)
     if (updates.isEmpty() && !remind) return
-    Surface(
+    RaisedCard(
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.primaryContainer,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentColor = MaterialTheme.colorScheme.contentColorFor(MaterialTheme.colorScheme.primaryContainer),
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (updates.isNotEmpty()) {
