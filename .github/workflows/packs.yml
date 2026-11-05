@@ -83,11 +83,13 @@ jobs:
           name: lychee-packs
           path: out/packs/lychee-*.zip
           if-no-files-found: error
+          retention-days: 7
 
       - uses: actions/upload-artifact@v4
         with:
           name: lychee-packs-page
           path: out/site
+          retention-days: 7
 
       # what is published, file by file
       - name: List the packs' contents

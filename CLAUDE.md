@@ -89,7 +89,10 @@ is outside it.
   - `app/scripts/` — fetching prebuilt librime, Zinnia, fonts, and the packs bundled in the APK.
 - `packs/` — the pack builders and the packs page (Japanese, Korean, English dictionaries,
   stroke order, examples, handwriting, font mirrors; `packs/site`), run by `packs.yml`.
-- `.github/workflows/` — `build.yml` (the app) and `packs.yml` (the packs, by hand).
+- `.github/workflows/` — `build.yml` (the app), `packs.yml` (the packs, by hand) and
+  `cleanup.yml` (Actions storage is limited: after a successful build or packs run it deletes
+  that workflow's earlier runs with their artifacts and logs, and stale caches; run by hand it
+  purges the whole repository, keeping each workflow's newest successful run).
 - Packs that come with the app: handwriting, the Japanese, Korean and English dictionaries,
   stroke order (Chinese, Japanese from KanjiVG, Korean made from letter strokes) and example
   sentences are bundled in the APK (`app/scripts/bundle-packs.py` fetches the newest
