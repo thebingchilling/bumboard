@@ -2281,6 +2281,14 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     }
 
     @Override
+    public boolean lycheeShowEnglishWord(@Nonnull final String word,
+            @Nonnull final kotlin.jvm.functions.Function0<kotlin.Unit> onType) {
+        // English keyboards only (the others have their own cards on their candidates)
+        if (mLycheeChinese == null || lycheeEngine() != null) return false;
+        return mLycheeChinese.showEnglishWord(word, onType);
+    }
+
+    @Override
     public void lycheeOpenSettings(@Nonnull final String page) {
         launchLycheeSettingsPage(page);
     }

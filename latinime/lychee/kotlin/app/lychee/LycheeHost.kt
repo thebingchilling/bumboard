@@ -28,6 +28,13 @@ interface LycheeHost {
      */
     fun lycheeShowGuesses(guesses: List<String>, onPick: (Int) -> Unit)
 
+    /**
+     * The English word card for [word] (a suggestion held on the English keyboards), like the
+     * Chinese ones; tapping it runs [onType] (picks the suggestion). False when there is no
+     * entry for it.
+     */
+    fun lycheeShowEnglishWord(word: String, onType: () -> Unit): Boolean
+
     /** Opens one page of Lychee's settings (a [app.lychee.settings.Page] name). */
     fun lycheeOpenSettings(page: String)
 }

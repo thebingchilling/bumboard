@@ -107,6 +107,20 @@
       "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-dict-ko.zip"
     },
     {
+      "id": "dict_en",
+      "kind": "data",
+      "name": "English dictionary",
+      "summary": "Definitions, examples and pronunciation for English words (hold a suggestion)",
+      "version": "1",
+      "built": true,
+      "url": "https://github.com/lychee-keyboard/lychee/releases/tag/packs",
+      "file": "lychee-dict-en.zip",
+      "size": "5 MB",
+      "license": "CC BY 4.0 (Open English WordNet)",
+      "credit": "English definitions from Open English WordNet",
+      "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-dict-en.zip"
+    },
+    {
       "id": "strokes_zh",
       "kind": "data",
       "name": "Stroke order",

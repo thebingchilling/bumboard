@@ -5,6 +5,8 @@
 
   lychee-dict-ko.zip    Korean dictionary: meanings, Hanja and part of speech for Korean words
                         (and their conjugated forms), from Wiktionary via kaikki.org (CC BY-SA).
+  lychee-dict-en.zip    English dictionary: definitions, examples and pronunciation for English
+                        words, from Open English WordNet (CC BY 4.0).
   lychee-strokes.zip    Stroke order and character breakdown for ~9,500 Chinese characters,
                         from Make Me a Hanzi (graphics: Arphic Public License; data: LGPL).
   lychee-examples.zip   Example sentences with English translations in Cantonese, Mandarin,
@@ -31,12 +33,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from english_lookup import write_english_schema  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import strokes_local  # noqa: E402
+
 HERE = Path(__file__).resolve().parent
 RIME = HERE.parent.parent / "rime"
 KO_WORDS = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/ko/ko_50k.txt"
 KAIKKI_KO = "https://kaikki.org/dictionary/Korean/kaikki.org-dictionary-Korean.jsonl"
 HANZI = "https://raw.githubusercontent.com/skishore/makemeahanzi/bddc96d41bef78427ed0e034e9f7e31d71fd1b92/{}"
 TATOEBA = "https://downloads.tatoeba.org/exports/per_language/{0}/{1}"
+OEWN = "https://github.com/globalwordnet/english-wordnet/releases/download/2025-edition/english-wordnet-2025.xml.gz"
+EN_WORDS = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/en/en_50k.txt"
+KANJIVG = "https://github.com/KanjiVG/kanjivg/releases/download/r20260714/kanjivg-20260714-main.zip"
 PACK_VERSION = "1"
 
 
@@ -190,12 +198,86 @@ def english_to_korean(english, cache: Path, work: Path) -> dict[str, Path]:
     return files
 
 
+# ---------------------------------------------------------------- English
+
+EN_POS = {"n": "noun", "v": "verb", "a": "adjective", "s": "adjective", "r": "adverb"}
+
+
+def build_en(out: Path, cache: Path, work: Path):
+    """English definitions (the word card on the English keyboards) from Open English WordNet:
+    each word's senses, most common first, with an example and its pronunciation (IPA);
+    irregular forms (went, mice) find their word. Ordered by FrequencyWords."""
+    import gzip
+    import xml.etree.ElementTree as ET
+    src = fetch(OEWN, cache, "english-wordnet.xml.gz")
+    order: dict[str, int] = {}
+    for i, line in enumerate(fetch(EN_WORDS, cache, "en_50k.txt").read_text(encoding="utf-8").splitlines()):
+        w = line.split(" ")[0]
+        order.setdefault(w, i)
+    entries = []  # (lemma, pos, ipa, forms, synsets)
+    synsets: dict[str, tuple[str, str | None]] = {}
+    with gzip.open(src) as f:
+        for _, e in ET.iterparse(f, events=("end",)):
+            if e.tag == "LexicalEntry":
+                lemma_el = e.find("Lemma")
+                lemma = lemma_el.get("writtenForm", "")
+                if lemma and " " not in lemma:
+                    pron = {}
+                    for p in lemma_el.findall("Pronunciation"):
+                        pron.setdefault(p.get("variety", ""), p.text or "")
+                    ipa = None
+                    if pron:
+                        if "GB" in pron and "US" in pron and pron["GB"] != pron["US"]:
+                            ipa = f"/{pron['GB']}/ (UK) · /{pron['US']}/ (US)"
+                        else:
+                            ipa = "/" + next(iter(pron.values())) + "/"
+                    forms = [x.get("writtenForm") for x in e.findall("Form") if x.get("writtenForm")]
+                    senses = [x.get("synset") for x in e.findall("Sense")]
+                    entries.append((lemma, EN_POS.get(lemma_el.get("partOfSpeech"), None), ipa, forms, senses))
+                e.clear()
+            elif e.tag == "Synset":
+                definition = e.findtext("Definition") or ""
+                example = e.findtext("Example")
+                synsets[e.get("id")] = (definition, example)
+                e.clear()
+    db_path = work / "en.db"
+    db = new_db(db_path, WORD_SCHEMA)
+    rows = []
+    for lemma, pos, ipa, forms, senses in entries:
+        glosses = []
+        for sid in senses[:8]:
+            d, ex = synsets.get(sid, ("", None))
+            if d:
+                glosses.append(f"{d} — “{ex}”" if ex else d)
+        if not glosses:
+            continue
+        key = lemma.lower()
+        rank = order.get(key, 1_000_000)
+        gloss = "\n".join(glosses)
+        rows.append((key, lemma, ipa, None, pos, gloss, rank))
+        for form in forms:
+            if form.lower() != key:
+                rows.append((form.lower(), lemma, ipa, None, pos, gloss, rank))
+    db.executemany("INSERT INTO word VALUES(?,?,?,?,?,?,?)", rows)
+    db.execute("CREATE INDEX word_form ON word(form)")
+    finish(db)
+    print(f"en.db: {len(rows)} forms", file=sys.stderr)
+    write_pack(out, "lychee-dict-en.zip", "dict_en", "English dictionary", db_path, {
+        "LICENSE.txt": "English definitions from Open English WordNet (https://en-word.net), "
+                       "CC BY 4.0: https://creativecommons.org/licenses/by/4.0/\n"
+                       "Word order from FrequencyWords (Hermit Dave, OpenSubtitles 2018), CC BY-SA 4.0.\n"
+                       "Changes: single words only, up to eight senses each, converted to SQLite.\n",
+    })
+
+
 # ---------------------------------------------------------------- stroke order
 
 STROKES_SCHEMA = """
 CREATE TABLE char(ch TEXT PRIMARY KEY, strokes TEXT NOT NULL, medians TEXT NOT NULL,
                   decomposition TEXT, radical TEXT, definition TEXT, pinyin TEXT, etymology TEXT)
                   WITHOUT ROWID;
+CREATE TABLE char_ja(ch TEXT PRIMARY KEY, medians TEXT NOT NULL) WITHOUT ROWID;
+CREATE TABLE char_ko(ch TEXT PRIMARY KEY, medians TEXT NOT NULL, decomposition TEXT) WITHOUT ROWID;
 """
 
 
@@ -224,8 +306,19 @@ def build_strokes(out: Path, cache: Path, work: Path):
                      d.get("radical"), d.get("definition"), ", ".join(d.get("pinyin", [])) or None,
                      json.dumps(ety, ensure_ascii=False) if ety else None))
     db.executemany("INSERT INTO char VALUES(?,?,?,?,?,?,?,?)", rows)
+    # Japanese (kana and kanji, KanjiVG) and Korean (every syllable): centre lines only
+    import zipfile as _zip
+    kvg_zip = fetch(KANJIVG, cache, "kanjivg-main.zip")
+    kvg = work / "kanjivg"
+    shutil.rmtree(kvg, ignore_errors=True)
+    with _zip.ZipFile(kvg_zip) as z:
+        z.extractall(kvg)
+    ja = [(c, json.dumps(m, separators=(",", ":"))) for c, m, _ in strokes_local.japanese(kvg / "kanji")]
+    db.executemany("INSERT INTO char_ja VALUES(?,?)", ja)
+    ko = [(c, json.dumps(m, separators=(",", ":")), d) for c, m, d in strokes_local.korean()]
+    db.executemany("INSERT INTO char_ko VALUES(?,?,?)", ko)
     finish(db)
-    print(f"strokes: {len(rows)} characters", file=sys.stderr)
+    print(f"strokes: {len(rows)} characters, {len(ja)} Japanese, {len(ko)} Korean", file=sys.stderr)
     write_pack(out, "lychee-strokes.zip", "strokes_zh", "Stroke order", db_path, {
         "LICENSE.txt": "Stroke order and character data from Make Me a Hanzi by Shaunak Kishore "
                        "(https://github.com/skishore/makemeahanzi).\n"
@@ -233,7 +326,12 @@ def build_strokes(out: Path, cache: Path, work: Path):
                        "Arphic Public License (APL.txt).\n"
                        "dictionary (breakdown, radical, etymology): GNU LGPL 3 or later (LGPL.txt), "
                        "see COPYING.txt.\n"
-                       "Changes: converted to SQLite; nothing else.\n",
+                       "Changes: converted to SQLite; nothing else.\n"
+                       "Japanese stroke order (char_ja): from KanjiVG by Ulrich Apel "
+                       "(https://kanjivg.tagaini.net), CC BY-SA 3.0; reduced to each stroke's centre line "
+                       "and shared under the same licence.\n"
+                       "Korean stroke order (char_ko): made by Lychee from each letter's standard stroke "
+                       "order.\n",
         "APL.txt": apl.read_text(encoding="utf-8", errors="replace"),
         "COPYING.txt": copying.read_text(encoding="utf-8", errors="replace"),
         "LGPL.txt": lgpl.read_text(encoding="utf-8", errors="replace"),
@@ -293,7 +391,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--cache", type=Path, default=HERE / ".cache")
-    ap.add_argument("--only", default="ko,strokes,examples")
+    ap.add_argument("--only", default="ko,en,strokes,examples")
     args = ap.parse_args()
     args.cache.mkdir(parents=True, exist_ok=True)
     work = args.out / "work-dicts"
@@ -301,6 +399,8 @@ def main():
     only = set(args.only.split(","))
     if "ko" in only:
         build_ko(args.out, args.cache, work)
+    if "en" in only:
+        build_en(args.out, args.cache, work)
     if "strokes" in only:
         build_strokes(args.out, args.cache, work)
     if "examples" in only:

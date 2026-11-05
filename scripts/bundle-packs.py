@@ -18,7 +18,7 @@ import urllib.request
 import zipfile
 
 RELEASE = "https://github.com/lychee-keyboard/lychee/releases/download/packs"
-BUNDLED = ["hw_zh", "hw_ja", "rime_ja", "dict_ko", "strokes_zh", "examples"]
+BUNDLED = ["hw_zh", "hw_ja", "rime_ja", "dict_ko", "dict_en", "strokes_zh", "examples"]
 
 
 def fetch(url: str) -> bytes:

@@ -496,6 +496,21 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
     public boolean onLongClick(final View view) {
         AudioAndHapticFeedbackManager.getInstance().performHapticAndAudioFeedback(
                 Constants.NOT_A_CODE, this);
+        // LYCHEE: holding a suggestion on the English keyboards opens its word card (its
+        // definitions, like the Chinese candidates'); otherwise the more-suggestions panel
+        final Object tag = view.getTag();
+        if (tag instanceof Integer && (Integer) tag < mSuggestedWords.size()) {
+            final SuggestedWordInfo info = mSuggestedWords.getInfo((Integer) tag);
+            final String word = mSuggestedWords.getWord((Integer) tag);
+            final app.lychee.LycheeHost host = app.lychee.LycheeHostKt.lycheeHost(this);
+            if (host != null && word != null && host.lycheeShowEnglishWord(word, () -> {
+                mListener.pickSuggestionManually(info);
+                return kotlin.Unit.INSTANCE;
+            })) {
+                view.setPressed(false);
+                return true;
+            }
+        }
         return showMoreSuggestions();
     }
 

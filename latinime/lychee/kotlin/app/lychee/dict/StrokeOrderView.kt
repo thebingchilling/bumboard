@@ -26,6 +26,8 @@ class StrokeOrderView(
 ) : View(context) {
 
     private val outlines: List<Path> = char.strokes.map { runCatching { PathParser.createPathFromPathData(it) }.getOrElse { Path() } }
+    /** Japanese and Korean strokes have only centre lines: drawn with the broad brush. */
+    private val linesOnly = outlines.isEmpty()
     private val centres: List<Path> = char.medians.map { pts ->
         Path().apply {
             pts.forEachIndexed { i, (x, y) -> if (i == 0) moveTo(x, y) else lineTo(x, y) }
@@ -52,13 +54,15 @@ class StrokeOrderView(
     private var animator: ValueAnimator? = null
 
     init {
+        // centre lines alone: a pen about as broad as the Chinese strokes' outlines
+        if (linesOnly) brush.strokeWidth = 78f
         setOnClickListener { play() }
         contentDescription = char.char
     }
 
     fun play() {
         animator?.cancel()
-        val n = outlines.size
+        val n = if (linesOnly) centres.size else outlines.size
         if (n == 0) return
         animator = ValueAnimator.ofFloat(0f, n.toFloat()).apply {
             duration = (n * STROKE_MS).toLong()
@@ -98,6 +102,26 @@ class StrokeOrderView(
         matrix.postTranslate(0f, 900f)
         canvas.concat(matrix)
         val done = progress.toInt()
+        if (linesOnly) {
+            centres.forEachIndexed { i, centre ->
+                when {
+                    i < done -> { brush.color = ink; canvas.drawPath(centre, brush) }
+                    else -> {
+                        brush.color = ghost
+                        canvas.drawPath(centre, brush)
+                        if (i == done && progress > done) {
+                            val measure = PathMeasure(centre, false)
+                            partial.reset()
+                            measure.getSegment(0f, measure.length * (progress - done), partial, true)
+                            brush.color = ink
+                            canvas.drawPath(partial, brush)
+                        }
+                    }
+                }
+            }
+            canvas.restore()
+            return
+        }
         outlines.forEachIndexed { i, outline ->
             when {
                 i < done -> {

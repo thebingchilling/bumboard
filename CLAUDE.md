@@ -71,8 +71,9 @@ packs page). Public facing, so be careful:
 - `core/` — pure Kotlin logic with JVM unit tests (romanisation, glide decoder, symbols ...).
 - `data/` — build scripts for bundled data (Rime schemas and dictionaries, emoji, Korean word
   list) and for packs (`data/packs/`: Japanese dictionary, handwriting, font mirrors).
-- Packs that come with the app: handwriting, the Japanese and Korean dictionaries, stroke order
-  and example sentences are bundled in the APK (`scripts/bundle-packs.py` fetches the newest
+- Packs that come with the app: handwriting, the Japanese, Korean and English dictionaries,
+  stroke order (Chinese, Japanese from KanjiVG, Korean made from letter strokes) and example
+  sentences are bundled in the APK (`scripts/bundle-packs.py` fetches the newest
   published ones; `packs/BundledPacks.kt` unpacks them). Only fonts are downloads. Emoji are
   always the bundled Noto Color Emoji (`data/emoji_sources.json`, the newest release); there
   are no other emoji fonts.

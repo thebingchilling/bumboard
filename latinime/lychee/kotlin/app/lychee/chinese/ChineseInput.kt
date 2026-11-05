@@ -145,6 +145,22 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         }
     }
 
+    /**
+     * The English word card for [word] (a suggestion held on an English keyboard): its
+     * definitions, examples and pronunciation; false when the dictionary doesn't have it.
+     * Tapping the card types the word, as the suggestion would.
+     */
+    fun showEnglishWord(word: String, onType: () -> Unit): Boolean {
+        val entries = app.lychee.dict.PackData.englishWords(ime, word)
+        if (entries.isEmpty()) return false
+        val frame = keyboardFrame?.takeIf { it.height > 0 } ?: return false
+        val peek = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
+        val locales = listOf(java.util.Locale.UK, java.util.Locale.US)
+        popup?.showWord(frame, word, null, entries, emptyList(), peek,
+            onSpeak = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }, lang = "en", onType = onType)
+        return true
+    }
+
     /** Japanese and Korean: the word's entry from the installed dictionary pack. */
     private fun showWordCard(index: Int, candidate: Candidate) {
         val entries = app.lychee.dict.PackData.words(ime, engine, candidate.text)

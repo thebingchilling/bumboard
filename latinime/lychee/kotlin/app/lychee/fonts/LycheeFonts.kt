@@ -318,7 +318,8 @@ object LycheeFonts {
     @JvmStatic
     @JvmOverloads
     fun forText(context: Context, text: CharSequence, lang: String? = null): Typeface? =
-        cjk(context, scriptOf(text) ?: lang)
+        // English (the English word card): the app's font, never the Kai one
+        if (lang == "en" && !isCjk(text)) appFont(context) else cjk(context, scriptOf(text) ?: lang)
 
     /** "ko" for Hangul, "ja" for kana, null for anything else. */
     @JvmStatic

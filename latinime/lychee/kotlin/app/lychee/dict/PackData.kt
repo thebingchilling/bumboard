@@ -8,12 +8,12 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
-/** A Japanese or Korean dictionary entry (from the rime_ja or dict_ko pack). */
+/** A Japanese, Korean or English dictionary entry (from the rime_ja, dict_ko or dict_en pack). */
 data class WordEntry(
     val form: String,
     /** the dictionary form (먹다 for 먹어요) */
     val lemma: String,
-    /** kana (Japanese) or Revised Romanization (Korean) */
+    /** kana (Japanese), Revised Romanization (Korean) or IPA (English) */
     val reading: String?,
     val hanja: String?,
     val partOfSpeech: String?,
@@ -21,7 +21,10 @@ data class WordEntry(
     val senses: List<String>,
 )
 
-/** A character's strokes (SVG paths in a 1024 box, y up) and breakdown, from the strokes pack. */
+/**
+ * A character's strokes (SVG paths in a 1024 box, y up) and breakdown, from the strokes pack.
+ * Japanese and Korean characters have only their strokes' centre lines (no [strokes]).
+ */
 data class CharStrokes(
     val char: String,
     val strokes: List<String>,
@@ -67,7 +70,35 @@ object PackData {
     private fun wordDb(context: Context, engine: String?) = when (engine) {
         "ja" -> db(context, "rime_ja", "ja.db")
         "ko" -> db(context, "dict_ko", "ko.db")
+        "en" -> db(context, "dict_en", "en.db")
         else -> null
+    }
+
+    /**
+     * English entries for [word] as typed: the word itself (lower case), else its stem by the
+     * usual endings (cats, running, tried, bigger ...); irregular forms are in the data.
+     */
+    fun englishWords(context: Context, word: String, limit: Int = 4): List<WordEntry> {
+        val w = word.lowercase().trim()
+        if (w.isEmpty()) return emptyList()
+        words(context, "en", w, limit).takeIf { it.isNotEmpty() }?.let { return it }
+        val stems = buildList {
+            fun strip(suffix: String, vararg ends: String) {
+                if (w.length > suffix.length + 1 && w.endsWith(suffix)) {
+                    val base = w.dropLast(suffix.length)
+                    ends.forEach { add(base + it) }
+                    // a doubled last letter: running -> run, bigger -> big
+                    if (base.length > 2 && base.last() == base[base.length - 2]) add(base.dropLast(1))
+                }
+            }
+            strip("ies", "y"); strip("ied", "y"); strip("es", ""); strip("s", "")
+            strip("ing", "", "e"); strip("ed", "", "e"); strip("er", "", "e"); strip("est", "", "e")
+            strip("ly", "", "le"); strip("'s", "")
+        }
+        for (stem in stems.distinct()) {
+            words(context, "en", stem, limit).takeIf { it.isNotEmpty() }?.let { return it }
+        }
+        return emptyList()
     }
 
     /** Entries for [text] typed on the [engine] keyboard, the word itself before forms of others. */
@@ -96,17 +127,41 @@ object PackData {
     /** Every character's stroke shapes (medians, as stored), for the handwriting stroke matcher. */
     fun allMedians(context: Context): List<Pair<String, String>> {
         val db = db(context, "strokes_zh", "strokes.db") ?: return emptyList()
-        return runCatching {
+        val chinese = runCatching {
             db.rawQuery("SELECT ch, medians FROM char", null).use { c ->
                 val out = ArrayList<Pair<String, String>>(c.count)
                 while (c.moveToNext()) out += c.getString(0) to c.getString(1)
                 out
             }
         }.getOrDefault(emptyList())
+        // the kana too (from the Japanese stroke order), so Japanese handwriting finds them
+        val kana = runCatching {
+            db.rawQuery("SELECT ch, medians FROM char_ja WHERE ch >= '\u3040' AND ch <= '\u30ff'", null).use { c ->
+                buildList { while (c.moveToNext()) add(c.getString(0) to c.getString(1)) }
+            }
+        }.getOrDefault(emptyList())
+        return chinese + kana
     }
 
-    fun strokes(context: Context, char: String): CharStrokes? {
+    /**
+     * [char]'s stroke order: Japanese ([lang] "ja": KanjiVG's, for kana and kanji) or Korean
+     * (Hangul) when there is one, otherwise Chinese (Make Me a Hanzi's).
+     */
+    fun strokes(context: Context, char: String, lang: String? = null): CharStrokes? {
         val db = db(context, "strokes_zh", "strokes.db") ?: return null
+        val cp = char.codePointAt(0)
+        val local = when {
+            cp in 0xAC00..0xD7A3 || cp in 0x3131..0x318E -> "char_ko"
+            cp in 0x3040..0x30FF || lang == "ja" -> "char_ja"
+            else -> null
+        }
+        if (local != null) {
+            runCatching {
+                db.rawQuery("SELECT medians FROM $local WHERE ch = ?", arrayOf(char)).use { c ->
+                    if (c.moveToFirst()) return CharStrokes(char, emptyList(), parseMedians(c.getString(0)), null, null, null, null)
+                }
+            }
+        }
         return runCatching {
             db.rawQuery(
                 "SELECT strokes, medians, decomposition, radical, definition, etymology FROM char WHERE ch = ?",
@@ -128,6 +183,16 @@ object PackData {
                     hint?.takeIf { it.isNotBlank() })
             }
         }.getOrNull()
+    }
+
+    private fun parseMedians(json: String): List<List<Pair<Float, Float>>> = JSONArray(json).let { a ->
+        List(a.length()) { i ->
+            val pts = a.getJSONArray(i)
+            List(pts.length()) { j ->
+                val p = pts.getJSONArray(j)
+                p.getDouble(0).toFloat() to p.getDouble(1).toFloat()
+            }
+        }
     }
 
     /** Up to [limit] (sentence, English) pairs in [lang] ("yue", "cmn", "ja", "ko") using any of [forms]. */

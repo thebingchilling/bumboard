@@ -85,12 +85,14 @@ class DictionaryPopup(private val ctx: Context) {
                     })
                 }
                 e.reading?.takeIf { it != e.lemma && it != romanisation }?.let {
-                    body.addView(content.labelled(ctx.getString(R.string.lychee_card_reading), it))
+                    val label = if (lang == "en") R.string.lychee_card_pronunciation else R.string.lychee_card_reading
+                    body.addView(content.labelled(ctx.getString(label), it))
                 }
                 e.hanja?.let { body.addView(content.labelled("Hanja", it)) }
                 e.partOfSpeech?.let { body.addView(content.labelled(ctx.getString(R.string.lychee_card_pos), it)) }
                 e.senses.take(Content.MAX_SENSES).forEachIndexed { n, s -> content.plainSense(n + 1, s) }
             }
+            if (lang == "ja" || lang == "ko") content.strokes(text)
             content.examples(examples)
         }
     }
@@ -341,10 +343,12 @@ class DictionaryPopup(private val ctx: Context) {
         }
 
         /** Stroke order and breakdown of each character (up to four), when the pack is installed. */
-        private fun strokes(text: String) {
-            val chars = text.codePoints().toArray().filter { Annotator.isHan(it) }
-                .map { String(Character.toChars(it)) }.distinct().take(4)
-            val found = chars.mapNotNull { app.lychee.dict.PackData.strokes(ctx, it) }
+        fun strokes(text: String) {
+            // Chinese characters, kana and Hangul (Japanese and Korean have their own order)
+            val chars = text.codePoints().toArray().filter {
+                Annotator.isHan(it) || it in 0x3040..0x30FF || it in 0xAC00..0xD7A3
+            }.map { String(Character.toChars(it)) }.distinct().take(4)
+            val found = chars.mapNotNull { app.lychee.dict.PackData.strokes(ctx, it, fontLang) }
             if (found.isEmpty()) return
             section(ctx.getString(R.string.lychee_card_strokes))
             val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
