@@ -1,13 +1,13 @@
 name: Build Lychee packs
 
-# The optional downloads the app's catalogue (latinime/lychee/assets/lychee/packs.json)
+# The optional downloads the app's catalogue (app/latinime/lychee/assets/lychee/packs.json)
 # links to: built (or, for fonts, mirrored) here from their sources' newest data and published
 # on the public lychee repository's "packs" release. The app has no network access: the browser
 # downloads these, and opening the downloaded file installs it.
 #
 # Only when started by hand (Actions > Build Lychee packs > Run workflow): the packs are
 # rebuilt; only packs whose contents changed get a new version and are uploaded
-# (data/packs/publish.py), and manifest.json, which the packs page uses to tell Lychee users
+# (packs/publish.py), and manifest.json, which the packs page uses to tell Lychee users
 # about updates, is refreshed. Nothing runs on a schedule or on pushes, to save Actions minutes.
 on:
   workflow_dispatch: {}
@@ -45,35 +45,35 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: |
-            data/packs/ja/.cache
-            data/packs/dict/.cache
+            packs/ja/.cache
+            packs/dict/.cache
           key: lychee-pack-sources-${{ steps.week.outputs.week }}
 
       - name: Japanese dictionary pack
-        run: python3 data/packs/ja/build_ja.py --out out/packs
+        run: python3 packs/ja/build_ja.py --out out/packs
 
       - name: Korean dictionary, stroke order and example sentence packs
-        run: python3 data/packs/dict/build_dicts.py --out out/packs
+        run: python3 packs/dict/build_dicts.py --out out/packs
 
       - name: Handwriting packs
-        run: data/packs/handwriting/build_hw.sh out/packs
+        run: packs/handwriting/build_hw.sh out/packs
 
       - name: Font and emoji packs (one-tap mirrors of the fonts' latest releases)
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 data/packs/fonts/mirror_fonts.py --out out/packs
+        run: python3 packs/fonts/mirror_fonts.py --out out/packs
 
       # what changed since the published packs: new versions, and the manifest
       - name: Version the changed packs
         run: |
           curl -fsSL -o out/previous-manifest.json "$RELEASE_FILES/manifest.json" || echo "no published manifest yet"
-          python3 data/packs/publish.py --packs out/packs --previous out/previous-manifest.json \
+          python3 packs/publish.py --packs out/packs --previous out/previous-manifest.json \
             --upload out/upload --manifest out/site/manifest.json
 
       - name: The packs page
         run: |
           scripts/fetch-fonts.sh
-          cp data/packs/site/index.html out/site/
+          cp packs/site/index.html out/site/
           cp data/out/assets/lychee/GoogleSansFlex.ttf out/site/
           printf 'Google Sans Flex, SIL Open Font License 1.1 (https://openfontlicense.org).\n' > out/site/FONT-LICENSE.txt
           touch out/site/.nojekyll
@@ -142,6 +142,6 @@ jobs:
           }
           publish out/site "$SITE_REPO" main
           mkdir -p out/forward
-          cp data/packs/site/forward.html out/forward/index.html
+          cp packs/site/forward.html out/forward/index.html
           touch out/forward/.nojekyll
           publish out/forward "$REPO" gh-pages

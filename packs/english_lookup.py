@@ -1,13 +1,13 @@
 """English lookups for the Japanese and Korean packs: type an English word, get Japanese or
 Korean words that mean it, like Lychee's English → Cantonese and Mandarin keyboards (same
-scoring: data/build_data.py, build_en_dict)."""
+scoring: app/data/build_data.py, build_en_dict)."""
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "app" / "data"))
 from build_data import build_en_dict  # noqa: E402
 
 SCHEMA = """# Type an English word, get {lang} words that mean it.

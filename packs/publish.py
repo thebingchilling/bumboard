@@ -9,7 +9,7 @@ manifest doesn't list yet keeps the version its build gave it.
 
 manifest.json lists every published pack: its version, what it is, its size and a digest of
 its contents (how the next run tells what changed), and for emoji fonts the Emoji version.
-The packs page (data/packs/site) reads it to tell Lychee users which of their packs have
+The packs page (packs/site) reads it to tell Lychee users which of their packs have
 updates; it is also attached to the "packs" release, where the next run finds it.
 
   publish.py --packs out/packs --previous manifest.json --upload out/upload --manifest out/manifest.json
@@ -28,8 +28,8 @@ import zipfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-ROOT = HERE.parents[1]
-CATALOGUE = ROOT / "latinime/lychee/assets/lychee/packs.json"
+ROOT = HERE.parent
+CATALOGUE = ROOT / "app/latinime/lychee/assets/lychee/packs.json"
 RELEASE = "https://github.com/lychee-keyboard/lychee/releases/download/packs/"
 FONT = (".ttf", ".otf", ".ttc")
 

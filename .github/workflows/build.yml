@@ -1,8 +1,13 @@
 name: Build Lychee
 
+# Builds only when the app itself changes: everything that goes into the APK lives in app/
+# (docs, pack builders in packs/ and the packs workflow don't start a build), or by hand.
 on:
   push:
-    branches: [main, 'claude/**']
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/build.yml'
   workflow_dispatch:
     inputs:
       release:
@@ -16,6 +21,10 @@ permissions:
 concurrency:
   group: lychee-${{ github.ref }}
   cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: app
 
 jobs:
   apk:
@@ -40,8 +49,8 @@ jobs:
 
       - uses: actions/cache@v4
         with:
-          path: data/.cache
-          key: lychee-sources-${{ hashFiles('data/sources.json', 'data/emoji_sources.json') }}
+          path: app/data/.cache
+          key: lychee-sources-${{ hashFiles('app/data/sources.json', 'app/data/emoji_sources.json') }}
 
       - name: Build dictionary data
         run: python3 data/build_data.py --opencc prebuilt/opencc/data

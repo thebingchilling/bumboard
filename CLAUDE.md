@@ -8,13 +8,14 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
 
 - Push straight to `main`. No feature branches, no pull requests unless asked.
 - GitHub Actions minutes are limited; use them sparingly:
-  - Every push to `main` starts a full `build.yml` run (about 15 minutes). Commit locally while
-    working and push once, when the round is finished (or when the owner says to push). Never
-    push docs-only or tiny follow-up changes on their own: they wait for the next round.
+  - A push to `main` starts a full `build.yml` run (about 15 minutes) only when it changes
+    `app/` (or `build.yml`); docs, `packs/` and the packs workflow never start a build. Commit
+    locally while working and push once, when the round is finished (or when the owner says
+    to push).
   - A push while a build is running cancels it: the minutes it used are wasted. Push again
     only after the run has finished.
   - Start no workflow by hand (and re-run none) unless the owner asks. `packs.yml` only runs by
-    hand; when the pack builders changed, ask the owner, then run the packs first and the app
+    hand; when the pack builders (`packs/`) changed, ask the owner, then run the packs first and the app
     build after them (one build that bundles the new packs, not two).
   - Before pushing, review the diff for compile errors (CI is the only compiler); a red build
     costs another run. Fix a red build in one push.
@@ -47,11 +48,11 @@ packs page). Public facing, so be careful:
   authored as "Lychee packs" (or Lychee), never with a thebingchilling name or email.
 
 - Only the pack zips (`lychee-*.zip`) and `manifest.json` go on the `packs` pre-release, and
-  only the packs page (`data/packs/site`: index.html, manifest.json, Google Sans Flex) on
+  only the packs page (`packs/site`: index.html, manifest.json, Google Sans Flex) on
   `lychee-keyboard.github.io`. No app code, APKs, internal notes or anything else from this repository.
 - `packs.yml` runs only when started by hand (no schedule, not on pushes): it rebuilds every
   pack from its sources' newest data and uploads only the packs whose contents changed, with
-  a date version (`data/packs/publish.py`). It uses a token of the
+  a date version (`packs/publish.py`). It uses a token of the
   lychee-keyboard account (`PACKS_TOKEN` secret), so uploads appear as lychee-keyboard's.
 - The packs page (https://lychee-keyboard.github.io/) is pushed by the same runs to the
   `lychee-keyboard/lychee-keyboard.github.io` repository (main branch), which GitHub Pages
@@ -73,20 +74,29 @@ packs page). Public facing, so be careful:
 
 ## Layout
 
-- `latinime/` — the app. LatinIME's Java in `java/`; Lychee's own code in `lychee/kotlin/app/lychee`,
-  resources in `lychee/res`, native bridges (Rime, Zinnia) in `lychee/cpp`. LatinIME changes
-  are marked `// LYCHEE`. The app icon (two lychees) is drawn in `java/res/drawable/lychee_icon_*`
-  with PNG launchers in `java/res/mipmap-*`; its SVG sources and store PNGs are in `lychee/icon`.
-- `core/` — pure Kotlin logic with JVM unit tests (romanisation, glide decoder, symbols ...).
-- `data/` — build scripts for bundled data (Rime schemas and dictionaries, emoji, Korean word
-  list) and for packs (`data/packs/`: Japanese dictionary, handwriting, font mirrors).
+Everything the app build uses is in `app/` (a push changing it starts `build.yml`); the rest
+is outside it.
+
+- `app/` — the Gradle project (`settings.gradle.kts`, `gradlew`, ...) and:
+  - `app/latinime/` — the app. LatinIME's Java in `java/`; Lychee's own code in
+    `lychee/kotlin/app/lychee`, resources in `lychee/res`, native bridges (Rime, Zinnia) in
+    `lychee/cpp`. LatinIME changes are marked `// LYCHEE`. The app icon (two lychees) is drawn
+    in `java/res/drawable/lychee_icon_*` with PNG launchers in `java/res/mipmap-*`; its SVG
+    sources and store PNGs are in `lychee/icon`.
+  - `app/core/` — pure Kotlin logic with JVM unit tests (romanisation, glide decoder, symbols ...).
+  - `app/data/` — build scripts for the data bundled in the APK (Rime schemas and
+    dictionaries, readings, emoji, Korean word list).
+  - `app/scripts/` — fetching prebuilt librime, Zinnia, fonts, and the packs bundled in the APK.
+- `packs/` — the pack builders and the packs page (Japanese, Korean, English dictionaries,
+  stroke order, examples, handwriting, font mirrors; `packs/site`), run by `packs.yml`.
+- `.github/workflows/` — `build.yml` (the app) and `packs.yml` (the packs, by hand).
 - Packs that come with the app: handwriting, the Japanese, Korean and English dictionaries,
   stroke order (Chinese, Japanese from KanjiVG, Korean made from letter strokes) and example
-  sentences are bundled in the APK (`scripts/bundle-packs.py` fetches the newest
-  published ones; `packs/BundledPacks.kt` unpacks them). Only fonts are downloads. Emoji are
-  always the bundled Noto Color Emoji (`data/emoji_sources.json`, the newest release); there
+  sentences are bundled in the APK (`app/scripts/bundle-packs.py` fetches the newest
+  published ones; `packs/BundledPacks.kt` in the app unpacks them). Only fonts are downloads. Emoji are
+  always the bundled Noto Color Emoji (`app/data/emoji_sources.json`, the newest release); there
   are no other emoji fonts.
-- `latinime/lychee/assets/lychee/packs.json` — the downloads catalogue (fonts and data packs).
+- `app/latinime/lychee/assets/lychee/packs.json` — the downloads catalogue (fonts and data packs).
 - Pack updates: Lychee can't go online, so "Check for updates" opens the packs page with the
   installed versions after the `#`; the page hands the newest back via `lychee://updates`
   (`packs/Updates.kt`, `PackImportActivity`). Only installed packs are checked.

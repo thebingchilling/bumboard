@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from english_lookup import write_english_schema  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-RIME = HERE.parent.parent / "rime"
+RIME = HERE.parent.parent / "app" / "data" / "rime"
 MOZC = "https://raw.githubusercontent.com/google/mozc/master/src/data/dictionary_oss/dictionary{:02d}.txt"
 JMDICT = "http://ftp.edrdg.org/pub/Nihongo/JMdict_e.gz"
 PACK_VERSION = "2"
