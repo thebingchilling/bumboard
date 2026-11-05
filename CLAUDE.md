@@ -7,8 +7,18 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
 ## Working rules
 
 - Push straight to `main`. No feature branches, no pull requests unless asked.
-- Be sparing with GitHub Actions minutes: push once per round (each push to `main` starts
-  one `build.yml` run), and start no workflow by hand unless the owner asks.
+- GitHub Actions minutes are limited; use them sparingly:
+  - Every push to `main` starts a full `build.yml` run (about 15 minutes). Commit locally while
+    working and push once, when the round is finished (or when the owner says to push). Never
+    push docs-only or tiny follow-up changes on their own: they wait for the next round.
+  - A push while a build is running cancels it: the minutes it used are wasted. Push again
+    only after the run has finished.
+  - Start no workflow by hand (and re-run none) unless the owner asks. `packs.yml` only runs by
+    hand; when the pack builders changed, ask the owner, then run the packs first and the app
+    build after them (one build that bundles the new packs, not two).
+  - Before pushing, review the diff for compile errors (CI is the only compiler); a red build
+    costs another run. Fix a red build in one push.
+  - Reading run status and logs costs no minutes.
 - Don't compile locally: GitHub Actions builds and tests (`build.yml`, `packs.yml`). Check
   the runs on `main` after pushing and fix any red build.
 - Every build on `main` is published by `build.yml` as a debug release (a full release, not a
