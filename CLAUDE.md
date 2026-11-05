@@ -7,9 +7,8 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
 ## Working rules
 
 - Push straight to `main`. No feature branches, no pull requests unless asked.
-- GitHub Actions minutes are used up for this month: start no workflows (no pushes, which
-  start `build.yml` and `packs.yml`, and no manual runs) until the owner says they are back.
-  Commit locally meanwhile; the owner says when to push.
+- Be sparing with GitHub Actions minutes: push once per round (each push to `main` starts
+  one `build.yml` run), and start no workflow by hand unless the owner asks.
 - Don't compile locally: GitHub Actions builds and tests (`build.yml`, `packs.yml`). Check
   the runs on `main` after pushing and fix any red build.
 - Every build on `main` is published by `build.yml` as a debug release (a full release, not a
@@ -40,9 +39,9 @@ packs page). Public facing, so be careful:
 - Only the pack zips (`lychee-*.zip`) and `manifest.json` go on the `packs` pre-release, and
   only the packs page (`data/packs/site`: index.html, manifest.json, Google Sans Flex) on
   `lychee-keyboard.github.io`. No app code, APKs, internal notes or anything else from this repository.
-- `packs.yml` publishes by itself on `main` (weekly, and when the pack builders change): it
-  rebuilds every pack from its sources' newest data and uploads only the packs whose contents
-  changed, with a date version (`data/packs/publish.py`). It uses a token of the
+- `packs.yml` runs only when started by hand (no schedule, not on pushes): it rebuilds every
+  pack from its sources' newest data and uploads only the packs whose contents changed, with
+  a date version (`data/packs/publish.py`). It uses a token of the
   lychee-keyboard account (`PACKS_TOKEN` secret), so uploads appear as lychee-keyboard's.
 - The packs page (https://lychee-keyboard.github.io/) is pushed by the same runs to the
   `lychee-keyboard/lychee-keyboard.github.io` repository (main branch), which GitHub Pages

@@ -5,27 +5,20 @@ name: Build Lychee packs
 # on the public lychee repository's "packs" release. The app has no network access: the browser
 # downloads these, and opening the downloaded file installs it.
 #
-# Every week (and on changes to the pack builders on main) the packs are rebuilt; only packs
-# whose contents changed get a new version and are uploaded (data/packs/publish.py), and
-# manifest.json, which the packs page uses to tell Lychee users about updates, is refreshed.
+# Only when started by hand (Actions > Build Lychee packs > Run workflow): the packs are
+# rebuilt; only packs whose contents changed get a new version and are uploaded
+# (data/packs/publish.py), and manifest.json, which the packs page uses to tell Lychee users
+# about updates, is refreshed. Nothing runs on a schedule or on pushes, to save Actions minutes.
 on:
   workflow_dispatch: {}
-  schedule:
-    - cron: '17 3 * * 1'
-  push:
-    branches: [main, 'claude/**']
-    paths:
-      - 'data/packs/**'
-      - '.github/workflows/packs.yml'
-      - 'latinime/lychee/assets/lychee/packs.json'
 
 permissions:
   contents: write
 
 concurrency:
   group: lychee-packs-${{ github.ref }}
-  # a publishing run on main always finishes
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  # a publishing run always finishes
+  cancel-in-progress: false
 
 jobs:
   packs:
