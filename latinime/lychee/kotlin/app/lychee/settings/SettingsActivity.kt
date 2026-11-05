@@ -97,6 +97,7 @@ enum class Page(@StringRes val title: Int) {
     Packs(R.string.lychee_packs_title),
     About(R.string.lychee_about),
     Licences(R.string.lychee_licences),
+    Diagnostics(R.string.lychee_diagnostics),
 }
 
 /** Whether Lychee is enabled in the system and whether it is the current keyboard. */
@@ -112,6 +113,7 @@ class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         CrashLog.install(this)
+        app.lychee.DiagLog.init(this)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         AudioAndHapticFeedbackManager.init(this)
@@ -171,7 +173,7 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
     LaunchedEffect(page) { submenu = null }
     val back = {
         if (submenu != null) submenu = null
-        else page = if (page == Page.Licences) Page.About else Page.Home
+        else page = if (page == Page.Licences || page == Page.Diagnostics) Page.About else Page.Home
     }
     BackHandler(enabled = page != Page.Home || submenu != null) { back() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -209,7 +211,7 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                     val deeper = when {
                         toMenu != null && fromMenu == null -> true
                         toMenu == null && fromMenu != null -> false
-                        else -> toPage.ordinal > fromPage.ordinal && fromPage != Page.Licences
+                        else -> toPage.ordinal > fromPage.ordinal && fromPage != Page.Licences && fromPage != Page.Diagnostics
                     }
                     val sign = if (deeper) 1 else -1
                     (androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(280)) { sign * it / 4 } +
@@ -241,8 +243,9 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                         Page.Advanced -> AdvancedPage()
                         Page.Fonts -> FontsPage()
                         Page.Packs -> PacksPage()
-                        Page.About -> AboutPage { page = Page.Licences }
+                        Page.About -> AboutPage({ page = Page.Licences }) { page = Page.Diagnostics }
                         Page.Licences -> LicencesPage()
+                        Page.Diagnostics -> DiagnosticsPage()
                     }
                 }
             }
@@ -1219,7 +1222,7 @@ private fun AdvancedPage() {
 // ---------------------------------------------------------------- about
 
 @Composable
-private fun AboutPage(openLicences: () -> Unit) {
+private fun AboutPage(openLicences: () -> Unit, openDiagnostics: () -> Unit) {
     val context = LocalContext.current
     val version = remember {
         context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
@@ -1231,8 +1234,54 @@ private fun AboutPage(openLicences: () -> Unit) {
             NavRow(it, stringResource(R.string.lychee_licences), stringResource(R.string.lychee_licences_summary),
                 R.drawable.ic_sym_license, openLicences)
         }
+        row {
+            NavRow(it, stringResource(R.string.lychee_diagnostics), stringResource(R.string.lychee_diagnostics_summary),
+                R.drawable.ic_sym_settings, openDiagnostics)
+        }
     }
     Spacer(Modifier.height(8.dp))
+}
+
+/**
+ * What the keyboard's engines did lately (packs unpacked, Rime started, schemas chosen,
+ * failures), to share when something doesn't work.
+ */
+@Composable
+private fun DiagnosticsPage() {
+    val context = LocalContext.current
+    var text by remember { mutableStateOf(app.lychee.DiagLog.read(context)) }
+    val packs = remember {
+        app.lychee.packs.Packs.catalog(context).filter { app.lychee.packs.Packs.isInstalled(context, it.id) }
+            .joinToString("\n") { "${it.id} ${app.lychee.packs.Packs.installedVersion(context, it.id)}" }
+    }
+    val version = remember { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "" }
+    val report = "Lychee $version\nAndroid ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}), ${Build.MANUFACTURER} ${Build.MODEL}\n\n" +
+        "Installed packs:\n$packs\n\n$text"
+    Text(
+        stringResource(R.string.lychee_diagnostics_body),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+    )
+    Row(Modifier.padding(horizontal = 24.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(onClick = {
+            context.startActivity(
+                Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, report), null)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }) { Text(stringResource(R.string.lychee_crash_share)) }
+        FilledTonalButton(onClick = {
+            context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Lychee diagnostics", report))
+        }) { Text(stringResource(R.string.lychee_crash_copy)) }
+        TextButton(onClick = { app.lychee.DiagLog.clear(context); text = "" }) { Text(stringResource(R.string.lychee_diagnostics_clear)) }
+    }
+    RaisedCard {
+        Text(
+            report,
+            style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            modifier = Modifier.padding(16.dp),
+        )
+    }
 }
 
 @Composable

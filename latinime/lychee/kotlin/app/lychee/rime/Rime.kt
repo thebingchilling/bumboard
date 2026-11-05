@@ -20,6 +20,9 @@ object Rime {
     fun start(sharedDir: String, userDir: String, fullCheck: Boolean) =
         nativeStart(sharedDir, userDir, fullCheck)
 
+    /** Stops and starts Rime again: its caches emptied and every session gone. */
+    fun restart(fullCheck: Boolean) = nativeRestart(fullCheck)
+
     fun createSession(): Long = nativeCreateSession()
     fun destroySession(session: Long) = nativeDestroySession(session)
     fun selectSchema(session: Long, schema: String): Boolean = nativeSelectSchema(session, schema)
@@ -43,6 +46,7 @@ object Rime {
     }
 
     @JvmStatic private external fun nativeStart(sharedDir: String, userDir: String, fullCheck: Boolean)
+    @JvmStatic private external fun nativeRestart(fullCheck: Boolean)
     @JvmStatic private external fun nativeStop()
     @JvmStatic private external fun nativeCreateSession(): Long
     @JvmStatic private external fun nativeDestroySession(session: Long)

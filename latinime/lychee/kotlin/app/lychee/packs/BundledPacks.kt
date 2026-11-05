@@ -2,6 +2,7 @@ package app.lychee.packs
 
 import android.content.Context
 import android.util.Log
+import app.lychee.DiagLog
 import org.json.JSONObject
 import java.io.File
 import java.util.zip.ZipInputStream
@@ -60,12 +61,19 @@ object BundledPacks {
                 val needed = USED_BY[id]?.any { it in engines } ?: true
                 if (!needed) {
                     // only when the enabled keyboards are known for sure
-                    if (enabled != null && Packs.isInstalled(app, id)) Packs.remove(app, id)
+                    if (enabled != null && Packs.isInstalled(app, id)) {
+                        Packs.remove(app, id)
+                        DiagLog.log("removed $id (no enabled keyboard uses it; enabled: $enabled)")
+                    }
                     continue
                 }
                 if (Packs.installedVersion(app, id) == version) continue
                 runCatching { install(app, id, version) }
-                    .onFailure { Log.w(TAG, "couldn't unpack $id", it) }
+                    .onSuccess { DiagLog.log("unpacked $id $version") }
+                    .onFailure {
+                        Log.w(TAG, "couldn't unpack $id", it)
+                        DiagLog.log("couldn't unpack $id", it)
+                    }
             }
         }
     }

@@ -606,6 +606,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     @Override
     public void onCreate() {
         app.lychee.CrashLog.install(this);
+        app.lychee.DiagLog.init(this);
         // LYCHEE: English (US or UK) and Mandarin only, out of the box.
         app.lychee.settings.DefaultLanguages.removeOldInputStyles(this);
         Settings.init(this);
@@ -928,7 +929,13 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         if (language == null) {
             language = mRichImm.getCurrentSubtypeLocale().toLanguageTag();
         }
-        mLycheeVoice.start(language);
+        try {
+            mLycheeVoice.start(language);
+        } catch (RuntimeException e) {
+            // voice typing failing must never take the keyboard down with it
+            app.lychee.DiagLog.log("voice typing failed to start", e);
+            mLycheeVoice.setVisibility(View.GONE);
+        }
     }
 
     // LYCHEE: the emoji panel's search box opens search over the letter keys.

@@ -125,7 +125,9 @@ class ToolbarView @JvmOverloads constructor(
     private fun rebuild() {
         row.removeAllViews()
         if (mode == Mode.TITLE) {
-            row.addView(button(R.drawable.ic_sym_arrow_back, R.string.lychee_back, highlighted = true) { onBack() })
+            // the same raised round Back as every other panel's (voice, emoji search, resizing)
+            row.addView(app.lychee.layout.LycheePanels.backButton(context) { onBack() },
+                LinearLayout.LayoutParams(dp(48), LinearLayout.LayoutParams.MATCH_PARENT))
             if (titleShown) row.addView(titleText(title), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
             return
         }

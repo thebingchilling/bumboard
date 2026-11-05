@@ -57,27 +57,47 @@ jstring toJava(JNIEnv *env, const char *utf8) {
 
 extern "C" {
 
+// Rime's folders, kept for a restart.
+static std::string gShared, gUser;
+
+static void fillTraits(RimeTraits *traits) {
+    traits->shared_data_dir = gShared.c_str();
+    traits->user_data_dir = gUser.c_str();
+    traits->distribution_name = "Lychee";
+    traits->distribution_code_name = "lychee";
+    traits->distribution_version = "1";
+    traits->app_name = "rime.lychee";
+    traits->min_log_level = 2;
+    traits->log_dir = "";
+}
+
 JNIEXPORT void JNICALL
 Java_app_lychee_rime_Rime_nativeStart(JNIEnv *env, jclass, jstring sharedDir, jstring userDir,
                                         jboolean fullCheck) {
-    static std::string shared, user;
-    shared = toString(env, sharedDir);
-    user = toString(env, userDir);
+    gShared = toString(env, sharedDir);
+    gUser = toString(env, userDir);
     RIME_STRUCT(RimeTraits, traits);
-    traits.shared_data_dir = shared.c_str();
-    traits.user_data_dir = user.c_str();
-    traits.distribution_name = "Lychee";
-    traits.distribution_code_name = "lychee";
-    traits.distribution_version = "1";
-    traits.app_name = "rime.lychee";
-    traits.min_log_level = 2;
-    traits.log_dir = "";
+    fillTraits(&traits);
     rime()->setup(&traits);
     rime()->initialize(&traits);
     if (rime()->start_maintenance(fullCheck ? True : False)) {
         rime()->join_maintenance_thread();
     }
-    LOGI("Rime started (shared=%s, user=%s)", shared.c_str(), user.c_str());
+    LOGI("Rime started (shared=%s, user=%s)", gShared.c_str(), gUser.c_str());
+}
+
+// Stops Rime and starts it again (its caches emptied, every session gone), with a maintenance
+// run: after a pack brings new schemas, so none is left as it was first found.
+JNIEXPORT void JNICALL
+Java_app_lychee_rime_Rime_nativeRestart(JNIEnv *, jclass, jboolean fullCheck) {
+    rime()->finalize();
+    RIME_STRUCT(RimeTraits, traits);
+    fillTraits(&traits);
+    rime()->initialize(&traits);
+    if (rime()->start_maintenance(fullCheck ? True : False)) {
+        rime()->join_maintenance_thread();
+    }
+    LOGI("Rime restarted");
 }
 
 JNIEXPORT void JNICALL

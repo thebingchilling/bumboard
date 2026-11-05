@@ -127,11 +127,12 @@ class HandwritingPanelView @JvmOverloads constructor(
         val engine = lycheeHost()?.lycheeEngine()
         val models = Zinnia.modelsFor(context, engine)
         zinnia = Zinnia.openAll(models)
-        loadMatcher(context)
+        // the guesses for what is already written are worked out again once the shapes are in
+        loadMatcher(context) { if (visibility == VISIBLE && pad.hasInk) recognise() }
         if (models.isEmpty() && !unpacking) {
             // the handwriting that comes with Lychee, unpacked now that it is wanted
             unpacking = true
-            worker.execute {
+            loader.execute {
                 app.lychee.packs.BundledPacks.installAll(context, engine)
                 main.post { if (visibility == VISIBLE && zinnia == null) show() }
             }
@@ -144,7 +145,7 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     override fun setVisibility(visibility: Int) {
         if (visibility != VISIBLE && this.visibility == VISIBLE) {
-            commitPending()
+            commitPending(now = true)
             main.removeCallbacksAndMessages(null)
             release()
             guesses = emptyList()
@@ -171,10 +172,17 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     private var unpacking = false
 
+    /** Bumped whenever the ink changes; guesses belong to the ink they were made for. */
+    private var inkVersion = 0
+    private var guessedVersion = -1
+    /** Type the guess as soon as the guesses for the whole ink arrive (see [commitPending]). */
+    private var commitWhenGuessed = false
+
     private fun recognise() {
         val z = zinnia
         val strokes = normalise(pad.strokes())
         if (strokes.isEmpty()) return
+        val version = ++inkVersion
         val ink = pad.strokeList()
         val m = matcher
         val japanese = lycheeHost()?.lycheeEngine() == "ja"
@@ -184,7 +192,13 @@ class HandwritingPanelView @JvmOverloads constructor(
                 val fromShapes = m?.match(ink, 30).orEmpty()
                 rank(fromZinnia, fromShapes, japanese).take(10)
             }.getOrDefault(emptyList())
-            main.post { if (pad.hasInk) showGuesses(result) }
+            main.post {
+                // a newer stroke has its own recognition coming: these guesses are stale
+                if (version != inkVersion || !pad.hasInk) return@post
+                guessedVersion = version
+                showGuesses(result)
+                if (commitWhenGuessed) commitPending()
+            }
         }
     }
 
@@ -265,10 +279,19 @@ class HandwritingPanelView @JvmOverloads constructor(
         return out.toFloatArray()
     }
 
-    /** Types the best guess for the ink on the pad and clears it for the next character. */
-    private fun commitPending() {
+    /**
+     * Types the best guess for the ink on the pad and clears it for the next character; when
+     * the guesses for all of the ink are still being worked out, as soon as they arrive (never
+     * a guess made from fewer strokes). [now]: type what there is (the pad is closing).
+     */
+    private fun commitPending(now: Boolean = false) {
         main.removeCallbacks(autoCommit)
         if (!pad.hasInk) return
+        if (!now && guessedVersion != inkVersion) {
+            commitWhenGuessed = true
+            return
+        }
+        commitWhenGuessed = false
         val best = guesses.firstOrNull()
         pad.clear()
         if (best != null) {
@@ -305,7 +328,11 @@ class HandwritingPanelView @JvmOverloads constructor(
     private fun backspace() {
         if (pad.hasInk) {
             pad.undo()
-            if (pad.hasInk) recognise() else showGuesses(emptyList())
+            commitWhenGuessed = false
+            if (pad.hasInk) recognise() else {
+                inkVersion++
+                showGuesses(emptyList())
+            }
             return
         }
         lastTyped = null
@@ -425,6 +452,8 @@ class HandwritingPanelView @JvmOverloads constructor(
                 MotionEvent.ACTION_DOWN -> {
                     hint.visibility = GONE
                     main.removeCallbacks(autoCommit)
+                    // still writing: no typing yet
+                    commitWhenGuessed = false
                     current = arrayListOf(event.x, event.y)
                     paths += Path().apply { moveTo(event.x, event.y) }
                 }
@@ -459,7 +488,7 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     private companion object {
         /** A pause this long after a stroke types the character. */
-        const val AUTO_COMMIT_MS = 750L
+        const val AUTO_COMMIT_MS = 1300L
         /** The square Zinnia sees each character in. */
         const val BOX = 300
         /** How much a rare character's score suffers (see rank). */
@@ -475,16 +504,22 @@ class HandwritingPanelView @JvmOverloads constructor(
         @Volatile
         private var matcherLoading = false
 
-        fun loadMatcher(context: Context) {
+        /** Builds the matcher, on a thread of its own so recognition never waits behind it. */
+        private val loader = Executors.newSingleThreadExecutor()
+
+        fun loadMatcher(context: Context, then: () -> Unit = {}) {
             if (matcher != null || matcherLoading) return
             matcherLoading = true
             val appContext = context.applicationContext
-            worker.execute {
+            loader.execute {
+                val started = System.currentTimeMillis()
                 val refs = app.lychee.dict.PackData.allMedians(appContext).map { (ch, json) ->
                     ch to app.lychee.handwriting.StrokeMatcher.parseMedians(json)
                 }
                 if (refs.isNotEmpty()) matcher = app.lychee.handwriting.StrokeMatcher(refs)
                 matcherLoading = false
+                app.lychee.DiagLog.log("handwriting shapes: ${refs.size} in ${System.currentTimeMillis() - started} ms")
+                if (refs.isNotEmpty()) Handler(Looper.getMainLooper()).post(then)
             }
         }
     }

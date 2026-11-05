@@ -148,7 +148,7 @@ object LycheeFonts {
         val face = if (gsfMissing) null else runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 // what Google Sans Flex lacks (∞ ★ ✓ ‰ ← ♥ ...) from Google's Noto fonts, cut to
-                // just those symbols (scripts/subset-symbols.py), then WenKai and the phone's fonts
+                // just those symbols (scripts/subset-symbols.py), then the phone's fonts
                 // (vulgar fractions are drawn with Google Sans Flex's own 'frac': fractionLabel)
                 val font = Font.Builder(app.assets, UI_FONT)
                     .setFontVariationSettings("'wght' $weight").setWeight(weight.coerceIn(1, 1000)).build()
@@ -159,9 +159,8 @@ object LycheeFonts {
                             .setFontVariationSettings("'wght' $weight").setWeight(weight.coerceIn(1, 1000)).build()
                     }.getOrNull()?.let { builder.addCustomFallback(FontFamily.Builder(it).build()) }
                 }
-                runCatching { Font.Builder(app.assets, BUNDLED_WENKAI).build() }.getOrNull()?.let {
-                    builder.addCustomFallback(FontFamily.Builder(it).build())
-                }
+                // nothing from WenKai here: an English symbol never takes the Kai look; what
+                // Google's fonts lack comes from the phone's sans-serif
                 builder.setSystemFallback("sans-serif").build()
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 Typeface.Builder(app.assets, UI_FONT).setFontVariationSettings("'wght' $weight").build()
@@ -225,9 +224,11 @@ object LycheeFonts {
             return Typeface.DEFAULT
         }
         val face = keysLatin(context, weight)
-        // symbols the keyboard font lacks (⅙, ⅐, ⁿ ...) in the phone's font, rather than blank
+        // symbols the keyboard font lacks in the phone's sans-serif rather than blank (WenKai only
+        // when it is the keyboard font: Google Sans Flex's symbols stay in Google's style)
         if (label != null && label.isNotEmpty() && !hasGlyph(face, label)) {
-            return wenkai(context) ?: if (weight >= 500) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+            if (choice(context, PREF_KEYS) == WENKAI) wenkai(context)?.let { return it }
+            return if (weight >= 500) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
         }
         return face
     }

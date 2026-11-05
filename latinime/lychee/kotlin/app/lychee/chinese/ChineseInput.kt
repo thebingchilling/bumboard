@@ -23,6 +23,18 @@ import com.android.inputmethod.latin.suggestions.SuggestionStripView
  */
 class ChineseInput(private val ime: InputMethodService, private val prefs: SharedPreferences) {
     private var session = 0L
+
+    init {
+        // Rime restarting (packs brought new schemas): the session goes with it; a new one is
+        // made and the schema chosen again when it is back
+        RimeService.onRestart = {
+            if (isComposing) ime.currentInputConnection?.finishComposingText()
+            isComposing = false
+            session = 0L
+            selectedEngine = null
+            show(null)
+        }
+    }
     private var engine: String? = null
     private var bar: CandidateBarView? = null
     private var panel: CandidatePanelView? = null
@@ -230,12 +242,35 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                 }
             }
             if (newEngine == "yue" || newEngine == "cmn") Readings.open(ime) { if (isComposing) show(shown) }
+            warmUp(newEngine)
             if (newEngine == "ja" && !app.lychee.packs.Packs.isInstalled(ime, "rime_ja") &&
                 !app.lychee.packs.BundledPacks.isBundled(ime, "rime_ja")) {
                 android.widget.Toast.makeText(ime, R.string.lychee_ja_needs_pack, android.widget.Toast.LENGTH_LONG).show()
             }
         }
         show(null)
+    }
+
+    /**
+     * Gets the first key typed going at once: the candidates' font is loaded (WenKai is large)
+     * and the keyboard's compiled dictionaries are read through once, so Rime's first look-ups
+     * don't wait on storage. In the background, as soon as the keyboard is chosen.
+     */
+    private fun warmUp(engine: String) {
+        val context = ime.applicationContext
+        warmer.execute {
+            runCatching {
+                app.lychee.fonts.LycheeFonts.cjk(context, engine)
+                app.lychee.fonts.LycheeFonts.appFont(context, 500)
+            }
+            val root = java.io.File(context.filesDir, "rime")
+            val buffer = ByteArray(1 shl 16)
+            for (dir in listOf(java.io.File(root, "user/build"), java.io.File(root, "shared/build"))) {
+                dir.listFiles()?.filter { it.name.startsWith("lychee_$engine") && it.name.endsWith(".bin") }?.forEach { f ->
+                    runCatching { f.inputStream().use { input -> while (input.read(buffer) > 0) Unit } }
+                }
+            }
+        }
     }
 
     /** Cantonese or Mandarin (not Japanese or Korean). */
@@ -305,13 +340,16 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             // or it isn't there at all (letters type as they are rather than vanishing)
             selectedEngine = null
             schemaMissing = !packComing(engine)
+            app.lychee.DiagLog.log("lychee_$engine not there yet (pack ${if (schemaMissing) "missing" else "on its way"})")
             return
         }
         if (session == 0L) session = Rime.createSession()
         selectedEngine = engine
         appliedSettings = schemaSettings()
         if (engine == "ja" || engine == "ko") {
-            schemaMissing = !Rime.selectSchema(session, if (englishMode) "lychee_en_$engine" else "lychee_$engine")
+            val schema = if (englishMode) "lychee_en_$engine" else "lychee_$engine"
+            schemaMissing = !Rime.selectSchema(session, schema)
+            app.lychee.DiagLog.log("chose $schema: ${if (schemaMissing) "failed" else "ok"}")
             return
         }
         schemaMissing = false
@@ -712,6 +750,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         /** Per keyboard ("…yue", "…cmn", "…ja", "…ko"): 英 (영) is on. */
         const val PREF_ENGLISH_MODE = "lychee_english_mode_"
         private const val KEY_BACKSPACE = 0xff08
+        private val warmer: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor()
         /** Candidates fetched per keystroke; the bar scrolls through these. */
         private const val CANDIDATE_LIMIT = 40
     }

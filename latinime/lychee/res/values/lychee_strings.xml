@@ -216,4 +216,8 @@
     <string name="lychee_voice_stop">Stop listening</string>
     <string name="lychee_voice_cancel">Cancel voice typing</string>
     <string name="lychee_voice_permission_granted">Microphone allowed. Tap the mic again to speak.</string>
+    <string name="lychee_diagnostics">Diagnostics</string>
+    <string name="lychee_diagnostics_summary">What the keyboard did lately, to share when something doesn\'t work</string>
+    <string name="lychee_diagnostics_body">The keyboard\'s recent steps: packs unpacked, dictionaries loaded and anything that failed. It stays on this phone unless you share it.</string>
+    <string name="lychee_diagnostics_clear">Clear</string>
 </resources>

@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import app.lychee.DiagLog
 import app.lychee.packs.BundledPacks
 import app.lychee.packs.Packs
 import java.io.File
@@ -41,11 +42,14 @@ object RimeService {
                 val user = File(root, "user").apply { mkdirs() }
                 val changed = installAssets(app, shared)
                 installPacks(app, shared)
-                Rime.start(shared.path, user.path, fullCheck = changed)
                 stagePackBuilds(app, user)
+                val listed = listPackSchemas(app, user)
+                Rime.start(shared.path, user.path, fullCheck = changed || listed)
                 ready = true
+                DiagLog.log("Rime started (assets changed: $changed, pack schemas: ${packSchemas(app)})")
             } catch (t: Throwable) {
                 Log.e(TAG, "Rime failed to start", t)
+                DiagLog.log("Rime failed to start", t)
             }
             main.post {
                 starting = false
@@ -55,6 +59,53 @@ object RimeService {
                 }
             }
         }
+    }
+
+    /** Told on the main thread just before Rime restarts: every session is about to go. */
+    var onRestart: (() -> Unit)? = null
+
+    /**
+     * Restarts Rime (on its thread) after packs brought new schemas, so nothing it found missing
+     * before stays missing: the keyboard stops using it first (letters typed meanwhile wait).
+     */
+    private fun restart() {
+        val stopped = java.util.concurrent.CountDownLatch(1)
+        main.post {
+            ready = false
+            runCatching { onRestart?.invoke() }
+            stopped.countDown()
+        }
+        stopped.await()
+        try {
+            Rime.restart(fullCheck = true)
+            DiagLog.log("Rime restarted for new pack schemas")
+        } catch (t: Throwable) {
+            DiagLog.log("Rime failed to restart", t)
+        } finally {
+            main.post { ready = true }
+        }
+    }
+
+    /** The schemas the installed packs bring (lychee_ja, lychee_en_ja, lychee_en_ko ...). */
+    private fun packSchemas(context: Context): List<String> = rimePacks(context).flatMap { pack ->
+        File(Packs.dir(context, pack.id), "rime").listFiles().orEmpty()
+            .map { it.name }.filter { it.endsWith(".schema.yaml") }.map { it.removeSuffix(".schema.yaml") }
+    }.distinct().sorted()
+
+    /**
+     * Lists the packs' schemas in Rime's schema list (user default.custom.yaml), so its
+     * maintenance checks and builds them like its own. Returns whether the list changed.
+     */
+    private fun listPackSchemas(context: Context, user: File): Boolean {
+        val schemas = packSchemas(context)
+        val text = if (schemas.isEmpty()) "" else
+            "# Lychee: the installed packs' schemas\npatch:\n  schema_list/+:\n" +
+                schemas.joinToString("") { "    - schema: $it\n" }
+        val file = File(user, "default.custom.yaml")
+        val old = if (file.exists()) file.readText() else ""
+        if (old == text) return false
+        if (text.isEmpty()) file.delete() else file.writeText(text)
+        return true
     }
 
     /**
@@ -81,10 +132,14 @@ object RimeService {
                 // the bundled packs this keyboard needs first (waits for an unpacking under way)
                 BundledPacks.installAll(app, engine)
                 val root = File(app.filesDir, "rime")
+                val user = File(root, "user")
                 changed = installPacks(app, File(root, "shared"))
-                stagePackBuilds(app, File(root, "user"))
+                stagePackBuilds(app, user)
+                changed = listPackSchemas(app, user) || changed
+                if (changed && ready) restart()
             } catch (t: Throwable) {
                 Log.e(TAG, "Rime packs failed to install", t)
+                DiagLog.log("Rime packs failed to install", t)
             }
             main.post { then(changed) }
         }

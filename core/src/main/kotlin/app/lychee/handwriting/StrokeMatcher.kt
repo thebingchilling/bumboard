@@ -56,35 +56,44 @@ class StrokeMatcher(references: List<Pair<String, List<FloatArray>>>) {
         // every pairing's cost: how far apart the points are, a little more when backwards, and
         // a little more the further apart they come in the writing order; a written stroke may
         // also take two neighbouring reference strokes at once (口 written in two strokes)
-        val pairs = ArrayList<Pairing>(n * m * 2)
+        // each pairing packed in a Long (its cost's bits high, so they sort by cost; then the
+        // written stroke, the reference stroke and how many it spans): no objects per pair
+        val joins = if (n < m) m - 1 else 0
+        val keys = LongArray(n * (m + joins))
+        var k = 0
         for (i in 0 until n) {
             val oi = i.toFloat() / max(1, n - 1)
             for (j in 0 until m) {
                 val order = ORDER * abs(oi - j.toFloat() / max(1, m - 1))
-                pairs += Pairing(i, j, 1, cost(a[i], b[j]) + order)
+                keys[k++] = pack(cost(a[i], b[j]) + order, i, j, 1)
             }
-            if (n < m) for (j in 0 until m - 1) {
+            for (j in 0 until joins) {
                 val order = ORDER * abs(oi - (j + 0.5f) / max(1, m - 1))
-                pairs += Pairing(i, j, 2, cost(a[i], ref.joined[j]) + order + JOIN)
+                keys[k++] = pack(cost(a[i], ref.joined[j]) + order + JOIN, i, j, 2)
             }
         }
-        pairs.sortBy { it.cost }
+        keys.sort()
         val usedA = BooleanArray(n)
         val usedB = BooleanArray(m)
         var total = 0f
         var left = n
-        for (p in pairs) {
-            if (usedA[p.i] || usedB[p.j] || (p.span == 2 && usedB[p.j + 1])) continue
-            usedA[p.i] = true
-            for (k in 0 until p.span) usedB[p.j + k] = true
-            total += p.cost * p.span
+        for (key in keys) {
+            val i = ((key ushr 20) and 0xFFF).toInt()
+            val j = ((key ushr 8) and 0xFFF).toInt()
+            val span = (key and 0xFF).toInt()
+            if (usedA[i] || usedB[j] || (span == 2 && usedB[j + 1])) continue
+            usedA[i] = true
+            for (s in 0 until span) usedB[j + s] = true
+            total += Float.fromBits((key ushr 32).toInt()) * span
             if (--left == 0) break
         }
         total += UNPAIRED * (usedA.count { !it } + usedB.count { !it })
         return total / max(n, m)
     }
 
-    private class Pairing(val i: Int, val j: Int, val span: Int, val cost: Float)
+    /** A pairing as one sortable Long; [cost] is never negative, so its bits sort as numbers. */
+    private fun pack(cost: Float, i: Int, j: Int, span: Int): Long =
+        (cost.toRawBits().toLong() shl 32) or ((i.toLong() and 0xFFF) shl 20) or ((j.toLong() and 0xFFF) shl 8) or span.toLong()
 
     /** The distance between two strokes, written either way round (backwards costs a little). */
     private fun cost(a: FloatArray, b: FloatArray) = min(distance(a, b, false), distance(a, b, true) + BACKWARDS)

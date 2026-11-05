@@ -157,6 +157,7 @@ class VoicePanelView @JvmOverloads constructor(
         } catch (t: Throwable) {
             // never take the keyboard down with it
             Log.e(TAG, "voice typing failed to start", t)
+            app.lychee.DiagLog.log("voice typing failed to start", t)
             recognizer = null
             visibility = VISIBLE
             status.visibility = VISIBLE
@@ -255,10 +256,12 @@ class VoicePanelView @JvmOverloads constructor(
     fun cancel() = cancel(notify = true)
 
     private fun cancel(notify: Boolean) {
-        recognizer?.run {
-            setRecognitionListener(null)
-            cancel()
-            destroy()
+        // a recogniser already gone (its service restarted, the permission just granted) must
+        // not take the keyboard down with it
+        recognizer?.let { r ->
+            runCatching { r.setRecognitionListener(null) }
+            runCatching { r.cancel() }
+            runCatching { r.destroy() }
         }
         recognizer = null
         if (visibility != GONE) {
@@ -303,7 +306,8 @@ class VoicePanelView @JvmOverloads constructor(
             } else {
                 status.visibility = VISIBLE
                 status.setText(R.string.lychee_voice_error)
-                recognizer?.destroy()
+                app.lychee.DiagLog.log("voice typing error $error")
+                runCatching { recognizer?.destroy() }
                 recognizer = null
             }
         }
