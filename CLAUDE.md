@@ -7,19 +7,25 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
 ## Working rules
 
 - Push straight to `main`. No feature branches, no pull requests unless asked.
-- GitHub Actions minutes are limited; use them sparingly:
-  - A push to `main` starts a full `build.yml` run (about 15 minutes) only when it changes
-    `app/` (or `build.yml`); docs, `packs/` and the packs workflow never start a build. Commit
-    locally while working and push once, when the round is finished (or when the owner says
-    to push).
-  - A push while a build is running cancels it: the minutes it used are wasted. Push again
-    only after the run has finished.
-  - Start no workflow by hand (and re-run none) unless the owner asks. `packs.yml` only runs by
-    hand; when the pack builders (`packs/`) changed, ask the owner, then run the packs first and the app
-    build after them (one build that bundles the new packs, not two).
-  - Before pushing, review the diff for compile errors (CI is the only compiler); a red build
-    costs another run. Fix a red build in one push.
-  - Reading run status and logs costs no minutes.
+- GitHub Actions minutes are not the limit; Actions **storage** is (artifacts and caches of
+  private repositories count towards it):
+  - Push and run workflows as often as is useful. A push to `main` starts `build.yml` (about
+    15 minutes) only when it changes `app/` (or `build.yml`); docs, `packs/` and the packs
+    workflow never start a build. A push while a build is running cancels it.
+  - Nothing ever runs on a schedule: builds start only when a push changes the app (`app/`),
+    and `cleanup.yml` runs after those runs. Never add a `schedule:` trigger.
+  - Never hold a build back: every push that changes `app/` builds, and no commit carries
+    `[skip ci]`. Starting or re-running `build.yml` by hand is fine too.
+  - The only manual workflow is `packs.yml`: it never runs on a schedule or on pushes, only
+    when the owner or an agent starts it. When the pack builders (`packs/`) changed, run the
+    packs first and the app build after them (so the build bundles the new packs).
+  - `cleanup.yml` keeps one run per workflow: after a successful run every other run of that
+    workflow (older, failed, cancelled), with its artifacts and logs, is deleted, and only the
+    newest cache for each set of paths is kept. Don't work around it.
+  - Keep storage small: artifacts get a short `retention-days` (7 or less), nothing large is
+    uploaded as an artifact that a release already holds (the APK is on the release), and
+    caches stay few (one key per set of paths, no per-commit keys).
+  - Fix a red build quickly; CI is the only compiler, so review the diff before pushing.
 - Don't compile locally: GitHub Actions builds and tests (`build.yml`, `packs.yml`). Check
   the runs on `main` after pushing and fix any red build.
 - Every build on `main` is published by `build.yml` as a debug release (a full release, not a
@@ -91,7 +97,10 @@ is outside it.
     bundled in the APK.
 - `packs/` — the pack builders and the packs page (Japanese, Korean, English dictionaries,
   stroke order, examples, font mirrors; `packs/site`), run by `packs.yml`.
-- `.github/workflows/` — `build.yml` (the app) and `packs.yml` (the packs, by hand).
+- `.github/workflows/` — `build.yml` (the app), `packs.yml` (the packs, by hand) and
+  `cleanup.yml` (Actions storage is limited: after a successful build or packs run it deletes
+  every other run of that workflow with its artifacts and logs, and stale caches; run by hand
+  it cuts every workflow down to its newest successful run).
 - Packs that come with the app: the Japanese, Korean and English dictionaries,
   stroke order (Chinese, Japanese from KanjiVG, Korean made from letter strokes) and example
   sentences are bundled in the APK (`app/scripts/bundle-packs.py` fetches the newest
