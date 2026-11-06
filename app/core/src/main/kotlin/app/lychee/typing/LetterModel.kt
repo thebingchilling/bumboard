@@ -51,11 +51,12 @@ class LetterModel private constructor(
     fun logProb(word: CharSequence, next: Char, whole: Boolean = true): Double {
         val x = if (next == ' ') END else index(next)
         if (x < 0) return ln(FLOOR)
-        val k = K * unit
+        val u = unit.toDouble()
+        val k = K * u
         // a letter trigram, backing off to the letter pair and the letter alone
         val b = if (word.isNotEmpty()) index(word[word.length - 1]).let { if (it < 0) START else it } else START
         val a = if (word.length > 1) index(word[word.length - 2]).let { if (it < 0) START else it } else START
-        val pUni = (unigram[x] + unit) / (uniTotal + N * unit)
+        val pUni = (unigram[x] + u) / (uniTotal + N * u)
         val pBi = (bigram[b * N + x] + k * pUni) / (biTotal[b] + k)
         var p = (counts[(a * N + b) * N + x] + k * pBi) / (triTotal[a * N + b] + k)
         // the word's own beginning, when real words begin like it
@@ -158,7 +159,7 @@ class LetterModel private constructor(
         /** as what came before: the start of the word; as what comes next: its end */
         private const val START = 26
         private const val END = 26
-        private const val K = 1.5f
+        private const val K = 1.5
         private const val FLOOR = 0.02
         /** how long a word's beginning may be to count on its own */
         const val MAX_PREFIX = 6
