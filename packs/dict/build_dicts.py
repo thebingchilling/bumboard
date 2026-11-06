@@ -43,6 +43,9 @@ KAIKKI_KO = "https://kaikki.org/dictionary/Korean/kaikki.org-dictionary-Korean.j
 HANZI = "https://raw.githubusercontent.com/skishore/makemeahanzi/bddc96d41bef78427ed0e034e9f7e31d71fd1b92/{}"
 TATOEBA = "https://downloads.tatoeba.org/exports/per_language/{0}/{1}"
 OEWN = "https://github.com/globalwordnet/english-wordnet/releases/download/2025-edition/english-wordnet-2025.xml.gz"
+# English Wiktionary (kaikki.org, CC BY-SA): the words WordNet leaves out (the, I, of, with,
+# because, don't ...); streamed, never cached (it is half a gigabyte)
+KAIKKI_EN = "https://kaikki.org/dictionary/English/kaikki.org-dictionary-English.jsonl.gz"
 EN_WORDS = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/en/en_50k.txt"
 KANJIVG = "https://github.com/KanjiVG/kanjivg/releases/download/r20260714/kanjivg-20260714-main.zip"
 PACK_VERSION = "1"
@@ -243,6 +246,7 @@ def build_en(out: Path, cache: Path, work: Path):
     db_path = work / "en.db"
     db = new_db(db_path, WORD_SCHEMA)
     rows = []
+    covered: dict[str, set] = {}  # form -> parts of speech WordNet has for it
     for lemma, pos, ipa, forms, senses in entries:
         glosses = []
         for sid in senses[:8]:
@@ -255,9 +259,12 @@ def build_en(out: Path, cache: Path, work: Path):
         rank = order.get(key, 1_000_000)
         gloss = "\n".join(glosses)
         rows.append((key, lemma, ipa, None, pos, gloss, rank))
+        covered.setdefault(key, set()).add(pos)
         for form in forms:
             if form.lower() != key:
                 rows.append((form.lower(), lemma, ipa, None, pos, gloss, rank))
+                covered.setdefault(form.lower(), set())
+    rows += wiktionary_en(order, covered)
     db.executemany("INSERT INTO word VALUES(?,?,?,?,?,?,?)", rows)
     db.execute("CREATE INDEX word_form ON word(form)")
     finish(db)
@@ -265,9 +272,93 @@ def build_en(out: Path, cache: Path, work: Path):
     write_pack(out, "lychee-dict-en.zip", "dict_en", "English dictionary", db_path, {
         "LICENSE.txt": "English definitions from Open English WordNet (https://en-word.net), "
                        "CC BY 4.0: https://creativecommons.org/licenses/by/4.0/\n"
+                       "Words WordNet lacks (the, of, because, don't ...) from English Wiktionary "
+                       "(https://en.wiktionary.org), extracted by kaikki.org (Tatu Ylonen, Wiktextract), "
+                       "CC BY-SA 4.0 and GFDL.\n"
                        "Word order from FrequencyWords (Hermit Dave, OpenSubtitles 2018), CC BY-SA 4.0.\n"
                        "Changes: single words only, up to eight senses each, converted to SQLite.\n",
     })
+
+
+WIKT_POS = {
+    "pron": "pronoun", "prep": "preposition", "conj": "conjunction", "det": "determiner",
+    "article": "article", "intj": "interjection", "particle": "particle", "contraction": "contraction",
+    "num": "number", "noun": "noun", "verb": "verb", "adj": "adjective", "adv": "adverb",
+    "name": "proper noun", "prep_phrase": "phrase", "phrase": "phrase", "postp": "postposition",
+}
+WIKT_SKIP_TAGS = {"obsolete", "archaic", "rare", "dated", "nonstandard", "misspelling", "dialectal"}
+
+
+def wiktionary_en(order: dict[str, int], covered: dict[str, set]) -> list[tuple]:
+    """English Wiktionary entries for the words people type (FrequencyWords' 50,000) that
+    WordNet lacks, or lacks in that part of speech (function words: the, of, because; like as
+    a preposition; contractions: don't, I'm)."""
+    import gzip
+    import json
+    wanted = {w for w in order if w}
+    wanted |= {w.replace("'", "’") for w in wanted if "'" in w}
+    rows = []
+    seen: set[tuple[str, str]] = set()
+    print(f"streaming {KAIKKI_EN}", file=sys.stderr)
+    with urllib.request.urlopen(KAIKKI_EN) as r, gzip.GzipFile(fileobj=r) as f:
+        for raw in f:
+            # most lines are words no one types: skip them before parsing the JSON
+            head = raw[:200]
+            i = head.find(b'"word": "')
+            if i >= 0:
+                j = head.find(b'"', i + 9)
+                if j > 0 and head[i + 9:j].decode("utf-8", "ignore").lower() not in wanted:
+                    continue
+            e = json.loads(raw)
+            if e.get("lang_code") != "en":
+                continue
+            word = e.get("word", "")
+            key = word.lower().replace("’", "'")
+            if key not in order:
+                continue
+            pos = WIKT_POS.get(e.get("pos", ""))
+            if pos is None:
+                continue
+            # WordNet's own entry is better where it has one in this part of speech
+            have = covered.get(key)
+            if have is not None and (pos in have or (pos == "proper noun" and have)):
+                continue
+            if (key, pos) in seen:
+                continue
+            glosses = []
+            for sense in e.get("senses", []):
+                if WIKT_SKIP_TAGS & set(sense.get("tags", [])):
+                    continue
+                g = (sense.get("glosses") or [""])[-1].strip()
+                if not g or g in glosses:
+                    continue
+                ex = next((x.get("text") for x in sense.get("examples", [])
+                           if x.get("text") and len(x["text"]) < 120), None)
+                glosses.append(f"{g} — “{ex}”" if ex else g)
+                if len(glosses) >= 6:
+                    break
+            if not glosses:
+                continue
+            uk = us = other = None
+            for snd in e.get("sounds", []):
+                ipa = snd.get("ipa")
+                if not ipa:
+                    continue
+                tags = set(snd.get("tags", []))
+                if uk is None and ({"UK", "Received-Pronunciation"} & tags):
+                    uk = ipa
+                elif us is None and ({"US", "General-American"} & tags):
+                    us = ipa
+                elif other is None:
+                    other = ipa
+            if uk and us and uk != us:
+                ipa = f"{uk} (UK) · {us} (US)"
+            else:
+                ipa = uk or us or other
+            seen.add((key, pos))
+            rows.append((key, word, ipa, None, pos, "\n".join(glosses), order[key]))
+    print(f"wiktionary: {len(rows)} entries WordNet lacks", file=sys.stderr)
+    return rows
 
 
 # ---------------------------------------------------------------- stroke order
