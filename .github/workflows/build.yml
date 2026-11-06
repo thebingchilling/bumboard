@@ -87,6 +87,16 @@ jobs:
       - name: Build debug APK
         run: ./gradlew --no-daemon :latinime:assembleDebug
 
+      - name: APK size
+        run: |
+          apk=$(ls latinime/build/outputs/apk/debug/*.apk | head -1)
+          {
+            echo "### APK: $(du -h "$apk" | cut -f1)"
+            echo '```'
+            unzip -lv "$apk" | awk 'NR>3 && $8 != "" && $1 ~ /^[0-9]+$/ {printf "%9.1f MB  %9.1f MB  %s\n", $1/1048576, $3/1048576, $8}' | sort -k3 -rn | head -20
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: No network permissions
         run: |
           apk=$(ls latinime/build/outputs/apk/debug/*.apk | head -1)

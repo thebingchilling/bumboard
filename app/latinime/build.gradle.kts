@@ -17,12 +17,19 @@ android {
         versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionName = System.getenv("BUILD_VERSION_NAME") ?: "0.1.0-dev"
         vectorDrawables.useSupportLibrary = false
+        // phones only: 64-bit and 32-bit ARM (no x86, which only emulators and a few old
+        // tablets use)
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
         externalNativeBuild {
             cmake {
                 arguments += "-DLYCHEE_PREBUILT_DIR=${rootDir.path}/prebuilt"
+                // the native code built small and optimised in every build, the debug ones
+                // too (they are the ones published)
+                arguments += "-DCMAKE_BUILD_TYPE=MinSizeRel"
+                cppFlags += listOf("-ffunction-sections", "-fdata-sections")
+                arguments += "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,--gc-sections"
             }
         }
     }
@@ -51,8 +58,17 @@ android {
     }
 
     androidResources {
-        // Dictionaries are mmapped by the native code, so they must stay uncompressed.
-        noCompress += listOf("dict", "onnx")
+        // Dictionaries are mmapped by the native code, so they must stay uncompressed (the
+        // handwriting models are read into memory, so they are compressed like the rest).
+        noCompress += listOf("dict")
+    }
+
+    packaging {
+        // native libraries compressed in the APK (unpacked when installed), not stored as they
+        // are for loading straight from it: a much smaller download
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 
     signingConfigs {
