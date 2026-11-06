@@ -113,6 +113,8 @@ class CandidatePanelView @JvmOverloads constructor(
     }
 
     private fun spanFor(text: String): Int {
+        // English: three words a row, each the same width, like the suggestion bar's
+        if (adapter.style.fontLang == "en") return 2
         val chars = text.codePointCount(0, text.length)
         return when {
             chars <= 1 -> 1
@@ -153,15 +155,16 @@ class CandidatePanelView @JvmOverloads constructor(
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             val (index, candidate) = items[position]
             val cell = holder.itemView as LinearLayout
-            cell.layoutParams.height = dp(if (annotated) 84 else 54)
+            val english = style.fontLang == "en"
+            cell.layoutParams.height = dp(if (annotated) 84 else if (english) 48 else 54)
             val word = cell.getChildAt(0) as TextView
             val reading = cell.getChildAt(1) as TextView
             val meaning = cell.getChildAt(2) as TextView
-            val color = if (index == 0) palette.primary else palette.onSurface
+            val color = if (index == 0 && style.fontLang != "en") palette.primary else palette.onSurface
             word.text = candidate.text
             word.typeface = app.lychee.fonts.LycheeFonts.forText(cell.context, candidate.text, style.fontLang)
                 ?: android.graphics.Typeface.DEFAULT
-            word.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f * scale)
+            word.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (english) 17f else 22f * scale)
             word.setTextColor(color)
             val a = annotations[position]
             // every reading the bar shows (Jyutping or Yale, and the other language's when on), in full

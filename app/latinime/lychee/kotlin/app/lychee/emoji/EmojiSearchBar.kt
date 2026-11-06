@@ -16,7 +16,8 @@ import com.android.inputmethod.latin.R
 import com.android.inputmethod.latin.common.Constants
 
 /**
- * Emoji search above the letter keys. It keeps the emoji panel's search pill (magnifier and
+ * Emoji search above the letter keys (and, with [start]'s unicode, the Unicode search: any
+ * symbol by the words of its name or its code point, each shown with its name and code). It keeps the emoji panel's search pill (magnifier and
  * query), with the matching emoji in a row above it and Back in the corner. While it is open,
  * LatinIME hands key events here first: letters build the query (in English, or Chinese
  * through the keywords); tapping an emoji types it into the app.
@@ -46,6 +47,9 @@ class EmojiSearchBar @JvmOverloads constructor(
     }
     private val scroller = HorizontalScrollView(context)
     private var shown: List<String> = emptyList()
+    /** Searching every Unicode symbol (by name or code point) rather than the emoji. */
+    private var unicode = false
+    private val info = EmojiInfo(context)
 
     init {
         orientation = VERTICAL
@@ -83,16 +87,20 @@ class EmojiSearchBar @JvmOverloads constructor(
         addView(pillRow, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
     }
 
-    fun start() {
+    @JvmOverloads
+    fun start(unicode: Boolean = false) {
+        this.unicode = unicode
         query.clear()
         isActive = true
         visibility = VISIBLE
-        EmojiData.load(context) { refresh() }
+        if (unicode) UnicodeNames.load { if (isActive) refresh() } else EmojiData.load(context) { refresh() }
+        refresh()
     }
 
     fun stop() {
         isActive = false
         visibility = GONE
+        info.dismiss()
     }
 
     private fun close() {
@@ -115,6 +123,7 @@ class EmojiSearchBar @JvmOverloads constructor(
             }
             code == Constants.CODE_ENTER -> shown.firstOrNull()?.let { type(it) }
             code == Constants.CODE_SPACE -> if (query.isNotEmpty() && query.last() != ' ') query.append(' ')
+            unicode && code > 0 -> query.appendCodePoint(Character.toLowerCase(code))
             code > 0 && Character.isLetterOrDigit(code) -> query.appendCodePoint(Character.toLowerCase(code))
             code > 0 -> query.appendCodePoint(code)
             else -> return false // shift, symbols and other keyboard keys behave as usual
@@ -124,8 +133,14 @@ class EmojiSearchBar @JvmOverloads constructor(
     }
 
     private fun refresh() {
-        queryView.text = query.ifEmpty { context.getString(R.string.lychee_emoji_search) }
+        queryView.text = query.ifEmpty { context.getString(if (unicode) R.string.lychee_unicode_search else R.string.lychee_emoji_search) }
         queryView.setTextColor(if (query.isEmpty()) palette.onSurfaceVariant else palette.onSurface)
+        if (unicode) {
+            refreshUnicode()
+            return
+        }
+        // back from the Unicode search: its cells go
+        if (results.childCount > 0 && results.getChildAt(0) is SymbolCell) results.removeAllViews()
         val found = if (query.isBlank()) store.recents() else EmojiData.search(query.toString(), RESULTS).map { store.shown(it) }
         shown = found
         // the result views are kept and reused: building them afresh on every key was the slow part
@@ -155,7 +170,65 @@ class EmojiSearchBar @JvmOverloads constructor(
 
     private fun type(emoji: String) {
         onType(emoji)
-        store.addRecent(emoji)
+        if (!unicode) store.addRecent(emoji)
+    }
+
+    /** The Unicode search's results: each symbol with its name and code point. */
+    private fun refreshUnicode() {
+        results.removeAllViews()
+        val found = UnicodeNames.search(query.toString())
+        shown = found.map { it.text }
+        found.forEach { s ->
+            results.addView(SymbolCell(s).apply {
+                setOnClickListener { type(s.text) }
+                setOnLongClickListener { info.show(this, s.text, s.name.lowercase(), emoji = false); true }
+            }, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+        }
+        if (found.isEmpty()) {
+            results.addView(TextView(context).apply {
+                text = context.getString(if (query.isBlank()) R.string.lychee_unicode_hint else R.string.lychee_emoji_none)
+                setTextColor(palette.onSurfaceVariant)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(8), 0, 0, 0)
+            }, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+        }
+        scroller.scrollTo(0, 0)
+    }
+
+    /** One Unicode result: the symbol, its name and its code point under it. */
+    private inner class SymbolCell(s: UnicodeNames.Symbol) : LinearLayout(context) {
+        init {
+            orientation = VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(8), 0, dp(8), 0)
+            minimumWidth = dp(56)
+            background = app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_suggestion)
+            addView(TextView(context).apply {
+                text = s.text
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 24f)
+                setTextColor(palette.onSurface)
+                typeface = app.lychee.fonts.LycheeFonts.ui(context)
+                includeFontPadding = false
+                gravity = Gravity.CENTER
+            })
+            addView(TextView(context).apply {
+                text = s.name.lowercase()
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+                setTextColor(palette.onSurfaceVariant)
+                isSingleLine = true
+                ellipsize = TextUtils.TruncateAt.END
+                maxWidth = dp(120)
+                gravity = Gravity.CENTER
+            })
+            addView(TextView(context).apply {
+                text = "U+%04X".format(s.code)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+                setTextColor(palette.onSurfaceVariant)
+                typeface = android.graphics.Typeface.MONOSPACE
+                gravity = Gravity.CENTER
+            })
+        }
     }
 
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()

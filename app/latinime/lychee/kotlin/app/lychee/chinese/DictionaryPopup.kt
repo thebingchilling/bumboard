@@ -70,12 +70,18 @@ class DictionaryPopup(private val ctx: Context) {
     fun showWord(
         keyboard: View, text: String, romanisation: String?, entries: List<app.lychee.dict.WordEntry>,
         examples: List<Pair<String, String>>, peek: Boolean, onSpeak: ((String, Lang?) -> Unit)?,
-        lang: String? = null, onType: () -> Unit,
+        lang: String? = null,
+        /** Says text in a given voice (English UK or US; null: the language's own). */
+        onSpeakAs: ((String, java.util.Locale?) -> Unit)? = null,
+        onType: () -> Unit,
     ) {
         present(keyboard, peek, onType) { c, body ->
             val content = Content(ctx, c, DisplayPrefs(), body, onSpeak)
             content.fontLang = lang
-            content.heading(text, text)
+            // each pronunciation has its own speak button; only a word with none keeps the
+            // heading's
+            val anyReading = entries.any { !it.reading.isNullOrBlank() }
+            content.heading(text, if (anyReading && onSpeakAs != null) null else text)
             romanisation?.let { body.addView(content.labelled(ctx.getString(R.string.lychee_card_romanisation), it)) }
             entries.forEachIndexed { i, e ->
                 if (i > 0 || e.lemma != text) {
@@ -84,9 +90,25 @@ class DictionaryPopup(private val ctx: Context) {
                         app.lychee.fonts.LycheeFonts.forText(ctx, e.lemma, lang)?.let { typeface = it }
                     })
                 }
-                e.reading?.takeIf { it != e.lemma && it != romanisation }?.let {
-                    val label = if (lang == "en") R.string.lychee_card_pronunciation else R.string.lychee_card_reading
-                    body.addView(content.labelled(ctx.getString(label), it))
+                e.reading?.takeIf { it != e.lemma && it != romanisation }?.let { reading ->
+                    val label = ctx.getString(if (lang == "en") R.string.lychee_card_pronunciation else R.string.lychee_card_reading)
+                    // English UK and US apart, each in its own voice; Japanese says the kana
+                    // reading itself; Korean the word
+                    val parts = if (lang == "en") reading.split(" · ") else listOf(reading)
+                    for (part in parts) {
+                        val locale = when {
+                            part.endsWith("(UK)") -> java.util.Locale.UK
+                            part.endsWith("(US)") -> java.util.Locale.US
+                            else -> null
+                        }
+                        val say = when (lang) {
+                            "ja" -> reading
+                            "en" -> e.lemma
+                            else -> e.lemma
+                        }
+                        val button = onSpeakAs?.let { speak -> content.speakButton { speak(say, locale) } }
+                        body.addView(content.readingRow(content.labelled(label, part), button))
+                    }
                 }
                 e.hanja?.let { body.addView(content.labelled("Hanja", it)) }
                 e.partOfSpeech?.let { body.addView(content.labelled(ctx.getString(R.string.lychee_card_pos), it)) }
@@ -143,11 +165,16 @@ class DictionaryPopup(private val ctx: Context) {
             })
         }
         // just above the keyboard, rising out of it
+        // over the keys only: in one-handed mode the card keeps to the narrowed keyboard
+        val keys = keyboard.rootView.findViewById<View>(R.id.keyboard_view)
+        val keysLeft = keys?.let { k ->
+            IntArray(2).also { k.getLocationInWindow(it) }[0] - IntArray(2).also { parent.getLocationInWindow(it) }[0]
+        } ?: 0
         (panel.layoutParams as FrameLayout.LayoutParams).let { lp ->
             lp.gravity = Gravity.BOTTOM or Gravity.START
-            lp.width = ViewGroup.LayoutParams.MATCH_PARENT
+            lp.width = keys?.width?.takeIf { it > 0 } ?: ViewGroup.LayoutParams.MATCH_PARENT
             lp.height = ViewGroup.LayoutParams.WRAP_CONTENT
-            lp.leftMargin = 0
+            lp.leftMargin = keysLeft
             lp.bottomMargin = parent.height - keyboardTop
             panel.layoutParams = lp
         }
@@ -216,9 +243,9 @@ class DictionaryPopup(private val ctx: Context) {
             if (main != null && !r.composed && main.traditional != main.simplified) {
                 val first = if (prefs.simplified) main.simplified else main.traditional
                 val second = if (prefs.simplified) main.traditional else main.simplified
-                heading(first, text, otherForm(first, second))
+                heading(first, null, otherForm(first, second))
             } else {
-                heading(text, text, null)
+                heading(text, null, null)
             }
             // both languages' readings, always
             readingRows(r, main, text)
@@ -280,14 +307,46 @@ class DictionaryPopup(private val ctx: Context) {
                 cmn?.let { Triple(Lang.Mandarin, R.string.lychee_card_mandarin, it) },
             ).let { if (r.lang == Lang.Mandarin) it.reversed() else it }
             for ((lang, label, reading) in rows) {
-                val row = LinearLayout(ctx).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
+                // every reading of the word in this language (a character read two ways has
+                // two), each with a 粵 or 普 button that says the word in that language
+                val all = (listOf(reading) + (hw?.readings?.get(lang).orEmpty())).distinct()
+                for (one in all) {
+                    val button = if (spoken != null && onSpeak != null) {
+                        langButton(ChineseScript.ui(if (lang == Lang.Cantonese) "粵" else "普", ctx)) { onSpeak.invoke(spoken, lang) }
+                    } else null
+                    body.addView(readingRow(labelled(ctx.getString(label), Annotator.format(one, lang, prefs)), button))
                 }
-                row.addView(labelled(ctx.getString(label), Annotator.format(reading, lang, prefs)),
-                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                body.addView(row)
             }
+        }
+
+        /** A reading on its own line, with its speak button at the end. */
+        fun readingRow(text: View, button: View?): View = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(text, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            if (button != null) addView(button)
+            setPadding(0, dp(2), 0, dp(2))
+        }
+
+        /** 粵 or 普 in a pill: says the word in that language. */
+        fun langButton(label: String, onClick: () -> Unit) = TextView(ctx).apply {
+            text = label
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            typeface = app.lychee.fonts.LycheeFonts.chinese(ctx) ?: Typeface.DEFAULT_BOLD
+            setTextColor(c.onPrimaryContainer)
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                cornerRadius = dp(18).toFloat()
+                setColor(c.primaryContainer)
+            }
+            contentDescription = ctx.getString(R.string.lychee_card_listen) + " " + label
+            layoutParams = LinearLayout.LayoutParams(dp(48), dp(36)).apply { marginStart = dp(8) }
+            setOnClickListener { onClick() }
+        }
+
+        /** The speak button, public for the word cards' readings. */
+        fun speakButton(onClick: () -> Unit): View = speaker(onClick).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginStart = dp(8) }
         }
 
         /**

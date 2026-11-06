@@ -15,6 +15,26 @@ object Speech {
     private var ready = false
     private var pending: Pair<String, List<Locale>>? = null
 
+    /**
+     * Starts the engine ahead of time (it takes a few seconds to connect and load a voice), so
+     * the first speak button tapped speaks at once.
+     */
+    fun warmUp(context: Context) {
+        if (tts != null) return
+        val app = context.applicationContext
+        tts = TextToSpeech(app) { status ->
+            ready = status == TextToSpeech.SUCCESS
+            val t = tts
+            if (!ready || t == null) {
+                tts = null
+                return@TextToSpeech
+            }
+            val p = pending
+            pending = null
+            if (p != null) say(app, t, p.first, p.second)
+        }
+    }
+
     /** Speaks [text] in the first of [locales] the engine has a voice for. */
     fun speak(context: Context, text: String, locales: List<Locale>) {
         val engine = tts

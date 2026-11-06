@@ -201,7 +201,7 @@
         <item name="keyShiftedLetterHintInactivatedColor">?attr/lycheeColorOnKeyVariant</item>
         <item name="keyShiftedLetterHintActivatedColor">?attr/lycheeColorOnKey</item>
         <item name="keyPreviewTextColor">?attr/lycheeColorOnKey</item>
-        <item name="keyPreviewTextRatio">52%</item>
+        <item name="keyPreviewTextRatio">62%</item>
         <item name="lycheeIconColor">?attr/lycheeColorOnKey</item>
         <item name="lycheeFunctionalIconColor">?attr/lycheeColorOnFunctional</item>
         <item name="lycheeActionColor">?attr/lycheeColorOnAccent</item>

@@ -390,8 +390,12 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mStripVisibilityGroup.showSuggestionsStrip();
         // LYCHEE: suggestions only while a word is being typed; next-word predictions and
         // punctuation "suggestions" give way to the shortcuts.
+        // a glide's suggestions always show: while the first glided word of a field is being
+        // put in, nothing is before the cursor yet, and they were hidden
+        final boolean glide = suggestedWords.mInputStyle == SuggestedWords.INPUT_STYLE_UPDATE_BATCH
+                || suggestedWords.mInputStyle == SuggestedWords.INPUT_STYLE_TAIL_BATCH;
         mLycheeHasSuggestions = !suggestedWords.isEmpty() && !suggestedWords.isPunctuationSuggestions()
-                && !suggestedWords.isPrediction() && lycheeTypingWord();
+                && !suggestedWords.isPrediction() && (glide || lycheeTypingWord());
         updateLycheeMiddle();
     }
 

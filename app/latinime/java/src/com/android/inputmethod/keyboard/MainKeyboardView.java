@@ -196,6 +196,8 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
                 R.styleable.MainKeyboardView_keyHysteresisDistanceForSlidingModifier, 0.0f);
         mKeyDetector = new KeyDetector(
                 keyHysteresisDistance, keyHysteresisDistanceForSlidingModifier);
+        // LYCHEE: a press between two letters types the likelier one
+        mKeyDetector.setLycheeBias(true);
 
         PointerTracker.init(mainKeyboardViewAttr, mTimerHandler, this /* DrawingProxy */);
 

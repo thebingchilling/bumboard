@@ -9,6 +9,9 @@
     <string name="lychee_sc_resize">Resize</string>
     <string name="lychee_sc_numpad">Number pad</string>
     <string name="lychee_sc_emoji">Emoji</string>
+    <string name="lychee_sc_unicode">Unicode</string>
+    <string name="lychee_unicode_search">Symbol name or U+code</string>
+    <string name="lychee_unicode_hint">Type a name (snowman, arrow, alpha) or a code (U+2603)</string>
     <string name="lychee_sc_undo">Undo</string>
     <string name="lychee_sc_redo">Redo</string>
     <string name="lychee_sc_settings">Settings</string>

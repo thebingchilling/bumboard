@@ -1231,6 +1231,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         final boolean lycheeGlide = currentSettingsValues.mGestureInputEnabled
                 && app.lychee.Features.isEnabled(app.lychee.Feature.GLIDE_TYPING)
                 && mRichImm.getCurrentSubtype().getRawSubtype().getExtraValueOf("LycheeEngine") == null;
+        // LYCHEE: the keys' model of likely letters for this keyboard's language
+        app.lychee.typing.KeyBias.prepare(this, lycheeEngine(), mRichImm.getCurrentSubtypeLocale());
+        app.lychee.typing.KeyBias.reset();
         if (lycheeGlide) {
             app.lychee.glide.GlideTyping.prepare(this, mRichImm.getCurrentSubtypeLocale());
         }
@@ -1724,6 +1727,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     // This method is public for testability of LatinIME, but also in the future it should
     // completely replace #onCodeInput.
     public void onEvent(@Nonnull final Event event) {
+        // LYCHEE: the letters of the word being typed, for the keys' likelier-letter choice
+        app.lychee.typing.KeyBias.onKey(event.mCodePoint, event.mKeyCode == Constants.CODE_DELETE);
         // LYCHEE: emoji search takes typed keys while it is open.
         if (mLycheeEmojiSearch != null && mLycheeEmojiSearch.isActive()) {
             if (mLycheeEmojiSearch.onEvent(event)) {
@@ -1959,6 +1964,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     // interface
     @Override
     public void pickSuggestionManually(final SuggestedWordInfo suggestionInfo) {
+        app.lychee.typing.KeyBias.reset();
         final InputTransaction completeInputTransaction = mInputLogic.onPickSuggestionManually(
                 mSettings.getCurrent(), suggestionInfo,
                 mKeyboardSwitcher.getKeyboardShiftMode(),
@@ -2208,6 +2214,20 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             break;
         case EMOJI:
             lycheeSendCode(Constants.CODE_EMOJI);
+            break;
+        case UNICODE:
+            // a search like the emoji one, over every Unicode symbol (by name or code point)
+            if (mLycheeEmojiSearch != null) {
+                if (mKeyboardSwitcher.isShowingEmojiPalettes()) {
+                    lycheeSendCode(Constants.CODE_ALPHA_FROM_EMOJI);
+                }
+                app.lychee.layout.LycheePanels.hideOthers(mInputView, null);
+                mLycheeChinese.reset();
+                if (mSuggestionStripView != null) mSuggestionStripView.setVisibility(View.GONE);
+                final View candidateBar = mInputView.findViewById(R.id.lychee_candidate_bar);
+                if (candidateBar != null) candidateBar.setVisibility(View.GONE);
+                mLycheeEmojiSearch.start(true);
+            }
             break;
         case UNDO:
         case REDO:

@@ -48,6 +48,7 @@ class EmojiPanelView @JvmOverloads constructor(
     @Suppress("DEPRECATION")
     private val store = EmojiStore(PreferenceManager.getDefaultSharedPreferences(context))
     private val tonePicker = TonePicker(context)
+    private val info = EmojiInfo(context)
     private val palette = M3Colors.of(context)
     private val adapter = Adapter()
     private val layoutManager = GridLayoutManager(context, 8)
@@ -154,6 +155,7 @@ class EmojiPanelView @JvmOverloads constructor(
 
     fun stopEmojiPalettes() {
         tonePicker.dismiss()
+        info.dismiss()
         repeat.removeCallbacksAndMessages(null)
     }
 
@@ -512,7 +514,12 @@ class EmojiPanelView @JvmOverloads constructor(
                     (view as EmojiCell).hasTones = row.emoji.tones != null
                     view.setOnClickListener { type(shown) }
                     view.setOnLongClickListener {
-                        if (row.emoji.tones == null) return@setOnLongClickListener false
+                        // no skin tones: what the emoji is (large, its name and code points)
+                        if (row.emoji.tones == null) {
+                            if (row.kaomoji) return@setOnLongClickListener false
+                            info.show(view, shown, row.emoji.name)
+                            return@setOnLongClickListener true
+                        }
                         tonePicker.show(view, row.emoji, shown) { picked ->
                             store.choose(row.emoji, picked)
                             type(picked)

@@ -74,6 +74,13 @@ public class KeyDetector {
         return mKeyboard;
     }
 
+    // LYCHEE: the main keys favour the likelier letter on a press between two (app.lychee.typing)
+    private boolean mLycheeBias;
+
+    public void setLycheeBias(final boolean on) {
+        mLycheeBias = on;
+    }
+
     public boolean alwaysAllowsKeySelectionByDraggingFinger() {
         return false;
     }
@@ -110,6 +117,9 @@ public class KeyDetector {
                 minDistance = distance;
                 primaryKey = key;
             }
+        }
+        if (mLycheeBias) {
+            return app.lychee.typing.KeyBias.choose(mKeyboard, primaryKey, touchX, touchY);
         }
         return primaryKey;
     }

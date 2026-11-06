@@ -255,8 +255,8 @@ class Submenu(
 val LocalSubmenu = androidx.compose.runtime.staticCompositionLocalOf<(Submenu) -> Unit> { {} }
 
 /**
- * A setting with a few choices: its title and the current choice; a tap opens a submenu, a
- * page of its own listing the choices (no dropdowns), and picking one comes back.
+ * A setting with a few choices, listed right in the menu: its title (and what it does), then
+ * each choice as a radio row under it; tapping one picks it. No dropdowns, no submenus.
  */
 @Composable
 fun <T> ChoiceRow(
@@ -265,23 +265,37 @@ fun <T> ChoiceRow(
     @DrawableRes icons: List<Int>? = null,
     onSelect: (T) -> Unit,
 ) {
-    val open = LocalSubmenu.current
-    val current = options.indexOfFirst { it.first == selected }
-    RowSurface(shape, {
-        open(Submenu(title, summary, options.map { it.second }, icons, current) { i ->
-            options.getOrNull(i)?.let { onSelect(it.first) }
-        })
-    }) {
-        CompactRow(
-            icons?.getOrNull(current), title, options.getOrNull(current)?.second,
-            summaryColor = MaterialTheme.colorScheme.primary,
-            trailing = {
-                Icon(
-                    painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_chevron_right), contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp),
+    Column(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.padding(start = 24.dp, end = 20.dp, top = 14.dp, bottom = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            if (summary != null) {
+                Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        options.forEachIndexed { i, (value, label) ->
+            val chosen = value == selected
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onSelect(value) }
+                    .heightIn(min = 48.dp)
+                    .padding(start = 12.dp, end = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                androidx.compose.material3.RadioButton(selected = chosen, onClick = { onSelect(value) })
+                icons?.getOrNull(i)?.let { res ->
+                    Icon(painterResource(res), contentDescription = null, modifier = Modifier.padding(end = 10.dp).size(20.dp))
+                }
+                Text(
+                    label, style = MaterialTheme.typography.bodyLarge,
+                    color = if (chosen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 )
-            },
-        )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
     }
 }
 

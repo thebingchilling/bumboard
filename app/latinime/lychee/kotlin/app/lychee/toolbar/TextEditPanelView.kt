@@ -85,7 +85,13 @@ class TextEditPanelView @JvmOverloads constructor(
             }
         }
         right.addView(selectAllKey, keyParams())
-        right.addView(labelled(R.drawable.ic_sym_content_copy, R.string.lychee_edit_copy) { menu(android.R.id.copy); setSelecting(false) }, keyParams())
+        // copy ends the selecting: the text stays, the selection collapses to its end
+        right.addView(labelled(R.drawable.ic_sym_content_copy, R.string.lychee_edit_copy) {
+            menu(android.R.id.copy)
+            collapseSelection()
+            setSelecting(false)
+            showCut(false)
+        }, keyParams())
         right.addView(labelled(R.drawable.ic_sym_content_paste, R.string.lychee_edit_paste) { menu(android.R.id.paste); setSelecting(false); showCut(false) }, keyParams())
         right.addView(icon(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete, repeats = true) {
             lycheeHost()?.lycheeSendCode(Constants.CODE_DELETE)
@@ -219,6 +225,14 @@ class TextEditPanelView @JvmOverloads constructor(
 
     private fun menu(id: Int) {
         lycheeHost()?.lycheeInputConnection()?.performContextMenuAction(id)
+    }
+
+    /** Ends a selection where it ends (the cursor after the selected text). */
+    private fun collapseSelection() {
+        val ic = lycheeHost()?.lycheeInputConnection() ?: return
+        val text = ic.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0) ?: return
+        val end = maxOf(text.selectionStart, text.selectionEnd) + text.startOffset
+        if (text.selectionStart != text.selectionEnd) ic.setSelection(end, end)
     }
 
     /** A column of the arrows: each key with how many rows it spans. */

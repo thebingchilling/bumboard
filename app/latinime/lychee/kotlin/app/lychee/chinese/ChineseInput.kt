@@ -64,6 +64,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         this.strip = strip
         popup?.dismiss()
         popup = DictionaryPopup(inputView.context)
+        // the phone's speech engine takes seconds to start: started now, it is ready when a
+        // card's speak button is first tapped
+        app.lychee.speech.Speech.warmUp(ime)
         keyboardFrame = inputView.findViewById(R.id.main_keyboard_frame)
         preedit = inputView.findViewById<android.widget.TextView>(R.id.lychee_preedit)?.also { p ->
             p.setTextColor(app.lychee.ui.LycheeColorStyle.color(inputView.context, R.attr.lycheeColorOnKeyVariant))
@@ -190,7 +193,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val peek = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
         val locales = listOf(java.util.Locale.UK, java.util.Locale.US)
         popup?.showWord(frame, word, null, entries, emptyList(), peek,
-            onSpeak = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }, lang = "en", onType = onType)
+            onSpeak = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }, lang = "en",
+            // UK and US each in their own voice
+            onSpeakAs = { text, locale -> app.lychee.speech.Speech.speak(ime, text, listOfNotNull(locale) + locales) },
+            onType = onType)
         return true
     }
 
@@ -205,7 +211,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val examples = app.lychee.dict.PackData.examples(ime, lang, forms)
         val locales = app.lychee.speech.Speech.localesFor(engine, false)
         popup?.showWord(frame, candidate.text, candidate.comment.trim().takeIf { it.isNotEmpty() }, entries,
-            examples, peek, onSpeak = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }, lang = lang) {
+            examples, peek, onSpeak = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }, lang = lang,
+            onSpeakAs = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }) {
             pick(index)
         }
     }
