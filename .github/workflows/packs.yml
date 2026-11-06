@@ -69,9 +69,9 @@ jobs:
 
       - name: The packs page
         run: |
-          scripts/fetch-fonts.sh
+          app/scripts/fetch-fonts.sh
           cp packs/site/index.html out/site/
-          cp data/out/assets/lychee/GoogleSansFlex.ttf out/site/
+          cp app/data/out/assets/lychee/GoogleSansFlex.ttf out/site/
           printf 'Google Sans Flex, SIL Open Font License 1.1 (https://openfontlicense.org).\n' > out/site/FONT-LICENSE.txt
           touch out/site/.nojekyll
 
