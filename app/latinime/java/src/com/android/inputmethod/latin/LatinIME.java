@@ -1323,6 +1323,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         if (isInputViewShown()
                 && mInputLogic.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
                         settingsValues)) {
+            // LYCHEE: the cursor was moved: what the keys know of the word no longer holds
+            app.lychee.typing.KeyBias.reset();
             mKeyboardSwitcher.requestUpdatingShiftState(getCurrentAutoCapsState(),
                     getCurrentRecapitalizeState());
         }
@@ -1727,8 +1729,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     // This method is public for testability of LatinIME, but also in the future it should
     // completely replace #onCodeInput.
     public void onEvent(@Nonnull final Event event) {
-        // LYCHEE: the letters of the word being typed, for the keys' likelier-letter choice
-        app.lychee.typing.KeyBias.onKey(event.mCodePoint, event.mKeyCode == Constants.CODE_DELETE);
+        // LYCHEE: the word being typed and where its keys were pressed, for the keys' touch model
+        app.lychee.typing.KeyBias.onKey(event.mCodePoint, event.mKeyCode == Constants.CODE_DELETE,
+                event.mX, event.mY);
         // LYCHEE: emoji search takes typed keys while it is open.
         if (mLycheeEmojiSearch != null && mLycheeEmojiSearch.isActive()) {
             if (mLycheeEmojiSearch.onEvent(event)) {
