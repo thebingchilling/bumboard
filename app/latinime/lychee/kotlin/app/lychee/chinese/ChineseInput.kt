@@ -32,6 +32,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             isComposing = false
             session = 0L
             selectedEngine = null
+            selecting = false
+            selectToken++
             show(null)
         }
     }
@@ -92,6 +94,37 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         // hold to peek: the card goes when the finger lifts
         bar?.onRelease = { if (prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek") popup?.dismiss() }
         show(null)
+    }
+
+    /** The English suggestions that don't fit on the bar, and what tapping one does. */
+    private var englishMore: List<String> = emptyList()
+    private var onEnglishMore: (Int) -> Unit = {}
+
+    /** The English keyboards' ⌄: the suggestions that don't fit, in the dropdown. */
+    fun setEnglishMore(words: List<String>, onPick: (Int) -> Unit) {
+        englishMore = words
+        onEnglishMore = onPick
+        if (isActive) return
+        if (words.isEmpty() && englishPanel) panel?.visibility = View.GONE
+        moreButton?.visibility = if (words.isEmpty()) View.GONE else View.VISIBLE
+        if (englishPanel && words.isNotEmpty()) showEnglishPanel()
+        updateMoreButton()
+    }
+
+    /** Whether the dropdown shows English suggestions (not candidates). */
+    private val englishPanel: Boolean
+        get() = !isActive && panel?.visibility == View.VISIBLE
+
+    private fun showEnglishPanel() {
+        val panel = panel ?: return
+        val view = inputView ?: return
+        app.lychee.layout.LycheePanels.hideOthers(view, panel)
+        app.lychee.layout.LycheePanels.cover(panel, view)
+        panel.bringToFront()
+        val words = englishMore
+        panel.show(words.map { Candidate(it, "") }, candidateScale(), null, CandidateBarView.Style(fontLang = "en"),
+            onPicked = { i -> onEnglishMore(i); updateMoreButton() },
+            onLongPicked = { i, _ -> words.getOrNull(i)?.let { w -> showEnglishWord(w) { onEnglishMore(i) } } })
     }
 
     /** Handwriting guesses or next characters, shown in the bar while nothing is composed. */
@@ -239,17 +272,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             // imported Rime packs (the Japanese dictionary) are checked afterwards, and the
             // schema is chosen again only if they changed
             RimeService.start(ime) {
-                if (selectedEngine != engine) selectSchema()
+                if (selectedEngine != engine) selectSchema(async = true)
                 replayPending()
                 RimeService.refreshPacks(ime, engine) { changed ->
                     if (engine != newEngine) return@refreshPacks
                     // a changed pack matters only to the schemas that come from packs (Japanese,
                     // and the English lookups of Japanese and Korean):
                     // choosing the schema again drops what is being typed
-                    if ((changed && (engine == "ja" || engine == "ko")) || selectedEngine != engine) selectSchema()
-                    if (selectedEngine == engine) {
-                        replayPending()
-                    } else {
+                    val needed = (changed && (engine == "ja" || engine == "ko")) || (selectedEngine != engine && !selecting)
+                    if (needed && !selectSchema(async = true)) {
                         // the pack never came: what was typed stays as it is, and keys type as is
                         schemaMissing = true
                         flushPending()
@@ -333,7 +364,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         // only when something Rime reads changed: choosing the schema again drops what is being
         // typed, and costs time just as typing starts (this runs every time the keyboard opens)
         val signature = schemaSettings()
-        if (isActive && RimeService.ready && (signature != appliedSettings || selectedEngine != engine)) selectSchema()
+        if (isActive && RimeService.ready && !selecting && (signature != appliedSettings || selectedEngine != engine)) selectSchema(async = true)
         if (!isComposing) show(null)
     }
 
@@ -349,38 +380,84 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** The engine whose schema the session has (null before the first). */
     private var selectedEngine: String? = null
 
-    private fun selectSchema() {
-        val engine = engine ?: return
+    /** A schema being chosen on Rime's thread (keys wait meanwhile, see onEvent). */
+    private var selecting = false
+    private var selectToken = 0
+
+    /**
+     * Chooses the keyboard's schema. [async]: on Rime's thread, in a new session, so the keys
+     * never wait for the dictionaries to load (the first choice of a schema reads them, which
+     * held up the first letters typed); letters typed meanwhile wait and go in after.
+     * Returns false when the schema isn't there (a pack not yet unpacked, or missing).
+     */
+    private fun selectSchema(async: Boolean = false): Boolean {
+        val engine = engine ?: return false
         if ((engine == "ja" || engine == "ko") && !RimeService.hasSchema(ime, "lychee_$engine")) {
             // not yet: the Japanese dictionary is still unpacking (letters wait, see onEvent),
             // or it isn't there at all (letters type as they are rather than vanishing)
             selectedEngine = null
             schemaMissing = !packComing(engine)
             app.lychee.DiagLog.log("lychee_$engine not there yet (pack ${if (schemaMissing) "missing" else "on its way"})")
-            return
+            return false
         }
-        if (session == 0L) session = Rime.createSession()
-        selectedEngine = engine
-        appliedSettings = schemaSettings()
-        if (engine == "ja" || engine == "ko") {
-            val schema = if (englishMode) "lychee_en_$engine" else "lychee_$engine"
-            schemaMissing = !Rime.selectSchema(session, schema)
-            app.lychee.DiagLog.log("chose $schema: ${if (schemaMissing) "failed" else "ok"}")
-            return
-        }
-        schemaMissing = false
         // fuzzy spellings (zh/z, n/l, ng ...) have schemas of their own
         val fuzzy = if (prefs.getBoolean(PREF_FUZZY + engine, false)) "_fuzzy" else ""
         val schema = when {
+            engine == "ja" || engine == "ko" -> if (englishMode) "lychee_en_$engine" else "lychee_$engine"
             englishMode -> if (engine == "yue") "lychee_en_yue" else "lychee_en_cmn"
             engine == "yue" -> (if (prefs.getString(PREF_CANTONESE_INPUT, "jyutping") == "yale") "lychee_yue_yale" else "lychee_yue") + fuzzy
             else -> "lychee_cmn$fuzzy"
         }
-        Rime.selectSchema(session, schema)
+        val chinese = engine == "yue" || engine == "cmn"
         val simplified = ChineseScript.candidatesSimplified(prefs)
-        Rime.setOption(session, "simplification", simplified)
-        Rime.setOption(session, "traditionalization", !simplified)
+        appliedSettings = schemaSettings()
+        fun apply(s: Long): Boolean {
+            val ok = Rime.selectSchema(s, schema)
+            if (chinese) {
+                Rime.setOption(s, "simplification", simplified)
+                Rime.setOption(s, "traditionalization", !simplified)
+            }
+            return ok
+        }
+        if (!async) {
+            if (session == 0L) session = Rime.createSession()
+            selectedEngine = engine
+            val ok = apply(session)
+            schemaMissing = !chinese && !ok
+            return true
+        }
+        // the old session is left alone while the new one loads: nothing on the main thread
+        // touches Rime meanwhile (session 0: keys wait in [pending])
+        val old = session
+        session = 0L
+        selectedEngine = null
+        selecting = true
+        val token = ++selectToken
+        val generation = RimeService.generation
+        RimeService.onRimeThread {
+            val started = System.currentTimeMillis()
+            val s = Rime.createSession()
+            val ok = apply(s)
+            if (old != 0L) Rime.destroySession(old)
+            val took = System.currentTimeMillis() - started
+            main.post {
+                if (token != selectToken || generation != RimeService.generation || this.engine != engine) {
+                    RimeService.onRimeThread { Rime.destroySession(s) }
+                    return@post
+                }
+                selecting = false
+                session = s
+                selectedEngine = engine
+                schemaMissing = !chinese && !ok
+                app.lychee.DiagLog.log("chose $schema in $took ms: ${if (ok) "ok" else "failed"}")
+                replayPending()
+                if (!isComposing) show(null)
+            }
+        }
+        return true
     }
+
+    private val main = android.os.Handler(android.os.Looper.getMainLooper())
 
     /** The keyboard's Rime schema couldn't be selected: keys go to LatinIME. */
     private var schemaMissing = false
@@ -528,6 +605,11 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val view = inputView ?: return
         if (panel.visibility == View.VISIBLE) {
             panel.visibility = View.GONE
+        } else if (!isActive) {
+            if (englishMore.isNotEmpty()) {
+                showEnglishPanel()
+                app.lychee.layout.LycheePanels.reveal(panel)
+            }
         } else {
             val candidates = shown?.candidates ?: return
             app.lychee.layout.LycheePanels.hideOthers(view, panel)
@@ -568,8 +650,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     }
 
     private fun key(keycode: Int): Boolean {
+        val started = android.os.SystemClock.uptimeMillis()
         val handled = Rime.processKey(session, keycode)
         if (handled) sync()
+        val took = android.os.SystemClock.uptimeMillis() - started
+        // a key that held the keyboard up is noted, to find what makes typing lag
+        if (took > SLOW_KEY_MS) app.lychee.DiagLog.log("slow key on $engine: $took ms")
         return handled
     }
 
@@ -618,15 +704,19 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         if ((!isActive && !guessing) || candidates.isEmpty()) {
             bar.setCandidates(emptyList(), null)
             bar.visibility = View.GONE
-            moreButton?.visibility = View.GONE
-            panel?.visibility = View.GONE
+            val english = !isActive && !guessing && englishMore.isNotEmpty()
+            moreButton?.visibility = if (english) View.VISIBLE else View.GONE
+            if (!english || !englishPanel) panel?.visibility = View.GONE
             updateMoreButton()
             stripView?.setLycheeCandidatesShowing(false)
             return
         }
         bar.setScale(candidateScale())
         bar.style = Readings.barStyle(prefs, barMode().lang).copy(fontLang = engine)
-        bar.setCandidates(candidates, if (guessing) guessAnnotation() else annotation())
+        val annotate = if (guessing) guessAnnotation() else annotation()
+        // every candidate keeps the same lines, filled or not, so they all line up
+        bar.lines = if (annotate != null) annotationLines() else null
+        bar.setCandidates(candidates, annotate)
         bar.visibility = View.VISIBLE
         moreButton?.visibility = if (guessing) View.GONE else View.VISIBLE
         // the open dropdown follows the typing
@@ -766,6 +856,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         /** Per keyboard ("…yue", "…cmn", "…ja", "…ko"): 英 (영) is on. */
         const val PREF_ENGLISH_MODE = "lychee_english_mode_"
         private const val KEY_BACKSPACE = 0xff08
+        /** A key taking longer than this (Rime and the candidates) is noted in Diagnostics. */
+        private const val SLOW_KEY_MS = 60L
         private val warmer: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor()
         /** Candidates fetched per keystroke; the bar scrolls through these. */
         private const val CANDIDATE_LIMIT = 40

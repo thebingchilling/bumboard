@@ -67,6 +67,8 @@ class CandidatePanelView @JvmOverloads constructor(
 
     @Volatile
     private var generation = 0
+    private var pickOverride: ((Int) -> Unit)? = null
+    private var longPickOverride: ((Int, android.view.View) -> Unit)? = null
 
     /**
      * Shows [candidates] (by Rime's index) that the phone can draw; [annotate], when given,
@@ -79,7 +81,12 @@ class CandidatePanelView @JvmOverloads constructor(
         style: CandidateBarView.Style = CandidateBarView.Style(),
         /** Rime's index of the last candidate the bar shows: the panel goes on from the next. */
         after: Int = -1,
+        /** For this list only, in place of [onPick] and [onLongPick] (the English dropdown). */
+        onPicked: ((Int) -> Unit)? = null,
+        onLongPicked: ((Int, android.view.View) -> Unit)? = null,
     ) {
+        pickOverride = onPicked
+        longPickOverride = onLongPicked
         val gen = ++generation
         adapter.items = candidates.withIndex().filter { it.index > after && CandidateBarView.renderable(it.value.text) }
         adapter.scale = scale
@@ -159,7 +166,8 @@ class CandidatePanelView @JvmOverloads constructor(
             val a = annotations[position]
             // every reading the bar shows (Jyutping or Yale, and the other language's when on), in full
             val lines = a?.lines.orEmpty()
-            reading.visibility = if (lines.isNotEmpty()) VISIBLE else GONE
+            // a candidate without readings or a meaning keeps their room, so all cells match
+            reading.visibility = if (lines.isNotEmpty()) VISIBLE else if (annotated) INVISIBLE else GONE
             if (a != null && lines.isNotEmpty()) {
                 val text = android.text.SpannableStringBuilder()
                 lines.forEachIndexed { i, line ->
@@ -172,7 +180,7 @@ class CandidatePanelView @JvmOverloads constructor(
                 reading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * scale)
                 reading.setTextColor(palette.onSurfaceVariant)
             }
-            meaning.visibility = if (a?.meaning != null) VISIBLE else GONE
+            meaning.visibility = if (a?.meaning != null) VISIBLE else if (annotated) INVISIBLE else GONE
             a?.meaning?.let {
                 meaning.text = it
                 meaning.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f * scale)
@@ -180,9 +188,9 @@ class CandidatePanelView @JvmOverloads constructor(
             }
             cell.setOnClickListener {
                 visibility = GONE
-                onPick(index)
+                (pickOverride ?: onPick)(index)
             }
-            cell.setOnLongClickListener { v -> onLongPick(index, v); true }
+            cell.setOnLongClickListener { v -> (longPickOverride ?: onLongPick)(index, v); true }
         }
     }
 

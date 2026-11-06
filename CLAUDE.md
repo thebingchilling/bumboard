@@ -65,8 +65,9 @@ packs page). Public facing, so be careful:
   build if one appears. Downloads open in the browser (Custom Tab); opening the downloaded
   file installs it (`PackImportActivity`), or the user picks it.
 - Downloaded models may be any size, but must not slow the phone: memory-mapped data
-  (Rime dictionaries, Zinnia handwriting models) is fine; models that hold hundreds of MB in
-  memory are not. AI features must be tiny.
+  (Rime dictionaries) is fine; models that hold hundreds of MB in memory are not. AI features
+  must be tiny. Handwriting is PaddleOCR's PP-OCRv5 mobile recogniser (Apache-2.0, 13-16 MB,
+  ONNX Runtime), in the APK (`app/scripts/fetch-ocr.sh`), opened only while the pad is open.
 - A learning app: Japanese and Korean are typed in romanisation on QWERTY (no native kana or
   Hangul layouts). Candidates show readings and meanings.
 - Freemium later; no billing or unlocking yet (`Features.isEnabled` is always true).
@@ -79,18 +80,19 @@ is outside it.
 
 - `app/` — the Gradle project (`settings.gradle.kts`, `gradlew`, ...) and:
   - `app/latinime/` — the app. LatinIME's Java in `java/`; Lychee's own code in
-    `lychee/kotlin/app/lychee`, resources in `lychee/res`, native bridges (Rime, Zinnia) in
+    `lychee/kotlin/app/lychee`, resources in `lychee/res`, the native Rime bridge in
     `lychee/cpp`. LatinIME changes are marked `// LYCHEE`. The app icon (two lychees) is drawn
     in `java/res/drawable/lychee_icon_*` with PNG launchers in `java/res/mipmap-*`; its SVG
     sources and store PNGs are in `lychee/icon`.
   - `app/core/` — pure Kotlin logic with JVM unit tests (romanisation, glide decoder, symbols ...).
   - `app/data/` — build scripts for the data bundled in the APK (Rime schemas and
     dictionaries, readings, emoji, Korean word list).
-  - `app/scripts/` — fetching prebuilt librime, Zinnia, fonts, and the packs bundled in the APK.
+  - `app/scripts/` — fetching prebuilt librime, fonts, the handwriting models and the packs
+    bundled in the APK.
 - `packs/` — the pack builders and the packs page (Japanese, Korean, English dictionaries,
-  stroke order, examples, handwriting, font mirrors; `packs/site`), run by `packs.yml`.
+  stroke order, examples, font mirrors; `packs/site`), run by `packs.yml`.
 - `.github/workflows/` — `build.yml` (the app) and `packs.yml` (the packs, by hand).
-- Packs that come with the app: handwriting, the Japanese, Korean and English dictionaries,
+- Packs that come with the app: the Japanese, Korean and English dictionaries,
   stroke order (Chinese, Japanese from KanjiVG, Korean made from letter strokes) and example
   sentences are bundled in the APK (`app/scripts/bundle-packs.py` fetches the newest
   published ones; `packs/BundledPacks.kt` in the app unpacks them). Only fonts are downloads. Emoji are

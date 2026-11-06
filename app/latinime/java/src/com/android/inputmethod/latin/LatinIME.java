@@ -2232,8 +2232,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                     : mInputView.findViewById(R.id.lychee_handwriting_panel);
             if (pad != null && pad.getVisibility() == View.VISIBLE) {
                 pad.setVisibility(View.GONE);
-            } else if (lycheeEngine() != null && !"ko".equals(lycheeEngine())) {
-                // never on the English (or Korean) keyboards
+            } else if (lycheeEngine() != null) {
+                // never on the English keyboards
                 showLycheePanel(R.id.lychee_handwriting_panel);
             }
             break;
@@ -2286,6 +2286,12 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // English keyboards only (the others have their own cards on their candidates)
         if (mLycheeChinese == null || lycheeEngine() != null) return false;
         return mLycheeChinese.showEnglishWord(word, onType);
+    }
+
+    @Override
+    public void lycheeEnglishMore(@Nonnull final java.util.List<String> words,
+            @Nonnull final kotlin.jvm.functions.Function1<? super Integer, kotlin.Unit> onPick) {
+        if (mLycheeChinese != null) mLycheeChinese.setEnglishMore(words, onPick);
     }
 
     @Override

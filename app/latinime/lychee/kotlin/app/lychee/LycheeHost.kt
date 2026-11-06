@@ -35,6 +35,12 @@ interface LycheeHost {
      */
     fun lycheeShowEnglishWord(word: String, onType: () -> Unit): Boolean
 
+    /**
+     * The English suggestions that don't fit on the bar ([words], empty for none): the ⌄ at
+     * its end opens them; [onPick] gets the index of the one tapped.
+     */
+    fun lycheeEnglishMore(words: List<String>, onPick: (Int) -> Unit)
+
     /** Opens one page of Lychee's settings (a [app.lychee.settings.Page] name). */
     fun lycheeOpenSettings(page: String)
 }

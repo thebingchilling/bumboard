@@ -52,7 +52,7 @@ android {
 
     androidResources {
         // Dictionaries are mmapped by the native code, so they must stay uncompressed.
-        noCompress += "dict"
+        noCompress += listOf("dict", "onnx")
     }
 
     signingConfigs {
@@ -97,6 +97,8 @@ dependencies {
     // Custom Tabs: pack pages open in the browser, which does the downloading
     implementation(libs.androidx.browser)
     implementation(libs.androidx.annotation)
+    // runs the handwriting recognisers (PP-OCRv5, scripts/fetch-ocr.sh)
+    implementation(libs.onnxruntime.android)
     compileOnly(libs.jsr305)
 
     implementation(platform(libs.compose.bom))

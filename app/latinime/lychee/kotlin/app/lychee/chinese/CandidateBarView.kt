@@ -52,6 +52,13 @@ class CandidateBarView @JvmOverloads constructor(
 
     var style = Style()
 
+    /**
+     * The lines under every candidate (readings, meaning), or null for none: each candidate
+     * keeps a slot for each, empty when it has nothing to show there, so they all match (the
+     * same height, the characters on one line) whether or not a meaning was found.
+     */
+    var lines: Lines? = null
+
     private val row = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
@@ -252,6 +259,28 @@ class CandidateBarView @JvmOverloads constructor(
             app.lychee.fonts.LycheeFonts.forText(context, candidate.text, style.fontLang)?.let { typeface = it }
         }, wrap())
         addView(word, wrap())
+        slots(this, 0, false)
+    }
+
+    /** Empty readings and meaning lines up to [lines], after the [readings] and [meaning] shown. */
+    private fun slots(cell: LinearLayout, readings: Int, meaning: Boolean) {
+        val want = lines ?: return
+        val color = cell.tag as Int
+        repeat((want.readings - readings).coerceAtLeast(0)) {
+            cell.addView(ShrinkToFitView(context, READING_SP * scale).apply {
+                text = ""
+                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
+                includeFontPadding = false
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
+        if (want.meaning && !meaning) {
+            cell.addView(FittedWordsView(context).apply {
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, MEANING_SP * scale)
+                setTextColor(ColorUtils.setAlphaComponent(color, 0xA0))
+                includeFontPadding = false
+                fullText = ""
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        }
     }
 
     private fun fill(cell: LinearLayout, annotation: Annotation) {
@@ -279,6 +308,7 @@ class CandidateBarView @JvmOverloads constructor(
                 fullText = meaning
             }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
+        slots(cell, annotation.lines.size, annotation.meaning != null)
     }
 
     /** The bar's exact height for [lines], measured from a sample candidate. */

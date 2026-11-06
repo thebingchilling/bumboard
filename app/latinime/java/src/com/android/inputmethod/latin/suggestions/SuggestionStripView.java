@@ -344,10 +344,11 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         // candidates take the bar
         final boolean voice = idle && !panel && mLycheeVoiceEnabled;
         mVoiceKey.setVisibility(voice ? VISIBLE : GONE);
+        final boolean suggestions = mLycheeHasSuggestions && !mLycheeCandidatesShowing && !panel;
         if (!notice) {
-            mSuggestionsStrip.setVisibility(mLycheeHasSuggestions && !mLycheeCandidatesShowing && !panel
-                    ? VISIBLE : INVISIBLE);
+            mSuggestionsStrip.setVisibility(suggestions ? VISIBLE : INVISIBLE);
         }
+        updateLycheeEnglishMore(suggestions && !notice);
         // the edges: 英 and 繁/简 on the right (Chinese keyboards), and the mic
         final int start = getLycheeStartWidth();
         final int script = getLycheeEdgeWidth();
@@ -356,7 +357,10 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         // the toolbar holds a panel's Back itself, so it always starts at the left edge (only
         // what shows beside Back, the candidates and suggestions, keeps clear of it)
         setLycheeMargins(mLycheeToolbar, 0, script + (voice ? mic : 0));
-        setLycheeMargins(mSuggestionsStrip, start, script + (voice ? mic : 0));
+        // the ⌄ for the other suggestions sits at the right end
+        final int more = mLycheeEnglishMore.isEmpty() ? 0 : getResources().getDimensionPixelSize(
+                R.dimen.lychee_candidate_more_width);
+        setLycheeMargins(mSuggestionsStrip, start, script + (voice ? mic : 0) + more);
     }
 
     /**
@@ -511,7 +515,33 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
                 return true;
             }
         }
-        return showMoreSuggestions();
+        // the other suggestions are in the ⌄ dropdown, not a long-press panel
+        return false;
+    }
+
+    /** LYCHEE: the suggestions that don't fit on the bar, for its ⌄ dropdown (empty: none). */
+    private java.util.List<String> mLycheeEnglishMore = java.util.Collections.emptyList();
+
+    private void updateLycheeEnglishMore(final boolean showing) {
+        final java.util.ArrayList<String> more = new java.util.ArrayList<>();
+        if (showing && mSuggestedWords != null) {
+            for (int i = mStartIndexOfMoreSuggestions; i < mSuggestedWords.size(); i++) {
+                final String w = mSuggestedWords.getWord(i);
+                if (w != null && !w.isEmpty()) more.add(w);
+            }
+        }
+        if (more.equals(mLycheeEnglishMore)) return;
+        mLycheeEnglishMore = more;
+        final app.lychee.LycheeHost host = app.lychee.LycheeHostKt.lycheeHost(this);
+        if (host == null) return;
+        final int start = mStartIndexOfMoreSuggestions;
+        host.lycheeEnglishMore(more, index -> {
+            final int i = start + index;
+            if (mSuggestedWords != null && i < mSuggestedWords.size()) {
+                mListener.pickSuggestionManually(mSuggestedWords.getInfo(i));
+            }
+            return kotlin.Unit.INSTANCE;
+        });
     }
 
     boolean showMoreSuggestions() {

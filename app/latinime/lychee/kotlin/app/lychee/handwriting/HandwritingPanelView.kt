@@ -38,10 +38,10 @@ import java.util.concurrent.Executors
  * opens it over the keys, with Back and its name in the bar above (Back, or the phone's,
  * closes it). Its bottom row: ?123 (the symbols, closing the pad), space, ⌫ and Enter.
  *
- * Recognition is [app.lychee.handwriting.StrokeMatcher], which compares the strokes with every
- * character's stroke shapes from the stroke-order data (common characters a little ahead), with
- * Zinnia and a handwriting pack's model (opened only while the pane is open) as a tie-breaker,
- * and in the lead for Japanese kana.
+ * Recognition is PaddleOCR's PP-OCRv5 text recogniser ([OcrRecognizer], opened only while the
+ * pad is open): the ink is drawn as a picture and read, so stroke order and joined-up strokes
+ * don't matter. Chinese and Japanese use its Chinese model, Korean its Korean model; on Japanese
+ * the stroke matcher adds the kana, which the model mistakes for look-alike kanji.
  */
 class HandwritingPanelView @JvmOverloads constructor(
     context: Context,
@@ -70,7 +70,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         gravity = Gravity.CENTER
         setPadding(dp(24), 0, dp(24), 0)
     }
-    private var zinnia: ZinniaSet? = null
+    private var ocr: OcrRecognizer? = null
     /** What the last automatic commit typed, so a tapped candidate can replace it. */
     private var lastTyped: String? = null
     private var guesses: List<String> = emptyList()
@@ -125,22 +125,27 @@ class HandwritingPanelView @JvmOverloads constructor(
         release()
         app.lychee.chinese.Readings.open(context)
         val engine = lycheeHost()?.lycheeEngine()
-        val models = Zinnia.modelsFor(context, engine)
-        zinnia = Zinnia.openAll(models)
-        // the guesses for what is already written are worked out again once the shapes are in
-        loadMatcher(context) { if (visibility == VISIBLE && pad.hasInk) recognise() }
-        if (models.isEmpty() && !unpacking) {
-            // the handwriting that comes with Lychee, unpacked now that it is wanted
-            unpacking = true
-            loader.execute {
-                app.lychee.packs.BundledPacks.installAll(context, engine)
-                main.post { if (visibility == VISIBLE && zinnia == null) show() }
+        val lang = if (engine == "ko") "ko" else "zh"
+        // the model opens off the main thread (it is read from the APK); what is written
+        // meanwhile is read as soon as it is open
+        worker.execute {
+            val opened = OcrRecognizer.open(context, lang)
+            main.post {
+                if (visibility == VISIBLE && ocr == null) {
+                    ocr = opened
+                    message.visibility = if (opened == null) VISIBLE else GONE
+                    updateHint()
+                    if (pad.hasInk) recognise()
+                } else if (opened != null) {
+                    worker.execute { opened.close() }
+                }
             }
         }
-        message.visibility = if (!ready) VISIBLE else GONE
+        // the kana's shapes, for Japanese
+        if (engine == "ja") loadMatcher(context) { if (visibility == VISIBLE && pad.hasInk) recognise() }
+        message.visibility = GONE
+        message.text = context.getString(R.string.lychee_hw_unavailable)
         updateHint()
-        message.text = context.getString(if (models.isEmpty()) R.string.lychee_hw_no_pack else R.string.lychee_hw_bad_pack)
-        message.setOnClickListener { lycheeHost()?.lycheeOpenSettings("Packs") }
     }
 
     override fun setVisibility(visibility: Int) {
@@ -159,18 +164,16 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     /** Closes the model on the recognition thread, after any recognition still running. */
     private fun release() {
-        val z = zinnia ?: return
-        zinnia = null
-        worker.execute { z.close() }
+        val o = ocr ?: return
+        ocr = null
+        worker.execute { o.close() }
     }
 
     // ------------------------------------------------------------------ recognition
 
-    /** Whether something can recognise the ink: Zinnia's model, or the stroke shapes. */
+    /** Whether the recogniser is open. */
     private val ready: Boolean
-        get() = zinnia != null || matcher != null || app.lychee.dict.PackData.hasStrokes(context)
-
-    private var unpacking = false
+        get() = ocr != null
 
     /** Bumped whenever the ink changes; guesses belong to the ink they were made for. */
     private var inkVersion = 0
@@ -179,19 +182,19 @@ class HandwritingPanelView @JvmOverloads constructor(
     private var commitWhenGuessed = false
 
     private fun recognise() {
-        val z = zinnia
-        val strokes = normalise(pad.strokes())
-        if (strokes.isEmpty()) return
-        val version = ++inkVersion
         val ink = pad.strokeList()
+        if (ink.isEmpty()) return
+        val version = ++inkVersion
+        val o = ocr
         val m = matcher
-        val japanese = lycheeHost()?.lycheeEngine() == "ja"
+        val engine = lycheeHost()?.lycheeEngine()
         worker.execute {
-            val result = runCatching {
-                val fromZinnia = z?.classify(BOX, BOX, strokes, 20).orEmpty()
-                val fromShapes = m?.match(ink, 30).orEmpty()
-                rank(fromZinnia, fromShapes, japanese).take(10)
-            }.getOrDefault(emptyList())
+            val started = System.currentTimeMillis()
+            val result = runCatching { rank(o, m, ink, engine).take(10) }
+                .onFailure { app.lychee.DiagLog.log("handwriting failed", it) }
+                .getOrDefault(emptyList())
+            val took = System.currentTimeMillis() - started
+            if (took > 400) app.lychee.DiagLog.log("handwriting took $took ms")
             main.post {
                 // a newer stroke has its own recognition coming: these guesses are stale
                 if (version != inkVersion || !pad.hasInk) return@post
@@ -203,81 +206,45 @@ class HandwritingPanelView @JvmOverloads constructor(
     }
 
     /**
-     * The stroke matcher's guesses (closest shapes first), with common characters a little
-     * ahead (the readings dictionary's frequency: a rare look-alike such as 已 巳 for 己 gives
-     * way), and Zinnia's guesses as a tie-breaker. Zinnia leads on Japanese, whose kana the
-     * stroke data doesn't have. Tuned on synthetic messy handwriting (joined strokes, strokes
-     * out of order, uneven proportions): about 86% right first time, 95% in the first five.
+     * PP-OCR's guesses (its confidence, 0..1), only characters of the keyboard's language
+     * (Chinese characters; Japanese adds the kana; Korean, Hangul), with common characters a
+     * little ahead (the readings dictionary's frequency). On Japanese the stroke matcher's
+     * kana come in too.
      */
-    private fun rank(zinnia: List<String>, shapes: List<Pair<String, Float>>, japanese: Boolean): List<String> {
-        val db = app.lychee.chinese.Readings.db
-        val logTop = db?.let { kotlin.math.ln(it.maxFrequency + 1.0) }?.takeIf { it > 0 }
-        fun rarity(ch: String): Float {
-            if (db == null || logTop == null) return 0f
-            val f = runCatching { db.frequency(ch) }.getOrDefault(0L)
-            return (1 - kotlin.math.ln(f + 1.0) / logTop).toFloat()
+    private fun rank(o: OcrRecognizer?, m: StrokeMatcher?, ink: List<FloatArray>, engine: String?): List<String> {
+        val allowed: (String) -> Boolean = when (engine) {
+            "ko" -> { ch -> ch.length == 1 && ch[0] in '\uAC00'..'\uD7A3' }
+            "ja" -> { ch -> isKana(ch) || isHan(ch) }
+            else -> { ch -> isHan(ch) }
         }
         val score = LinkedHashMap<String, Float>()
-        shapes.forEach { (ch, distance) -> score[ch] = distance + FREQUENCY * rarity(ch) }
-        val bonus = if (japanese) ZINNIA_BONUS_JA else ZINNIA_BONUS
-        zinnia.take(10).forEachIndexed { i, g ->
-            val floor = (score.values.minOrNull() ?: 0f) + 0.15f
-            score[g] = (score[g] ?: (floor + FREQUENCY * rarity(g))) - bonus / (i + if (japanese) 1 else 3)
-        }
-        return score.entries.sortedBy { it.value }.map { it.key }
-    }
-
-    /**
-     * The ink as Zinnia's models expect it: the character alone, centred in a square [BOX]
-     * (the pad is much wider than a character, and Zinnia scales x and y by the box it is
-     * given), with the points thinned out like the models' training strokes.
-     */
-    private fun normalise(strokes: FloatArray): FloatArray {
-        var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE
-        var maxX = -Float.MAX_VALUE; var maxY = -Float.MAX_VALUE
-        var i = 0
-        while (i + 1 < strokes.size) {
-            val x = strokes[i]; val y = strokes[i + 1]
-            if (x >= 0) {
-                minX = minOf(minX, x); maxX = maxOf(maxX, x)
-                minY = minOf(minY, y); maxY = maxOf(maxY, y)
+        o?.recognise(ink, 20, allowed)?.forEach { (ch, p) -> score[ch] = p }
+        if (engine == "ja" && m != null) {
+            // PP-OCR takes kana for look-alike kanji (く for 人, け for 十): the stroke matcher
+            // knows their shapes
+            m.match(ink, 40).filter { (ch, _) -> isKana(ch) }.take(5).forEach { (ch, distance) ->
+                val s = (1f - distance / KANA_DISTANCE).coerceAtLeast(0f) * KANA_WEIGHT
+                if (s > (score[ch] ?: 0f)) score[ch] = s
             }
-            i += 2
         }
-        if (minX > maxX) return FloatArray(0)
-        // a wide margin and coarse points, as Zinnia's models read best (measured on stroke
-        // data); a flat stroke (一) keeps its shape instead of being stretched
-        val side = maxOf(maxX - minX, maxY - minY, dp(24).toFloat()) * 1.4f
-        val scale = BOX / side
-        val offX = (side - (maxX - minX)) / 2 - minX
-        val offY = (side - (maxY - minY)) / 2 - minY
-        val minStep = BOX * 0.1f
-        val out = ArrayList<Float>(strokes.size)
-        var lastX = -1f; var lastY = -1f
-        var pendingX = -1f; var pendingY = -1f
-        i = 0
-        while (i + 1 < strokes.size) {
-            val x = strokes[i]; val y = strokes[i + 1]
-            if (x < 0) {
-                // always keep a stroke's end
-                if (pendingX >= 0) { out += pendingX; out += pendingY }
-                out += -1f; out += -1f
-                lastX = -1f; pendingX = -1f
-            } else {
-                val nx = (x + offX) * scale
-                val ny = (y + offY) * scale
-                if (lastX < 0 || kotlin.math.hypot(nx - lastX, ny - lastY) >= minStep) {
-                    out += nx; out += ny
-                    lastX = nx; lastY = ny
-                    pendingX = -1f
-                } else {
-                    pendingX = nx; pendingY = ny
+        if (engine != "ko") {
+            val db = app.lychee.chinese.Readings.db
+            val logTop = db?.let { kotlin.math.ln(it.maxFrequency + 1.0) }?.takeIf { it > 0 }
+            if (db != null && logTop != null) {
+                for (ch in score.keys.toList()) {
+                    if (!isHan(ch)) continue
+                    val f = runCatching { db.frequency(ch) }.getOrDefault(0L)
+                    score[ch] = score.getValue(ch) + COMMON * (kotlin.math.ln(f + 1.0) / logTop).toFloat()
                 }
             }
-            i += 2
         }
-        return out.toFloatArray()
+        return score.entries.sortedByDescending { it.value }.map { it.key }
     }
+
+    private fun isKana(ch: String) = ch.length == 1 && ch[0] in '\u3040'..'\u30FF'
+
+    private fun isHan(ch: String) = ch.codePointCount(0, ch.length) == 1 &&
+        Character.UnicodeScript.of(ch.codePointAt(0)) == Character.UnicodeScript.HAN
 
     /**
      * Types the best guess for the ink on the pad and clears it for the next character; when
@@ -293,6 +260,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         }
         commitWhenGuessed = false
         val best = guesses.firstOrNull()
+        HandwritingSamples.save(context, pad.strokeList(), best, guesses, lycheeHost()?.lycheeEngine())
         pad.clear()
         if (best != null) {
             lycheeHost()?.lycheeType(best)
@@ -307,6 +275,7 @@ class HandwritingPanelView @JvmOverloads constructor(
     private fun pick(text: String) {
         if (pad.hasInk) {
             main.removeCallbacks(autoCommit)
+            HandwritingSamples.save(context, pad.strokeList(), text, guesses, lycheeHost()?.lycheeEngine())
             pad.clear()
         } else {
             val previous = lastTyped
@@ -447,7 +416,6 @@ class HandwritingPanelView @JvmOverloads constructor(
 
         @SuppressLint("ClickableViewAccessibility")
         override fun onTouchEvent(event: MotionEvent): Boolean {
-            if (!ready) return false
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     hint.visibility = GONE
@@ -489,13 +457,12 @@ class HandwritingPanelView @JvmOverloads constructor(
     private companion object {
         /** A pause this long after a stroke types the character. */
         const val AUTO_COMMIT_MS = 1300L
-        /** The square Zinnia sees each character in. */
-        const val BOX = 300
-        /** How much a rare character's score suffers (see rank). */
-        const val FREQUENCY = 0.1f
-        /** Zinnia's first guess comes this much closer (less for its later ones). */
-        const val ZINNIA_BONUS = 0.1f
-        const val ZINNIA_BONUS_JA = 0.5f
+        /** How much a common character gains (see rank): a tie-breaker between look-alikes. */
+        const val COMMON = 0.06f
+        /** A stroke matcher distance past this gives a kana no score at all. */
+        const val KANA_DISTANCE = 0.4f
+        /** A perfect kana match's score (PP-OCR's confident guesses score near 1). */
+        const val KANA_WEIGHT = 0.9f
         val worker = Executors.newSingleThreadExecutor()
 
         /** The stroke matcher, built once from the stroke-order data (a second or so). */

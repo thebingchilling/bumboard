@@ -39,6 +39,9 @@ class Engines(ime: InputMethodService, prefs: SharedPreferences) {
     /** The English word card for a held suggestion; false when the dictionary hasn't the word. */
     fun showEnglishWord(word: String, onType: () -> Unit): Boolean = chinese.showEnglishWord(word, onType)
 
+    /** The English suggestions that don't fit on the bar, for its ⌄ dropdown. */
+    fun setEnglishMore(words: List<String>, onPick: (Int) -> Unit) = chinese.setEnglishMore(words, onPick)
+
     /** Handwriting guesses or next characters in the candidate bar. */
     fun showGuesses(guesses: List<String>, onPick: (Int) -> Unit) = chinese.showGuesses(guesses, onPick)
 

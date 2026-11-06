@@ -347,18 +347,21 @@ class DictionaryPopup(private val ctx: Context) {
             // Chinese characters, kana and Hangul (Japanese and Korean have their own order)
             val chars = text.codePoints().toArray().filter {
                 Annotator.isHan(it) || it in 0x3040..0x30FF || it in 0xAC00..0xD7A3
-            }.map { String(Character.toChars(it)) }.distinct().take(4)
+            }.map { String(Character.toChars(it)) }.distinct().take(MAX_STROKE_CHARS)
             val found = chars.mapNotNull { app.lychee.dict.PackData.strokes(ctx, it, fontLang) }
             if (found.isEmpty()) return
             section(ctx.getString(R.string.lychee_card_strokes))
-            val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-            found.forEach { ch ->
-                row.addView(app.lychee.dict.StrokeOrderView(ctx, ch, c.onSurface,
-                    androidx.core.graphics.ColorUtils.setAlphaComponent(c.onSurface, 0x30),
-                    androidx.core.graphics.ColorUtils.setAlphaComponent(c.outline, 0x80)),
-                    LinearLayout.LayoutParams(dp(76), dp(76)).apply { marginEnd = dp(8) })
+            // every character of a long word, four to a row
+            found.chunked(4).forEach { chunk ->
+                val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+                chunk.forEach { ch ->
+                    row.addView(app.lychee.dict.StrokeOrderView(ctx, ch, c.onSurface,
+                        androidx.core.graphics.ColorUtils.setAlphaComponent(c.onSurface, 0x30),
+                        androidx.core.graphics.ColorUtils.setAlphaComponent(c.outline, 0x80)),
+                        LinearLayout.LayoutParams(dp(76), dp(76)).apply { marginEnd = dp(8); bottomMargin = dp(8) })
+                }
+                body.addView(row)
             }
-            body.addView(row)
         }
 
         fun examples(list: List<Pair<String, String>>) {
@@ -525,6 +528,8 @@ class DictionaryPopup(private val ctx: Context) {
 
         companion object {
             const val MAX_SENSES = 12
+            /** Characters whose stroke order a card shows (a long word wraps onto more rows). */
+            const val MAX_STROKE_CHARS = 16
             // TypeDuck codes
             val POS = mapOf(
                 "n" to "noun", "v" to "verb", "adj" to "adjective", "adv" to "adverb",

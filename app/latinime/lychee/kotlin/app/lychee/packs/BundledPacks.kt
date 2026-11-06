@@ -30,11 +30,9 @@ object BundledPacks {
 
     /** Which keyboards ("yue", "cmn", "ja", "ko") use each bundled pack. */
     private val USED_BY = mapOf(
-        "hw_zh" to setOf("yue", "cmn"),
-        "hw_ja" to setOf("ja"),
         "rime_ja" to setOf("ja"),
         "dict_ko" to setOf("ko"),
-        "strokes_zh" to setOf("yue", "cmn", "ja"),
+        "strokes_zh" to setOf("yue", "cmn", "ja", "ko"),
         "examples" to setOf("yue", "cmn", "ja", "ko"),
     )
 

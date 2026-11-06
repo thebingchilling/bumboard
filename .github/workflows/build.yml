@@ -44,8 +44,8 @@ jobs:
       - name: Fetch prebuilt librime
         run: scripts/fetch-prebuilt.sh
 
-      - name: Fetch Zinnia (handwriting)
-        run: scripts/fetch-zinnia.sh
+      - name: Fetch the handwriting models (PP-OCRv5)
+        run: scripts/fetch-ocr.sh
 
       - uses: actions/cache@v4
         with:
@@ -61,8 +61,8 @@ jobs:
       - name: Fetch Google Sans Flex (interface font)
         run: scripts/fetch-fonts.sh
 
-      # handwriting, the Japanese and Korean dictionaries, stroke order and examples come with
-      # the app (the newest published packs); only fonts and emoji are downloads
+      # the Japanese, Korean and English dictionaries, stroke order and examples come with the
+      # app (the newest published packs); only fonts are downloads
       - name: Bundle the packs that come with Lychee
         run: python3 scripts/bundle-packs.py data/out/assets/lychee/bundled
 

@@ -217,6 +217,11 @@
     <string name="lychee_voice_cancel">Cancel voice typing</string>
     <string name="lychee_voice_permission_granted">Microphone allowed. Tap the mic again to speak.</string>
     <string name="lychee_card_pronunciation">Pronunciation</string>
+    <string name="lychee_hw_unavailable">Handwriting couldn\'t start on this phone. Settings &gt; About &gt; Diagnostics says why.</string>
+    <string name="lychee_hw_samples">Save handwriting samples</string>
+    <string name="lychee_hw_samples_summary">Keeps what you write on the handwriting pad on this phone, to share from Diagnostics when it reads you wrong</string>
+    <string name="lychee_hw_samples_count">%1$d handwriting samples saved</string>
+    <string name="lychee_hw_samples_share">Share handwriting samples</string>
     <string name="lychee_diagnostics">Diagnostics</string>
     <string name="lychee_diagnostics_summary">What the keyboard did lately, to share when something doesn\'t work</string>
     <string name="lychee_diagnostics_body">The keyboard\'s recent steps: packs unpacked, dictionaries loaded and anything that failed. It stays on this phone unless you share it.</string>

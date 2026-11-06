@@ -64,6 +64,17 @@ object RimeService {
     /** Told on the main thread just before Rime restarts: every session is about to go. */
     var onRestart: (() -> Unit)? = null
 
+    /** Bumped at each restart: a session made before it is gone. */
+    @Volatile
+    var generation = 0
+        private set
+
+    /**
+     * Runs [block] on Rime's own thread (after anything queued there), for work that would
+     * hold up the keys: choosing a schema loads its dictionaries.
+     */
+    fun onRimeThread(block: () -> Unit) = executor.execute(block)
+
     /**
      * Restarts Rime (on its thread) after packs brought new schemas, so nothing it found missing
      * before stays missing: the keyboard stops using it first (letters typed meanwhile wait).
@@ -77,6 +88,7 @@ object RimeService {
         }
         stopped.await()
         try {
+            generation++
             Rime.restart(fullCheck = true)
             DiagLog.log("Rime restarted for new pack schemas")
         } catch (t: Throwable) {

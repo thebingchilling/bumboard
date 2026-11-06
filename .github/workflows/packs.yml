@@ -55,9 +55,6 @@ jobs:
       - name: Korean dictionary, stroke order and example sentence packs
         run: python3 packs/dict/build_dicts.py --out out/packs
 
-      - name: Handwriting packs
-        run: packs/handwriting/build_hw.sh out/packs
-
       - name: Font and emoji packs (one-tap mirrors of the fonts' latest releases)
         env:
           GH_TOKEN: ${{ github.token }}

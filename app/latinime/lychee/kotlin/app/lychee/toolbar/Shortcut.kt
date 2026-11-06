@@ -75,9 +75,8 @@ class ShortcutStore(private val prefs: SharedPreferences) {
 object Shortcuts {
     /** Whether [shortcut] belongs on the current keyboard ([engine]: null for English). */
     fun available(shortcut: Shortcut, engine: String?): Boolean = when (shortcut) {
-        // handwriting is for Chinese and Japanese (the languages with a handwriting pack), never
-        // the English keyboards
-        Shortcut.HANDWRITING -> engine != null && engine != "ko"
+        // handwriting is for Chinese, Japanese and Korean, never the English keyboards
+        Shortcut.HANDWRITING -> engine != null
         else -> true
     }
 }

@@ -1151,6 +1151,9 @@ private fun AdvancedPage() {
     val emojiAlt = prefs.boolPref(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY) {
         prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY, true)
     }
+    val hwSamples = prefs.boolPref(app.lychee.handwriting.HandwritingSamples.PREF) {
+        prefs.getBoolean(app.lychee.handwriting.HandwritingSamples.PREF, false)
+    }
 
     Group(stringResource(R.string.lychee_group_popups)) {
         if (Settings.readFromBuildConfigIfToShowKeyPreviewPopupOption(res)) {
@@ -1210,6 +1213,11 @@ private fun AdvancedPage() {
         row {
             SwitchRow(it, stringResource(R.string.enable_split_keyboard), null, split.value, split::set)
         }
+        // characters written on the handwriting pad, kept on the phone to check misreadings
+        row {
+            SwitchRow(it, stringResource(R.string.lychee_hw_samples), stringResource(R.string.lychee_hw_samples_summary),
+                hwSamples.value, hwSamples::set)
+        }
         row {
             SwitchRow(
                 it, stringResource(R.string.prefs_enable_emoji_alt_physical_key),
@@ -1257,6 +1265,7 @@ private fun DiagnosticsPage() {
     val version = remember { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "" }
     val report = "Lychee $version\nAndroid ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}), ${Build.MANUFACTURER} ${Build.MODEL}\n\n" +
         "Installed packs:\n$packs\n\n$text"
+    var samples by remember { mutableStateOf(app.lychee.handwriting.HandwritingSamples.count(context)) }
     Text(
         stringResource(R.string.lychee_diagnostics_body),
         style = MaterialTheme.typography.bodyMedium,
@@ -1274,6 +1283,26 @@ private fun DiagnosticsPage() {
             context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Lychee diagnostics", report))
         }) { Text(stringResource(R.string.lychee_crash_copy)) }
         TextButton(onClick = { app.lychee.DiagLog.clear(context); text = "" }) { Text(stringResource(R.string.lychee_diagnostics_clear)) }
+    }
+    // the handwriting samples (Settings > Advanced), shared as text: one character per line
+    if (samples > 0) {
+        Text(
+            stringResource(R.string.lychee_hw_samples_count, samples),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
+        )
+        Row(Modifier.padding(horizontal = 24.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilledTonalButton(onClick = {
+                val data = app.lychee.handwriting.HandwritingSamples.read(context)
+                context.startActivity(
+                    Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, data), null)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }) { Text(stringResource(R.string.lychee_hw_samples_share)) }
+            TextButton(onClick = { app.lychee.handwriting.HandwritingSamples.clear(context); samples = 0 }) {
+                Text(stringResource(R.string.lychee_diagnostics_clear))
+            }
+        }
     }
     RaisedCard {
         Text(

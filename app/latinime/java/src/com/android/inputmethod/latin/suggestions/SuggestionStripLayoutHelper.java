@@ -426,7 +426,8 @@ final class SuggestionStripLayoutHelper {
     private TextView layoutWord(final Context context, final int positionInStrip, final int width) {
         final TextView wordView = mWordViews.get(positionInStrip);
         final CharSequence word = wordView.getText();
-        if (positionInStrip == mCenterPositionInStrip && mMoreSuggestionsAvailable) {
+        // LYCHEE: no "…" hint: the ⌄ at the end of the bar opens the other suggestions
+        if (false && positionInStrip == mCenterPositionInStrip && mMoreSuggestionsAvailable) {
             // TODO: This "more suggestions hint" should have a nicely designed icon.
             wordView.setCompoundDrawablesWithIntrinsicBounds(
                     null, null, null, mMoreSuggestionsHint);
