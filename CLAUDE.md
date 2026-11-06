@@ -12,6 +12,8 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
   - Push and run workflows as often as is useful. A push to `main` starts `build.yml` (about
     15 minutes) only when it changes `app/` (or `build.yml`); docs, `packs/` and the packs
     workflow never start a build. A push while a build is running cancels it.
+  - Nothing ever runs on a schedule: builds start only when a push changes the app (`app/`),
+    and `cleanup.yml` runs after those runs. Never add a `schedule:` trigger.
   - Never hold a build back: every push that changes `app/` builds, and no commit carries
     `[skip ci]`. Starting or re-running `build.yml` by hand is fine too.
   - The only manual workflow is `packs.yml`: it never runs on a schedule or on pushes, only
