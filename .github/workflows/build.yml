@@ -44,9 +44,6 @@ jobs:
       - name: Fetch prebuilt librime
         run: scripts/fetch-prebuilt.sh
 
-      - name: Fetch the handwriting models (PP-OCRv5)
-        run: scripts/fetch-ocr.sh
-
       - uses: actions/cache@v4
         with:
           path: app/data/.cache
@@ -57,6 +54,10 @@ jobs:
 
       - name: Build emoji data
         run: python3 data/build_emoji.py
+
+      # after the data builds: build_data.py starts by clearing data/out
+      - name: Fetch the handwriting models (PP-OCRv5)
+        run: scripts/fetch-ocr.sh
 
       - name: Fetch Google Sans Flex (interface font)
         run: scripts/fetch-fonts.sh
