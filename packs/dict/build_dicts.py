@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import bz2
 import json
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -247,6 +248,7 @@ def build_en(out: Path, cache: Path, work: Path):
     db = new_db(db_path, WORD_SCHEMA)
     rows = []
     covered: dict[str, set] = {}  # form -> parts of speech WordNet has for it
+    sounds: dict[str, set] = {}  # form -> the pronunciations WordNet gives it ("/lɛd/")
     for lemma, pos, ipa, forms, senses in entries:
         glosses = []
         for sid in senses[:8]:
@@ -260,11 +262,12 @@ def build_en(out: Path, cache: Path, work: Path):
         gloss = "\n".join(glosses)
         rows.append((key, lemma, ipa, None, pos, gloss, rank))
         covered.setdefault(key, set()).add(pos)
+        sounds.setdefault(key, set()).update(re.findall(r"/[^/]+/", ipa or ""))
         for form in forms:
             if form.lower() != key:
                 rows.append((form.lower(), lemma, ipa, None, pos, gloss, rank))
                 covered.setdefault(form.lower(), set())
-    rows += wiktionary_en(order, covered)
+    rows += wiktionary_en(order, covered, sounds)
     db.executemany("INSERT INTO word VALUES(?,?,?,?,?,?,?)", rows)
     db.execute("CREATE INDEX word_form ON word(form)")
     finish(db)
@@ -289,16 +292,26 @@ WIKT_POS = {
 WIKT_SKIP_TAGS = {"obsolete", "archaic", "rare", "dated", "nonstandard", "misspelling", "dialectal"}
 
 
-def wiktionary_en(order: dict[str, int], covered: dict[str, set]) -> list[tuple]:
+def ipa_key(ipa: str) -> str:
+    """A pronunciation for comparing: without slashes, stress, length or syllable marks, and
+    with the usual spelling differences between transcriptions evened out."""
+    k = ipa.strip("/[] ")
+    for a, b in (("ɹ", "r"), ("ɡ", "g"), ("ɐ", "ʌ"), ("ɝ", "ɜr"), ("ɚ", "ər"), ("e", "ɛ")):
+        k = k.replace(a, b)
+    return re.sub(r"[ˈˌː.‿ \u0329\u032f]", "", k)
+
+
+def wiktionary_en(order: dict[str, int], covered: dict[str, set], sounds: dict[str, set]) -> list[tuple]:
     """English Wiktionary entries for the words people type (FrequencyWords' 50,000) that
     WordNet lacks, or lacks in that part of speech (function words: the, of, because; like as
-    a preposition; contractions: don't, I'm)."""
+    a preposition; contractions: don't, I'm), or lacks in that pronunciation (read said
+    /ɹɛd/, its past tense: the word card says each pronunciation its own way)."""
     import gzip
     import json
     wanted = {w for w in order if w}
     wanted |= {w.replace("'", "’") for w in wanted if "'" in w}
     rows = []
-    seen: set[tuple[str, str]] = set()
+    seen: set[tuple[str, str, bool]] = set()
     print(f"streaming {KAIKKI_EN}", file=sys.stderr)
     with urllib.request.urlopen(KAIKKI_EN) as r, gzip.GzipFile(fileobj=r) as f:
         for raw in f:
@@ -319,11 +332,20 @@ def wiktionary_en(order: dict[str, int], covered: dict[str, set]) -> list[tuple]
             pos = WIKT_POS.get(e.get("pos", ""))
             if pos is None:
                 continue
-            # WordNet's own entry is better where it has one in this part of speech
+            # WordNet's own entry is better where it has one in this part of speech, unless
+            # this one is said another way (read, past tense /ɹɛd/)
             have = covered.get(key)
-            if have is not None and (pos in have or (pos == "proper noun" and have)):
+            said = {snd.get("ipa") for snd in e.get("sounds", []) if snd.get("ipa")
+                    and not ({"Early", "Middle", "Old", "obsolete", "archaic"} & set(snd.get("tags", [])))}
+            # only an inflection said its own way ("simple past of read"), not every word
+            # that Wiktionary transcribes a little differently from WordNet
+            inflection = bool(e.get("senses")) and all(
+                "form_of" in x or "form-of" in x.get("tags", []) for x in e["senses"])
+            known = {ipa_key(x) for x in sounds.get(key, set())}
+            new_sound = inflection and bool(said) and have is not None and not ({ipa_key(x) for x in said} & known)
+            if have is not None and (pos in have or (pos == "proper noun" and have)) and not new_sound:
                 continue
-            if (key, pos) in seen:
+            if (key, pos, new_sound) in seen:
                 continue
             glosses = []
             for sense in e.get("senses", []):
@@ -355,7 +377,7 @@ def wiktionary_en(order: dict[str, int], covered: dict[str, set]) -> list[tuple]
                 ipa = f"{uk} (UK) · {us} (US)"
             else:
                 ipa = uk or us or other
-            seen.add((key, pos))
+            seen.add((key, pos, new_sound))
             rows.append((key, word, ipa, None, pos, "\n".join(glosses), order[key]))
     print(f"wiktionary: {len(rows)} entries WordNet lacks", file=sys.stderr)
     return rows
