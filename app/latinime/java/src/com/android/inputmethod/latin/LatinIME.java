@@ -607,6 +607,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     public void onCreate() {
         app.lychee.CrashLog.install(this);
         app.lychee.DiagLog.init(this);
+        // LYCHEE: the words put back after autocorrect, never corrected again
+        app.lychee.typing.CorrectionMemory.init(this);
         // LYCHEE: English (US or UK) and Mandarin only, out of the box.
         app.lychee.settings.DefaultLanguages.removeOldInputStyles(this);
         Settings.init(this);
@@ -1732,6 +1734,14 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // LYCHEE: the word being typed and where its keys were pressed, for the keys' touch model
         app.lychee.typing.KeyBias.onKey(event.mCodePoint, event.mKeyCode == Constants.CODE_DELETE,
                 event.mX, event.mY);
+        // LYCHEE: backspacing into a word autocorrect changed: that correction wasn't wanted
+        if (event.mKeyCode == Constants.CODE_DELETE) {
+            final CharSequence lycheeBefore = mInputLogic.mConnection.getTextBeforeCursor(48, 0);
+            if (lycheeBefore != null && lycheeBefore.length() > 0) {
+                app.lychee.typing.CorrectionMemory.onDelete(
+                        lycheeBefore.subSequence(0, lycheeBefore.length() - 1));
+            }
+        }
         // LYCHEE: emoji search takes typed keys while it is open.
         if (mLycheeEmojiSearch != null && mLycheeEmojiSearch.isActive()) {
             if (mLycheeEmojiSearch.onEvent(event)) {
@@ -1968,6 +1978,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     @Override
     public void pickSuggestionManually(final SuggestedWordInfo suggestionInfo) {
         app.lychee.typing.KeyBias.reset();
+        // LYCHEE: picking what was typed before a correction keeps that word from now on
+        app.lychee.typing.CorrectionMemory.picked(suggestionInfo.mWord);
         final InputTransaction completeInputTransaction = mInputLogic.onPickSuggestionManually(
                 mSettings.getCurrent(), suggestionInfo,
                 mKeyboardSwitcher.getKeyboardShiftMode(),

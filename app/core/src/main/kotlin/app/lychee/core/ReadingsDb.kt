@@ -103,6 +103,32 @@ class ReadingsDb(private val sql: Sql) : Dictionary {
         return out.toList()
     }
 
+    /**
+     * The commonest single character read only as [syllable] in [lang] (in every word it is
+     * written in): said aloud, it can only come out as that sound. Null when there is none.
+     */
+    fun soundAlike(syllable: String, lang: Lang, simplified: Boolean): String? = sql.query(
+        "SELECT hw.trad, hw.simp FROM reading r JOIN hw ON hw.id = r.hw " +
+            "WHERE r.lang = ? AND r.r = ? AND r.rank = 0 AND length(hw.trad) = 1 " +
+            "AND NOT EXISTS (SELECT 1 FROM form f JOIN reading o ON o.hw = f.hw " +
+            "WHERE f.form = hw.trad AND o.lang = r.lang AND o.r <> r.r) " +
+            "ORDER BY hw.freq DESC LIMIT 1",
+        arrayOf(lang.code, syllable),
+    ) { if (simplified) it.string(1) else it.string(0) }.firstOrNull()
+
+    /**
+     * [reading] (numbered syllables) spelt in characters that can only be read that way, so a
+     * voice says exactly that reading (行 read hang4, not haang4); null when a syllable has
+     * no such character.
+     */
+    fun sayAs(reading: String, lang: Lang, simplified: Boolean): String? {
+        val syllables = reading.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }
+        if (syllables.isEmpty()) return null
+        val out = StringBuilder()
+        for (s in syllables) out.append(soundAlike(s.lowercase(), lang, simplified) ?: return null)
+        return out.toString()
+    }
+
     fun meta(key: String): String? =
         sql.query("SELECT v FROM meta WHERE k = ?", arrayOf(key)) { it.string(0) }.firstOrNull()
 }

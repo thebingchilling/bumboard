@@ -1611,6 +1611,22 @@ public final class InputLogic {
                 }
             }
         }
+        // LYCHEE: a word autocorrect changed offers what was typed first, then the other
+        // suggestions it had (whether or not the app kept the suggestion spans)
+        int lycheeRank = 0;
+        for (final String s : app.lychee.typing.CorrectionMemory.offersFor(typedWordString)) {
+            boolean present = TextUtils.equals(s, typedWordString);
+            for (final SuggestedWordInfo info : suggestions) {
+                if (TextUtils.equals(info.mWord, s)) present = true;
+            }
+            if (present) continue;
+            suggestions.add(1 + lycheeRank, new SuggestedWordInfo(s,
+                    "" /* prevWordsContext */, SuggestedWords.MAX_SUGGESTIONS - lycheeRank,
+                    SuggestedWordInfo.KIND_RESUMED, Dictionary.DICTIONARY_RESUMED,
+                    SuggestedWordInfo.NOT_AN_INDEX /* indexOfTouchPointOfSecondWord */,
+                    SuggestedWordInfo.NOT_A_CONFIDENCE /* autoCommitFirstWordConfidence */));
+            lycheeRank++;
+        }
         final int[] codePoints = StringUtils.toCodePointArray(typedWordString);
         mWordComposer.setComposingWord(codePoints,
                 mLatinIME.getCoordinatesForCurrentKeyboard(codePoints));
@@ -2160,6 +2176,14 @@ public final class InputLogic {
                 mConnection.commitCorrection(new CorrectionInfo(
                         mConnection.getExpectedSelectionEnd() - stringToCommit.length(),
                         typedWord, stringToCommit));
+                // LYCHEE: remembered, to offer what was typed when the cursor comes back
+                final java.util.ArrayList<String> lycheeAlternatives = new java.util.ArrayList<>();
+                for (int k = 0; k < mSuggestedWords.size() && k < 6; k++) {
+                    final String w = mSuggestedWords.getWord(k);
+                    if (w != null) lycheeAlternatives.add(w);
+                }
+                app.lychee.typing.CorrectionMemory.corrected(typedWord, stringToCommit,
+                        lycheeAlternatives);
                 String prevWordsContext = (autoCorrectionOrNull != null)
                         ? autoCorrectionOrNull.mPrevWordsContext
                         : "";

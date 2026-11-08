@@ -102,6 +102,25 @@ object PackData {
         return emptyList()
     }
 
+    /**
+     * The commonest English word pronounced only as [ipa] ("/lɛd/"), other than [word]: said
+     * aloud, it says that pronunciation (lead the metal as "led", not as in "lead the way").
+     * Null when no word sounds just like it.
+     */
+    fun homophone(context: Context, ipa: String, word: String): String? {
+        val db = wordDb(context, "en") ?: return null
+        val core = Regex("/[^/]+/").find(ipa)?.value ?: return null
+        val like = "%$core%"
+        return runCatching {
+            db.rawQuery(
+                "SELECT form FROM word w WHERE reading LIKE ? AND form <> ? AND form = lower(lemma) " +
+                    "AND NOT EXISTS (SELECT 1 FROM word o WHERE o.form = w.form AND IFNULL(o.reading, '') NOT LIKE ?) " +
+                    "ORDER BY rank LIMIT 1",
+                arrayOf(like, word.lowercase(), like),
+            ).use { c -> if (c.moveToFirst()) c.getString(0) else null }
+        }.getOrNull()
+    }
+
     /** Entries for [text] typed on the [engine] keyboard, the word itself before forms of others. */
     fun words(context: Context, engine: String?, text: String, limit: Int = 4): List<WordEntry> {
         val db = wordDb(context, engine) ?: return emptyList()

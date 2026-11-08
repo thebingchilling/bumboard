@@ -83,6 +83,10 @@ class DictionaryPopup(private val ctx: Context) {
             val anyReading = entries.any { !it.reading.isNullOrBlank() }
             content.heading(text, if (anyReading && onSpeakAs != null) null else text)
             romanisation?.let { body.addView(content.labelled(ctx.getString(R.string.lychee_card_romanisation), it)) }
+            // a word written alike but said differently by meaning (lead, wind, tear): each
+            // pronunciation says itself
+            val pronunciations = entries.mapNotNull { e -> e.reading?.takeIf { it.isNotBlank() } }.distinct()
+            val heteronym = lang == "en" && pronunciations.size > 1
             entries.forEachIndexed { i, e ->
                 if (i > 0 || e.lemma != text) {
                     if (i > 0) body.addView(content.divider())
@@ -101,12 +105,17 @@ class DictionaryPopup(private val ctx: Context) {
                             part.endsWith("(US)") -> java.util.Locale.US
                             else -> null
                         }
-                        val say = when (lang) {
-                            "ja" -> reading
-                            "en" -> e.lemma
-                            else -> e.lemma
+                        val button = onSpeakAs?.let { speak ->
+                            content.speakButton {
+                                val say = when {
+                                    lang == "ja" -> reading
+                                    // said as a word that sounds just like this pronunciation
+                                    heteronym -> app.lychee.dict.PackData.homophone(ctx, part, e.lemma) ?: e.lemma
+                                    else -> e.lemma
+                                }
+                                speak(say, locale)
+                            }
                         }
-                        val button = onSpeakAs?.let { speak -> content.speakButton { speak(say, locale) } }
                         body.addView(content.readingRow(content.labelled(label, part), button))
                     }
                 }
@@ -323,23 +332,36 @@ class DictionaryPopup(private val ctx: Context) {
                 cmn?.let { Triple(Lang.Mandarin, R.string.lychee_card_mandarin, it) },
             ).let { if (r.lang == Lang.Mandarin) it.reversed() else it }
             for ((lang, label, reading) in rows) {
+                val mark = ChineseScript.ui(if (lang == Lang.Cantonese) "粵" else "普", ctx)
+                // the word itself when this is how it is usually read; otherwise spelt in
+                // characters that can only be read this way, so the voice says this reading
+                val usual = hw?.readings?.get(lang)?.firstOrNull()?.let { norm(it) == norm(reading) } ?: true
                 val button = if (spoken != null && onSpeak != null) {
-                    langButton(ChineseScript.ui(if (lang == Lang.Cantonese) "粵" else "普", ctx)) { onSpeak.invoke(spoken, lang) }
+                    langButton(mark) { onSpeak.invoke(if (usual) spoken else sayAs(reading, lang) ?: spoken, lang) }
                 } else null
                 body.addView(readingRow(labelled(ctx.getString(label), Annotator.format(reading, lang, prefs)), button))
-                // other readings only where the dictionary gives them meanings of their own
+                // other readings only where the dictionary gives them meanings of their own,
+                // each said as that reading
                 val main = norm(reading)
                 hw?.senses?.filter { it.lang == lang && !it.reading.isNullOrBlank() && norm(it.reading!!) != main }
                     ?.distinctBy { norm(it.reading!!) }
                     ?.take(MAX_OTHER_READINGS)
                     ?.forEach { s ->
-                        body.addView(textView(
-                            "${Annotator.format(s.reading!!, lang, prefs)}  ·  ${Annotator.shorten(s.gloss, 60)}",
+                        val other = s.reading!!
+                        val say = if (spoken != null && onSpeak != null) {
+                            langButton(mark) { onSpeak.invoke(sayAs(other, lang) ?: spoken, lang) }
+                        } else null
+                        body.addView(readingRow(textView(
+                            "${Annotator.format(other, lang, prefs)}  ·  ${Annotator.shorten(s.gloss, 60)}",
                             14f, c.onSurfaceVariant,
-                        ).apply { setPadding(dp(12), 0, 0, dp(2)) })
+                        ).apply { setPadding(dp(12), 0, 0, 0) }, say))
                     }
             }
         }
+
+        /** [reading] in characters only ever read that way, for the voice; null when there are none. */
+        private fun sayAs(reading: String, lang: Lang): String? =
+            runCatching { Readings.db?.sayAs(reading, lang, prefs.simplified) }.getOrNull()
 
         private fun norm(reading: String) = reading.trim().lowercase().replace(Regex("\\s+"), " ")
 
@@ -352,19 +374,34 @@ class DictionaryPopup(private val ctx: Context) {
             setPadding(0, dp(2), 0, dp(2))
         }
 
-        /** 粵 or 普 in a pill: says the word in that language. */
-        fun langButton(label: String, onClick: () -> Unit) = TextView(ctx).apply {
-            text = label
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            typeface = app.lychee.fonts.LycheeFonts.chinese(ctx) ?: Typeface.DEFAULT_BOLD
-            setTextColor(c.onPrimaryContainer)
+        /**
+         * A speak button for one language: the speaker, with 粵 or 普 beside it showing which
+         * language it says the word in, in a pill.
+         */
+        fun langButton(label: String, onClick: () -> Unit): View = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
+            setPadding(dp(10), 0, dp(12), 0)
             background = GradientDrawable().apply {
                 cornerRadius = dp(18).toFloat()
                 setColor(c.primaryContainer)
             }
+            addView(android.widget.ImageView(ctx).apply {
+                setImageResource(R.drawable.lychee_ic_volume)
+                imageTintList = android.content.res.ColorStateList.valueOf(c.onPrimaryContainer)
+            }, LinearLayout.LayoutParams(dp(20), dp(20)))
+            addView(TextView(ctx).apply {
+                text = label
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                typeface = app.lychee.fonts.LycheeFonts.chinese(ctx) ?: Typeface.DEFAULT_BOLD
+                setTextColor(c.onPrimaryContainer)
+                includeFontPadding = false
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                marginStart = dp(4)
+            })
             contentDescription = ctx.getString(R.string.lychee_card_listen) + " " + label
-            layoutParams = LinearLayout.LayoutParams(dp(48), dp(36)).apply { marginStart = dp(8) }
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)).apply { marginStart = dp(8) }
+            isClickable = true
             setOnClickListener { onClick() }
         }
 

@@ -257,7 +257,10 @@ public final class Suggest {
             final app.lychee.typing.AutoCorrectPolicy.Decision decision =
                     app.lychee.typing.AutoCorrectPolicy.INSTANCE.decide(consideredWord,
                             suggestionResults.first().mWord);
-            if (decision == app.lychee.typing.AutoCorrectPolicy.Decision.KEEP) {
+            // a word put back as typed, or typed again after its correction was deleted, stays
+            if (decision == app.lychee.typing.AutoCorrectPolicy.Decision.KEEP
+                    || app.lychee.typing.CorrectionMemory.shouldKeep(consideredWord,
+                            suggestionResults.first().mWord)) {
                 hasAutoCorrection = false;
                 lycheeKeepsTyped = true;
             } else if (decision == app.lychee.typing.AutoCorrectPolicy.Decision.CORRECT) {
