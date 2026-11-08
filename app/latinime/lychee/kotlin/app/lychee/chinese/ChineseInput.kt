@@ -187,8 +187,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
      * Tapping the card types the word, as the suggestion would.
      */
     fun showEnglishWord(word: String, onType: () -> Unit): Boolean {
+        // any word, even one the dictionary lacks (its card says so, and still speaks it)
+        if (word.none { it.isLetter() }) return false
         val entries = app.lychee.dict.PackData.englishWords(ime, word)
-        if (entries.isEmpty()) return false
         val frame = keyboardFrame?.takeIf { it.height > 0 } ?: return false
         val peek = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
         val locales = listOf(java.util.Locale.UK, java.util.Locale.US)
@@ -423,6 +424,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             if (chinese) {
                 Rime.setOption(s, "simplification", simplified)
                 Rime.setOption(s, "traditionalization", !simplified)
+                // every written form of a Traditional character (為 and 爲) comes up too
+                Rime.setOption(s, "lychee_variants", !simplified)
             }
             return ok
         }

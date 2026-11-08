@@ -128,6 +128,8 @@ class ShortcutGalleryView @JvmOverloads constructor(
 
     fun show() {
         visibility = VISIBLE
+        // the Unicode search's names, read now so its first search is instant
+        app.lychee.emoji.UnicodeNames.warmUp(context)
         setEditing(false)
         pages.scrollToPosition(0)
         toolbar()?.let { bar ->

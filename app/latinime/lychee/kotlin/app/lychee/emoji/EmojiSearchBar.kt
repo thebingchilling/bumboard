@@ -93,7 +93,7 @@ class EmojiSearchBar @JvmOverloads constructor(
         query.clear()
         isActive = true
         visibility = VISIBLE
-        if (unicode) UnicodeNames.load { if (isActive) refresh() } else EmojiData.load(context) { refresh() }
+        if (unicode) UnicodeNames.load(context) { if (isActive) refresh() } else EmojiData.load(context) { refresh() }
         refresh()
     }
 
@@ -176,13 +176,13 @@ class EmojiSearchBar @JvmOverloads constructor(
     /** The Unicode search's results: each symbol with its name and code point. */
     private fun refreshUnicode() {
         results.removeAllViews()
-        val found = UnicodeNames.search(query.toString())
+        val found = UnicodeNames.search(query.toString(), RESULTS) { symbolPaint.hasGlyph(it) }
         shown = found.map { it.text }
         found.forEach { s ->
             results.addView(SymbolCell(s).apply {
                 setOnClickListener { type(s.text) }
                 setOnLongClickListener { info.show(this, s.text, s.name.lowercase(), emoji = false); true }
-            }, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+            }, LayoutParams(dp(CELL_WIDTH), LayoutParams.MATCH_PARENT).apply { marginEnd = dp(2) })
         }
         if (found.isEmpty()) {
             results.addView(TextView(context).apply {
@@ -196,38 +196,51 @@ class EmojiSearchBar @JvmOverloads constructor(
         scroller.scrollTo(0, 0)
     }
 
-    /** One Unicode result: the symbol, its name and its code point under it. */
+    /** The symbols' font: the keys' font, Noto's symbols, then every font of the phone's. */
+    private val symbolFace by lazy { app.lychee.fonts.LycheeFonts.ui(context) }
+    private val symbolPaint by lazy { android.graphics.Paint().apply { typeface = symbolFace } }
+
+    /**
+     * One Unicode result, all the same size: the symbol, and beside it its name on one line
+     * and its code point under that.
+     */
     private inner class SymbolCell(s: UnicodeNames.Symbol) : LinearLayout(context) {
         init {
-            orientation = VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(dp(8), 0, dp(8), 0)
-            minimumWidth = dp(56)
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(4), 0, dp(8), 0)
             background = app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_suggestion)
             addView(TextView(context).apply {
-                text = s.text
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 24f)
+                text = s.shown
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
                 setTextColor(palette.onSurface)
-                typeface = app.lychee.fonts.LycheeFonts.ui(context)
+                typeface = symbolFace
                 includeFontPadding = false
-                gravity = Gravity.CENTER
-            })
-            addView(TextView(context).apply {
-                text = s.name.lowercase()
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
-                setTextColor(palette.onSurfaceVariant)
                 isSingleLine = true
-                ellipsize = TextUtils.TruncateAt.END
-                maxWidth = dp(120)
                 gravity = Gravity.CENTER
-            })
-            addView(TextView(context).apply {
-                text = "U+%04X".format(s.code)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
-                setTextColor(palette.onSurfaceVariant)
-                typeface = android.graphics.Typeface.MONOSPACE
-                gravity = Gravity.CENTER
-            })
+            }, LayoutParams(dp(40), LayoutParams.WRAP_CONTENT))
+            addView(LinearLayout(context).apply {
+                orientation = VERTICAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(TextView(context).apply {
+                    text = s.name.lowercase().ifEmpty { "—" }
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                    setTextColor(palette.onSurface)
+                    typeface = app.lychee.fonts.LycheeFonts.ui(context)
+                    includeFontPadding = false
+                    isSingleLine = true
+                    ellipsize = TextUtils.TruncateAt.END
+                })
+                addView(TextView(context).apply {
+                    text = "U+%04X".format(s.code)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+                    setTextColor(palette.onSurfaceVariant)
+                    typeface = android.graphics.Typeface.MONOSPACE
+                    includeFontPadding = false
+                    isSingleLine = true
+                    setPadding(0, dp(2), 0, 0)
+                })
+            }, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(4) })
         }
     }
 
@@ -247,5 +260,7 @@ class EmojiSearchBar @JvmOverloads constructor(
     private companion object {
         /** Results shown at most: a bar's worth and some to scroll. */
         const val RESULTS = 40
+        /** A Unicode result's width (dp): every one the same. */
+        const val CELL_WIDTH = 150
     }
 }

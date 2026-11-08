@@ -30,6 +30,8 @@ object LycheePanels {
     @JvmStatic
     fun reveal(panel: View) {
         if (!animate(panel.context)) return
+        // the input view's own transition already brings it in (LycheeMotion)
+        if ((panel.parent as? android.view.ViewGroup)?.layoutTransition != null) return
         panel.animate().cancel()
         panel.alpha = 0f
         panel.translationY = panel.resources.displayMetrics.density * 12

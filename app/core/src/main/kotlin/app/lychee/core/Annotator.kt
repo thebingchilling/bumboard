@@ -102,6 +102,52 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
         return r
     }
 
+    /**
+     * [sentence] in [lang]'s romanisation (as chosen in [prefs]), a word at a time: the longest
+     * run of characters the dictionary has as a word, read the dictionary's way (the reading
+     * of the word, so a character read two ways reads as it does in that word); punctuation
+     * as it is written in English, anything else as it is.
+     */
+    fun romanise(sentence: String, lang: Lang, prefs: DisplayPrefs): String {
+        val cps = sentence.codePoints().toArray()
+        val words = ArrayList<String>()
+        var i = 0
+        while (i < cps.size) {
+            val cp = cps[i]
+            if (!isHan(cp)) {
+                val p = SentencePunct[cp] ?: String(Character.toChars(cp))
+                when {
+                    p.isBlank() -> {}
+                    // punctuation joins the word before it
+                    words.isNotEmpty() && p in CLOSING -> words[words.size - 1] += p
+                    // letters and digits run on in one word
+                    words.isNotEmpty() && Character.isLetterOrDigit(cp) && i > 0 && !isHan(cps[i - 1]) &&
+                        Character.isLetterOrDigit(cps[i - 1]) -> words[words.size - 1] += p
+                    else -> words += p
+                }
+                i++
+                continue
+            }
+            var matched = false
+            for (len in minOf(MAX_WORD, cps.size - i) downTo 1) {
+                if ((0 until len).any { !isHan(cps[i + it]) }) continue
+                val form = String(cps, i, len)
+                val reading = lookup(form).firstNotNullOfOrNull { hw ->
+                    hw.readings[lang]?.firstOrNull { it.trim().split(Regex("\\s+")).size == len }
+                } ?: continue
+                words += format(reading, lang, prefs)
+                i += len
+                matched = true
+                break
+            }
+            if (!matched) {
+                words += String(Character.toChars(cp))
+                i++
+            }
+        }
+        return words.joinToString(" ")
+    }
+
     private fun lookup(form: String): List<Headword> =
         lookupCache.getOrPut(form) { dictionary.lookup(form).sortedByDescending { it.frequency } }
 
@@ -242,6 +288,15 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
             "^(variant of|old variant|archaic variant|see |see also|also written|also pr\\.|" +
                 "Taiwan pr\\.|erhua variant|used in |abbr\\. for|surname )",
             RegexOption.IGNORE_CASE
+        )
+
+        private const val MAX_WORD = 6
+        private val CLOSING = setOf(".", ",", "!", "?", ":", ";", "…", ")", "\"")
+        private val SentencePunct: Map<Int, String> = mapOf(
+            '。'.code to ".", '，'.code to ",", '、'.code to ",", '！'.code to "!", '？'.code to "?",
+            '：'.code to ":", '；'.code to ";", '「'.code to "\"", '」'.code to "\"", '『'.code to "\"",
+            '』'.code to "\"", '（'.code to "(", '）'.code to ")", '…'.code to "…", '　'.code to " ",
+            '“'.code to "\"", '”'.code to "\"", '·'.code to " ",
         )
 
         fun isHan(cp: Int): Boolean =

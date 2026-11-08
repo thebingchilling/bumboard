@@ -48,6 +48,8 @@ public final class InputView extends FrameLayout {
                 mMainKeyboardView, suggestionStripView);
         mMoreSuggestionsViewCanceler = new MoreSuggestionsViewCanceler(
                 mMainKeyboardView, suggestionStripView);
+        // LYCHEE: the panels over the keys fade in and out (app.lychee.layout.LycheeMotion)
+        app.lychee.layout.LycheeMotion.install(this);
     }
 
     public void setKeyboardTopPadding(final int keyboardTopPadding) {

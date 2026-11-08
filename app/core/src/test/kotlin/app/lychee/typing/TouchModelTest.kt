@@ -35,6 +35,18 @@ class TouchModelTest {
     }
 
     @Test
+    fun learnsHowSpreadOutPressesAre() {
+        // the usual spread until it knows
+        assertEquals(TouchModel.DEFAULT_SPREAD, TouchModel().spread()[0], 0f)
+        // a precise typist: presses close to where they always land, so the keys tighten
+        val precise = TouchModel()
+        repeat(200) { i -> precise.learn('a', if (i % 2 == 0) 0.05f else -0.05f, 0f) }
+        assertEquals(0.22f, precise.spread()[0], 0.001f)
+        // and it is kept
+        assertEquals(0.22f, TouchModel.fromArray(precise.toArray())!!.spread()[1], 0.001f)
+    }
+
+    @Test
     fun keepsItsCounts() {
         val t = TouchModel()
         repeat(20) { t.learn('k', -0.1f, 0.15f) }

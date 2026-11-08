@@ -25,7 +25,16 @@ chinese_engine:
     - table_translator@custom_phrase
   filters:
     - simplifier
+    # every written form of a Traditional character (為 爲): on when typing Traditional
+    - simplifier@lychee_variants
     - uniquifier
+
+# the variants filter's settings, included by each Chinese schema
+lychee_variants:
+  option_name: lychee_variants
+  opencc_config: lychee_variants.json
+  tips: none
+  show_in_comment: false
 
 english_lookup_engine:
   processors:

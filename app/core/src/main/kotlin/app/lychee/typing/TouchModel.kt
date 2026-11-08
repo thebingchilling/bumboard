@@ -15,6 +15,9 @@ class TouchModel {
     private val n = FloatArray(SIZE)
     private val mx = FloatArray(SIZE)
     private val my = FloatArray(SIZE)
+    /** how far presses land from their key's own mean (squared, x and y): the spread */
+    private var vx = DEFAULT_SPREAD * DEFAULT_SPREAD
+    private var vy = DEFAULT_SPREAD * DEFAULT_SPREAD
 
     /** How far presses meaning [letter] land from its centre (x, y in key sizes). */
     @Synchronized
@@ -38,8 +41,31 @@ class TouchModel {
         val i = index(letter)
         // a press that far off was more likely meant for another key and fixed later
         if (i < 0 || abs(dx) > OUTLIER || abs(dy) > OUTLIER) return
+        // the spread around where this key's presses usually land (once it has some)
+        if (n[i] >= 5) {
+            val rx = dx - mx[i]
+            val ry = dy - my[i]
+            val a = 1f / minOf(n[ALL] + 1f, MEMORY)
+            vx += (rx * rx - vx) * a
+            vy += (ry * ry - vy) * a
+        }
         add(i, dx, dy)
         add(ALL, dx, dy)
+    }
+
+    /**
+     * How spread out this person's presses are (x, y in key sizes): the touch model's bell
+     * curve. The usual spread until enough presses are known; never tighter or looser than
+     * keys allow.
+     */
+    @Synchronized
+    fun spread(): FloatArray {
+        val k = n[ALL]
+        if (k < SPREAD_AFTER) return floatArrayOf(DEFAULT_SPREAD, DEFAULT_SPREAD)
+        return floatArrayOf(
+            kotlin.math.sqrt(vx).coerceIn(MIN_SPREAD, MAX_SPREAD),
+            kotlin.math.sqrt(vy).coerceIn(MIN_SPREAD, MAX_SPREAD),
+        )
     }
 
     private fun add(i: Int, dx: Float, dy: Float) {
@@ -55,7 +81,7 @@ class TouchModel {
     fun presses(): Int = n[ALL].toInt()
 
     @Synchronized
-    fun toArray(): FloatArray = n + mx + my
+    fun toArray(): FloatArray = n + mx + my + floatArrayOf(vx, vy)
 
     companion object {
         private const val SIZE = 27
@@ -68,13 +94,25 @@ class TouchModel {
         private const val OUTLIER = 0.75f
 
         fun fromArray(a: FloatArray): TouchModel? {
-            if (a.size != SIZE * 3) return null
+            // the first files had no spread
+            if (a.size != SIZE * 3 && a.size != SIZE * 3 + 2) return null
             return TouchModel().also { t ->
                 a.copyInto(t.n, 0, 0, SIZE)
                 a.copyInto(t.mx, 0, SIZE, SIZE * 2)
                 a.copyInto(t.my, 0, SIZE * 2, SIZE * 3)
+                if (a.size == SIZE * 3 + 2) {
+                    t.vx = a[SIZE * 3]
+                    t.vy = a[SIZE * 3 + 1]
+                }
             }
         }
+
+        /** The usual spread of presses for a key (key sizes), and the limits of a learnt one. */
+        const val DEFAULT_SPREAD = 0.3f
+        private const val MIN_SPREAD = 0.22f
+        private const val MAX_SPREAD = 0.4f
+        /** presses before the learnt spread counts */
+        private const val SPREAD_AFTER = 60f
 
         private fun index(ch: Char): Int {
             val c = ch.lowercaseChar()

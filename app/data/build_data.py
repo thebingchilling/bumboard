@@ -222,7 +222,7 @@ def parse_unihan(zip_path: Path):
         if not line.startswith("U+"):
             continue
         cp, field, value = line.split("\t", 2)
-        if field in ("kSimplifiedVariant", "kTraditionalVariant"):
+        if field in ("kSimplifiedVariant", "kTraditionalVariant", "kZVariant", "kSemanticVariant"):
             variants[chr(int(cp[2:], 16))][field] = [
                 chr(int(v.split("<")[0][2:], 16)) for v in value.split()
             ]
@@ -981,7 +981,61 @@ def main():
         for name in ("t2s.json", "s2t.json", "STCharacters.ocd2", "STPhrases.ocd2",
                      "TSCharacters.ocd2", "TSPhrases.ocd2"):
             shutil.copy(args.opencc / name, dest / name)
+        write_variants(R, variants, dest)
     write_stamp(rime_dir)
+
+
+def write_variants(R: "Readings", variants: dict, dest: Path):
+    """The other written forms of each Traditional character (為 and 爲, 裏 and 裡, 衛 and 衞),
+    for Rime's simplifier@lychee_variants: every form comes up as a candidate, the usual one
+    first. Unihan's same-character variants (kZVariant, kSemanticVariant) of characters the
+    dictionary has, kept when both simplify to the same character or one has no Simplified
+    form of its own (so 乾 and 幹, which only share 干, stay apart)."""
+    freq: dict[str, int] = {}
+    for trad, simp, f in R.hw:
+        if len(trad) == 1:
+            freq[trad] = max(freq.get(trad, 0), f)
+
+    def simp(ch: str) -> str:
+        return variants.get(ch, {}).get("kSimplifiedVariant", [ch])[0]
+
+    parent: dict[str, str] = {}
+
+    def find(ch: str) -> str:
+        while parent.setdefault(ch, ch) != ch:
+            parent[ch] = parent[parent[ch]]
+            ch = parent[ch]
+        return ch
+
+    for ch, fields in variants.items():
+        if ch not in freq:
+            continue
+        for v in fields.get("kZVariant", []) + fields.get("kSemanticVariant", []):
+            # 衞 has no Simplified form of its own in Unihan: it goes with 衛 all the same
+            alone = "kSimplifiedVariant" not in variants.get(v, {}) or "kSimplifiedVariant" not in fields
+            if v != ch and v in freq and (alone or simp(v) == simp(ch)):
+                parent[find(v)] = find(ch)
+    families: dict[str, list[str]] = defaultdict(list)
+    for ch in parent:
+        families[find(ch)].append(ch)
+    lines = []
+    count = 0
+    for family in families.values():
+        if len(family) < 2:
+            continue
+        family.sort(key=lambda c: (-freq.get(c, 0), c))
+        count += 1
+        for ch in family:
+            lines.append(ch + "\t" + " ".join([ch] + [x for x in family if x != ch]))
+    lines.sort()
+    (dest / "lychee_variants.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    dictionary = {"type": "text", "file": "lychee_variants.txt"}
+    (dest / "lychee_variants.json").write_text(json.dumps({
+        "name": "Lychee: every written form of a Traditional character",
+        "segmentation": {"type": "mmseg", "dict": dictionary},
+        "conversion_chain": [{"dict": dictionary}],
+    }, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"variants: {count} characters written more than one way", file=sys.stderr)
 
 
 if __name__ == "__main__":

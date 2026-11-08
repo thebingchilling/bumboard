@@ -339,14 +339,15 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         // a panel's title gives way to candidates (handwriting guesses); its Back stays
         mLycheeToolbar.setTitleShown(!mLycheeCandidatesShowing);
         final boolean idle = panel || (!mLycheeHasSuggestions && !mLycheeCandidatesShowing && !notice);
-        mLycheeToolbar.setVisibility(idle ? VISIBLE : INVISIBLE);
+        // LYCHEE: the toolbar and the suggestions fade in as they take turns
+        app.lychee.layout.LycheeMotion.fade(mLycheeToolbar, idle, INVISIBLE);
         // the mic belongs to the toolbar, like the menu button: it goes when suggestions or
         // candidates take the bar
         final boolean voice = idle && !panel && mLycheeVoiceEnabled;
         mVoiceKey.setVisibility(voice ? VISIBLE : GONE);
         final boolean suggestions = mLycheeHasSuggestions && !mLycheeCandidatesShowing && !panel;
         if (!notice) {
-            mSuggestionsStrip.setVisibility(suggestions ? VISIBLE : INVISIBLE);
+            app.lychee.layout.LycheeMotion.fade(mSuggestionsStrip, suggestions, INVISIBLE);
         }
         updateLycheeEnglishMore(suggestions && !notice);
         // the edges: 英 and 繁/简 on the right (Chinese keyboards), and the mic

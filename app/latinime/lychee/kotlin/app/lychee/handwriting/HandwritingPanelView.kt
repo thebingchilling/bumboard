@@ -315,7 +315,12 @@ class HandwritingPanelView @JvmOverloads constructor(
     }
 
     /** The recogniser's guesses for the ink on the pad, in the candidate bar. */
-    private fun showGuesses(list: List<String>) {
+    private fun showGuesses(found: List<String>) {
+        // writing Traditional: every written form of each character (為 then 爲)
+        @Suppress("DEPRECATION")
+        val traditional = !app.lychee.chinese.ChineseScript.candidatesSimplified(
+            android.preference.PreferenceManager.getDefaultSharedPreferences(context))
+        val list = if (traditional) app.lychee.chinese.Variants.expand(context, found) else found
         guesses = list
         lycheeHost()?.lycheeShowGuesses(list) { i -> list.getOrNull(i)?.let { pick(it) } }
     }

@@ -69,6 +69,7 @@ class EmojiInfo(private val ctx: Context) {
         })
         card.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         val popup = PopupWindow(card, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, false).apply {
+            animationStyle = com.android.inputmethod.latin.R.style.LycheePopupAnimation
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             isOutsideTouchable = true
             elevation = dp(8).toFloat()

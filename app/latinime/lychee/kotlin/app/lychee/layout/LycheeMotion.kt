@@ -1,0 +1,104 @@
+package app.lychee.layout
+
+import android.animation.AnimatorSet
+import android.animation.LayoutTransition
+import android.animation.ObjectAnimator
+import android.view.View
+import android.view.ViewGroup
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
+import com.android.inputmethod.keyboard.Keyboard
+import com.android.inputmethod.keyboard.KeyboardId
+
+/**
+ * The keyboard's motion, like Gboard's: every panel over the keys (shortcuts, text editing,
+ * number pad, handwriting, voice, resizing, candidates, word cards, emoji) fades in rising a
+ * little and fades out as it goes; the keys cross-fade when they change (letters and symbols,
+ * one language and another). Nothing moves when the phone's animations are off.
+ */
+object LycheeMotion {
+    /** How long a panel takes to come in, and to go. */
+    private const val IN = 220L
+    private const val OUT = 140L
+    private const val KEYS = 160L
+
+    /** Animates [group]'s children as they show and hide (the input view's panels). */
+    @JvmStatic
+    fun install(group: ViewGroup) {
+        val rise = group.resources.displayMetrics.density * 16
+        val transition = LayoutTransition().apply {
+            // only the panels themselves: the others keep still (no sliding around them)
+            disableTransitionType(LayoutTransition.CHANGE_APPEARING)
+            disableTransitionType(LayoutTransition.CHANGE_DISAPPEARING)
+            disableTransitionType(LayoutTransition.CHANGING)
+            setAnimator(LayoutTransition.APPEARING, AnimatorSet().apply {
+                playTogether(
+                    ObjectAnimator.ofFloat(null, View.ALPHA, 0f, 1f),
+                    ObjectAnimator.ofFloat(null, View.TRANSLATION_Y, rise, 0f),
+                )
+            })
+            setDuration(LayoutTransition.APPEARING, IN)
+            setInterpolator(LayoutTransition.APPEARING, DecelerateInterpolator(2f))
+            setStartDelay(LayoutTransition.APPEARING, 0)
+            setAnimator(LayoutTransition.DISAPPEARING, AnimatorSet().apply {
+                playTogether(
+                    ObjectAnimator.ofFloat(null, View.ALPHA, 1f, 0f),
+                    ObjectAnimator.ofFloat(null, View.TRANSLATION_Y, 0f, rise / 2),
+                )
+            })
+            setDuration(LayoutTransition.DISAPPEARING, OUT)
+            setInterpolator(LayoutTransition.DISAPPEARING, AccelerateInterpolator())
+            setStartDelay(LayoutTransition.DISAPPEARING, 0)
+            // a gone panel ends as it was, ready to come in again
+            addTransitionListener(object : LayoutTransition.TransitionListener {
+                override fun startTransition(t: LayoutTransition, c: ViewGroup, v: View, type: Int) {}
+                override fun endTransition(t: LayoutTransition, c: ViewGroup, v: View, type: Int) {
+                    v.alpha = 1f
+                    v.translationY = 0f
+                }
+            })
+        }
+        group.layoutTransition = transition
+    }
+
+    /** The keys changed from [old] to [new]: they cross-fade when it's another set of keys. */
+    @JvmStatic
+    fun keyboardChanged(view: View, old: Keyboard?, new: Keyboard) {
+        if (old == null || !view.isShown || !LycheePanels.animate(view.context)) return
+        if (kind(old.mId) == kind(new.mId) && old.mId.mSubtype == new.mId.mSubtype) return
+        view.animate().cancel()
+        view.alpha = 0.35f
+        view.scaleX = 0.985f
+        view.scaleY = 0.985f
+        view.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(KEYS)
+            .setInterpolator(DecelerateInterpolator(1.5f)).start()
+    }
+
+    /**
+     * Shows or hides [view] (the bar's toolbar and suggestions taking turns): one coming in
+     * fades in; one going goes at once, so the two never overlap.
+     */
+    @JvmStatic
+    fun fade(view: View, visible: Boolean, hidden: Int) {
+        val target = if (visible) View.VISIBLE else hidden
+        if (view.visibility == target) return
+        view.visibility = target
+        if (!visible || !view.isAttachedToWindow || !LycheePanels.animate(view.context)) {
+            view.animate().cancel()
+            view.alpha = 1f
+            return
+        }
+        view.animate().cancel()
+        view.alpha = 0f
+        view.animate().alpha(1f).setDuration(FADE).setInterpolator(DecelerateInterpolator()).start()
+    }
+
+    private const val FADE = 150L
+
+    /** Letters (shifted or not), symbols (either page), or anything else on its own. */
+    private fun kind(id: KeyboardId): Int = when {
+        id.isAlphabetKeyboard -> 0
+        id.mElementId == KeyboardId.ELEMENT_SYMBOLS || id.mElementId == KeyboardId.ELEMENT_SYMBOLS_SHIFTED -> 1
+        else -> 2 + id.mElementId
+    }
+}

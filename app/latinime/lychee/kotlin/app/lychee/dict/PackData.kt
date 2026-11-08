@@ -79,7 +79,8 @@ object PackData {
      * usual endings (cats, running, tried, bigger ...); irregular forms are in the data.
      */
     fun englishWords(context: Context, word: String, limit: Int = 4): List<WordEntry> {
-        val w = word.lowercase().trim()
+        // curly apostrophes as the dictionary writes them: don’t → don't
+        val w = word.lowercase().trim().replace('\u2019', '\'')
         if (w.isEmpty()) return emptyList()
         words(context, "en", w, limit).takeIf { it.isNotEmpty() }?.let { return it }
         val stems = buildList {

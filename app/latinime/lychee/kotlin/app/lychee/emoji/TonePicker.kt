@@ -134,6 +134,7 @@ class TonePicker(private val ctx: Context) {
         }
         content.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         popup = PopupWindow(content, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, false).apply {
+            animationStyle = com.android.inputmethod.latin.R.style.LycheePopupAnimation
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             isOutsideTouchable = true
             elevation = dp(8).toFloat()

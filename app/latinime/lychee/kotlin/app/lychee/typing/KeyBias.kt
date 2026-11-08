@@ -43,6 +43,11 @@ object KeyBias {
     private var whole = true
     /** The word's presses not yet known to be right: letter, offset x, offset y. */
     private val pending = ArrayList<FloatArray>()
+    /** When the last letter was typed (a fast run of keys is typed less precisely). */
+    @Volatile
+    private var lastKey = 0L
+    private const val FAST_MS = 150L
+    private const val FAST_WIDEN = 1.12f
     private var learnt = 0
 
     /** Gets the models for a keyboard: [engine] ("yue", "cmn", "ja", "ko") or [locale]'s words. */
@@ -85,6 +90,7 @@ object KeyBias {
                 if (pending.isNotEmpty()) pending.removeAt(pending.size - 1)
             }
             isLetter(code) -> {
+                lastKey = android.os.SystemClock.uptimeMillis()
                 word.append(Character.toLowerCase(code.toChar()))
                 if (word.length > 24) {
                     word.delete(0, word.length - 24)
@@ -185,7 +191,12 @@ object KeyBias {
         if (keys.isEmpty()) return hit
         for (key in keyboard.getNearestKeys(x, y)) consider(key)
         if (keys.size == 1) return hit
-        return keys[KeyChooser.choose(model, typed, all, candidates, 0)]
+        // this person's spread of presses, a little wider in a fast run of keys (fingers
+        // land less precisely, so what's likely next counts for more)
+        val spread = t?.spread() ?: floatArrayOf(TouchModel.DEFAULT_SPREAD, TouchModel.DEFAULT_SPREAD)
+        val fast = android.os.SystemClock.uptimeMillis() - lastKey < FAST_MS
+        val widen = if (fast) FAST_WIDEN else 1f
+        return keys[KeyChooser.choose(model, typed, all, candidates, 0, spread[0] * widen, spread[1] * widen)]
     }
 
     private fun isLetter(code: Int) = code in 'a'.code..'z'.code || code in 'A'.code..'Z'.code

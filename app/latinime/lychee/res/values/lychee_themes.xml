@@ -8,4 +8,9 @@
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:backgroundDimEnabled">false</item>
     </style>
+    <!-- LYCHEE: pop-ups over the keys grow in and shrink away (res/anim/lychee_pop_*) -->
+    <style name="LycheePopupAnimation">
+        <item name="android:windowEnterAnimation">@anim/lychee_pop_in</item>
+        <item name="android:windowExitAnimation">@anim/lychee_pop_out</item>
+    </style>
 </resources>

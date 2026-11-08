@@ -118,6 +118,7 @@ object LanguageCard {
         }
         val location = IntArray(2).also { keyboard.getLocationInWindow(it) }
         val popup = PopupWindow(scrim, keyboard.width, keyboard.height, false).apply {
+            animationStyle = com.android.inputmethod.latin.R.style.LycheePopupAnimation
             setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
             isOutsideTouchable = true
             isClippingEnabled = false
