@@ -10,7 +10,7 @@
             <Row
                 latin:keyWidth="10%p"
             >
-                <Key latin:keySpec="1" latin:moreKeys="¹,½,⅓,¼,⅕,⅐,⅛,⅑,⅒" />
+                <Key latin:keySpec="1" latin:moreKeys="¹,½,⅓,¼,⅕,⅙,⅐,⅛,⅑,⅒" />
                 <Key latin:keySpec="2" latin:moreKeys="²,⅔,⅖" />
                 <Key latin:keySpec="3" latin:moreKeys="³,¾,⅜,⅗" />
                 <Key latin:keySpec="4" latin:moreKeys="⁴,⅘" />

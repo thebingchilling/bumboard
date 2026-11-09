@@ -24,7 +24,7 @@
 >
     <Key
         latin:keySpec="1"
-        latin:moreKeys="¹,½,⅓,¼,⅕,⅐,⅛,⅑,⅒" />
+        latin:moreKeys="¹,½,⅓,¼,⅕,⅙,⅐,⅛,⅑,⅒" />
     <Key
         latin:keySpec="2"
         latin:moreKeys="²,⅔,⅖" />
