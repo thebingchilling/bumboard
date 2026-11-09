@@ -56,7 +56,7 @@
     <string name="lychee_fonts_sample_ko">안녕하세요, 한국어</string>
     <string name="lychee_fonts_sample_emoji">😀🥰🐱🍜🎉❤️🫠</string>
     <string name="lychee_fonts_gsf">Google Sans Flex</string>
-    <string name="lychee_fonts_noto">Noto Sans</string>
+    <string name="lychee_fonts_noto_sans">Noto Sans</string>
     <string name="lychee_fonts_gsf_summary">Built in</string>
     <string name="lychee_fonts_wenkai">LXGW WenKai</string>
     <string name="lychee_fonts_wenkai_summary">Built in · Kai style</string>
