@@ -134,7 +134,9 @@ class TonePicker(private val ctx: Context) {
             })
         }
         content.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
-        popup = PopupWindow(content, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, false).apply {
+        // exactly the measured size: the rows that fill the card's width would otherwise fill
+        // the screen's
+        popup = PopupWindow(content, content.measuredWidth, content.measuredHeight, false).apply {
             animationStyle = com.android.inputmethod.latin.R.style.LycheePopupAnimation
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             isOutsideTouchable = true

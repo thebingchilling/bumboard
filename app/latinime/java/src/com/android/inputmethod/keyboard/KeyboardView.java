@@ -214,6 +214,30 @@ public class KeyboardView extends View {
      * @see #getKeyboard()
      * @param keyboard the keyboard to display in this view
      */
+    // LYCHEE: the keys that changed with the last switch of keys (letters to symbols, another
+    // language), fading in; those that stayed the same don't flash (app.lychee.layout.LycheeMotion)
+    private java.util.Set<Key> mLycheeFading = java.util.Collections.emptySet();
+    private int mLycheeFadeAlpha = Constants.Color.ALPHA_OPAQUE;
+    private android.animation.ValueAnimator mLycheeFade;
+
+    public void lycheeFadeIn(@Nonnull final java.util.Set<Key> keys, final long duration) {
+        if (mLycheeFade != null) mLycheeFade.cancel();
+        mLycheeFading = keys;
+        if (keys.isEmpty()) {
+            mLycheeFadeAlpha = Constants.Color.ALPHA_OPAQUE;
+            return;
+        }
+        mLycheeFade = android.animation.ValueAnimator.ofInt(0, Constants.Color.ALPHA_OPAQUE);
+        mLycheeFade.setDuration(duration);
+        mLycheeFade.setInterpolator(new android.view.animation.DecelerateInterpolator(1.5f));
+        mLycheeFade.addUpdateListener(a -> {
+            mLycheeFadeAlpha = (Integer) a.getAnimatedValue();
+            invalidateAllKeys();
+        });
+        mLycheeFadeAlpha = 0;
+        mLycheeFade.start();
+    }
+
     public void setKeyboard(@Nonnull final Keyboard keyboard) {
         mKeyboard = keyboard;
         final int keyHeight = keyboard.mMostCommonKeyHeight - keyboard.mVerticalGap;
@@ -362,6 +386,10 @@ public class KeyboardView extends View {
                 : Math.min(key.getHeight(), drawn.mMostCommonKeyHeight - drawn.mVerticalGap);
         final KeyDrawParams params = mKeyDrawParams.mayCloneAndUpdateParams(labelHeight, attr);
         params.mAnimAlpha = Constants.Color.ALPHA_OPAQUE;
+        // LYCHEE: a key that changed with the last switch of keys fades in (the others stay put)
+        final boolean lycheeFading = mLycheeFadeAlpha < Constants.Color.ALPHA_OPAQUE
+                && mLycheeFading.contains(key);
+        if (lycheeFading) params.mAnimAlpha = mLycheeFadeAlpha;
 
         if (!key.isSpacer()) {
             Drawable background = key.selectBackgroundDrawable(
@@ -371,7 +399,9 @@ public class KeyboardView extends View {
             final boolean hidden = background == mKeyBackground && !app.lychee.ui.KeyStyle.getBorders()
                     && !key.isPressed();
             if (background != null && !hidden) {
+                if (lycheeFading) background.setAlpha(mLycheeFadeAlpha);
                 onDrawKeyBackground(key, canvas, background);
+                if (lycheeFading) background.setAlpha(Constants.Color.ALPHA_OPAQUE);
             }
         }
         onDrawKeyTopVisuals(key, canvas, paint, params);

@@ -87,6 +87,9 @@ object Readings {
         zhuyin = prefs.getBoolean(PREF_ZHUYIN, false),
     )
 
+    /** Chinese readings too on the Japanese and Korean keyboards' Kanji and Hanja cards. */
+    const val PREF_CHINESE_ON_KANJI = "lychee_chinese_on_kanji"
+
     /** Zhuyin (bopomofo) with pinyin. */
     const val PREF_ZHUYIN = "lychee_zhuyin"
 

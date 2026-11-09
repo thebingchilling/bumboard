@@ -272,6 +272,8 @@ class Readings:
         self.with_senses: set[int] = set()
         # per headword: hsk, band, reg, cl, pos (see Readings.write)
         self.info: dict[int, dict] = defaultdict(dict)
+        # (character, lang, rank, reading): Japanese and Korean readings of characters
+        self.char_readings: list[tuple] = []
 
     def headword(self, trad: str, simp: str) -> int:
         key = (trad, simp)
@@ -320,8 +322,13 @@ class Readings:
             -- cl: measure words as in CEDICT ('個|个[ge4],隻|只[zhi1]'); pos: jieba tag
             CREATE TABLE info(hw INTEGER PRIMARY KEY, hsk INTEGER, band INTEGER, reg TEXT,
                               cl TEXT, pos TEXT);
+            -- a character's Japanese and Korean readings (Unihan): lang 'ja' (kana: on'yomi in
+            -- katakana, kun'yomi in hiragana), 'ja_on' and 'ja_kun' (romaji), 'ko' (Hangul)
+            CREATE TABLE charread(ch TEXT NOT NULL, lang TEXT NOT NULL, rank INTEGER NOT NULL,
+                                  r TEXT NOT NULL, PRIMARY KEY(ch, lang, rank)) WITHOUT ROWID;
             """
         )
+        db.executemany("INSERT OR IGNORE INTO charread VALUES(?,?,?,?)", self.char_readings)
         db.executemany("INSERT INTO meta VALUES(?,?)", sorted(meta.items()))
         db.executemany(
             "INSERT INTO hw VALUES(?,?,?,?)",
@@ -681,6 +688,18 @@ def main():
     unihan, variants = parse_unihan(src["unihan"])
 
     R = Readings()
+    # the characters' Japanese (on'yomi, kun'yomi) and Korean (Hangul) readings, for Kanji and
+    # Hanja on the Japanese and Korean keyboards
+    for ch, fields in unihan.items():
+        # kana as Unihan gives them (on'yomi in katakana, kun'yomi in hiragana), and in romaji
+        for rank, r in enumerate(fields.get("kJapanese", "").split()[:8]):
+            R.char_readings.append((ch, "ja", rank, r))
+        for field, lang in (("kJapaneseOn", "ja_on"), ("kJapaneseKun", "ja_kun")):
+            for rank, r in enumerate(fields.get(field, "").split()[:6]):
+                R.char_readings.append((ch, lang, rank, r.lower()))
+        hangul = [v.split(":")[0] for v in fields.get("kHangul", "").split()]
+        for rank, r in enumerate(dict.fromkeys(h for h in hangul if h)):
+            R.char_readings.append((ch, "ko", rank, r))
 
     # per-character reading weights, used to rank the readings of single characters
     pinlu_share: dict[str, dict[str, float]] = {

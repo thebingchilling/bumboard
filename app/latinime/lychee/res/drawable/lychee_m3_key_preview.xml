@@ -1,22 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The bubble above a pressed key: a raised rounded card the width of the key, sitting just
-    above it, clearly set off from the keys (a lighter face, a thin outline and a soft shadow
-    under it), so every press shows even with sound and vibration off.
+    The bubble above a pressed key: a rounded card the width of the key, sitting just above it,
+    in the same style as the long-press popup (the key colour, a soft shadow under it, no
+    outline), so every press shows even with sound and vibration off.
     KeyPreviewChoreographer widens it to the key; its height is lychee_key_preview_height and
     LatinIME places it from keyPreviewOffset.
 -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:top="3dp" android:left="1dp" android:right="1dp">
+    <item android:top="2dp" android:left="1dp" android:right="1dp">
         <shape android:shape="rectangle">
             <solid android:color="@color/lychee_m3_preview_shadow" />
             <corners android:radius="14dp" />
         </shape>
     </item>
-    <item android:bottom="3dp">
+    <item android:bottom="2dp">
         <shape android:shape="rectangle">
-            <solid android:color="@color/lychee_m3_preview" />
-            <stroke android:width="1dp" android:color="@color/lychee_m3_outline_variant" />
+            <solid android:color="?attr/lycheeColorKey" />
             <corners android:radius="14dp" />
             <size android:width="40dp" android:height="58dp" />
             <padding android:left="2dp" android:top="0dp" android:right="2dp" android:bottom="3dp" />

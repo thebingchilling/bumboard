@@ -731,6 +731,7 @@ private fun ChinesePage() {
     val dictionaryHold = prefs.stringPref(ChineseInput.PREF_DICTIONARY_HOLD) {
         prefs.getString(ChineseInput.PREF_DICTIONARY_HOLD, null) ?: "pin"
     }
+    val chineseOnKanji = prefs.boolPref(Readings.PREF_CHINESE_ON_KANJI) { prefs.getBoolean(Readings.PREF_CHINESE_ON_KANJI, false) }
     Group(stringResource(R.string.lychee_group_candidates)) {
         for ((_, name, size) in sizes) {
             row {
@@ -748,6 +749,12 @@ private fun ChinesePage() {
                     "pin" to stringResource(R.string.lychee_pref_dictionary_pin),
                 ),
                 dictionaryHold.value, onSelect = dictionaryHold::set,
+            )
+        }
+        row {
+            SwitchRow(
+                it, stringResource(R.string.lychee_pref_chinese_on_kanji), stringResource(R.string.lychee_pref_chinese_on_kanji_summary),
+                chineseOnKanji.value, chineseOnKanji::set,
             )
         }
     }

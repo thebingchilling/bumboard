@@ -252,7 +252,7 @@
         <item name="functionalKeyBackground">@drawable/lychee_m3_key_popup</item>
         <item name="divider">@null</item>
         <item name="keyTypeface">normal</item>
-        <!-- round keys: the selected one is a filled circle with its symbol in white -->
+        <!-- the selected key: a rounded square in the accent colour (the key press bubble's shape) with its symbol in white -->
         <item name="keyLabelFlags">keepBackgroundAspectRatio</item>
         <item name="lycheePressedTextColor">?attr/lycheeColorOnAccent</item>
         <item name="verticalCorrection">@dimen/config_more_keys_keyboard_vertical_correction_holo</item>

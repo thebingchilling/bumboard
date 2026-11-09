@@ -83,6 +83,12 @@
     <string name="lychee_close">Close</string>
     <string name="lychee_type_it">Type it</string>
     <string name="lychee_card_parts">Parts</string>
+    <string name="lychee_card_onyomi">On\'yomi</string>
+    <string name="lychee_card_kunyomi">Kun\'yomi</string>
+    <string name="lychee_card_korean">Korean</string>
+    <string name="lychee_card_meanings">Meanings</string>
+    <string name="lychee_pref_chinese_on_kanji">Chinese readings on Kanji and Hanja</string>
+    <string name="lychee_pref_chinese_on_kanji_summary">On the Japanese and Korean keyboards, characters show their Japanese or Korean readings; this adds the Cantonese and Mandarin ones to their cards</string>
     <string name="lychee_card_cantonese">Cantonese</string>
     <string name="lychee_card_mandarin">Mandarin</string>
     <string name="lychee_card_character">Character</string>

@@ -392,9 +392,10 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
     public void setKeyboard(final Keyboard keyboard) {
         // Remove any pending messages, except dismissing preview and key repeat.
         mTimerHandler.cancelLongPressTimers();
-        // LYCHEE: other keys (symbols, another language) cross-fade in
-        app.lychee.layout.LycheeMotion.keyboardChanged(this, getKeyboard(), keyboard);
+        // LYCHEE: other keys (symbols, another language): the ones that changed fade in
+        final Keyboard lycheeOld = getKeyboard();
         super.setKeyboard(keyboard);
+        app.lychee.layout.LycheeMotion.keyboardChanged(this, lycheeOld, keyboard);
         mKeyDetector.setKeyboard(
                 keyboard, -getPaddingLeft(), -getPaddingTop() + getVerticalCorrection());
         PointerTracker.setKeyDetector(mKeyDetector);

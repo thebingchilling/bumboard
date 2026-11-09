@@ -129,6 +129,16 @@ class ReadingsDb(private val sql: Sql) : Dictionary {
         return out.toString()
     }
 
+    /**
+     * A character's Japanese or Korean readings from Unihan, most common first: [lang] "ja"
+     * (kana: on'yomi in katakana, kun'yomi in hiragana) or "ko" (Hangul). Empty when there
+     * are none (or the data predates them).
+     */
+    fun charReadings(ch: String, lang: String): List<String> = runCatching {
+        sql.query("SELECT r FROM charread WHERE ch = ? AND lang = ? ORDER BY rank", arrayOf(ch, lang)) { it.string(0) }
+            .filterNotNull()
+    }.getOrDefault(emptyList())
+
     /** Every single character the dictionary has (Traditional and Simplified forms). */
     fun characters(): Set<String> = sql.query(
         "SELECT DISTINCT form FROM form WHERE length(form) = 1", emptyArray(),

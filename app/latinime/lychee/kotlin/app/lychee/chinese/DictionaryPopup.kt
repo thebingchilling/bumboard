@@ -58,10 +58,26 @@ class DictionaryPopup(private val ctx: Context) {
      */
     fun show(
         keyboard: View, text: String, resolved: Resolved, prefs: DisplayPrefs, peek: Boolean,
-        onSpeak: ((String, Lang?) -> Unit)? = null, onType: () -> Unit,
+        onSpeak: ((String, Lang?) -> Unit)? = null,
+        /** a Kanji or Hanja on the Japanese or Korean keyboard: its readings in that language */
+        local: List<LocalReading>? = null,
+        /** with [local]: whether the Chinese readings show too */
+        showChinese: Boolean = true,
+        /** with [local]: says a reading in that language */
+        onSpeakLocal: ((String) -> Unit)? = null,
+        onType: () -> Unit,
     ) {
-        present(keyboard, peek, onType) { c, body -> Content(ctx, c, prefs, body, onSpeak).fill(text, resolved) }
+        present(keyboard, peek, onType) { c, body ->
+            Content(ctx, c, prefs, body, onSpeak).apply {
+                this.local = local
+                this.showChinese = local == null || showChinese
+                this.onSpeakLocal = onSpeakLocal
+            }.fill(text, resolved)
+        }
     }
+
+    /** One of a character's Japanese or Korean readings: its label, as shown, and what is said. */
+    class LocalReading(val label: String, val shown: String, val say: String)
 
     /**
      * A Japanese or Korean word's card: its reading (kana, or romanisation and Hanja), part of
@@ -242,6 +258,11 @@ class DictionaryPopup(private val ctx: Context) {
     ) {
         /** The word's language ("ja", "ko"; null for Chinese), which picks the font. */
         var fontLang: String? = null
+        /** A Kanji or Hanja's Japanese or Korean readings, shown first. */
+        var local: List<LocalReading>? = null
+        /** Whether the Chinese readings (and Chinese examples) show. */
+        var showChinese = true
+        var onSpeakLocal: ((String) -> Unit)? = null
 
         @Suppress("DEPRECATION")
         private val settings = android.preference.PreferenceManager.getDefaultSharedPreferences(ctx)
@@ -270,13 +291,17 @@ class DictionaryPopup(private val ctx: Context) {
             }
             // both languages' readings, always
             spokenWord = text
-            readingRows(r, main, text)
+            // a Kanji or Hanja: its Japanese or Korean readings first
+            local?.forEach { lr ->
+                body.addView(readingRow(labelled(lr.label, lr.shown), onSpeakLocal?.let { say -> smallSpeaker { say(lr.say) } }))
+            }
+            if (showChinese) readingRows(r, main, text)
             if (main != null && !r.composed) facts(main)
             strokes(text)
             val lang = if (r.lang == Lang.Cantonese) "yue" else "cmn"
             val forms2 = listOfNotNull(text, main?.traditional, main?.simplified)
             val romanLang = if (r.lang == Lang.Mandarin) Lang.Mandarin else Lang.Cantonese
-            examples(app.lychee.dict.PackData.examples(ctx, lang, forms2)) { sentence ->
+            if (showChinese) examples(app.lychee.dict.PackData.examples(ctx, lang, forms2)) { sentence ->
                 Readings.annotator?.romanise(sentence, romanLang, prefs)
             }
 
@@ -296,7 +321,7 @@ class DictionaryPopup(private val ctx: Context) {
                     body.addView(textView(if (other != null) "$first  ($other)" else first, 22f, c.onSurface).apply {
                         app.lychee.fonts.LycheeFonts.forText(ctx, hw.traditional)?.let { typeface = it }
                     })
-                    readingRows(Resolved(r.lang, null, null, null, listOf(hw), false), hw, null)
+                    if (showChinese) readingRows(Resolved(r.lang, null, null, null, listOf(hw), false), hw, null)
                 }
                 senses(hw, r)
             }
@@ -543,6 +568,14 @@ class DictionaryPopup(private val ctx: Context) {
         }
 
         private fun senses(hw: Headword, r: Resolved) {
+            if (!showChinese) {
+                // a Kanji or Hanja: its meanings together, without the Chinese languages' headings
+                val list = hw.senses.filter { it.partOfSpeech != "cl" }.distinctBy { it.gloss.lowercase() }.take(MAX_SENSES)
+                if (list.isEmpty()) return
+                section(ctx.getString(R.string.lychee_card_meanings))
+                list.forEachIndexed { i, s -> sense(i + 1, s) }
+                return
+            }
             val groups = listOf(
                 Lang.Cantonese to R.string.lychee_card_cantonese,
                 Lang.Mandarin to R.string.lychee_card_mandarin,

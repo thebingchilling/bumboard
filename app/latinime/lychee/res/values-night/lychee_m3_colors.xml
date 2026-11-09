@@ -27,5 +27,5 @@
     <color name="lychee_m3_on_key_functional_neutral">#E2E6EB</color>
     <!-- the key press bubble: brighter than the keys, with a shadow, so presses show -->
     <color name="lychee_m3_preview">#3B4240</color>
-    <color name="lychee_m3_preview_shadow">#80000000</color>
+    <color name="lychee_m3_preview_shadow">#59000000</color>
 </resources>

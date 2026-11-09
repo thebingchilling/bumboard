@@ -47,3 +47,11 @@ Emoji (assets/lychee/emoji.json, NotoColorEmoji.ttf):
     Unicode License v3, (c) 1991-2026 Unicode, Inc.
   * Noto Color Emoji font (Unicode 18.0 release) — SIL Open Font License 1.1,
     (c) Google LLC. https://github.com/googlefonts/noto-emoji
+
+Fonts (assets/lychee):
+  * Noto Sans (NotoSans.ttf, the keyboard font) and the symbol cuts of Noto Sans, Noto Sans Math
+    and Noto Sans Symbols 2 (LycheeSymbols*.ttf) — SIL Open Font License 1.1, (c) Google LLC.
+    https://github.com/google/fonts
+  * Google Sans Flex (GoogleSansFlex.ttf) — SIL Open Font License 1.1, (c) Google LLC.
+  * LXGW WenKai (LXGWWenKai-Regular.ttf, LXGWWenKaiKeys.ttf) — SIL Open Font License 1.1,
+    (c) LXGW. https://github.com/lxgw/LxgwWenKai

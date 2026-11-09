@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A key inside the long-press popup: a filled circle in the accent colour while selected,
-     like Gboard's (the popup keeps its aspect ratio, so it stays round). -->
+<!-- A key inside the long-press popup: while selected, a rounded square in the accent colour,
+     the same shape as the key press bubble (the popup keeps its aspect ratio). -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_pressed="true">
-        <shape android:shape="oval">
+        <shape android:shape="rectangle">
             <solid android:color="?attr/lycheeColorAccent" />
-            <size android:width="44dp" android:height="44dp" />
+            <corners android:radius="12dp" />
+            <size android:width="40dp" android:height="48dp" />
         </shape>
     </item>
     <item>
-        <shape android:shape="oval">
+        <shape android:shape="rectangle">
             <solid android:color="@android:color/transparent" />
-            <size android:width="44dp" android:height="44dp" />
+            <corners android:radius="12dp" />
+            <size android:width="40dp" android:height="48dp" />
         </shape>
     </item>
 </selector>

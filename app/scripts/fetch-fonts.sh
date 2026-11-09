@@ -3,6 +3,7 @@
 #   Google Sans Flex (SIL Open Font License 1.1), the interface font, from google/fonts;
 #   LXGW WenKai (SIL Open Font License 1.1), the default Chinese font (it also covers kana and
 #   Hangul), from its pinned release, and its Medium weight cut to the keys' letters and symbols;
+#   Noto Sans (SIL Open Font License 1.1), the keyboard's font, from google/fonts;
 #   the symbols Google Sans Flex lacks (⅙ ∞ ★ ✓ ‰ ← ♥ ...), cut from Google's Noto Sans, Noto Sans
 #   Math and Noto Sans Symbols 2 (SIL Open Font License 1.1) by scripts/subset-symbols.py.
 # Without them Lychee falls back to the system's fonts.
@@ -45,6 +46,22 @@ if [ ! -f "$OUT/LXGWWenKaiKeys.ttf" ]; then
         --layout-features='*' --name-IDs='*' --notdef-outline
     rm -rf "$TMP3"
     echo "lxgw wenkai medium (keys): $(du -h "$OUT/LXGWWenKaiKeys.ttf" | cut -f1)"
+fi
+
+# Noto Sans (variable), the keyboard's font: Latin, Greek, Cyrillic and their symbols,
+# fractions such as ⅙ included
+if [ ! -f "$OUT/NotoSans.ttf" ]; then
+    TMP4="$(mktemp -d)"
+    git clone -q --depth 1 --filter=blob:none --sparse https://github.com/google/fonts "$TMP4/fonts"
+    git -C "$TMP4/fonts" sparse-checkout set ofl/notosans
+    noto="$(find "$TMP4/fonts/ofl/notosans" -maxdepth 1 -name 'NotoSans*.ttf' ! -iname '*italic*' | sort | head -1)"
+    if [ -z "$noto" ]; then
+        echo "::error::Noto Sans not found in google/fonts (ofl/notosans)"
+        exit 1
+    fi
+    cp "$noto" "$OUT/NotoSans.ttf"
+    rm -rf "$TMP4"
+    echo "noto sans (keys): $(basename "$noto"), $(du -h "$OUT/NotoSans.ttf" | cut -f1)"
 fi
 
 if [ ! -f "$OUT/LycheeSymbols0.ttf" ]; then

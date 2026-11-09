@@ -50,6 +50,10 @@ object LycheeFonts {
     private const val KEYS_WENKAI = "lychee/LXGWWenKaiKeys.ttf"
     /** Google Sans Flex, the interface font (fetched at build time; see scripts/fetch-fonts.sh). */
     const val UI_FONT = "lychee/GoogleSansFlex.ttf"
+    /** Noto Sans (SIL OFL), the keyboard's font: it has the symbols Google Sans Flex lacks (⅙ ...). */
+    const val KEYS_FONT = "lychee/NotoSans.ttf"
+    /** The keyboard font choice for Google Sans Flex (the default, "", is Noto Sans). */
+    const val GSF = "gsf"
 
     private var appContext: Context? = null
     private var listener: SharedPreferences.OnSharedPreferenceChangeListener? = null
@@ -198,10 +202,44 @@ object LycheeFonts {
     fun keysLatin(context: Context, weight: Int = 400): Typeface {
         val bold = weight >= 500
         return when (val c = choice(context, PREF_KEYS)) {
-            "" -> gsf(context, weight)
-            WENKAI -> wenkaiKeys(context)?.let { styledLike(it, bold) } ?: gsf(context, weight)
-            else -> packFace(context, c)?.let { styledLike(it, bold) } ?: gsf(context, weight)
+            "" -> noto(context, weight)
+            GSF -> gsf(context, weight)
+            WENKAI -> wenkaiKeys(context)?.let { styledLike(it, bold) } ?: noto(context, weight)
+            else -> packFace(context, c)?.let { styledLike(it, bold) } ?: noto(context, weight)
         }
+    }
+
+    private val notoFaces = HashMap<Int, Typeface>()
+
+    /**
+     * Noto Sans at [weight], the keys' font: then Noto's other symbols (the same cut as for
+     * Google Sans Flex) and the phone's fonts; the interface font when it is not in the APK.
+     */
+    @Synchronized
+    @JvmStatic
+    fun noto(context: Context, weight: Int = 400): Typeface {
+        notoFaces[weight]?.let { return it }
+        val app = app(context)
+        val face = runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val font = Font.Builder(app.assets, KEYS_FONT)
+                    .setFontVariationSettings("'wght' $weight").setWeight(weight.coerceIn(1, 1000)).build()
+                val builder = Typeface.CustomFallbackBuilder(FontFamily.Builder(font).build())
+                for (n in 0 until 3) {
+                    runCatching {
+                        Font.Builder(app.assets, "lychee/LycheeSymbols$n.ttf")
+                            .setFontVariationSettings("'wght' $weight").setWeight(weight.coerceIn(1, 1000)).build()
+                    }.getOrNull()?.let { builder.addCustomFallback(FontFamily.Builder(it).build()) }
+                }
+                builder.setSystemFallback("sans-serif").build()
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Typeface.Builder(app.assets, KEYS_FONT).setFontVariationSettings("'wght' $weight").build()
+            } else {
+                Typeface.createFromAsset(app.assets, KEYS_FONT)
+            }
+        }.onFailure { Log.w(TAG, "keyboard font unavailable", it) }.getOrNull() ?: gsf(context, weight)
+        notoFaces[weight] = face
+        return face
     }
 
     /** The keyboard's font in place of [face] (bold stays bold); for code without a context. */

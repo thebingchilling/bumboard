@@ -45,11 +45,19 @@ class NumpadPanelView @JvmOverloads constructor(
         val top = LinearLayout(context).apply { orientation = HORIZONTAL }
         // operators: a narrow column that scrolls, its scrollbar always showing
         val operators = LinearLayout(context).apply { orientation = VERTICAL }
+        // one rounded panel holding the operators as a list (not a stack of keys), its
+        // scrollbar inside the panel's edge
         val scroll = android.widget.ScrollView(context).apply {
             isVerticalScrollBarEnabled = true
             isScrollbarFadingEnabled = false
-            scrollBarStyle = View.SCROLLBARS_OUTSIDE_INSET
-            setPadding(0, 0, dp(5), 0)
+            scrollBarStyle = View.SCROLLBARS_INSIDE_INSET
+            setPadding(0, dp(2), dp(4), dp(2))
+            clipToPadding = false
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = dp(12).toFloat()
+                setColor(palette.surfaceContainerHigh)
+            }
+            clipToOutline = true
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
                 verticalScrollbarThumbDrawable = android.graphics.drawable.GradientDrawable().apply {
                     cornerRadius = dp(2).toFloat()
@@ -64,21 +72,27 @@ class NumpadPanelView @JvmOverloads constructor(
             }
             addView(operators)
         }
-        top.addView(scroll, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_OPERATORS))
+        top.addView(scroll, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_OPERATORS).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
         scroll.addOnLayoutChangeListener { _, _, t, _, b, _, ot, _, ob ->
             if (b - t != ob - ot) {
-                val keyHeight = (b - t) / 3
+                // three and a bit showing, so it's plain there's more below
+                val itemHeight = ((b - t) / 3.4f).toInt()
                 for (i in 0 until operators.childCount) {
-                    val lp = operators.getChildAt(i).layoutParams as LayoutParams
-                    if (lp.height != keyHeight - dp(6)) {
-                        lp.height = keyHeight - dp(6)
-                        operators.getChildAt(i).layoutParams = lp
+                    val child = operators.getChildAt(i)
+                    val lp = child.layoutParams as LayoutParams
+                    val h = if (child is TextView) itemHeight else lp.height
+                    if (lp.height != h) {
+                        lp.height = h
+                        child.layoutParams = lp
                     }
                 }
             }
         }
-        for (op in OPERATORS) {
-            operators.addView(text(op), LayoutParams(LayoutParams.MATCH_PARENT, dp(48)).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
+        OPERATORS.forEachIndexed { i, op ->
+            if (i > 0) operators.addView(View(context).apply {
+                setBackgroundColor(androidx.core.graphics.ColorUtils.setAlphaComponent(palette.outlineVariant, 0x80))
+            }, LayoutParams(LayoutParams.MATCH_PARENT, 1).apply { setMargins(dp(10), 0, dp(10), 0) })
+            operators.addView(operatorItem(op), LayoutParams(LayoutParams.MATCH_PARENT, dp(48)))
         }
         val digits = LinearLayout(context).apply { orientation = VERTICAL }
         for (row in listOf("123", "456", "789")) {
@@ -127,6 +141,20 @@ class NumpadPanelView @JvmOverloads constructor(
     private fun digit(d: String) = key(d, letter = true, size = 26f) { lycheeHost()?.lycheeSendCode(d[0].code) }
 
     private fun text(t: String) = key(t, letter = false) { lycheeHost()?.lycheeSendCode(t[0].code) }
+
+    /** An operator in the scrolling list: plain, rippling when tapped. */
+    private fun operatorItem(t: String) = TextView(context).apply {
+        text = t
+        setTextColor(palette.onSurface)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+        typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
+        gravity = Gravity.CENTER
+        background = TypedValue().let { v ->
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackground, v, true)
+            context.getDrawable(v.resourceId)
+        }
+        setOnClickListener { lycheeHost()?.lycheeSendCode(t[0].code) }
+    }
 
 
     private fun spaceKey() = icon(R.drawable.ic_sym_space_bar, R.string.lychee_numpad_space) { send(Constants.CODE_SPACE) }

@@ -173,33 +173,68 @@ class EmojiSearchBar @JvmOverloads constructor(
         if (!unicode) store.addRecent(emoji)
     }
 
-    /** The Unicode search's results: each symbol with its name and code point. */
+    /**
+     * The Unicode search's results: each symbol with its name and code point. The search runs
+     * in the background a moment after the last key (typing never waits for it), and the result
+     * cells are reused; the new results fade in.
+     */
     private fun refreshUnicode() {
-        results.removeAllViews()
-        val found = UnicodeNames.search(query.toString(), RESULTS, drawable = { symbolPaint.hasGlyph(it) },
-            used = { cp -> unicodeUse.getInt(cp.toString(16), 0) })
+        val q = query.toString()
+        val generation = ++searchGeneration
+        removeCallbacks(pendingSearch)
+        pendingSearch = Runnable {
+            searcher.execute {
+                if (generation != searchGeneration) return@execute
+                val found = runCatching {
+                    UnicodeNames.search(q, RESULTS, drawable = { symbolPaint.hasGlyph(it) },
+                        used = { cp -> unicodeUse.getInt(cp.toString(16), 0) })
+                }.getOrDefault(emptyList())
+                post { if (generation == searchGeneration && isActive && unicode) showUnicode(q, found) }
+            }
+        }
+        postDelayed(pendingSearch, if (q.isEmpty()) 0L else SEARCH_DELAY)
+    }
+
+    private var searchGeneration = 0
+    private var pendingSearch = Runnable {}
+    private val cells = ArrayList<SymbolCell>()
+    private val emptyNote by lazy {
+        TextView(context).apply {
+            setTextColor(palette.onSurfaceVariant)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), 0, 0, 0)
+        }
+    }
+
+    private fun showUnicode(q: String, found: List<UnicodeNames.Symbol>) {
         shown = found.map { it.text }
-        found.forEach { s ->
-            results.addView(SymbolCell(s).apply {
-                setOnClickListener {
-                    // what this person uses comes first next time
-                    unicodeUse.edit().putInt(s.code.toString(16), unicodeUse.getInt(s.code.toString(16), 0) + 1).apply()
-                    type(s.text)
-                }
-                setOnLongClickListener { info.show(this, s.text, s.name.lowercase(), emoji = false); true }
-            }, LayoutParams(dp(CELL_WIDTH), LayoutParams.MATCH_PARENT).apply { marginEnd = dp(2) })
+        // the cells already made are reused; only as many as there are results show
+        while (cells.size < found.size) cells += SymbolCell()
+        if (results.childCount > 0 && results.getChildAt(0) !is SymbolCell && results.getChildAt(0) !== emptyNote) results.removeAllViews()
+        results.removeView(emptyNote)
+        for ((k, cell) in cells.withIndex()) {
+            if (k < found.size) {
+                cell.bind(found[k])
+                if (cell.parent == null) results.addView(cell, LayoutParams(dp(CELL_WIDTH), LayoutParams.MATCH_PARENT).apply { marginEnd = dp(2) })
+                cell.visibility = VISIBLE
+            } else if (cell.parent != null) {
+                cell.visibility = GONE
+            }
         }
         if (found.isEmpty()) {
-            results.addView(TextView(context).apply {
-                text = context.getString(if (query.isBlank()) R.string.lychee_unicode_hint else R.string.lychee_emoji_none)
-                setTextColor(palette.onSurfaceVariant)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(8), 0, 0, 0)
-            }, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+            emptyNote.text = context.getString(if (q.isBlank()) R.string.lychee_unicode_hint else R.string.lychee_emoji_none)
+            results.addView(emptyNote, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
         }
         scroller.scrollTo(0, 0)
+        if (app.lychee.layout.LycheePanels.animate(context)) {
+            results.alpha = 0.4f
+            results.animate().alpha(1f).setDuration(120).start()
+        }
     }
+
+    /** Searches off the main thread, one at a time. */
+    private val searcher = java.util.concurrent.Executors.newSingleThreadExecutor()
 
     /** How often each symbol was typed from the Unicode search (by code point, in hex). */
     private val unicodeUse by lazy { context.getSharedPreferences("lychee_unicode_use", Context.MODE_PRIVATE) }
@@ -212,43 +247,56 @@ class EmojiSearchBar @JvmOverloads constructor(
      * One Unicode result, all the same size: the symbol, and beside it its name on one line
      * and its code point under that.
      */
-    private inner class SymbolCell(s: UnicodeNames.Symbol) : LinearLayout(context) {
+    private inner class SymbolCell : LinearLayout(context) {
+        private val symbol = TextView(context).apply {
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+            setTextColor(palette.onSurface)
+            typeface = symbolFace
+            includeFontPadding = false
+            isSingleLine = true
+            gravity = Gravity.CENTER
+        }
+        private val name = TextView(context).apply {
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(palette.onSurface)
+            typeface = app.lychee.fonts.LycheeFonts.ui(context)
+            includeFontPadding = false
+            isSingleLine = true
+            ellipsize = TextUtils.TruncateAt.END
+        }
+        private val code = TextView(context).apply {
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            setTextColor(palette.onSurfaceVariant)
+            typeface = android.graphics.Typeface.MONOSPACE
+            includeFontPadding = false
+            isSingleLine = true
+            setPadding(0, dp(2), 0, 0)
+        }
+
         init {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(4), 0, dp(8), 0)
             background = app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_suggestion)
-            addView(TextView(context).apply {
-                text = s.shown
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
-                setTextColor(palette.onSurface)
-                typeface = symbolFace
-                includeFontPadding = false
-                isSingleLine = true
-                gravity = Gravity.CENTER
-            }, LayoutParams(dp(40), LayoutParams.WRAP_CONTENT))
+            addView(symbol, LayoutParams(dp(40), LayoutParams.WRAP_CONTENT))
             addView(LinearLayout(context).apply {
                 orientation = VERTICAL
                 gravity = Gravity.CENTER_VERTICAL
-                addView(TextView(context).apply {
-                    text = s.name.lowercase().ifEmpty { "—" }
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                    setTextColor(palette.onSurface)
-                    typeface = app.lychee.fonts.LycheeFonts.ui(context)
-                    includeFontPadding = false
-                    isSingleLine = true
-                    ellipsize = TextUtils.TruncateAt.END
-                })
-                addView(TextView(context).apply {
-                    text = "U+%04X".format(s.code)
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-                    setTextColor(palette.onSurfaceVariant)
-                    typeface = android.graphics.Typeface.MONOSPACE
-                    includeFontPadding = false
-                    isSingleLine = true
-                    setPadding(0, dp(2), 0, 0)
-                })
+                addView(name)
+                addView(code)
             }, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = dp(4) })
+        }
+
+        fun bind(s: UnicodeNames.Symbol) {
+            symbol.text = s.shown
+            name.text = s.name.lowercase().ifEmpty { "—" }
+            code.text = "U+%04X".format(s.code)
+            setOnClickListener {
+                // what this person uses comes first next time
+                unicodeUse.edit().putInt(s.code.toString(16), unicodeUse.getInt(s.code.toString(16), 0) + 1).apply()
+                type(s.text)
+            }
+            setOnLongClickListener { info.show(this, s.text, s.name.lowercase(), emoji = false); true }
         }
     }
 
@@ -270,5 +318,7 @@ class EmojiSearchBar @JvmOverloads constructor(
         const val RESULTS = 40
         /** A Unicode result's width (dp): every one the same. */
         const val CELL_WIDTH = 150
+        /** How long after the last key the Unicode search runs (ms). */
+        const val SEARCH_DELAY = 90L
     }
 }

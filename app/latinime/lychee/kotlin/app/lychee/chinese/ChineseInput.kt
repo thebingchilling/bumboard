@@ -167,7 +167,14 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val peek = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
         val voice = if (guessing) (if (guessMode() == InputMode.Cantonese) "yue" else "cmn") else engine
         val locales = app.lychee.speech.Speech.localesFor(voice, ChineseScript.candidatesSimplified(prefs))
+        // a Kanji or Hanja written on the Japanese or Korean keyboard: its readings in that
+        // language (the Chinese ones only when Settings says so)
+        val local = if (guessing) localReadings(candidate.text) else null
+        val localVoices = app.lychee.speech.Speech.localesFor(engine, false)
         popup?.show(frame, candidate.text, resolved, Readings.displayPrefs(prefs), peek,
+            local = local,
+            showChinese = prefs.getBoolean(Readings.PREF_CHINESE_ON_KANJI, false),
+            onSpeakLocal = { text -> app.lychee.speech.Speech.speak(ime, text, localVoices) },
             onSpeak = { text, lang ->
                 // YUE and PU: the word in Cantonese or in Mandarin, whichever keyboard this is
                 val voices = when (lang) {
@@ -263,9 +270,57 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     }
 
 
+    /**
+     * A character's readings in the Japanese or Korean keyboard's own language (on'yomi and
+     * kun'yomi in kana with their romaji; Hangul with its romanisation); null on the other
+     * keyboards. Kana and Hangul read as themselves.
+     */
+    private fun localReadings(text: String): List<DictionaryPopup.LocalReading>? {
+        val lang = engine?.takeIf { it == "ja" || it == "ko" } ?: return null
+        val db = Readings.db
+        val out = ArrayList<DictionaryPopup.LocalReading>()
+        val isHan = text.codePoints().anyMatch { app.lychee.core.Annotator.isHan(it) }
+        if (lang == "ja") {
+            if (isHan && db != null) {
+                val all = text.codePoints().toArray().singleOrNull()?.let { db.charReadings(String(Character.toChars(it)), "ja") }.orEmpty()
+                val on = all.filter { r -> r.any { it in '\u30A1'..'\u30FA' } }
+                val kun = all - on.toSet()
+                fun row(label: Int, list: List<String>) {
+                    if (list.isEmpty()) return
+                    val shown = list.joinToString("、") { r -> "$r ${app.lychee.core.SentenceRomanizer.kana(r.replace(".", "").replace("-", ""))}" }
+                    out += DictionaryPopup.LocalReading(ime.getString(label), shown, list.first().replace(".", "").replace("-", ""))
+                }
+                row(R.string.lychee_card_onyomi, on)
+                row(R.string.lychee_card_kunyomi, kun)
+            } else if (!isHan) {
+                out += DictionaryPopup.LocalReading(ime.getString(R.string.lychee_card_reading), app.lychee.core.SentenceRomanizer.kana(text), text)
+            }
+        } else {
+            val hangul = if (isHan && db != null) {
+                text.codePoints().toArray().singleOrNull()?.let { db.charReadings(String(Character.toChars(it)), "ko") }.orEmpty()
+            } else listOf(text)
+            if (hangul.isNotEmpty()) {
+                val shown = hangul.joinToString("、") { h -> "$h ${app.lychee.core.SentenceRomanizer.korean(h)}" }
+                out += DictionaryPopup.LocalReading(ime.getString(R.string.lychee_card_korean), shown, hangul.first())
+            }
+        }
+        return out
+    }
+
     /** Readings for handwriting guesses: Cantonese readings, or Mandarin when typing Simplified. */
     private fun guessAnnotation(): ((Candidate) -> Annotation?)? {
         if (!Readings.showReadings(prefs)) return null
+        // the Japanese and Korean keyboards: the character's own language's readings
+        if (engine == "ja" || engine == "ko") {
+            return { candidate ->
+                val local = localReadings(candidate.text).orEmpty()
+                val line = local.joinToString("  ") { it.shown.substringBefore("、").let { first ->
+                    // under a candidate: the kana (or Hangul) alone, the first of each kind
+                    if (engine == "ja") first.substringBefore(' ') else first
+                } }
+                if (line.isBlank()) null else Annotation(listOf(line), null, null)
+            }
+        }
         val annotator = Readings.annotator ?: return null
         val mode = guessMode()
         val display = Readings.displayPrefs(prefs)
