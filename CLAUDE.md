@@ -105,8 +105,9 @@ is outside it.
   stroke order (Chinese, Japanese from KanjiVG, Korean made from letter strokes) and example
   sentences are bundled in the APK (`app/scripts/bundle-packs.py` fetches the newest
   published ones; `packs/BundledPacks.kt` in the app unpacks them). Only fonts are downloads. Emoji are
-  always the bundled Noto Color Emoji (`app/data/emoji_sources.json`, the newest release); there
-  are no other emoji fonts.
+  the bundled Noto Color Emoji by default (`app/data/emoji_sources.json`, the newest release);
+  Noto 3D (two sizes) is a download pack mirrored by `packs.yml`, and the user may pick their
+  own emoji font or the phone's. Emoji font zips stay out of Actions artifacts (storage).
 - `app/latinime/lychee/assets/lychee/packs.json` — the downloads catalogue (fonts and data packs).
 - Pack updates: Lychee can't go online, so "Check for updates" opens the packs page with the
   installed versions after the `#`; the page hands the newest back via `lychee://updates`

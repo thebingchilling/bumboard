@@ -379,15 +379,37 @@ object LycheeFonts {
     /** Lychee's own copy of Noto Color Emoji. */
     @JvmStatic
     fun bundledEmoji(context: Context): Typeface = load(BUNDLED_EMOJI) {
-        runCatching { Typeface.createFromAsset(app(context).assets, BUNDLED_EMOJI) }.getOrNull()
+        val assets = app(context).assets
+        // the phone's fonts behind it, for anything it lacks
+        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) runCatching {
+            Typeface.CustomFallbackBuilder(FontFamily.Builder(Font.Builder(assets, BUNDLED_EMOJI).build()).build())
+                .setSystemFallback("sans-serif").build()
+        }.getOrNull() else null) ?: runCatching { Typeface.createFromAsset(assets, BUNDLED_EMOJI) }.getOrNull()
     } ?: Typeface.DEFAULT
 
     /**
-     * The emoji font: Lychee's own Noto Color Emoji (the newest, Emoji 18), the only one; it
-     * draws every emoji the keyboard offers the same on every phone.
+     * The emoji font chosen in Settings > Fonts: Lychee's own Noto Color Emoji (the default, the
+     * newest), a downloaded one (Noto 3D), the user's own, or the phone's. Whatever the chosen
+     * font lacks (an emoji newer than it, a rare sequence) comes from the phone's emoji rather
+     * than falling apart into pieces.
      */
     @JvmStatic
-    fun emoji(context: Context): Typeface = bundledEmoji(context)
+    fun emoji(context: Context): Typeface = when (val c = choice(context, PREF_EMOJI)) {
+        "" -> bundledEmoji(context)
+        SYSTEM -> Typeface.DEFAULT
+        else -> packEmoji(context, c) ?: bundledEmoji(context)
+    }
+
+    /** A downloaded or own emoji font, with the phone's fonts behind it. */
+    private fun packEmoji(context: Context, id: String): Typeface? {
+        val file = packFile(context, id) ?: return null
+        return load("emoji:${file.path}:${file.lastModified()}") {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) runCatching {
+                Typeface.CustomFallbackBuilder(FontFamily.Builder(Font.Builder(file).build()).build())
+                    .setSystemFallback("sans-serif").build()
+            }.getOrNull() ?: PackImporter.loadFont(file) else PackImporter.loadFont(file)
+        }
+    }
 
     /** Emoji new in each Emoji version, newest first (data/packs/fonts/emoji_fonts.py checks the same). */
     private val EMOJI_VERSIONS = listOf(

@@ -103,13 +103,17 @@ fun FontsPage() {
             ) + ownFont(context, kind),
         )
     }
-    // one emoji font: Noto Color Emoji, built in at its newest
+    // emoji: Noto Color Emoji built in at its newest; Noto 3D to download; the phone's own; your own
     FontSection(
         stringResource(R.string.lychee_fonts_emoji), LycheeFonts.PREF_EMOJI, stringResource(R.string.lychee_fonts_sample_emoji), actions,
         listOf(
             FontOption("", stringResource(R.string.lychee_fonts_noto), stringResource(R.string.lychee_fonts_noto_summary),
                 face = { LycheeFonts.bundledEmoji(it) }, emoji = true),
-        ),
+        ) + Packs.ofKind(context, PackKind.FONT_EMOJI).filter { !it.custom }.map {
+            FontOption(it.id, it.name, listOf(it.summary, it.size).filter { s -> s.isNotEmpty() }.joinToString(" · "), pack = it, emoji = true)
+        } + FontOption(LycheeFonts.SYSTEM, stringResource(R.string.lychee_fonts_system_emoji), stringResource(R.string.lychee_fonts_system_emoji_summary),
+            face = { Typeface.DEFAULT }, emoji = true) +
+            ownFont(context, PackKind.FONT_EMOJI).map { it.copy(emoji = true) },
     )
 }
 

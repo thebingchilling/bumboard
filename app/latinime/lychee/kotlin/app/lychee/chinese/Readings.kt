@@ -101,8 +101,9 @@ object Readings {
     const val PREF_YALE_TONES = "lychee_tones_yale"
     const val PREF_PINYIN_TONES = "lychee_tones_pinyin"
 
-    /** Readings under candidates are off when both the romanisation and the meaning are off. */
-    fun showReadings(prefs: SharedPreferences) = prefs.getBoolean(PREF_SHOW_READINGS, true)
+    /** Readings under candidates: always on, on every language's keyboard (a learning app). */
+    @Suppress("UNUSED_PARAMETER")
+    fun showReadings(prefs: SharedPreferences) = true
 
     /** Under each candidate: tone colours. */
     fun barStyle(prefs: SharedPreferences, lang: app.lychee.core.Lang?) = CandidateBarView.Style(

@@ -76,33 +76,28 @@ object LycheeMotion {
         group.layoutTransition = transition
     }
 
-    /** The number pad coming in: it fades in like changed keys do (no scaling). */
+    /**
+     * Keys coming in (another set of keys, the number pad): the whole keyboard fades in with a
+     * small bounce up to full size, like Gboard.
+     */
     @JvmStatic
     fun keysIn(view: View) {
         if (!LycheePanels.animate(view.context)) return
         view.animate().cancel()
-        view.alpha = 0f
-        view.animate().alpha(1f).setDuration(KEYS).setInterpolator(DecelerateInterpolator(1.5f)).start()
+        view.alpha = 0.35f
+        view.scaleX = 0.985f
+        view.scaleY = 0.985f
+        view.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(KEYS)
+            .setInterpolator(DecelerateInterpolator(1.5f)).start()
     }
 
-    /**
-     * The keys changed from [old] to [new]: when it's another set of keys (letters and
-     * symbols, another language), the keys that changed fade in, and those that stayed the
-     * same (the same label in the same place: the bottom row, Enter, backspace ...) don't flash.
-     */
+    /** The keys changed from [old] to [new]: another set of keys bounces in. */
     @JvmStatic
-    fun keyboardChanged(view: com.android.inputmethod.keyboard.KeyboardView, old: Keyboard?, new: Keyboard) {
+    fun keyboardChanged(view: View, old: Keyboard?, new: Keyboard) {
         if (old == null || !view.isShown || !LycheePanels.animate(view.context)) return
         if (kind(old.mId) == kind(new.mId) && old.mId.mSubtype == new.mId.mSubtype) return
-        val stayed = HashSet<String>()
-        for (k in old.sortedKeys) stayed += signature(k)
-        val changed = new.sortedKeys.filterTo(HashSet()) { signature(it) !in stayed }
-        view.lycheeFadeIn(changed, KEYS)
+        keysIn(view)
     }
-
-    /** A key as it shows: where it is, its label or icon, what it types. */
-    private fun signature(k: com.android.inputmethod.keyboard.Key): String =
-        "${k.x},${k.y},${k.width},${k.height}|${k.label}|${k.iconId}|${k.code}|${k.hintLabel}"
 
     /**
      * Shows or hides [view] (the bar's toolbar and suggestions taking turns): one coming in

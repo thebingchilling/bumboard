@@ -175,11 +175,8 @@ class DictionaryPopup(private val ctx: Context) {
         }
         fill(c, body)
 
-        val actions = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.END
-            setPadding(dp(12), dp(6), dp(12), dp(10))
-        }
+        // its two buttons in the top corners: close (X) on the left, type the word on the right
+        val actions = FrameLayout(ctx).apply { setPadding(dp(6), dp(6), dp(6), 0) }
         val card = MaxHeightLayout(ctx, room).apply {
             orientation = LinearLayout.VERTICAL
             isClickable = true
@@ -188,18 +185,20 @@ class DictionaryPopup(private val ctx: Context) {
                 cornerRadius = dp(20).toFloat()
             }
             elevation = dp(6).toFloat()
+            addView(actions)
             addView(ScrollView(ctx).apply { addView(body) },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-            addView(actions)
         }
         if (peek) {
             actions.visibility = View.GONE
         } else {
-            actions.addView(button(ctx.getString(R.string.lychee_close), c, filled = false) { dismiss() })
-            actions.addView(button(ctx.getString(R.string.lychee_type_it), c, filled = true) {
+            actions.addView(cornerButton(R.drawable.ic_sym_close, ctx.getString(R.string.lychee_close), c, filled = false) { dismiss() },
+                FrameLayout.LayoutParams(dp(40), dp(40), Gravity.START or Gravity.TOP))
+            actions.addView(cornerButton(R.drawable.lychee_ic_input, ctx.getString(R.string.lychee_type_it), c, filled = true) {
                 dismiss()
                 onType()
-            })
+            }, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.END or Gravity.TOP))
+            body.setPadding(body.paddingLeft, dp(2), body.paddingRight, dp(12))
         }
         // just above the keyboard, rising out of it
         // over the keys only: in one-handed mode the card keeps to the narrowed keyboard
@@ -232,6 +231,20 @@ class DictionaryPopup(private val ctx: Context) {
             super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(maxHeight, MeasureSpec.AT_MOST))
         }
     }
+
+    /** A round icon button in a corner of the card. */
+    private fun cornerButton(icon: Int, label: String, c: M3Colors, filled: Boolean, onClick: () -> Unit) =
+        android.widget.ImageView(ctx).apply {
+            setImageResource(icon)
+            imageTintList = android.content.res.ColorStateList.valueOf(if (filled) c.onPrimary else c.onSurfaceVariant)
+            scaleType = android.widget.ImageView.ScaleType.CENTER
+            contentDescription = label
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(if (filled) c.primary else c.surfaceContainer)
+            }
+            setOnClickListener { onClick() }
+        }
 
     private fun button(label: String, c: M3Colors, filled: Boolean, onClick: () -> Unit) = TextView(ctx).apply {
         text = label
@@ -287,7 +300,8 @@ class DictionaryPopup(private val ctx: Context) {
                 val second = if (prefs.simplified) main.traditional else main.simplified
                 heading(first, null, otherForm(first, second))
             } else {
-                heading(text, null, null)
+                // a phrase (read piece by piece) still shows its other script under it
+                heading(text, null, (Annotator.otherScript(text, r) ?: charByChar(text))?.let { otherForm(text, it) })
             }
             // both languages' readings, always
             spokenWord = text
@@ -316,15 +330,34 @@ class DictionaryPopup(private val ctx: Context) {
             r.headwords.forEachIndexed { i, hw ->
                 if (i > 0) {
                     body.addView(divider())
+                    // each entry's word as large as the first's, its other script under it
                     val first = if (prefs.simplified) hw.simplified else hw.traditional
-                    val other = otherForm(first, if (prefs.simplified) hw.traditional else hw.simplified)
-                    body.addView(textView(if (other != null) "$first  ($other)" else first, 22f, c.onSurface).apply {
-                        app.lychee.fonts.LycheeFonts.forText(ctx, hw.traditional)?.let { typeface = it }
-                    })
+                    heading(first, null, otherForm(first, if (prefs.simplified) hw.traditional else hw.simplified))
                     if (showChinese) readingRows(Resolved(r.lang, null, null, null, listOf(hw), false), hw, null)
                 }
                 senses(hw, r)
             }
+        }
+
+        /** [text] in the other script character by character, from the dictionary; null when the same. */
+        private fun charByChar(text: String): String? {
+            val db = Readings.db ?: return null
+            val out = StringBuilder()
+            var i = 0
+            while (i < text.length) {
+                val cp = text.codePointAt(i)
+                val ch = String(Character.toChars(cp))
+                val hw = if (Annotator.isHan(cp)) runCatching { db.lookup(ch) }.getOrNull()
+                    ?.firstOrNull { it.traditional.length == ch.length && it.simplified.length == ch.length && (it.traditional == ch || it.simplified == ch) }
+                else null
+                out.append(when {
+                    hw == null -> ch
+                    hw.traditional == ch -> hw.simplified
+                    else -> hw.traditional
+                })
+                i += Character.charCount(cp)
+            }
+            return out.toString().takeIf { it != text }
         }
 
         /**

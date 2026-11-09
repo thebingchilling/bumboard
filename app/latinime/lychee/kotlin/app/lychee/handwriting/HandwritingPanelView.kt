@@ -261,27 +261,17 @@ class HandwritingPanelView @JvmOverloads constructor(
     private fun isHan(ch: String) = ch.codePointCount(0, ch.length) == 1 &&
         Character.UnicodeScript.of(ch.codePointAt(0)) == Character.UnicodeScript.HAN
 
-    /**
-     * Types the best guess for the ink on the pad and clears it for the next character; when
-     * the guesses for all of the ink are still being worked out, as soon as they arrive (never
-     * a guess made from fewer strokes). [now]: type what there is (the pad is closing).
-     */
-    private fun commitPending(now: Boolean = false) {
+    /** Clears the ink on the pad without typing anything (only a tapped candidate types). */
+    private fun commitPending(@Suppress("UNUSED_PARAMETER") now: Boolean = false) {
+        // nothing is typed unless a candidate is tapped: moving on (space, Enter, a key, the
+        // pad closing) just clears what was written
         main.removeCallbacks(autoCommit)
-        if (!pad.hasInk) return
-        if (!now && guessedVersion != inkVersion) {
-            commitWhenGuessed = true
-            return
-        }
         commitWhenGuessed = false
-        val best = guesses.firstOrNull()
-        HandwritingSamples.save(context, pad.strokeList(), best, guesses, lycheeHost()?.lycheeEngine())
+        if (!pad.hasInk) return
         pad.clear()
-        if (best != null) {
-            lycheeHost()?.lycheeType(best)
-            lastTyped = best
-            showNext(best)
-        }
+        inkVersion++
+        showGuesses(emptyList())
+        updateHint()
     }
 
     private val autoCommit = Runnable { commitPending() }
@@ -453,8 +443,8 @@ class HandwritingPanelView @JvmOverloads constructor(
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     current?.let { points += it.toFloatArray() }
                     current = null
+                    // the guesses show; one is typed only when it is tapped
                     recognise()
-                    main.postDelayed(autoCommit, AUTO_COMMIT_MS)
                 }
             }
             invalidate()
@@ -475,8 +465,6 @@ class HandwritingPanelView @JvmOverloads constructor(
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 
     private companion object {
-        /** A pause this long after a stroke types the character. */
-        const val AUTO_COMMIT_MS = 1300L
         /** How much a common character gains (see rank): a tie-breaker between look-alikes. */
         const val COMMON = 0.06f
         /** The stroke matcher's say on Chinese characters: past this distance none; its weight. */

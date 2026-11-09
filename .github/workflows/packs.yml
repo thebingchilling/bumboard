@@ -78,7 +78,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: lychee-packs
-          path: out/packs/lychee-*.zip
+          # emoji fonts (Noto 3D is 140 MB) stay out: Actions storage is limited, and they are
+          # on the packs release anyway
+          path: |
+            out/packs/lychee-*.zip
+            !out/packs/lychee-emoji-*.zip
           if-no-files-found: error
           retention-days: 7
 

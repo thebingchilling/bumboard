@@ -567,7 +567,6 @@ private fun ChinesePage() {
     val cantonese = prefs.stringPref(ChineseInput.PREF_CANTONESE_INPUT) {
         prefs.getString(ChineseInput.PREF_CANTONESE_INPUT, null) ?: "jyutping"
     }
-    val showReadings = prefs.boolPref(Readings.PREF_SHOW_READINGS) { Readings.showReadings(prefs) }
     val otherLanguage = prefs.boolPref(Readings.PREF_OTHER_LANGUAGE) {
         prefs.getBoolean(Readings.PREF_OTHER_LANGUAGE, false)
     }
@@ -691,13 +690,8 @@ private fun ChinesePage() {
         }
     }
     Group(stringResource(R.string.lychee_under_candidates)) {
-        row {
-            SwitchRow(
-                it, stringResource(R.string.lychee_show_readings), stringResource(R.string.lychee_show_readings_summary),
-                showReadings.value, showReadings::set,
-            )
-        }
-        if (showReadings.value) {
+        // readings are always on (no switch): the rest of the group says what they show
+        run {
             row {
                 SwitchRow(
                     it, stringResource(R.string.lychee_other_language), stringResource(R.string.lychee_other_language_summary,

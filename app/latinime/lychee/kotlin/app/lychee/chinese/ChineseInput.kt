@@ -143,9 +143,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         if (!isComposing) show(null)
     }
 
-    /** Handwriting reads Cantonese, or Mandarin when typing Simplified. */
-    private fun guessMode() =
-        if (ChineseScript.candidatesSimplified(prefs)) InputMode.Mandarin else InputMode.Cantonese
+    /**
+     * Handwriting guesses read like the keyboard's own candidates: Cantonese on the Cantonese
+     * keyboard, Mandarin on the Mandarin one; elsewhere Mandarin when typing Simplified.
+     */
+    private fun guessMode() = when (engine) {
+        "yue" -> InputMode.Cantonese
+        "cmn" -> InputMode.Mandarin
+        else -> if (ChineseScript.candidatesSimplified(prefs)) InputMode.Mandarin else InputMode.Cantonese
+    }
 
     /** What the bar shows: the keyboard's own candidates, or handwriting guesses. */
     private fun barMode() = if (showingGuesses) guessMode() else inputMode()
@@ -697,6 +703,16 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val view = inputView ?: return
         if (panel.visibility == View.VISIBLE) {
             panel.visibility = View.GONE
+        } else if (showingGuesses) {
+            // handwriting guesses: all of them over the pad (which stays open under them)
+            val list = guesses.map { Candidate(it, "") }
+            app.lychee.layout.LycheePanels.cover(panel, view)
+            panel.bringToFront()
+            panel.show(list, candidateScale(), guessAnnotation(), bar?.style ?: Readings.barStyle(prefs, guessMode().lang),
+                after = bar?.lastVisible ?: -1,
+                onPicked = { i -> panel.visibility = View.GONE; onGuess(i); updateMoreButton() },
+                onLongPicked = { i, anchor -> showDictionary(i, anchor) })
+            app.lychee.layout.LycheePanels.reveal(panel)
         } else if (!isActive) {
             if (englishMore.isNotEmpty()) {
                 showEnglishPanel()
@@ -810,7 +826,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         bar.lines = if (annotate != null) annotationLines() else null
         bar.setCandidates(candidates, annotate)
         bar.visibility = View.VISIBLE
-        moreButton?.visibility = if (guessing) View.GONE else View.VISIBLE
+        // handwriting guesses are candidates like any others: the ⌄ shows them all
+        moreButton?.visibility = View.VISIBLE
         // the open dropdown follows the typing
         if (panel?.visibility == View.VISIBLE) {
             bar.post { panel?.show(candidates, candidateScale(), annotation(), bar.style, after = bar.lastVisible) }
