@@ -72,6 +72,8 @@
     <string name="lychee_under_candidates">Under each candidate</string>
     <string name="lychee_show_readings">Readings and meanings</string>
     <string name="lychee_show_readings_summary">Show how each candidate is read and what it means</string>
+    <string name="lychee_zhuyin">Zhuyin (bopomofo) too</string>
+    <string name="lychee_zhuyin_summary">ㄋㄧˇ ㄏㄠˇ beside the pinyin, under the candidates and on the word cards</string>
     <string name="lychee_other_language">Also show the other language</string>
     <string name="lychee_other_language_summary">Pinyin under Cantonese, %1$s under Mandarin</string>
     <string name="lychee_show_meaning">English meaning</string>

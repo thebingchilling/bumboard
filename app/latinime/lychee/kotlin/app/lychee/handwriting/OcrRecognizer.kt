@@ -29,13 +29,39 @@ class OcrRecognizer private constructor(
      * with their scores (0..1); only those [allowed] lets through.
      */
     fun recognise(strokes: List<FloatArray>, limit: Int = 12, allowed: (String) -> Boolean = { true }): List<Pair<String, Float>> {
-        val input = picture(strokes) ?: return emptyList()
+        // the ink smoothed (a shaky hand's wobble taken out), then read as a few pictures,
+        // with a thinner and a thicker pen and another margin, and the scores averaged: a
+        // character written only roughly right still comes out on top
+        val ink = smooth(strokes)
+        var total: FloatArray? = null
+        var reads = 0
+        for ((pen, margin) in VARIANTS) {
+            val scores = scores(picture(ink, pen, margin) ?: continue) ?: continue
+            val t = total ?: FloatArray(scores.size).also { total = it }
+            if (t.size != scores.size) continue
+            for (c in scores.indices) t[c] += scores[c]
+            reads++
+        }
+        val best = total ?: return emptyList()
+        if (reads == 0) return emptyList()
+        // class 0 is CTC's blank; class i is chars[i - 1]
+        return (1 until best.size).asSequence()
+            .filter { it - 1 < chars.size }
+            .map { chars[it - 1] to best[it] / reads }
+            .filter { (ch, _) -> ch.isNotBlank() && allowed(ch) }
+            .sortedByDescending { it.second }
+            .take(limit)
+            .toList()
+    }
+
+    /** Each character's best probability anywhere in one picture. */
+    private fun scores(input: FloatArray): FloatArray? {
         val env = OrtEnvironment.getEnvironment()
         OnnxTensor.createTensor(env, FloatBuffer.wrap(input), longArrayOf(1, 3, SIZE.toLong(), SIZE.toLong())).use { tensor ->
             session.run(mapOf(session.inputNames.first() to tensor)).use { result ->
                 @Suppress("UNCHECKED_CAST")
                 val out = (result[0].value as Array<Array<FloatArray>>)[0]  // time x classes
-                val classes = out.firstOrNull()?.size ?: return emptyList()
+                val classes = out.firstOrNull()?.size ?: return null
                 // probabilities already (the models end in softmax); softmax them if not
                 val probs = out.all { row -> row.all { it in 0f..1.0001f } }
                 val best = FloatArray(classes)
@@ -46,14 +72,7 @@ class OcrRecognizer private constructor(
                         if (p > best[c]) best[c] = p
                     }
                 }
-                // class 0 is CTC's blank; class i is chars[i - 1]
-                return (1 until classes).asSequence()
-                    .filter { it - 1 < chars.size }
-                    .map { chars[it - 1] to best[it] }
-                    .filter { (ch, _) -> ch.isNotBlank() && allowed(ch) }
-                    .sortedByDescending { it.second }
-                    .take(limit)
-                    .toList()
+                return best
             }
         }
     }
@@ -65,6 +84,23 @@ class OcrRecognizer private constructor(
         private const val SIZE = 48
         /** Drawn larger first, then scaled down smoothly, like a photographed line of text. */
         private const val CANVAS = 192
+        /** The pictures each character is read as: pen width (of the square) and margin. */
+        private val VARIANTS = listOf(0.055f to 1.25f, 0.075f to 1.25f, 0.045f to 1.4f)
+
+        /**
+         * The strokes with each point averaged with its neighbours (a shaky hand's wobble
+         * taken out; corners stay, the ends stay put).
+         */
+        fun smooth(strokes: List<FloatArray>): List<FloatArray> = strokes.map { s ->
+            val n = s.size / 2
+            if (n < 5) return@map s
+            val out = s.copyOf()
+            for (i in 1 until n - 1) {
+                out[2 * i] = (s[2 * (i - 1)] + 2 * s[2 * i] + s[2 * (i + 1)]) / 4
+                out[2 * i + 1] = (s[2 * (i - 1) + 1] + 2 * s[2 * i + 1] + s[2 * (i + 1) + 1]) / 4
+            }
+            out
+        }
 
         /** Opens the [lang] model ("zh" or "ko") from the APK; null when it isn't there. */
         fun open(context: Context, lang: String): OcrRecognizer? = runCatching {
@@ -85,7 +121,7 @@ class OcrRecognizer private constructor(
          * character (centred), drawn with a round pen about 5.5% of the square wide, scaled to
          * [SIZE] and normalised to -1..1, as channels of red, green and blue.
          */
-        fun picture(strokes: List<FloatArray>): FloatArray? {
+        fun picture(strokes: List<FloatArray>, penWidth: Float = 0.055f, margin: Float = 1.25f): FloatArray? {
             var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE
             var maxX = -Float.MAX_VALUE; var maxY = -Float.MAX_VALUE
             for (s in strokes) {
@@ -97,7 +133,7 @@ class OcrRecognizer private constructor(
                 }
             }
             if (minX > maxX) return null
-            val side = maxOf(maxX - minX, maxY - minY, 1f) * 1.25f
+            val side = maxOf(maxX - minX, maxY - minY, 1f) * margin
             val scale = CANVAS / side
             val offX = (side - (maxX - minX)) / 2 - minX
             val offY = (side - (maxY - minY)) / 2 - minY
@@ -107,7 +143,7 @@ class OcrRecognizer private constructor(
             val pen = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.BLACK
                 style = Paint.Style.STROKE
-                strokeWidth = maxOf(2f, CANVAS * 0.055f)
+                strokeWidth = maxOf(2f, CANVAS * penWidth)
                 strokeCap = Paint.Cap.ROUND
                 strokeJoin = Paint.Join.ROUND
             }

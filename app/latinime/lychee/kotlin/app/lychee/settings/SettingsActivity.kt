@@ -663,6 +663,7 @@ private fun ChinesePage() {
     val jyutpingTones = prefs.stringPref(Readings.PREF_JYUTPING_TONES) { prefs.getString(Readings.PREF_JYUTPING_TONES, null) ?: "Numbers" }
     val yaleTones = prefs.stringPref(Readings.PREF_YALE_TONES) { prefs.getString(Readings.PREF_YALE_TONES, null) ?: "Marks" }
     val pinyinTones = prefs.stringPref(Readings.PREF_PINYIN_TONES) { prefs.getString(Readings.PREF_PINYIN_TONES, null) ?: "Marks" }
+    val zhuyin = prefs.boolPref(Readings.PREF_ZHUYIN) { prefs.getBoolean(Readings.PREF_ZHUYIN, false) }
     Group(stringResource(R.string.lychee_group_tones)) {
         if (cantonese.value == "yale") {
             row {
@@ -681,6 +682,12 @@ private fun ChinesePage() {
             ChoiceRow(it, stringResource(R.string.lychee_tones_pinyin), null, listOf(
                 "Marks" to "nǐ", "Numbers" to "ni3", "Superscript" to "ni³",
             ), pinyinTones.value, onSelect = pinyinTones::set)
+        }
+        row {
+            SwitchRow(
+                it, stringResource(R.string.lychee_zhuyin), stringResource(R.string.lychee_zhuyin_summary),
+                zhuyin.value, zhuyin::set,
+            )
         }
     }
     Group(stringResource(R.string.lychee_under_candidates)) {

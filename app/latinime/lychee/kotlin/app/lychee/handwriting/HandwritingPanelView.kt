@@ -141,8 +141,10 @@ class HandwritingPanelView @JvmOverloads constructor(
                 }
             }
         }
-        // the kana's shapes, for Japanese
-        if (engine == "ja") loadMatcher(context) { if (visibility == VISIBLE && pad.hasInk) recognise() }
+        // the characters' stroke shapes (a second opinion for Chinese and Japanese, and the
+        // kana's shapes); and the Chinese dictionary's characters, for the filter
+        if (engine != "ko") loadMatcher(context) { if (visibility == VISIBLE && pad.hasInk) recognise() }
+        if (engine != "ko" && engine != "ja") worker.execute { chineseCharacters() }
         message.visibility = GONE
         message.text = context.getString(R.string.lychee_hw_unavailable)
         updateHint()
@@ -212,13 +214,26 @@ class HandwritingPanelView @JvmOverloads constructor(
      * kana come in too.
      */
     private fun rank(o: OcrRecognizer?, m: StrokeMatcher?, ink: List<FloatArray>, engine: String?): List<String> {
+        // each keyboard only its own language's characters: Korean, Hangul; Japanese, kana and
+        // kanji; Chinese, the characters its dictionary has (no kana, Hangul, or characters
+        // only Japanese or Korean use)
+        val chinese = if (engine == "ko" || engine == "ja") null else chineseCharacters()
         val allowed: (String) -> Boolean = when (engine) {
             "ko" -> { ch -> ch.length == 1 && ch[0] in '\uAC00'..'\uD7A3' }
             "ja" -> { ch -> isKana(ch) || isHan(ch) }
-            else -> { ch -> isHan(ch) }
+            else -> { ch -> isHan(ch) && (chinese == null || ch in chinese) }
         }
         val score = LinkedHashMap<String, Float>()
         o?.recognise(ink, 20, allowed)?.forEach { (ch, p) -> score[ch] = p }
+        if (engine != "ko" && m != null) {
+            // a second opinion from the strokes' shapes and directions (the stroke-order data),
+            // which a roughly drawn character fools differently from the picture: agreement
+            // lifts a character, and one the picture missed can still come up
+            m.match(ink, 30).filter { (ch, _) -> isHan(ch) && allowed(ch) }.forEach { (ch, distance) ->
+                val s = (1f - distance / HAN_DISTANCE).coerceAtLeast(0f) * HAN_WEIGHT
+                if (s > 0f) score[ch] = (score[ch] ?: 0f) + s
+            }
+        }
         if (engine == "ja" && m != null) {
             // PP-OCR takes kana for look-alike kanji (く for 人, け for 十): the stroke matcher
             // knows their shapes
@@ -464,11 +479,24 @@ class HandwritingPanelView @JvmOverloads constructor(
         const val AUTO_COMMIT_MS = 1300L
         /** How much a common character gains (see rank): a tie-breaker between look-alikes. */
         const val COMMON = 0.06f
+        /** The stroke matcher's say on Chinese characters: past this distance none; its weight. */
+        const val HAN_DISTANCE = 0.45f
+        const val HAN_WEIGHT = 0.35f
         /** A stroke matcher distance past this gives a kana no score at all. */
         const val KANA_DISTANCE = 0.4f
         /** A perfect kana match's score (PP-OCR's confident guesses score near 1). */
         const val KANA_WEIGHT = 0.9f
         val worker = Executors.newSingleThreadExecutor()
+
+        /** The Chinese dictionary's single characters, read once (null until it is open). */
+        @Volatile
+        private var chineseSet: Set<String>? = null
+
+        fun chineseCharacters(): Set<String>? {
+            chineseSet?.let { return it }
+            val db = app.lychee.chinese.Readings.db ?: return null
+            return runCatching { db.characters() }.getOrNull()?.takeIf { it.isNotEmpty() }?.also { chineseSet = it }
+        }
 
         /** The stroke matcher, built once from the stroke-order data (a second or so). */
         @Volatile

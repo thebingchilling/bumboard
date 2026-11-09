@@ -26,7 +26,22 @@ object LycheeMotion {
     @JvmStatic
     fun install(group: ViewGroup) {
         val rise = group.resources.displayMetrics.density * 16
-        val transition = LayoutTransition().apply {
+        val transition = object : LayoutTransition() {
+            // the number pad is part of the keyboard, not a tool over it: it changes in the way
+            // the keys change (letters to symbols), and simply goes when it closes
+            override fun showChild(parent: ViewGroup, child: View, oldVisibility: Int) {
+                if (child is app.lychee.toolbar.NumpadPanelView) {
+                    keysIn(child)
+                    return
+                }
+                super.showChild(parent, child, oldVisibility)
+            }
+
+            override fun hideChild(parent: ViewGroup, child: View, newVisibility: Int) {
+                if (child is app.lychee.toolbar.NumpadPanelView) return
+                super.hideChild(parent, child, newVisibility)
+            }
+        }.apply {
             // only the panels themselves: the others keep still (no sliding around them)
             disableTransitionType(LayoutTransition.CHANGE_APPEARING)
             disableTransitionType(LayoutTransition.CHANGE_DISAPPEARING)
@@ -61,17 +76,24 @@ object LycheeMotion {
         group.layoutTransition = transition
     }
 
-    /** The keys changed from [old] to [new]: they cross-fade when it's another set of keys. */
+    /** Keys coming in (another set of keys, the number pad): a quick cross-fade, like Gboard. */
     @JvmStatic
-    fun keyboardChanged(view: View, old: Keyboard?, new: Keyboard) {
-        if (old == null || !view.isShown || !LycheePanels.animate(view.context)) return
-        if (kind(old.mId) == kind(new.mId) && old.mId.mSubtype == new.mId.mSubtype) return
+    fun keysIn(view: View) {
+        if (!LycheePanels.animate(view.context)) return
         view.animate().cancel()
         view.alpha = 0.35f
         view.scaleX = 0.985f
         view.scaleY = 0.985f
         view.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(KEYS)
             .setInterpolator(DecelerateInterpolator(1.5f)).start()
+    }
+
+    /** The keys changed from [old] to [new]: they cross-fade when it's another set of keys. */
+    @JvmStatic
+    fun keyboardChanged(view: View, old: Keyboard?, new: Keyboard) {
+        if (old == null || !view.isShown || !LycheePanels.animate(view.context)) return
+        if (kind(old.mId) == kind(new.mId) && old.mId.mSubtype == new.mId.mSubtype) return
+        keysIn(view)
     }
 
     /**

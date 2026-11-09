@@ -102,13 +102,32 @@ object UnicodeNames {
             }
     }
 
+    /**
+     * How commonly a code point's block is used: 0 the everyday symbols (punctuation, currency,
+     * arrows, maths, shapes, dingbats, Greek, emoji ...), 1 the rest of the common scripts, 2
+     * historic scripts and other rarities.
+     */
+    private fun tier(cp: Int): Int = when {
+        cp <= 0xFF -> 0
+        cp in 0x0370..0x03FF -> 0
+        cp in 0x2000..0x2BFF -> 0
+        cp in 0x3000..0x303F -> 0
+        cp in 0x1F000..0x1FAFF -> 0
+        cp <= 0xFFFF -> 1
+        else -> 2
+    }
+
     private val CODE = Regex("^(?:u\\+|0x|u)?([0-9a-f]{2,6})$")
 
     /**
      * Characters matching [query], best first, at most [limit], only those [drawable] says the
      * phone can show (a character no font has would be a blank box).
      */
-    fun search(query: String, limit: Int = 40, drawable: (String) -> Boolean = { true }): List<Symbol> {
+    fun search(
+        query: String, limit: Int = 40, drawable: (String) -> Boolean = { true },
+        /** how often this person has typed each code point from the search */
+        used: (Int) -> Int = { 0 },
+    ): List<Symbol> {
         val q = query.trim().lowercase(Locale.ROOT)
         if (q.isEmpty()) return emptyList()
         val out = ArrayList<Symbol>()
@@ -125,23 +144,26 @@ object UnicodeNames {
         val terms = q.uppercase(Locale.ROOT).split(' ', '-').filter { it.isNotEmpty() }
         if (terms.isEmpty()) return out
         val joined = terms.joinToString(" ")
-        val found = ArrayList<Long>()  // rank << 32 | index, to sort without boxing pairs
+        class Found(val index: Int, val exact: Boolean, val used: Int, val tier: Int, val rank: Int)
+        val found = ArrayList<Found>()
         for (i in ns.indices) {
             val name = ns[i]
             var all = true
             for (t in terms) if (!name.contains(t)) { all = false; break }
             if (!all) continue
-            // whole words and names starting with the query first, then shorter names
+            // within the same use: whole words and names starting with the query first, then
+            // shorter names
             var rank = name.length
-            if (name == joined) rank -= 1000
             if (name.startsWith(terms[0])) rank -= 200
             if (terms.all { t -> ws[i].contains(t) }) rank -= 400
-            found += ((rank + 2000).toLong() shl 32) or i.toLong()
+            found += Found(i, name == joined, used(cps[i]), tier(cps[i]), rank)
         }
-        found.sort()
-        for (packed in found) {
+        // the exact name, then what this person uses most, then the commonly used symbols
+        // before rare ones (historic scripts and the like)
+        found.sortWith(compareBy<Found>({ !it.exact }, { -it.used }, { it.tier }, { it.rank }))
+        for (f in found) {
             if (out.size >= limit) break
-            val i = (packed and 0xFFFFFFFFL).toInt()
+            val i = f.index
             if (out.any { it.code == cps[i] }) continue
             val text = String(Character.toChars(cps[i]))
             if (!drawable(text)) continue

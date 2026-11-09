@@ -21,10 +21,11 @@ import com.android.inputmethod.latin.R
 import com.android.inputmethod.latin.common.Constants
 
 /**
- * A number pad over the keys, laid out like Gboard's: a scrolling column of operators on the
- * left, big digits in a phone-style 3 x 3 grid, %, space and backspace on the right, and
- * ABC , !?# 0 = . Enter along the bottom. It opens from the "12/34" key on the symbols page;
- * ABC goes back to the letters and !?# to the symbols.
+ * A number pad over the keys: a narrow scrolling column of operators on the left (its
+ * scrollbar showing), big digits in a phone-style grid, !?#, space and backspace on the right,
+ * and ABC , 0 . Enter along the bottom, lined up with the columns above (0 is a digit like the
+ * others). Four rows of the same height. It opens from the "12/34" key on the symbols page and
+ * changes like the keyboard does; ABC goes back to the letters and !?# to the symbols.
  */
 class NumpadPanelView @JvmOverloads constructor(
     context: Context,
@@ -39,14 +40,31 @@ class NumpadPanelView @JvmOverloads constructor(
         isClickable = true
         setBackgroundColor(palette.surface)
         setPadding(dp(3), dp(4), dp(3), dp(4))
+        // four rows of equal height, like the keyboard's own rows; the bottom row lines up with
+        // the columns above it, so 0 is a digit like the others
         val top = LinearLayout(context).apply { orientation = HORIZONTAL }
-        // operators: a column that scrolls, the first three showing
+        // operators: a narrow column that scrolls, its scrollbar always showing
         val operators = LinearLayout(context).apply { orientation = VERTICAL }
         val scroll = android.widget.ScrollView(context).apply {
-            isVerticalScrollBarEnabled = false
+            isVerticalScrollBarEnabled = true
+            isScrollbarFadingEnabled = false
+            scrollBarStyle = View.SCROLLBARS_OUTSIDE_INSET
+            setPadding(0, 0, dp(5), 0)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                verticalScrollbarThumbDrawable = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = dp(2).toFloat()
+                    setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(palette.onSurfaceVariant, 0x99))
+                    setSize(dp(3), dp(24))
+                }
+                verticalScrollbarTrackDrawable = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = dp(2).toFloat()
+                    setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(palette.onSurfaceVariant, 0x22))
+                    setSize(dp(3), dp(24))
+                }
+            }
             addView(operators)
         }
-        top.addView(scroll, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        top.addView(scroll, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_OPERATORS))
         scroll.addOnLayoutChangeListener { _, _, t, _, b, _, ot, _, ob ->
             if (b - t != ob - ot) {
                 val keyHeight = (b - t) / 3
@@ -69,26 +87,24 @@ class NumpadPanelView @JvmOverloads constructor(
                 row.forEach { d -> addView(digit(d.toString()), keyParams(1f)) }
             }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         }
-        top.addView(digits, LayoutParams(0, LayoutParams.MATCH_PARENT, 3.6f))
+        top.addView(digits, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_DIGIT * 3))
         val right = LinearLayout(context).apply { orientation = VERTICAL }
-        right.addView(text("%"), keyParams(1f, vertical = true))
+        right.addView(key("!?#", letter = false, size = 15f) {
+            // the symbols page is underneath (this, not the column the key sits in)
+            this@NumpadPanelView.visibility = GONE
+        }, keyParams(1f, vertical = true))
         right.addView(spaceKey(), keyParams(1f, vertical = true))
         right.addView(icon(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete, repeats = true) { send(Constants.CODE_DELETE) },
             keyParams(1f, vertical = true))
-        top.addView(right, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.2f))
+        top.addView(right, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_SIDE))
         addView(top, LayoutParams(LayoutParams.MATCH_PARENT, 0, 3f))
         addView(LinearLayout(context).apply {
             orientation = HORIZONTAL
-            addView(abcKey(), keyParams(1.3f))
-            addView(text(","), keyParams(0.8f))
-            addView(key("!?#", letter = false, size = 15f) {
-                // the symbols page is underneath (this, not the row the key sits in)
-                this@NumpadPanelView.visibility = GONE
-            }, keyParams(1f))
-            addView(digit("0"), keyParams(1.6f))
-            addView(text("="), keyParams(0.8f))
-            addView(text("."), keyParams(0.8f))
-            addView(enterKey(), keyParams(1.3f))
+            addView(abcKey(), keyParams(COLUMN_OPERATORS))
+            addView(text(","), keyParams(COLUMN_DIGIT))
+            addView(digit("0"), keyParams(COLUMN_DIGIT))
+            addView(text("."), keyParams(COLUMN_DIGIT))
+            addView(enterKey(), keyParams(COLUMN_SIDE))
         }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         visibility = GONE
     }
@@ -170,6 +186,10 @@ class NumpadPanelView @JvmOverloads constructor(
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 
     private companion object {
-        val OPERATORS = listOf("+", "-", "*", "/", "(", ")", ":", ";", "#", "@", "~", "^")
+        val OPERATORS = listOf("+", "-", "*", "/", "=", "%", "(", ")", ":", ";", "#", "@", "~", "^")
+        /** the columns' widths: the (narrow) operators, each digit, the right-hand keys */
+        const val COLUMN_OPERATORS = 0.8f
+        const val COLUMN_DIGIT = 1.25f
+        const val COLUMN_SIDE = 1.1f
     }
 }

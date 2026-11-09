@@ -83,6 +83,56 @@ object SentenceRomanizer {
         return out.toString()
     }
 
+    /** Romaji to kana: Hepburn and the usual typed spellings (si, tu, nn ...). */
+    private val ROMAJI: Map<String, String> by lazy {
+        val m = HashMap<String, String>()
+        // Hepburn from the table above; the first kana for a spelling wins (ji: じ, not ぢ)
+        for ((kana, roman) in KANA) if (kana.length == 1 && kana[0] in "ぁぃぅぇぉゃゅょゎ") continue else m.putIfAbsent(roman, kana)
+        m.putAll(mapOf(
+            "si" to "し", "ti" to "ち", "tu" to "つ", "hu" to "ふ", "zi" to "じ", "di" to "ぢ", "du" to "づ",
+            "sya" to "しゃ", "syu" to "しゅ", "syo" to "しょ", "tya" to "ちゃ", "tyu" to "ちゅ", "tyo" to "ちょ",
+            "zya" to "じゃ", "zyu" to "じゅ", "zyo" to "じょ", "jya" to "じゃ", "jyu" to "じゅ", "jyo" to "じょ",
+            "nn" to "ん", "n'" to "ん", "wo" to "を", "xtu" to "っ", "ltu" to "っ",
+            "-" to "ー",
+        ))
+        m
+    }
+
+    /** Romaji (as typed or in Hepburn) in hiragana: kyouto → きょうと, gakkou → がっこう. */
+    fun hiraganaOf(romaji: String): String {
+        val s = romaji.lowercase().filter { !it.isWhitespace() }
+        val out = StringBuilder()
+        var i = 0
+        while (i < s.length) {
+            val ch = s[i]
+            // a doubled consonant (and tch): a small tsu
+            if (i + 1 < s.length && ch !in "aeioun" && ch.isLetter() && (s[i + 1] == ch || (ch == 't' && s[i + 1] == 'c'))) {
+                out.append('っ')
+                i++
+                continue
+            }
+            var matched = false
+            for (len in 3 downTo 1) {
+                if (i + len > s.length) continue
+                val part = s.substring(i, i + len)
+                // n before a consonant (or at the end) is ん; before a vowel or y it starts a syllable
+                if (part == "n" && i + 1 < s.length && s[i + 1] in "aeiouy") continue
+                // nn before a vowel is ん then a syllable of n (konnichiha: こんにちは)
+                if (part == "nn" && i + 2 < s.length && s[i + 2] in "aeiouy") continue
+                val kana = ROMAJI[part] ?: continue
+                out.append(kana)
+                i += len
+                matched = true
+                break
+            }
+            if (!matched) {
+                out.append(ch)
+                i++
+            }
+        }
+        return out.toString()
+    }
+
     private fun isKana(ch: Char) = ch in 'ぁ'..'ゖ' || ch in 'ァ'..'ヺ' || ch == 'ー' || ch == 'ゝ'
 
     /**

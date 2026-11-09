@@ -514,13 +514,14 @@ class EmojiPanelView @JvmOverloads constructor(
                     (view as EmojiCell).hasTones = row.emoji.tones != null
                     view.setOnClickListener { type(shown) }
                     view.setOnLongClickListener {
-                        // no skin tones: what the emoji is (large, its name and code points)
-                        if (row.emoji.tones == null) {
+                        // no skin tones, or a recent one already in its tone (nothing more to
+                        // pick): what the emoji is (large, its name and code points)
+                        if (row.emoji.tones == null || (row.form != null && row.form != row.emoji.base)) {
                             if (row.kaomoji) return@setOnLongClickListener false
                             info.show(view, shown, row.emoji.name)
                             return@setOnLongClickListener true
                         }
-                        tonePicker.show(view, row.emoji, shown) { picked ->
+                        tonePicker.show(view, row.emoji, shown, onInfo = { v, text -> info.show(v, text, row.emoji.name) }) { picked ->
                             store.choose(row.emoji, picked)
                             type(picked)
                             notifyItemChanged(holder.bindingAdapterPosition)

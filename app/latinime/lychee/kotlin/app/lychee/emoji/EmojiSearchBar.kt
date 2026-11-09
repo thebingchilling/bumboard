@@ -176,11 +176,16 @@ class EmojiSearchBar @JvmOverloads constructor(
     /** The Unicode search's results: each symbol with its name and code point. */
     private fun refreshUnicode() {
         results.removeAllViews()
-        val found = UnicodeNames.search(query.toString(), RESULTS) { symbolPaint.hasGlyph(it) }
+        val found = UnicodeNames.search(query.toString(), RESULTS, drawable = { symbolPaint.hasGlyph(it) },
+            used = { cp -> unicodeUse.getInt(cp.toString(16), 0) })
         shown = found.map { it.text }
         found.forEach { s ->
             results.addView(SymbolCell(s).apply {
-                setOnClickListener { type(s.text) }
+                setOnClickListener {
+                    // what this person uses comes first next time
+                    unicodeUse.edit().putInt(s.code.toString(16), unicodeUse.getInt(s.code.toString(16), 0) + 1).apply()
+                    type(s.text)
+                }
                 setOnLongClickListener { info.show(this, s.text, s.name.lowercase(), emoji = false); true }
             }, LayoutParams(dp(CELL_WIDTH), LayoutParams.MATCH_PARENT).apply { marginEnd = dp(2) })
         }
@@ -195,6 +200,9 @@ class EmojiSearchBar @JvmOverloads constructor(
         }
         scroller.scrollTo(0, 0)
     }
+
+    /** How often each symbol was typed from the Unicode search (by code point, in hex). */
+    private val unicodeUse by lazy { context.getSharedPreferences("lychee_unicode_use", Context.MODE_PRIVATE) }
 
     /** The symbols' font: the keys' font, Noto's symbols, then every font of the phone's. */
     private val symbolFace by lazy { app.lychee.fonts.LycheeFonts.ui(context) }

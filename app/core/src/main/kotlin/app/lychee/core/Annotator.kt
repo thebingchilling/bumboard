@@ -29,6 +29,8 @@ data class DisplayPrefs(
     val showMeaning: Boolean = true,
     /** the Chinese keyboards type Simplified */
     val simplified: Boolean = false,
+    /** Zhuyin (bopomofo) with pinyin, under the candidates and on the cards */
+    val zhuyin: Boolean = false,
 )
 
 /** Everything resolved for one candidate, before formatting. */
@@ -212,8 +214,9 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
             headwords += r.headwords.first()
             i += len
         }
-        val reading = readings.takeIf { it.all { r -> r != null } }?.joinToString(" ")
-        val other = others.takeIf { it.all { r -> r != null } }?.joinToString(" ")
+        // every candidate gets a reading: a piece the dictionary doesn't know shows as "?"
+        val reading = readings.takeIf { it.any { r -> r != null } }?.joinToString(" ") { it ?: "?" }
+        val other = others.takeIf { it.any { r -> r != null } }?.joinToString(" ") { it ?: "?" }
         // a phrase read piece by piece: the pieces' meanings, so every candidate has one
         val meaning = headwords.mapNotNull { meaning(listOf(it), lang, null)?.let { m -> shorten(m, 16) } }
             .takeIf { it.isNotEmpty() }?.joinToString(" + ")
@@ -365,6 +368,7 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
                     reading,
                     pinyinStyle(prefs)
                 ))
+                if (prefs.zhuyin) emit(Zhuyin.format(reading))
             }
             when (r.lang) {
                 Lang.Cantonese -> {
@@ -406,7 +410,8 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
         fun format(reading: String, lang: Lang, prefs: DisplayPrefs): String = when (lang) {
             Lang.Cantonese -> if (prefs.cantonese == CantoneseRomanization.Yale) yale(reading, prefs)
                 else Romanization.format(reading, jyutpingStyle(prefs))
-            else -> Romanization.format(reading, pinyinStyle(prefs))
+            else -> Romanization.format(reading, pinyinStyle(prefs)) +
+                if (prefs.zhuyin) "  " + Zhuyin.format(reading) else ""
         }
     }
 }

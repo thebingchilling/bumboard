@@ -84,7 +84,11 @@ object Readings {
         jyutpingTones = tones(prefs, PREF_JYUTPING_TONES, app.lychee.core.ToneStyle.Numbers),
         yaleTones = tones(prefs, PREF_YALE_TONES, app.lychee.core.ToneStyle.Marks),
         pinyinTones = tones(prefs, PREF_PINYIN_TONES, app.lychee.core.ToneStyle.Marks),
+        zhuyin = prefs.getBoolean(PREF_ZHUYIN, false),
     )
+
+    /** Zhuyin (bopomofo) with pinyin. */
+    const val PREF_ZHUYIN = "lychee_zhuyin"
 
     private fun tones(prefs: SharedPreferences, key: String, default: app.lychee.core.ToneStyle) =
         runCatching { app.lychee.core.ToneStyle.valueOf(prefs.getString(key, null) ?: default.name) }.getOrDefault(default)

@@ -129,6 +129,11 @@ class ReadingsDb(private val sql: Sql) : Dictionary {
         return out.toString()
     }
 
+    /** Every single character the dictionary has (Traditional and Simplified forms). */
+    fun characters(): Set<String> = sql.query(
+        "SELECT DISTINCT form FROM form WHERE length(form) = 1", emptyArray(),
+    ) { it.string(0) }.filterNotNull().toHashSet()
+
     fun meta(key: String): String? =
         sql.query("SELECT v FROM meta WHERE k = ?", arrayOf(key)) { it.string(0) }.firstOrNull()
 }

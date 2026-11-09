@@ -13,6 +13,16 @@ class SentenceRomanizerTest {
     }
 
     @Test
+    fun romajiInKana() {
+        assertEquals("きょうと", SentenceRomanizer.hiraganaOf("kyouto"))
+        assertEquals("がっこう", SentenceRomanizer.hiraganaOf("gakkou"))
+        assertEquals("しんぶん", SentenceRomanizer.hiraganaOf("shinbun"))
+        assertEquals("こんにちは", SentenceRomanizer.hiraganaOf("konnichiha"))
+        assertEquals("まっちゃ", SentenceRomanizer.hiraganaOf("matcha"))
+        assertEquals("つき", SentenceRomanizer.hiraganaOf("tuki"))
+    }
+
+    @Test
     fun japaneseSentencesWordByWord() {
         val readings = mapOf("私" to "わたし", "学生" to "がくせい", "です" to "です")
         assertEquals("watashi wa gakusei desu.", SentenceRomanizer.japanese("私は学生です。") { readings[it] })

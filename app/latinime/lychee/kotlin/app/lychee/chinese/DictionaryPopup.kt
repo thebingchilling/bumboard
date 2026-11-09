@@ -269,6 +269,7 @@ class DictionaryPopup(private val ctx: Context) {
                 heading(text, null, null)
             }
             // both languages' readings, always
+            spokenWord = text
             readingRows(r, main, text)
             if (main != null && !r.composed) facts(main)
             strokes(text)
@@ -280,8 +281,11 @@ class DictionaryPopup(private val ctx: Context) {
             }
 
             if (r.composed) {
-                section(ctx.getString(R.string.lychee_card_parts))
-                r.headwords.forEach { hw -> part(hw, r.lang) }
+                // a candidate the dictionary has nothing for shows just its strokes and readings
+                if (r.headwords.isNotEmpty()) {
+                    section(ctx.getString(R.string.lychee_card_parts))
+                    r.headwords.forEach { hw -> part(hw, r.lang) }
+                }
                 return
             }
             r.headwords.forEachIndexed { i, hw ->
@@ -332,32 +336,29 @@ class DictionaryPopup(private val ctx: Context) {
                 cmn?.let { Triple(Lang.Mandarin, R.string.lychee_card_mandarin, it) },
             ).let { if (r.lang == Lang.Mandarin) it.reversed() else it }
             for ((lang, label, reading) in rows) {
-                val mark = ChineseScript.ui(if (lang == Lang.Cantonese) "粵" else "普", ctx)
-                // the word itself when this is how it is usually read; otherwise spelt in
-                // characters that can only be read this way, so the voice says this reading
-                val usual = hw?.readings?.get(lang)?.firstOrNull()?.let { norm(it) == norm(reading) } ?: true
-                val button = if (spoken != null && onSpeak != null) {
-                    langButton(mark) { onSpeak.invoke(if (usual) spoken else sayAs(reading, lang) ?: spoken, lang) }
-                } else null
-                body.addView(readingRow(labelled(ctx.getString(label), Annotator.format(reading, lang, prefs)), button))
-                // other readings only where the dictionary gives them meanings of their own,
-                // each said as that reading
-                val main = norm(reading)
-                hw?.senses?.filter { it.lang == lang && !it.reading.isNullOrBlank() && norm(it.reading!!) != main }
-                    ?.distinctBy { norm(it.reading!!) }
-                    ?.take(MAX_OTHER_READINGS)
-                    ?.forEach { s ->
-                        val other = s.reading!!
-                        val say = if (spoken != null && onSpeak != null) {
-                            langButton(mark) { onSpeak.invoke(sayAs(other, lang) ?: spoken, lang) }
-                        } else null
-                        body.addView(readingRow(textView(
-                            "${Annotator.format(other, lang, prefs)}  ·  ${Annotator.shorten(s.gloss, 60)}",
-                            14f, c.onSurfaceVariant,
-                        ).apply { setPadding(dp(12), 0, 0, 0) }, say))
-                    }
+                mainReading[lang] = norm(reading)
+                // the main reading only; a reading with meanings of its own comes with them
+                body.addView(readingRow(labelled(ctx.getString(label), Annotator.format(reading, lang, prefs)),
+                    readingSpeaker(hw, reading, lang, spoken)))
             }
         }
+
+        /** Each language's main reading on this card, for the meanings read another way. */
+        private val mainReading = HashMap<Lang, String>()
+
+        /**
+         * A small speaker saying [reading] in [lang]: the word itself when that is how it is
+         * usually read, otherwise spelt in characters only ever read that way.
+         */
+        private fun readingSpeaker(hw: Headword?, reading: String, lang: Lang, spoken: String?): View? {
+            val say = onSpeak ?: return null
+            val word = spoken ?: return null
+            val usual = hw?.readings?.get(lang)?.firstOrNull()?.let { norm(it) == norm(reading) } ?: true
+            return smallSpeaker { say(if (usual) word else sayAs(reading, lang) ?: word, lang) }
+        }
+
+        /** The word the card is for (what the speakers say). */
+        var spokenWord: String? = null
 
         /** [reading] in characters only ever read that way, for the voice; null when there are none. */
         private fun sayAs(reading: String, lang: Lang): String? =
@@ -374,41 +375,14 @@ class DictionaryPopup(private val ctx: Context) {
             setPadding(0, dp(2), 0, dp(2))
         }
 
-        /**
-         * A speak button for one language: the speaker, with 粵 or 普 beside it showing which
-         * language it says the word in, in a pill.
-         */
-        fun langButton(label: String, onClick: () -> Unit): View = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setPadding(dp(10), 0, dp(12), 0)
-            background = GradientDrawable().apply {
-                cornerRadius = dp(18).toFloat()
-                setColor(c.primaryContainer)
-            }
-            addView(android.widget.ImageView(ctx).apply {
-                setImageResource(R.drawable.lychee_ic_volume)
-                imageTintList = android.content.res.ColorStateList.valueOf(c.onPrimaryContainer)
-            }, LinearLayout.LayoutParams(dp(20), dp(20)))
-            addView(TextView(ctx).apply {
-                text = label
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-                typeface = app.lychee.fonts.LycheeFonts.chinese(ctx) ?: Typeface.DEFAULT_BOLD
-                setTextColor(c.onPrimaryContainer)
-                includeFontPadding = false
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                marginStart = dp(4)
-            })
-            contentDescription = ctx.getString(R.string.lychee_card_listen) + " " + label
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(36)).apply { marginStart = dp(8) }
-            isClickable = true
-            setOnClickListener { onClick() }
+        /** A small speaker beside a reading: no label, it says the reading it sits next to. */
+        fun smallSpeaker(onClick: () -> Unit): View = speaker(onClick).apply {
+            setPadding(dp(7), dp(7), dp(7), dp(7))
+            layoutParams = LinearLayout.LayoutParams(dp(32), dp(32)).apply { marginStart = dp(8) }
         }
 
         /** The speak button, public for the word cards' readings. */
-        fun speakButton(onClick: () -> Unit): View = speaker(onClick).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginStart = dp(8) }
-        }
+        fun speakButton(onClick: () -> Unit): View = smallSpeaker(onClick)
 
         /**
          * The word, large, with [other] (the other script's form) smaller under it, and the
@@ -518,33 +492,21 @@ class DictionaryPopup(private val ctx: Context) {
             senseBlock(n, gloss, emptyList())
         }
 
-        /**
-         * One definition, set apart from the next: its own tinted block, the number in an
-         * accent-coloured circle beside it, then the meaning and any notes under it.
-         */
+        /** One definition: its number in the accent colour, then the meaning and any notes under it. */
         private fun senseBlock(n: Int, gloss: String, notes: List<String>) {
             val block = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
-                setPadding(dp(10), dp(10), dp(12), dp(10))
-                background = GradientDrawable().apply {
-                    cornerRadius = dp(14).toFloat()
-                    setColor(c.surfaceContainer)
-                }
+                setPadding(0, dp(4), 0, dp(4))
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                    .apply { topMargin = dp(6) }
             }
+            // the number in the accent colour, the meaning beside it: no box around it
             block.addView(TextView(ctx).apply {
-                text = n.toString()
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                text = "$n."
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
                 typeface = app.lychee.fonts.LycheeFonts.appFont(ctx, 700)
-                setTextColor(c.onPrimary)
-                gravity = Gravity.CENTER
+                setTextColor(c.primary)
                 includeFontPadding = false
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(c.primary)
-                }
-            }, LinearLayout.LayoutParams(dp(24), dp(24)).apply { marginEnd = dp(12) })
+            }, LinearLayout.LayoutParams(dp(26), ViewGroup.LayoutParams.WRAP_CONTENT))
             val column = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
             column.addView(textView(gloss, 15f, c.onSurface).apply { setLineSpacing(0f, 1.1f) })
             notes.forEach { column.addView(textView(it, 13f, c.onSurfaceVariant).apply { setPadding(0, dp(4), 0, 0) }) }
@@ -587,10 +549,24 @@ class DictionaryPopup(private val ctx: Context) {
                 Lang.Any to R.string.lychee_card_character,
             ).let { if (r.lang == Lang.Mandarin) listOf(it[1], it[0], it[2]) else it }
             for ((lang, title) in groups) {
-                val list = hw.senses.filter { it.lang == lang && it.partOfSpeech != "cl" }
+                val list = hw.senses.filter { it.lang == lang && it.partOfSpeech != "cl" }.take(MAX_SENSES)
                 if (list.isEmpty()) continue
                 section(ctx.getString(title))
-                list.take(MAX_SENSES).forEachIndexed { i, s -> sense(i + 1, s) }
+                // meanings read the main way first; those read another way under their reading
+                val main = mainReading[lang]
+                val groupsByReading = list.groupBy { s -> s.reading?.takeIf { it.isNotBlank() }?.let { norm(it) } ?: main }
+                var n = 0
+                val order = groupsByReading.keys.sortedBy { if (it == main || it == null) 0 else 1 }
+                for (key in order) {
+                    val senses = groupsByReading.getValue(key)
+                    if (key != null && key != main && lang != Lang.Any) {
+                        val reading = senses.first().reading!!
+                        body.addView(readingRow(textView(Annotator.format(reading, lang, prefs), 15f, c.primary).apply {
+                            setPadding(0, dp(10), 0, 0)
+                        }, readingSpeaker(hw, reading, lang, spokenWord)))
+                    }
+                    senses.forEach { s -> sense(++n, s) }
+                }
             }
         }
 
@@ -652,8 +628,6 @@ class DictionaryPopup(private val ctx: Context) {
         private fun dp(v: Int) = (ctx.resources.displayMetrics.density * v).toInt()
 
         companion object {
-            /** other readings with meanings of their own, at most */
-            const val MAX_OTHER_READINGS = 3
             const val MAX_SENSES = 12
             /** Characters whose stroke order a card shows (a long word wraps onto more rows). */
             const val MAX_STROKE_CHARS = 16

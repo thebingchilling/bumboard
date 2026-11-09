@@ -160,8 +160,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             return
         }
         val annotator = Readings.annotator ?: return
-        val resolved = annotator.resolve(candidate.text, candidate.comment, barMode()) ?: return
-        if (resolved.headwords.isEmpty() && resolved.reading == null) return
+        // every candidate has a card, even one the dictionary lacks (its strokes, its readings)
+        val resolved = annotator.resolve(candidate.text, candidate.comment, barMode())
+            ?: app.lychee.core.Resolved(barMode().lang ?: app.lychee.core.Lang.Cantonese, null, null, null, emptyList(), true)
         val frame = keyboardFrame?.takeIf { it.height > 0 } ?: return
         val peek = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
         val voice = if (guessing) (if (guessMode() == InputMode.Cantonese) "yue" else "cmn") else engine
@@ -203,15 +204,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /** Japanese and Korean: the word's entry from the installed dictionary pack. */
     private fun showWordCard(index: Int, candidate: Candidate) {
+        // every candidate has a card: one the dictionary lacks shows its readings and strokes
         val entries = app.lychee.dict.PackData.words(ime, engine, candidate.text)
-        if (entries.isEmpty()) return
         val frame = keyboardFrame?.takeIf { it.height > 0 } ?: return
         val peek = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
         val lang = if (engine == "ja") "ja" else "ko"
         val forms = listOf(candidate.text) + entries.map { it.lemma }.take(1)
         val examples = app.lychee.dict.PackData.examples(ime, lang, forms)
         val locales = app.lychee.speech.Speech.localesFor(engine, false)
-        popup?.showWord(frame, candidate.text, candidate.comment.trim().takeIf { it.isNotEmpty() }, entries,
+        popup?.showWord(frame, candidate.text, wordReading(candidate, entries.firstOrNull()), entries,
             examples, peek, onSpeak = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }, lang = lang,
             onSpeakAs = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }) {
             pick(index)
@@ -223,16 +224,42 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
      * with kanji, else the romanisation Rime typed; Hanja beside Korean words.
      */
     private fun wordAnnotation(candidate: Candidate, showMeaning: Boolean): Annotation? {
-        val romanisation = candidate.comment.trim().takeIf { it.isNotEmpty() }
         val entry = app.lychee.dict.PackData.words(ime, engine, candidate.text, limit = 1).firstOrNull()
-        val hasKanji = candidate.text.codePoints().anyMatch { app.lychee.core.Annotator.isHan(it) }
-        val reading = when {
-            engine == "ja" && hasKanji && entry?.reading != null -> entry.reading
-            else -> romanisation
-        }
         val meaning = entry?.senses?.firstOrNull()?.takeIf { showMeaning }?.let { app.lychee.core.Annotator.shorten(it) }
+        val reading = wordReading(candidate, entry)
         if (reading == null && meaning == null) return null
         return Annotation(listOfNotNull(reading), meaning, null, otherScript = entry?.hanja?.takeIf { engine == "ko" })
+    }
+
+    /**
+     * Every Japanese and Korean candidate's reading, made when the dictionary has none:
+     * Japanese, the kana (for words with kanji or katakana) and the romaji; Korean, Revised
+     * Romanization.
+     */
+    private fun wordReading(candidate: Candidate, entry: app.lychee.dict.WordEntry?): String? {
+        val text = candidate.text
+        val typed = candidate.comment.trim().takeIf { it.isNotEmpty() && it.all { c -> c.isLetter() || c == ' ' || c == '\'' } }
+        return when (engine) {
+            "ja" -> {
+                val hasKanji = text.codePoints().anyMatch { app.lychee.core.Annotator.isHan(it) }
+                val katakana = text.any { it in '\u30A1'..'\u30FA' }
+                val kana = when {
+                    hasKanji -> entry?.reading ?: typed?.let { app.lychee.core.SentenceRomanizer.hiraganaOf(it) }
+                    else -> text
+                }
+                val romaji = typed ?: kana?.let { app.lychee.core.SentenceRomanizer.kana(it) }
+                    ?: app.lychee.core.SentenceRomanizer.japanese(text) { form ->
+                        app.lychee.dict.PackData.words(ime, "ja", form, 1).firstOrNull()?.let { it.reading ?: it.form }
+                    }
+                val shownKana = kana?.takeIf { hasKanji || katakana }?.let { k ->
+                    // katakana words read in hiragana
+                    k.map { if (it in '\u30A1'..'\u30F6') it - 0x60 else it }.joinToString("")
+                }
+                listOfNotNull(shownKana, romaji.takeIf { it.isNotBlank() && it != text }).joinToString("  ").ifEmpty { null }
+            }
+            "ko" -> typed ?: app.lychee.core.SentenceRomanizer.korean(text).takeIf { it != text }
+            else -> typed
+        }
     }
 
 
@@ -738,9 +765,21 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     }
 
     /** The candidate size for this keyboard's language, else the one for all languages. */
-    private fun candidateScale(): Float {
+    private fun candidateScale(): Float = scaleFor(engine)
+
+    /** The candidate size chosen for [engine]'s keyboard. */
+    private fun scaleFor(engine: String?): Float {
         val all = prefs.getFloat(PREF_CANDIDATE_SIZE, 1f)
         return prefs.getFloat(PREF_CANDIDATE_SIZE + "_" + engine, all).coerceIn(0.7f, 1.6f)
+    }
+
+    /** The most reading lines any of the Chinese, Japanese and Korean keyboards shows. */
+    private fun uniformLines(): CandidateBarView.Lines {
+        if (!Readings.showReadings(prefs)) return CandidateBarView.Lines(0, false)
+        val display = Readings.displayPrefs(prefs)
+        val chineseLines = (if (display.showOtherLanguage) 2 else 1) + (if (display.zhuyin) 1 else 0)
+        val meaning = display.showMeaning || prefs.getBoolean(Readings.PREF_MEANING, true)
+        return CandidateBarView.Lines(chineseLines, meaning)
     }
 
     /**
@@ -758,8 +797,13 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val rime = isActive && !schemaMissing
         val height = if (bar == null || (!rime && !candidates)) standard
         else {
+            // the same height on every Chinese, Japanese and Korean keyboard: as tall as the
+            // roomiest of them needs (its reading lines, its candidate size), so switching
+            // between them never moves the keys
+            bar.setScale(SIZED_ENGINES.maxOf { scaleFor(it) })
+            val tallest = bar.heightFor(uniformLines())
             bar.setScale(candidateScale())
-            maxOf(standard, bar.heightFor(annotationLines()) + if (rime) line else 0)
+            maxOf(standard, tallest + if (rime) line else 0)
         }
         bar?.let { if (it.paddingTop != (if (rime) line else 0)) it.setPadding(0, if (rime) line else 0, 0, 0) }
         for (view in listOfNotNull(stripView, bar)) {
@@ -835,10 +879,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val display = Readings.displayPrefs(prefs)
         var lines = 1
         if (display.showOtherLanguage) lines++
+        // Zhuyin under the pinyin, when a Mandarin line shows
+        if (display.zhuyin && (barMode().lang == app.lychee.core.Lang.Mandarin || display.showOtherLanguage)) lines++
         return CandidateBarView.Lines(lines, display.showMeaning)
     }
 
     companion object {
+        /** The keyboards whose candidate bars share one height. */
+        private val SIZED_ENGINES = listOf("yue", "cmn", "ja", "ko")
+
         /** ASCII punctuation and its Chinese full-width form. */
         private val PUNCTUATION = mapOf(
             ','.code to "，", '.'.code to "。", '?'.code to "？", '!'.code to "！",
