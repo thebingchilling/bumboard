@@ -5,12 +5,12 @@ import android.content.SharedPreferences
 import android.preference.PreferenceManager
 
 /**
- * Traditional or Simplified, chosen twice: once for the whole of Lychee (menus, names and
- * labels with Chinese in them: 粵語 / 粤语 on the space bar, the settings), and once for the
- * candidates (the 繁/简 key), which follows the first until it is set.
+ * Traditional or Simplified: one choice, made with the keyboard's 繁/简 key (or the same row in
+ * Settings > Chinese). There is no separate app-wide pick: the candidates and the Chinese in
+ * Lychee's own labels (粵語 / 粤语 on the space bar, the settings) all follow it.
  */
 object ChineseScript {
-    /** Lychee's own script: "traditional" or "simplified". */
+    /** The old app-wide choice, folded into the 繁/简 key's (see [init]). */
     const val PREF_UI = "lychee_chinese_script_ui"
 
     @Volatile
@@ -22,17 +22,23 @@ object ChineseScript {
 
     @JvmStatic
     fun init(context: Context) {
-        prefs(context)
+        val p = prefs(context) ?: return
+        // the old app-wide choice becomes the 繁/简 key's when the key was never used
+        p.getString(PREF_UI, null)?.let { old ->
+            val e = p.edit()
+            if (p.getString(ChineseInput.PREF_SCRIPT, null) == null) e.putString(ChineseInput.PREF_SCRIPT, old)
+            e.remove(PREF_UI).apply()
+        }
     }
 
-    /** Whether Lychee's menus and labels show Simplified characters. */
+    /** Whether Lychee's menus and labels show Simplified characters: as the 繁/简 key says. */
     @JvmStatic
-    fun uiSimplified(prefs: SharedPreferences): Boolean = prefs.getString(PREF_UI, "traditional") == "simplified"
+    fun uiSimplified(prefs: SharedPreferences): Boolean = candidatesSimplified(prefs)
 
-    /** Whether the candidates are Simplified (their own choice, or Lychee's until there is one). */
+    /** Whether the candidates are Simplified (the 繁/简 key; Traditional until it is used). */
     @JvmStatic
     fun candidatesSimplified(prefs: SharedPreferences): Boolean =
-        (prefs.getString(ChineseInput.PREF_SCRIPT, null) ?: prefs.getString(PREF_UI, "traditional")) == "simplified"
+        (prefs.getString(ChineseInput.PREF_SCRIPT, null) ?: prefs.getString(PREF_UI, null)) == "simplified"
 
     /** [text] (a menu item, name or label) in Lychee's script. */
     @JvmStatic

@@ -47,7 +47,7 @@
     <fraction name="config_key_letter_ratio_holo">65%</fraction>
     <fraction name="config_key_letter_ratio_lxx">65%</fraction>
     <fraction name="config_key_large_letter_ratio_holo">74%</fraction>
-    <fraction name="config_key_large_letter_ratio_lxx">90%</fraction>
+    <fraction name="config_key_large_letter_ratio_lxx">62%</fraction> <!-- LYCHEE: number pad digits a little larger than letters, like Gboard (was 90%) -->
     <fraction name="config_key_label_ratio_holo">40%</fraction>
     <fraction name="config_key_label_ratio_lxx">40%</fraction>
     <fraction name="config_key_hint_letter_ratio_holo">30%</fraction>

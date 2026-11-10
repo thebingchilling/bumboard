@@ -91,6 +91,7 @@ class EmojiSearchBar @JvmOverloads constructor(
     fun start(unicode: Boolean = false) {
         this.unicode = unicode
         query.clear()
+        picked = false
         isActive = true
         visibility = VISIBLE
         if (unicode) UnicodeNames.load(context) { if (isActive) refresh() } else EmojiData.load(context) { refresh() }
@@ -114,20 +115,25 @@ class EmojiSearchBar @JvmOverloads constructor(
         val code = event.mCodePoint
         when {
             event.mKeyCode == Constants.CODE_DELETE -> {
-                if (query.isNotEmpty()) query.setLength(query.length - 1)
+                // after a pick, the first Delete clears the whole query; with nothing left in the
+                // bar, Delete goes to the app and deletes what was typed (the symbol picked)
+                if (query.isEmpty()) return false
+                if (picked) query.clear() else query.setLength(query.length - 1)
+                picked = false
             }
             event.mKeyCode == Constants.CODE_EMOJI -> {
                 // back to the panel; LatinIME then switches to it
                 stop()
                 return false
             }
-            code == Constants.CODE_ENTER -> shown.firstOrNull()?.let { type(it) }
+            code == Constants.CODE_ENTER -> { shown.firstOrNull()?.let { type(it) }; return true }
             code == Constants.CODE_SPACE -> if (query.isNotEmpty() && query.last() != ' ') query.append(' ')
             unicode && code > 0 -> query.appendCodePoint(Character.toLowerCase(code))
             code > 0 && Character.isLetterOrDigit(code) -> query.appendCodePoint(Character.toLowerCase(code))
             code > 0 -> query.appendCodePoint(code)
             else -> return false // shift, symbols and other keyboard keys behave as usual
         }
+        if (event.mKeyCode != Constants.CODE_DELETE) picked = false
         refresh()
         return true
     }
@@ -168,8 +174,12 @@ class EmojiSearchBar @JvmOverloads constructor(
         scroller.scrollTo(0, 0)
     }
 
+    /** A symbol was typed since the query last changed (see Delete in [onEvent]). */
+    private var picked = false
+
     private fun type(emoji: String) {
         onType(emoji)
+        picked = true
         if (!unicode) store.addRecent(emoji)
     }
 
@@ -267,7 +277,7 @@ class EmojiSearchBar @JvmOverloads constructor(
         private val code = TextView(context).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
             setTextColor(palette.onSurfaceVariant)
-            typeface = android.graphics.Typeface.MONOSPACE
+            typeface = app.lychee.fonts.LycheeFonts.ui(context)
             includeFontPadding = false
             isSingleLine = true
             setPadding(0, dp(2), 0, 0)

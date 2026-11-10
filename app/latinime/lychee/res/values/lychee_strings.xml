@@ -41,6 +41,7 @@
     <string name="lychee_version">Version %1$s</string>
     <string name="lychee_theme_note">Material 3, following your light or dark mode. Pick the colours and how the keys look.</string>
     <string name="lychee_language_settings">Language settings</string>
+    <string name="lychee_language_card_title">Keyboards</string>
     <string name="lychee_pref_colors">Colours</string>
     <string name="lychee_pref_colors_neutral">Neutral</string>
     <string name="lychee_pref_colors_wallpaper">Wallpaper</string>
@@ -58,9 +59,8 @@
     <string name="lychee_ja_needs_pack">Japanese needs its dictionary: get it in Lychee Settings &gt; Downloads.</string>
     <string name="lychee_chinese">Chinese</string>
     <string name="lychee_chinese_summary">Cantonese and Mandarin typing</string>
-    <string name="lychee_script">Candidates</string>
-    <string name="lychee_script_ui">Everywhere in Lychee</string>
-    <string name="lychee_script_ui_summary">Menus, names and labels with Chinese in them; the candidates follow until set below or with the 繁/简 key</string>
+    <string name="lychee_script">Traditional or Simplified</string>
+    <string name="lychee_script_summary">The same as the 繁/简 key on the keyboard: the candidates, and the Chinese in Lychee\'s own labels, follow it</string>
     <string name="lychee_script_traditional">Traditional 繁</string>
     <string name="lychee_script_simplified">Simplified 简</string>
     <string name="lychee_cantonese_input">Cantonese romanisation (typing and readings)</string>
@@ -117,6 +117,10 @@
     <string name="lychee_card_reading">Reading</string>
     <string name="lychee_card_pos">Part of speech</string>
     <string name="lychee_card_strokes">Stroke order</string>
+    <plurals name="lychee_card_stroke_count">
+        <item quantity="one">%d stroke</item>
+        <item quantity="other">%d strokes</item>
+    </plurals>
     <string name="lychee_card_breakdown">Parts</string>
     <string name="lychee_card_radical">Radical</string>
     <string name="lychee_card_replay">Replay</string>

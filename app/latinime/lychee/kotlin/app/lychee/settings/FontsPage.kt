@@ -88,6 +88,7 @@ fun FontsPage() {
             FontOption("", stringResource(R.string.lychee_fonts_noto_sans), gsfSummary, face = { LycheeFonts.noto(it) }),
             FontOption(LycheeFonts.GSF, gsf, gsfSummary, face = { LycheeFonts.gsf(it) }),
             FontOption(LycheeFonts.WENKAI, wenkai, stringResource(R.string.lychee_fonts_wenkai_keys_summary), face = { LycheeFonts.wenkaiKeys(it) }),
+            FontOption(LycheeFonts.SYSTEM, system, systemSummary, face = { Typeface.SANS_SERIF }),
         ) + ownFont(context, PackKind.FONT_KEYS),
     )
     for ((title, pref, sample, kind) in listOf(

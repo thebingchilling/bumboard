@@ -16,6 +16,8 @@ import com.android.inputmethod.latin.utils.ResourceUtils
  * above them. The keys themselves are already sized by KeyboardSwitcher.
  */
 object LayoutApplier {
+    /** One-handed: the gap between the keys and the screen's edge. */
+    private const val EDGE_PAD_DP = 6
 
     @JvmStatic
     fun apply(inputView: View) {
@@ -31,6 +33,15 @@ object LayoutApplier {
         val keys = layout.keyboardWidth(full)
         val oneHanded = layout.mode == LycheeLayout.Mode.ONE_HANDED
         val keysOnRight = layout.oneHandedRight
+        // one-handed, a little room between the keys (and the bar and panels over them) and the
+        // screen's edge, so nothing sits flush against it or is cut off
+        val pad = if (oneHanded) (ctx.resources.displayMetrics.density * EDGE_PAD_DP).toInt() else 0
+        val keysView = inputView.findViewById<View>(R.id.keyboard_view)
+        (keysView?.layoutParams as? LinearLayout.LayoutParams)?.let { klp ->
+            klp.leftMargin = if (oneHanded && !keysOnRight) pad else 0
+            klp.rightMargin = if (oneHanded && keysOnRight) pad else 0
+            keysView.layoutParams = klp
+        }
 
         left?.visibility = View.GONE
         right?.visibility = View.GONE
@@ -48,7 +59,7 @@ object LayoutApplier {
             val side = if (keysOnRight) left else right
             side?.let {
                 it.visibility = View.VISIBLE
-                it.layoutParams = (it.layoutParams as LinearLayout.LayoutParams).apply { width = full - keys }
+                it.layoutParams = (it.layoutParams as LinearLayout.LayoutParams).apply { width = full - keys - pad }
                 it.setKeysOnRight(keysOnRight)
             }
         }
@@ -57,14 +68,16 @@ object LayoutApplier {
             val tlp = it.layoutParams as LinearLayout.LayoutParams
             tlp.width = if (oneHanded) keys else ViewGroup.LayoutParams.MATCH_PARENT
             tlp.gravity = if (oneHanded && keysOnRight) Gravity.END else Gravity.START
+            tlp.leftMargin = if (oneHanded && !keysOnRight) pad else 0
+            tlp.rightMargin = if (oneHanded && keysOnRight) pad else 0
             it.layoutParams = tlp
         }
         // the emoji panel takes the keyboard's place; one-handed, its emoji and keys keep to
         // the keys' side (its width is the keys' plus this padding, see EmojiPanelView)
         emoji?.let {
-            val free = if (oneHanded) full - keys else 0
-            it.setPadding(if (oneHanded && keysOnRight) free else 0, it.paddingTop,
-                if (oneHanded && !keysOnRight) free else 0, it.paddingBottom)
+            val free = if (oneHanded) full - keys - pad else 0
+            it.setPadding(if (oneHanded) (if (keysOnRight) free else pad) else 0, it.paddingTop,
+                if (oneHanded) (if (keysOnRight) pad else free) else 0, it.paddingBottom)
             it.setBackgroundColor(background)
             it.elevation = 0f
             it.clipToOutline = false

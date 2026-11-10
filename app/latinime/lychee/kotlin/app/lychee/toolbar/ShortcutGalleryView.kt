@@ -16,17 +16,16 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.PagerSnapHelper
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import app.lychee.lycheeHost
 import app.lychee.ui.M3Colors
 import com.android.inputmethod.latin.R
 
 /**
- * Every shortcut over the keys, like Gboard's menu: pages of a grid of icons with their names
- * under them, swiped sideways, with dots under them, Settings in the left corner and a pencil
- * in the right one. The menu button on the bar (now ✕) closes it. Tap a shortcut to use it.
+ * Every shortcut over the keys, like Gboard's menu: a grid of icons with their names under
+ * them that wraps to as many columns as fit (fewer in one-handed mode) and scrolls up and
+ * down, Settings in the left corner and a pencil in the right one. The menu button on the bar (now ✕) closes it. Tap a shortcut to use it.
  *
  * Editing (the pencil; the bar's ✓ ends it): the menu holds the shortcuts not on the bar. Touch
  * and hold one to drag it: within the menu to reorder, or up onto the bar to put it there;
@@ -44,12 +43,8 @@ class ShortcutGalleryView @JvmOverloads constructor(
     private var items: MutableList<Shortcut> = mutableListOf()
 
     private val pages = RecyclerView(context)
-    private val pager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
-    private val adapter = PageAdapter()
-    private val dots = LinearLayout(context).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER
-    }
+    private val grid = GridLayoutManager(context, COLUMNS)
+    private val adapter = TileAdapter()
     private val hint = TextView(context).apply {
         setText(R.string.lychee_gallery_hint)
         setTextColor(palette.onSurfaceVariant)
@@ -97,15 +92,21 @@ class ShortcutGalleryView @JvmOverloads constructor(
     init {
         isClickable = true
         setBackgroundColor(palette.surface)
-        pages.layoutManager = pager
+        pages.layoutManager = grid
         pages.adapter = adapter
-        pages.overScrollMode = OVER_SCROLL_NEVER
-        PagerSnapHelper().attachToRecyclerView(pages)
-        pages.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrollStateChanged(rv: RecyclerView, state: Int) {
-                if (state == RecyclerView.SCROLL_STATE_IDLE) updateDots()
+        pages.overScrollMode = OVER_SCROLL_IF_CONTENT_SCROLLS
+        pages.isVerticalScrollBarEnabled = true
+        pages.clipToPadding = false
+        pages.setPadding(dp(8), dp(6), dp(8), dp(6))
+        // as many columns as fit (tiles about 80dp wide): fewer in one-handed mode, so the tiles
+        // wrap onto more rows rather than squeezing or running off the side
+        pages.addOnLayoutChangeListener { v, l, _, r, _, ol, _, or_, _ ->
+            if (r - l != or_ - ol) {
+                val width = (r - l - v.paddingLeft - v.paddingRight).coerceAtLeast(1)
+                val columns = (width / dp(80)).coerceIn(3, 6)
+                if (grid.spanCount != columns) v.post { grid.spanCount = columns }
             }
-        })
+        }
         pages.setOnDragListener { _, event -> onDrag(event) }
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -115,10 +116,9 @@ class ShortcutGalleryView @JvmOverloads constructor(
                     .apply { leftMargin = dp(12) })
                 addView(hint, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT, Gravity.START)
                     .apply { leftMargin = dp(16) })
-                addView(dots, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT, Gravity.CENTER))
                 addView(pencil, LayoutParams(dp(64), dp(36), Gravity.END or Gravity.CENTER_VERTICAL)
                     .apply { rightMargin = dp(12) })
-            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(48)))
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44)))
         }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(empty, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         visibility = GONE
@@ -150,7 +150,7 @@ class ShortcutGalleryView @JvmOverloads constructor(
     private fun setEditing(on: Boolean) {
         editing = on
         toolbar()?.mode = if (on) ToolbarView.Mode.EDIT else ToolbarView.Mode.GALLERY
-        // editing: the hint in place of the dots, the pencil hidden, the menu outlined
+        // editing: the hint along the bottom, the pencil hidden, the menu outlined
         hint.visibility = if (on) VISIBLE else GONE
         pencil.visibility = if (on) GONE else VISIBLE
         settings.visibility = if (on) GONE else VISIBLE
@@ -174,24 +174,6 @@ class ShortcutGalleryView @JvmOverloads constructor(
         }.toMutableList()
         adapter.notifyDataSetChanged()
         empty.visibility = if (items.isEmpty()) VISIBLE else GONE
-        updateDots()
-    }
-
-    private val pageCount get() = (items.size + PER_PAGE - 1) / PER_PAGE
-
-    private fun updateDots() {
-        dots.removeAllViews()
-        val count = pageCount
-        dots.visibility = if (count > 1 && !editing) VISIBLE else GONE
-        val current = pager.findFirstCompletelyVisibleItemPosition().coerceAtLeast(0)
-        repeat(count) { i ->
-            dots.addView(View(context).apply {
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(if (i == current) palette.onSurfaceVariant else palette.outlineVariant)
-                }
-            }, LinearLayout.LayoutParams(dp(6), dp(6)).apply { setMargins(dp(3), 0, dp(3), 0) })
-        }
     }
 
     /** Saves the bar (unchanged) and the menu's order, after a drag within or into it. */
@@ -203,23 +185,8 @@ class ShortcutGalleryView @JvmOverloads constructor(
 
     /** The index in [items] of the tile under ([x], [y]) in the pages' coordinates, or -1. */
     private fun indexAt(x: Float, y: Float): Int {
-        val page = pages.findChildViewUnder(x, y) ?: return -1
-        val pageIndex = pages.getChildAdapterPosition(page)
-        if (pageIndex < 0) return -1
-        val px = x - page.left
-        val py = y - page.top
-        val tiles = page as ViewGroup
-        for (r in 0 until tiles.childCount) {
-            val row = tiles.getChildAt(r) as ViewGroup
-            for (c in 0 until row.childCount) {
-                val tile = row.getChildAt(c)
-                if (px >= row.left + tile.left && px < row.left + tile.right &&
-                    py >= row.top + tile.top && py < row.top + tile.bottom) {
-                    return (tile.tag as? Int) ?: -1
-                }
-            }
-        }
-        return -1
+        val tile = pages.findChildViewUnder(x, y) ?: return -1
+        return pages.getChildAdapterPosition(tile).takeIf { it in items.indices } ?: -1
     }
 
     private fun onDrag(event: DragEvent): Boolean {
@@ -284,7 +251,10 @@ class ShortcutGalleryView @JvmOverloads constructor(
         }
         return FrameLayout(context).apply {
             tag = index
-            addView(face, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            clipChildren = false
+            // the face inset a little, so the corner button sits on its corner and inside the tile
+            addView(face, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
+                .apply { setMargins(dp(4), dp(6), dp(4), dp(2)) })
             if (editing) {
                 addView(ImageView(context).apply {
                     setImageResource(if (isHidden) R.drawable.ic_sym_visibility_off else R.drawable.ic_sym_visibility)
@@ -299,7 +269,7 @@ class ShortcutGalleryView @JvmOverloads constructor(
                         store.setHidden(sc, !isHidden)
                         load()
                     }
-                }, LayoutParams(dp(26), dp(26), Gravity.TOP or Gravity.END).apply { topMargin = dp(2); rightMargin = dp(2) })
+                }, LayoutParams(dp(24), dp(24), Gravity.TOP or Gravity.END))
             }
             contentDescription = context.getString(sc.label)
             face.setOnClickListener {
@@ -317,42 +287,31 @@ class ShortcutGalleryView @JvmOverloads constructor(
         }
     }
 
-    /** One page: a grid of [ROWS] rows of [COLUMNS] icons. */
-    private inner class PageAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-        override fun getItemCount() = pageCount
+    /** The tiles, wrapping onto as many rows as they need; the list scrolls up and down. */
+    private inner class TileAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+        override fun getItemCount() = items.size
 
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-            val page = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(12), dp(8), dp(12), 0)
-                layoutParams = RecyclerView.LayoutParams(parent.width.takeIf { it > 0 } ?: ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT)
-            }
-            return object : RecyclerView.ViewHolder(page) {}
-        }
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
+            object : RecyclerView.ViewHolder(FrameLayout(context).apply {
+                layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(TILE_HEIGHT))
+                setPadding(dp(2), 0, dp(2), dp(4))
+                clipToPadding = false
+                clipChildren = false
+            }) {}
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-            val page = holder.itemView as LinearLayout
-            page.removeAllViews()
-            val first = position * PER_PAGE
-            for (r in 0 until ROWS) {
-                val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-                for (c in 0 until COLUMNS) {
-                    val index = first + r * COLUMNS + c
-                    val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f)
-                        .apply { setMargins(dp(4), dp(4), dp(4), dp(4)) }
-                    row.addView(if (index < items.size) tile(index) else View(context), lp)
-                }
-                page.addView(row, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
-            }
+            val cell = holder.itemView as FrameLayout
+            cell.removeAllViews()
+            cell.addView(tile(position), LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         }
     }
 
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 
     private companion object {
+        /** columns before the first layout; then as many as fit */
         const val COLUMNS = 4
-        const val ROWS = 2
-        const val PER_PAGE = COLUMNS * ROWS
+        /** a tile's height (dp), with its gap */
+        const val TILE_HEIGHT = 76
     }
 }

@@ -36,7 +36,7 @@ class OcrRecognizer private constructor(
         var total: FloatArray? = null
         var reads = 0
         for ((pen, margin) in VARIANTS) {
-            val scores = scores(picture(ink, pen, margin) ?: continue) ?: continue
+            val scores = scores(picture(ink, pen, margin) ?: continue, WIDTH) ?: continue
             val t = total ?: FloatArray(scores.size).also { total = it }
             if (t.size != scores.size) continue
             for (c in scores.indices) t[c] += scores[c]
@@ -55,9 +55,9 @@ class OcrRecognizer private constructor(
     }
 
     /** Each character's best probability anywhere in one picture. */
-    private fun scores(input: FloatArray): FloatArray? {
+    private fun scores(input: FloatArray, width: Int): FloatArray? {
         val env = OrtEnvironment.getEnvironment()
-        OnnxTensor.createTensor(env, FloatBuffer.wrap(input), longArrayOf(1, 3, SIZE.toLong(), SIZE.toLong())).use { tensor ->
+        OnnxTensor.createTensor(env, FloatBuffer.wrap(input), longArrayOf(1, 3, SIZE.toLong(), width.toLong())).use { tensor ->
             session.run(mapOf(session.inputNames.first() to tensor)).use { result ->
                 @Suppress("UNCHECKED_CAST")
                 val out = (result[0].value as Array<Array<FloatArray>>)[0]  // time x classes
@@ -82,10 +82,16 @@ class OcrRecognizer private constructor(
     companion object {
         /** The model reads pictures 48 pixels tall; a character is drawn in a square that size. */
         private const val SIZE = 48
+        /**
+         * The picture's width: the character's square in the middle of white 2.5 times as wide,
+         * like a word on a line of text, which is what the model was trained on (a bare square
+         * reads much worse: about 87% right first time against 72% on simulated handwriting).
+         */
+        private const val WIDTH = 120
         /** Drawn larger first, then scaled down smoothly, like a photographed line of text. */
         private const val CANVAS = 192
         /** The pictures each character is read as: pen width (of the square) and margin. */
-        private val VARIANTS = listOf(0.055f to 1.25f, 0.075f to 1.25f, 0.045f to 1.4f)
+        private val VARIANTS = listOf(0.05f to 1.25f, 0.065f to 1.25f, 0.045f to 1.4f)
 
         /**
          * The strokes with each point averaged with its neighbours (a shaky hand's wobble
@@ -119,9 +125,10 @@ class OcrRecognizer private constructor(
         /**
          * The ink as the model's input: the strokes in a square a quarter larger than the
          * character (centred), drawn with a round pen about 5.5% of the square wide, scaled to
-         * [SIZE] and normalised to -1..1, as channels of red, green and blue.
+         * [SIZE], set in the middle of a white strip [width] wide and normalised to -1..1, as
+         * channels of red, green and blue.
          */
-        fun picture(strokes: List<FloatArray>, penWidth: Float = 0.055f, margin: Float = 1.25f): FloatArray? {
+        fun picture(strokes: List<FloatArray>, penWidth: Float = 0.05f, margin: Float = 1.25f, width: Int = WIDTH): FloatArray? {
             var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE
             var maxX = -Float.MAX_VALUE; var maxY = -Float.MAX_VALUE
             for (s in strokes) {
@@ -160,15 +167,21 @@ class OcrRecognizer private constructor(
                 if (s.size == 2) path.lineTo((s[0] + offX) * scale + 0.5f, (s[1] + offY) * scale)
                 canvas.drawPath(path, pen)
             }
-            val small = Bitmap.createScaledBitmap(big, SIZE, SIZE, true)
+            // halved twice rather than at once: a smoother picture, like a photographed line
+            val half = Bitmap.createScaledBitmap(big, CANVAS / 2, CANVAS / 2, true)
             big.recycle()
+            val small = Bitmap.createScaledBitmap(half, SIZE, SIZE, true)
+            half.recycle()
             val pixels = IntArray(SIZE * SIZE)
             small.getPixels(pixels, 0, SIZE, 0, 0, SIZE, SIZE)
             small.recycle()
-            val plane = SIZE * SIZE
-            val out = FloatArray(3 * plane)
-            for (i in 0 until plane) {
-                val p = pixels[i]
+            // the square in the middle of a white strip [WIDTH] wide (white is 1 after normalising)
+            val plane = SIZE * width
+            val out = FloatArray(3 * plane) { 1f }
+            val left = (width - SIZE) / 2
+            for (y in 0 until SIZE) for (x in 0 until SIZE) {
+                val p = pixels[y * SIZE + x]
+                val i = y * width + left + x
                 out[i] = ((p shr 16 and 0xFF) / 255f - 0.5f) / 0.5f
                 out[plane + i] = ((p shr 8 and 0xFF) / 255f - 0.5f) / 0.5f
                 out[2 * plane + i] = ((p and 0xFF) / 255f - 0.5f) / 0.5f

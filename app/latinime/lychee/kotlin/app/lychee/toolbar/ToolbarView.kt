@@ -127,7 +127,7 @@ class ToolbarView @JvmOverloads constructor(
         if (mode == Mode.TITLE) {
             // the same raised round Back as every other panel's (voice, emoji search, resizing)
             row.addView(app.lychee.layout.LycheePanels.backButton(context) { onBack() },
-                LinearLayout.LayoutParams(dp(48), LinearLayout.LayoutParams.MATCH_PARENT))
+                LinearLayout.LayoutParams(slot(), LinearLayout.LayoutParams.MATCH_PARENT))
             if (titleShown) row.addView(titleText(title), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
             return
         }
@@ -140,7 +140,7 @@ class ToolbarView @JvmOverloads constructor(
         }
         val shortcuts = store.toolbar().filter { Shortcuts.available(it, lycheeHost()?.lycheeEngine()) }
         // packed on the left, beside the menu button; a long list scrolls
-        fun shortcutParams() = LinearLayout.LayoutParams(dp(48), dp(40)).apply { gravity = Gravity.CENTER_VERTICAL }
+        fun shortcutParams() = LinearLayout.LayoutParams(slot(), dp(40)).apply { gravity = Gravity.CENTER_VERTICAL }
         if (mode == Mode.EDIT) {
             // the bar's shortcuts in an outlined pill: drag them along it, or down into the menu
             val pill = LinearLayout(context).apply {
@@ -242,10 +242,14 @@ class ToolbarView @JvmOverloads constructor(
         background = if (highlighted) android.graphics.drawable.InsetDrawable(GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setColor(palette.primaryContainer)
-        }, dp(6), dp(2), dp(6), dp(2)) else app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_suggestion)
+        }, dp(if (slot() < dp(48)) 2 else 6), dp(2), dp(if (slot() < dp(48)) 2 else 6), dp(2)) else app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_suggestion)
         setOnClickListener { onClick() }
-        layoutParams = LinearLayout.LayoutParams(dp(48), dp(40)).apply { gravity = Gravity.CENTER_VERTICAL }
+        layoutParams = LinearLayout.LayoutParams(slot(), dp(40)).apply { gravity = Gravity.CENTER_VERTICAL }
     }
+
+    /** A shortcut's width on the bar: closer together one-handed, where the bar is narrower. */
+    private fun slot() = dp(if (app.lychee.layout.LycheeLayout.get(context).mode ==
+        app.lychee.layout.LycheeLayout.Mode.ONE_HANDED) 38 else 48)
 
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 }

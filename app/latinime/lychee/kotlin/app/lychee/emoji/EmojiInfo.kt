@@ -62,7 +62,7 @@ class EmojiInfo(private val ctx: Context) {
             this.text = codePoints(text)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             setTextColor(c.onSurfaceVariant)
-            typeface = android.graphics.Typeface.MONOSPACE
+            typeface = app.lychee.fonts.LycheeFonts.ui(ctx)
             gravity = Gravity.CENTER
             maxWidth = dp(240)
             setPadding(0, dp(2), 0, 0)

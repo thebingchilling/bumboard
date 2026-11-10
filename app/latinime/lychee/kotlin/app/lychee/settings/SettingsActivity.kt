@@ -557,12 +557,9 @@ private fun openSystemLanguages(context: Context) {
 @Composable
 private fun ChinesePage() {
     val prefs = prefs()
-    val uiScript = prefs.stringPref(app.lychee.chinese.ChineseScript.PREF_UI) {
-        prefs.getString(app.lychee.chinese.ChineseScript.PREF_UI, null) ?: "traditional"
-    }
-    // the candidates follow Lychee's script until chosen here (or with the 繁/简 key)
+    // one choice, the same as the keyboard's 繁/简 key: the candidates and Lychee's labels
     val script = prefs.stringPref(ChineseInput.PREF_SCRIPT) {
-        prefs.getString(ChineseInput.PREF_SCRIPT, null) ?: uiScript.value
+        if (app.lychee.chinese.ChineseScript.candidatesSimplified(prefs)) "simplified" else "traditional"
     }
     val cantonese = prefs.stringPref(ChineseInput.PREF_CANTONESE_INPUT) {
         prefs.getString(ChineseInput.PREF_CANTONESE_INPUT, null) ?: "jyutping"
@@ -573,7 +570,7 @@ private fun ChinesePage() {
     val meaning = prefs.boolPref(Readings.PREF_MEANING) { prefs.getBoolean(Readings.PREF_MEANING, true) }
     val toneColours = prefs.boolPref(Readings.PREF_TONE_COLOURS) { prefs.getBoolean(Readings.PREF_TONE_COLOURS, true) }
     Text(
-        stringResource(R.string.lychee_chinese_how).let { if (uiScript.value == "simplified") app.lychee.chinese.ChineseScript.simplify(it) else it },
+        stringResource(R.string.lychee_chinese_how).let { if (script.value == "simplified") app.lychee.chinese.ChineseScript.simplify(it) else it },
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
@@ -581,18 +578,7 @@ private fun ChinesePage() {
     Group(stringResource(R.string.lychee_group_script)) {
         row {
             ChoiceRow(
-                it, stringResource(R.string.lychee_script_ui), stringResource(R.string.lychee_script_ui_summary),
-                options = listOf(
-                    "traditional" to stringResource(R.string.lychee_script_traditional),
-                    "simplified" to stringResource(R.string.lychee_script_simplified),
-                ),
-                selected = uiScript.value,
-                onSelect = uiScript::set,
-            )
-        }
-        row {
-            ChoiceRow(
-                it, stringResource(R.string.lychee_script),
+                it, stringResource(R.string.lychee_script), stringResource(R.string.lychee_script_summary),
                 options = listOf(
                     "traditional" to stringResource(R.string.lychee_script_traditional),
                     "simplified" to stringResource(R.string.lychee_script_simplified),

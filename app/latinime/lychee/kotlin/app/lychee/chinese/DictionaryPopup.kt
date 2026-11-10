@@ -175,8 +175,9 @@ class DictionaryPopup(private val ctx: Context) {
         }
         fill(c, body)
 
-        // its two buttons in the top corners: close (X) on the left, type the word on the right
-        val actions = FrameLayout(ctx).apply { setPadding(dp(6), dp(6), dp(6), 0) }
+        // its two buttons along the bottom, where the thumb is: close (X) on the left, type the
+        // word on the right
+        val actions = FrameLayout(ctx).apply { setPadding(dp(10), dp(4), dp(10), dp(10)) }
         val card = MaxHeightLayout(ctx, room).apply {
             orientation = LinearLayout.VERTICAL
             isClickable = true
@@ -185,20 +186,20 @@ class DictionaryPopup(private val ctx: Context) {
                 cornerRadius = dp(20).toFloat()
             }
             elevation = dp(6).toFloat()
-            addView(actions)
             addView(ScrollView(ctx).apply { addView(body) },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+            addView(actions)
         }
         if (peek) {
             actions.visibility = View.GONE
         } else {
             actions.addView(cornerButton(R.drawable.ic_sym_close, ctx.getString(R.string.lychee_close), c, filled = false) { dismiss() },
-                FrameLayout.LayoutParams(dp(40), dp(40), Gravity.START or Gravity.TOP))
+                FrameLayout.LayoutParams(dp(48), dp(48), Gravity.START or Gravity.BOTTOM))
             actions.addView(cornerButton(R.drawable.lychee_ic_input, ctx.getString(R.string.lychee_type_it), c, filled = true) {
                 dismiss()
                 onType()
-            }, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.END or Gravity.TOP))
-            body.setPadding(body.paddingLeft, dp(2), body.paddingRight, dp(12))
+            }, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.END or Gravity.BOTTOM))
+            body.setPadding(body.paddingLeft, dp(14), body.paddingRight, dp(4))
         }
         // just above the keyboard, rising out of it
         // over the keys only: in one-handed mode the card keeps to the narrowed keyboard
@@ -505,13 +506,36 @@ class DictionaryPopup(private val ctx: Context) {
             if (found.isEmpty()) return
             section(ctx.getString(R.string.lychee_card_strokes))
             // every character of a long word, four to a row
+            // not another copy of the word: each character on a tinted copybook tile, written in
+            // the accent colour (the stroke being written in another), its strokes numbered, with
+            // the count under it
             found.chunked(4).forEach { chunk ->
                 val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
                 chunk.forEach { ch ->
-                    row.addView(app.lychee.dict.StrokeOrderView(ctx, ch, c.onSurface,
-                        androidx.core.graphics.ColorUtils.setAlphaComponent(c.onSurface, 0x30),
-                        androidx.core.graphics.ColorUtils.setAlphaComponent(c.outline, 0x80)),
-                        LinearLayout.LayoutParams(dp(76), dp(76)).apply { marginEnd = dp(8); bottomMargin = dp(8) })
+                    val cell = LinearLayout(ctx).apply {
+                        orientation = LinearLayout.VERTICAL
+                        gravity = Gravity.CENTER_HORIZONTAL
+                    }
+                    val tile = FrameLayout(ctx).apply {
+                        background = GradientDrawable().apply {
+                            cornerRadius = dp(14).toFloat()
+                            setColor(c.surfaceContainer)
+                        }
+                        setPadding(dp(6), dp(6), dp(6), dp(6))
+                        addView(app.lychee.dict.StrokeOrderView(ctx, ch, c.primary,
+                            androidx.core.graphics.ColorUtils.setAlphaComponent(c.onSurface, 0x1C),
+                            androidx.core.graphics.ColorUtils.setAlphaComponent(c.outline, 0x70),
+                            current = c.onSurface, numbers = c.onSurfaceVariant),
+                            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    }
+                    cell.addView(tile, LinearLayout.LayoutParams(dp(72), dp(72)))
+                    val count = ch.medians.size
+                    cell.addView(textView(ctx.resources.getQuantityString(R.plurals.lychee_card_stroke_count, count, count), 11f, c.onSurfaceVariant).apply {
+                        gravity = Gravity.CENTER
+                        setPadding(0, dp(3), 0, 0)
+                    })
+                    row.addView(cell, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                        .apply { marginEnd = dp(10); bottomMargin = dp(10) })
                 }
                 body.addView(row)
             }

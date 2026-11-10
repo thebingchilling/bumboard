@@ -23,6 +23,11 @@ import com.android.inputmethod.latin.R
  * card closes it, and it shrinks back into the key.
  */
 object LanguageCard {
+    private const val ROW_DP = 48
+    private const val TITLE_DP = 36
+    /** The gap kept between the card and the edges of the keys. */
+    private const val EDGE_DP = 8
+
     private var window: PopupWindow? = null
     private var card: View? = null
     private var scrim: View? = null
@@ -84,40 +89,74 @@ object LanguageCard {
             }, LinearLayout.LayoutParams(dp(24), dp(24)))
             setOnClickListener { dismiss(); onClick() }
         }
-        // the keyboards scroll when they do not all fit over the keys
+        // the card has the keys and the bar above them to itself (more room than the keys alone)
+        val bar = keyboard.rootView.findViewById<View>(R.id.lychee_top_bar)
+        val keysLoc = IntArray(2).also { keyboard.getLocationInWindow(it) }
+        val extra = bar?.takeIf { it.isShown }?.let { b ->
+            (keysLoc[1] - IntArray(2).also { b.getLocationInWindow(it) }[1]).coerceIn(0, dp(120))
+        } ?: 0
+        val areaHeight = keyboard.height + extra
+        val anchorY = if (anchorTop > 0) anchorTop + extra else -1
+
+        // a title, the keyboards (scrolling, with their scrollbar, when they don't all fit),
+        // then Language settings, always in reach under them
+        card.addView(TextView(context).apply {
+            setText(R.string.lychee_language_card_title)
+            setTextColor(palette.onSurfaceVariant)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            typeface = LycheeFonts.ui(context, 500)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(20), 0, dp(20), 0)
+        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(TITLE_DP)))
         val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         names.forEachIndexed { i, name ->
-            list.addView(row(name, i == checked, null) { onPick(i) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
+            list.addView(row(name, i == checked, null) { onPick(i) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(ROW_DP)))
         }
-        val room = keyboard.height - dp(32) - dp(48 + 9 + 16)
-        card.addView(android.widget.ScrollView(context).apply {
-            isVerticalScrollBarEnabled = false
+        // the card's fixed parts: its padding, the title, the divider and Language settings
+        val fixed = dp(8 + 8 + TITLE_DP + 9 + ROW_DP)
+        val wanted = dp(ROW_DP) * names.size
+        // above the key held when it all fits there; otherwise as tall as the area allows
+        val roomAbove = if (anchorY > 0) anchorY - dp(6) - dp(EDGE_DP) else 0
+        val fitsAbove = anchorY > 0 && fixed + wanted <= roomAbove
+        val maxCard = (if (fitsAbove) roomAbove else areaHeight - 2 * dp(EDGE_DP)).coerceAtLeast(fixed + dp(ROW_DP))
+        val listHeight = minOf(wanted, maxCard - fixed)
+        val scroller = android.widget.ScrollView(context).apply {
+            isVerticalScrollBarEnabled = wanted > listHeight
+            isScrollbarFadingEnabled = false
+            scrollBarStyle = View.SCROLLBARS_INSIDE_INSET
+            isVerticalFadingEdgeEnabled = wanted > listHeight
+            setFadingEdgeLength(dp(24))
+            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
             addView(list)
-        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, minOf(dp(48) * names.size, room.coerceAtLeast(dp(48)))))
+        }
+        card.addView(scroller, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, listHeight))
+        // the ticked keyboard in view
+        if (checked >= 0 && wanted > listHeight) scroller.post {
+            scroller.scrollTo(0, (dp(ROW_DP) * checked - listHeight / 2 + dp(ROW_DP) / 2).coerceAtLeast(0))
+        }
         card.addView(View(context).apply { setBackgroundColor(palette.outlineVariant) },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply { setMargins(dp(16), dp(4), dp(16), dp(4)) })
         card.addView(row(context.getString(R.string.lychee_language_settings), false, R.drawable.ic_sym_settings) { onSettings() },
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(ROW_DP)))
 
         // the keys fade behind the card; a tap on them closes it
         val background = app.lychee.ui.LycheeColorStyle.color(context, R.attr.lycheeColorBackground)
-        val width = minOf(dp(320), keyboard.width - dp(32))
-        val anchored = anchorX >= 0 && anchorTop > 0
+        val width = minOf(dp(320), keyboard.width - 2 * dp(EDGE_DP))
+        val anchored = anchorX >= 0 && fitsAbove
         val scrim = FrameLayout(context).apply {
             setBackgroundColor((background and 0x00FFFFFF) or 0xB3000000.toInt())
             setOnClickListener { dismiss() }
             addView(card, if (anchored) {
                 // just above the key held, centred on it, kept inside the keys
                 FrameLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.START).apply {
-                    leftMargin = (anchorX - width / 2).coerceIn(dp(16), keyboard.width - width - dp(16))
-                    bottomMargin = (keyboard.height - anchorTop + dp(6)).coerceAtMost(keyboard.height / 3)
+                    leftMargin = (anchorX - width / 2).coerceIn(dp(EDGE_DP), (keyboard.width - width - dp(EDGE_DP)).coerceAtLeast(dp(EDGE_DP)))
+                    bottomMargin = areaHeight - anchorY + dp(6)
                 }
             } else {
                 FrameLayout.LayoutParams(width, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER)
             })
         }
-        val location = IntArray(2).also { keyboard.getLocationInWindow(it) }
-        val popup = PopupWindow(scrim, keyboard.width, keyboard.height, false).apply {
+        val popup = PopupWindow(scrim, keyboard.width, areaHeight, false).apply {
             animationStyle = com.android.inputmethod.latin.R.style.LycheePopupAnimation
             setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
             isOutsideTouchable = true
@@ -126,7 +165,7 @@ object LanguageCard {
         window = popup
         this.card = card
         this.scrim = scrim
-        popup.showAtLocation(keyboard, Gravity.TOP or Gravity.START, location[0], location[1])
+        popup.showAtLocation(keyboard, Gravity.TOP or Gravity.START, keysLoc[0], keysLoc[1] - extra)
         // the scrim fades in, the card springs up out of the key
         scrim.alpha = 0f
         scrim.animate().alpha(1f).setDuration(160).start()

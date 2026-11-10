@@ -873,6 +873,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                 mIsHardwareAcceleratedDrawingEnabled);
     }
 
+    private boolean mLycheeFontPending; // LYCHEE
+
     @Override
     public void setInputView(final View view) {
         super.setInputView(view);
@@ -889,6 +891,17 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // LYCHEE: keep the keys above the navigation bar (edge to edge from Android 15).
         app.lychee.KeyboardInsets.apply(view);
         setUpLycheeEmoji(view);
+        // LYCHEE: everything on the keyboard in the keyboard font (Settings > Fonts); texts
+        // still in the phone's stock font take it whenever views are added or laid out
+        app.lychee.fonts.LycheeFonts.applyTree(view);
+        view.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            if (mLycheeFontPending) return;
+            mLycheeFontPending = true;
+            view.post(() -> {
+                mLycheeFontPending = false;
+                app.lychee.fonts.LycheeFonts.applyTree(view);
+            });
+        });
         if (mSuggestionStripView != null) {
             mSuggestionStripView.getLycheeToolbar().setOnGallery(() -> {
                 // the gallery button opens the shortcuts, and closes them again

@@ -32,7 +32,9 @@ import java.util.concurrent.Executors
  * characters can be written one after another. The guesses show in the candidate bar, with
  * their readings: tap one to replace what was typed. After each character the bar suggests
  * what usually follows it (校, 生, 習 after 學), from the readings dictionary's words.
- * ⌫ takes back the last stroke while writing, otherwise deletes.
+ * The ink fades away by itself a couple of seconds after the last stroke (its guesses stay in
+ * the bar to pick from). ⌫ never touches the ink: it clears the guesses while they show,
+ * otherwise deletes.
  *
  * A mode, like text editing: the Handwriting shortcut (Chinese and Japanese keyboards only)
  * opens it over the keys, with Back and its name in the bar above (Back, or the phone's,
@@ -201,6 +203,7 @@ class HandwritingPanelView @JvmOverloads constructor(
                 // a newer stroke has its own recognition coming: these guesses are stale
                 if (version != inkVersion || !pad.hasInk) return@post
                 guessedVersion = version
+                lastInk = null
                 showGuesses(result)
                 if (commitWhenGuessed) commitPending()
             }
@@ -261,12 +264,57 @@ class HandwritingPanelView @JvmOverloads constructor(
     private fun isHan(ch: String) = ch.codePointCount(0, ch.length) == 1 &&
         Character.UnicodeScript.of(ch.codePointAt(0)) == Character.UnicodeScript.HAN
 
+    /** The strokes of the last character the pad cleared by itself, kept for [pick]'s sample. */
+    private var lastInk: List<FloatArray>? = null
+
+    /**
+     * A few seconds after the last stroke the ink fades out and the pad is ready for the next
+     * character; the guesses stay in the bar until another character is written or one is picked.
+     */
+    private val autoClear: Runnable = object : Runnable {
+        override fun run() {
+            if (!pad.hasInk) return
+            // its guesses first (the recogniser is still reading it)
+            if (guessedVersion != inkVersion) {
+                main.postDelayed(this, 250)
+                return
+            }
+            val ink = pad.strokeList()
+            val finish = {
+                if (pad.hasInk && pad.strokeList().size == ink.size) {
+                    lastInk = ink
+                    pad.clear()
+                    // the guesses on show belong to this ink still: keep them
+                    guessedVersion = ++inkVersion
+                    updateHint()
+                }
+                pad.alpha = 1f
+            }
+            if (LycheePanels.animate(context)) {
+                pad.animate().alpha(0f).setDuration(FADE_MS).withEndAction { finish() }.start()
+            } else finish()
+        }
+    }
+
+    private fun scheduleAutoClear() {
+        main.removeCallbacks(autoClear)
+        main.postDelayed(autoClear, AUTO_CLEAR_MS)
+    }
+
+    private fun cancelAutoClear() {
+        main.removeCallbacks(autoClear)
+        pad.animate().cancel()
+        pad.alpha = 1f
+    }
+
     /** Clears the ink on the pad without typing anything (only a tapped candidate types). */
     private fun commitPending(@Suppress("UNUSED_PARAMETER") now: Boolean = false) {
         // nothing is typed unless a candidate is tapped: moving on (space, Enter, a key, the
         // pad closing) just clears what was written
         main.removeCallbacks(autoCommit)
         commitWhenGuessed = false
+        cancelAutoClear()
+        lastInk = null
         if (!pad.hasInk) return
         pad.clear()
         inkVersion++
@@ -280,8 +328,15 @@ class HandwritingPanelView @JvmOverloads constructor(
     private fun pick(text: String) {
         if (pad.hasInk) {
             main.removeCallbacks(autoCommit)
+            cancelAutoClear()
             HandwritingSamples.save(context, pad.strokeList(), text, guesses, lycheeHost()?.lycheeEngine())
             pad.clear()
+            inkVersion++
+            updateHint()
+        } else if (lastInk != null) {
+            // the character the pad already cleared by itself
+            HandwritingSamples.save(context, lastInk!!, text, guesses, lycheeHost()?.lycheeEngine())
+            lastInk = null
         } else {
             val previous = lastTyped
             if (previous != null) {
@@ -299,18 +354,21 @@ class HandwritingPanelView @JvmOverloads constructor(
         lycheeHost()?.lycheeSendCode(Constants.CODE_SPACE)
     }
 
+    /**
+     * ⌫ never touches the ink (it fades by itself): while guesses show it clears them, and
+     * otherwise deletes from the text.
+     */
     private fun backspace() {
-        if (pad.hasInk) {
-            pad.undo()
+        if (guesses.isNotEmpty()) {
             commitWhenGuessed = false
-            if (pad.hasInk) recognise() else {
-                inkVersion++
-                showGuesses(emptyList())
-            }
+            lastInk = null
+            showGuesses(emptyList())
+            // what is still on the pad is read again with its next stroke
+            if (pad.hasInk) guessedVersion = ++inkVersion
             return
         }
         lastTyped = null
-        showGuesses(emptyList())
+        lycheeHost()?.lycheeShowGuesses(emptyList()) {}
         lycheeHost()?.lycheeSendCode(Constants.CODE_DELETE)
     }
 
@@ -430,6 +488,10 @@ class HandwritingPanelView @JvmOverloads constructor(
                 MotionEvent.ACTION_DOWN -> {
                     hint.visibility = GONE
                     main.removeCallbacks(autoCommit)
+                    // writing again: the ink stays until a pause, and a new character is not a
+                    // replacement for the one picked before
+                    cancelAutoClear()
+                    if (!hasInk) lastTyped = null
                     // still writing: no typing yet
                     commitWhenGuessed = false
                     current = arrayListOf(event.x, event.y)
@@ -445,6 +507,7 @@ class HandwritingPanelView @JvmOverloads constructor(
                     current = null
                     // the guesses show; one is typed only when it is tapped
                     recognise()
+                    scheduleAutoClear()
                 }
             }
             invalidate()
@@ -465,6 +528,9 @@ class HandwritingPanelView @JvmOverloads constructor(
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 
     private companion object {
+        /** The pause after the last stroke before the ink fades away, and the fade. */
+        const val AUTO_CLEAR_MS = 2200L
+        const val FADE_MS = 350L
         /** How much a common character gains (see rank): a tie-breaker between look-alikes. */
         const val COMMON = 0.06f
         /** The stroke matcher's say on Chinese characters: past this distance none; its weight. */

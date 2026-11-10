@@ -18,7 +18,8 @@ import java.io.File
 /**
  * The fonts Lychee draws with, chosen in Settings > Fonts:
  *  - the app's own font: Google Sans Flex or the phone's font (no others);
- *  - the keyboard's font, for the letters on the keys and the suggestions: Google Sans Flex,
+ *  - the keyboard's font, for everything on the keyboard (keys, suggestions, panels, the word
+ *    card): Noto Sans, Google Sans Flex, the phone's font,
  *    LXGW WenKai or the user's own;
  *  - a font each for Chinese, Japanese and Korean (candidates, the word card, CJK key labels):
  *    LXGW WenKai, the phone's font or the user's own;
@@ -118,19 +119,19 @@ object LycheeFonts {
      * sans-serif when chosen (or when the font is not in the APK).
      */
     @JvmStatic
-    fun ui(context: Context, weight: Int = 400): Typeface = when {
-        choice(context, PREF_KEYS).isNotEmpty() -> keysLatin(context, weight)
-        uiIsSystem(context) -> system(weight)
-        else -> gsf(context, weight)
-    }
+    fun ui(context: Context, weight: Int = 400): Typeface = keysLatin(context, weight)
 
     /**
-     * The app's own font at [weight], whatever the keyboard font: for what goes with the
-     * candidates (their readings and meanings, the word card), which keep their look when the
-     * keyboard takes another font.
+     * The font of what goes with the candidates (their readings and meanings, the word card):
+     * the keyboard font too, so everything on the keyboard is in the one font chosen in
+     * Settings > Fonts (other fonts only stand in for characters it lacks).
      */
     @JvmStatic
-    fun appFont(context: Context, weight: Int = 400): Typeface =
+    fun appFont(context: Context, weight: Int = 400): Typeface = keysLatin(context, weight)
+
+    /** The app's own font at [weight] (Settings), whatever the keyboard font. */
+    @JvmStatic
+    fun settingsFont(context: Context, weight: Int = 400): Typeface =
         if (uiIsSystem(context)) system(weight) else gsf(context, weight)
 
     /** The app's font in place of [face]: medium for bold, regular otherwise. */
@@ -204,6 +205,7 @@ object LycheeFonts {
         return when (val c = choice(context, PREF_KEYS)) {
             "" -> noto(context, weight)
             GSF -> gsf(context, weight)
+            SYSTEM -> system(weight)
             WENKAI -> wenkaiKeys(context)?.let { styledLike(it, bold) } ?: noto(context, weight)
             else -> packFace(context, c)?.let { styledLike(it, bold) } ?: noto(context, weight)
         }
@@ -266,9 +268,34 @@ object LycheeFonts {
         // when it is the keyboard font: Google Sans Flex's symbols stay in Google's style)
         if (label != null && label.isNotEmpty() && !hasGlyph(face, label)) {
             if (choice(context, PREF_KEYS) == WENKAI) wenkai(context)?.let { return it }
+            // Noto Sans (with Noto's symbols) before the phone's font
+            noto(context, weight).takeIf { hasGlyph(it, label) }?.let { return it }
             return if (weight >= 500) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
         }
         return face
+    }
+
+    /**
+     * Puts the keyboard font on every text in [root] still in a stock font (the phone's
+     * default, bold or not), so nothing on the keyboard shows another font by accident; texts
+     * given a font on purpose (Chinese, emoji, ...) keep theirs.
+     */
+    @JvmStatic
+    fun applyTree(root: android.view.View) {
+        val ctx = root.context
+        fun walk(v: android.view.View) {
+            if (v is android.widget.TextView) {
+                val tf = v.typeface
+                if (tf == null || tf == Typeface.DEFAULT || tf == Typeface.DEFAULT_BOLD ||
+                    tf == Typeface.SANS_SERIF || tf == Typeface.MONOSPACE) {
+                    val bold = tf != null && tf.isBold
+                    val face = keysLatin(ctx, if (bold) 500 else 400)
+                    if (face != tf) v.typeface = face
+                }
+            }
+            if (v is android.view.ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
+        }
+        walk(root)
     }
 
     private val glyphPaint = Paint()
