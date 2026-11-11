@@ -84,8 +84,40 @@ object LycheeFonts {
     @Synchronized
     private fun clear() {
         choices.clear()
-        loaded.keys.filter { it.startsWith("/") }.forEach { loaded.remove(it) }
+        loaded.keys.filter { it.startsWith("/") || it.startsWith("emoji:") || it.startsWith("keys:") }.forEach { loaded.remove(it) }
         styled.clear()
+        // their fallbacks include the emoji font chosen
+        notoFaces.clear()
+        gsfFaces.clear()
+    }
+
+    /**
+     * The emoji font chosen, as a fallback family for the keyboard's fonts: so every emoji on
+     * the keyboard (keys, suggestions, candidates, panels) is drawn by it, in colour, whatever
+     * the phone's own emoji font is (its variation selectors pick the emoji form of ❤️, ☀️ ...).
+     * Null for the phone's own emoji, which the system fallback brings.
+     */
+    private fun emojiFallback(app: Context): FontFamily? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        return runCatching {
+            when (val c = choice(app, PREF_EMOJI)) {
+                SYSTEM -> null
+                "" -> FontFamily.Builder(Font.Builder(app.assets, BUNDLED_EMOJI).build()).build()
+                else -> packFile(app, c)?.let { FontFamily.Builder(Font.Builder(it).build()).build() }
+                    ?: FontFamily.Builder(Font.Builder(app.assets, BUNDLED_EMOJI).build()).build()
+            }
+        }.getOrNull()
+    }
+
+    /** [builder] given Lychee's symbols at [weight] and then the emoji font, before the phone's. */
+    private fun addFallbacks(app: Context, builder: Typeface.CustomFallbackBuilder, weight: Int) {
+        for (n in 0 until 3) {
+            runCatching {
+                Font.Builder(app.assets, "lychee/LycheeSymbols$n.ttf")
+                    .setFontVariationSettings("'wght' $weight").setWeight(weight.coerceIn(1, 1000)).build()
+            }.getOrNull()?.let { builder.addCustomFallback(FontFamily.Builder(it).build()) }
+        }
+        emojiFallback(app)?.let { builder.addCustomFallback(it) }
     }
 
     @Synchronized
@@ -158,12 +190,7 @@ object LycheeFonts {
                 val font = Font.Builder(app.assets, UI_FONT)
                     .setFontVariationSettings("'wght' $weight").setWeight(weight.coerceIn(1, 1000)).build()
                 val builder = Typeface.CustomFallbackBuilder(FontFamily.Builder(font).build())
-                for (n in 0 until 3) {
-                    runCatching {
-                        Font.Builder(app.assets, "lychee/LycheeSymbols$n.ttf")
-                            .setFontVariationSettings("'wght' $weight").setWeight(weight.coerceIn(1, 1000)).build()
-                    }.getOrNull()?.let { builder.addCustomFallback(FontFamily.Builder(it).build()) }
-                }
+                addFallbacks(app, builder, weight)
                 // nothing from WenKai here: an English symbol never takes the Kai look; what
                 // Google's fonts lack comes from the phone's sans-serif
                 builder.setSystemFallback("sans-serif").build()
@@ -207,8 +234,26 @@ object LycheeFonts {
             GSF -> gsf(context, weight)
             SYSTEM -> system(weight)
             WENKAI -> wenkaiKeys(context)?.let { styledLike(it, bold) } ?: noto(context, weight)
-            else -> packFace(context, c)?.let { styledLike(it, bold) } ?: noto(context, weight)
+            else -> packKeysFace(context, c, bold) ?: noto(context, weight)
         }
+    }
+
+    /** The user's own keyboard font, with Lychee's symbols and the emoji font behind it. */
+    private fun packKeysFace(context: Context, id: String, bold: Boolean): Typeface? {
+        if (!Features.isEnabled(Feature.CUSTOM_FONTS)) return null
+        val file = packFile(context, id) ?: return null
+        val app = app(context)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            load("keys:${file.path}:${file.lastModified()}:$bold") {
+                runCatching {
+                    val font = Font.Builder(file).setWeight(if (bold) 700 else 400).build()
+                    val builder = Typeface.CustomFallbackBuilder(FontFamily.Builder(font).build())
+                    addFallbacks(app, builder, if (bold) 500 else 400)
+                    builder.setSystemFallback("sans-serif").build()
+                }.getOrNull()
+            }?.let { return it }
+        }
+        return packFace(context, id)?.let { styledLike(it, bold) }
     }
 
     private val notoFaces = HashMap<Int, Typeface>()
@@ -227,12 +272,7 @@ object LycheeFonts {
                 val font = Font.Builder(app.assets, KEYS_FONT)
                     .setFontVariationSettings("'wght' $weight").setWeight(weight.coerceIn(1, 1000)).build()
                 val builder = Typeface.CustomFallbackBuilder(FontFamily.Builder(font).build())
-                for (n in 0 until 3) {
-                    runCatching {
-                        Font.Builder(app.assets, "lychee/LycheeSymbols$n.ttf")
-                            .setFontVariationSettings("'wght' $weight").setWeight(weight.coerceIn(1, 1000)).build()
-                    }.getOrNull()?.let { builder.addCustomFallback(FontFamily.Builder(it).build()) }
-                }
+                addFallbacks(app, builder, weight)
                 builder.setSystemFallback("sans-serif").build()
             } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 Typeface.Builder(app.assets, KEYS_FONT).setFontVariationSettings("'wght' $weight").build()
@@ -284,7 +324,9 @@ object LycheeFonts {
     fun applyTree(root: android.view.View) {
         val ctx = root.context
         fun walk(v: android.view.View) {
-            if (v is android.widget.TextView) {
+            // Chinese, Japanese and Korean text keeps its own font (Settings > Fonts), and the
+            // buttons with a character on them keep their fixed heavy one
+            if (v is android.widget.TextView && v !in fixedViews && !isCjk(v.text)) {
                 val tf = v.typeface
                 if (tf == null || tf == Typeface.DEFAULT || tf == Typeface.DEFAULT_BOLD ||
                     tf == Typeface.SANS_SERIF || tf == Typeface.MONOSPACE) {
@@ -296,6 +338,25 @@ object LycheeFonts {
             if (v is android.view.ViewGroup) for (i in 0 until v.childCount) walk(v.getChildAt(i))
         }
         walk(root)
+    }
+
+    /** Views whose font is fixed (see [heavy]); [applyTree] leaves them alone. */
+    private val fixedViews = java.util.Collections.newSetFromMap(java.util.WeakHashMap<android.view.View, Boolean>())
+
+    /**
+     * The fixed font of buttons with a character on them (繁/简, 英, 粵/普): the phone's sans-serif
+     * at its heaviest, whatever fonts are chosen, so they read as buttons, not text.
+     */
+    @JvmStatic
+    fun heavy(): Typeface =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) Typeface.create(Typeface.DEFAULT, 900, false)
+        else Typeface.DEFAULT_BOLD
+
+    /** Gives [view] the [heavy] font for good. */
+    @JvmStatic
+    fun fixHeavy(view: android.widget.TextView) {
+        view.typeface = heavy()
+        fixedViews += view
     }
 
     private val glyphPaint = Paint()
@@ -431,9 +492,13 @@ object LycheeFonts {
     private fun packEmoji(context: Context, id: String): Typeface? {
         val file = packFile(context, id) ?: return null
         return load("emoji:${file.path}:${file.lastModified()}") {
+            // what the chosen font lacks from Lychee's Noto Color Emoji (the newest), only then
+            // the phone's: an emoji newer than the font still shows whole
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) runCatching {
-                Typeface.CustomFallbackBuilder(FontFamily.Builder(Font.Builder(file).build()).build())
-                    .setSystemFallback("sans-serif").build()
+                val builder = Typeface.CustomFallbackBuilder(FontFamily.Builder(Font.Builder(file).build()).build())
+                runCatching { Font.Builder(app(context).assets, BUNDLED_EMOJI).build() }.getOrNull()
+                    ?.let { builder.addCustomFallback(FontFamily.Builder(it).build()) }
+                builder.setSystemFallback("sans-serif").build()
             }.getOrNull() ?: PackImporter.loadFont(file) else PackImporter.loadFont(file)
         }
     }

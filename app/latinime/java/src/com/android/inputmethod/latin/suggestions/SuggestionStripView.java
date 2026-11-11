@@ -153,12 +153,13 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
                 context.getColor(R.color.lychee_m3_primary_container)));
         mLycheeScriptKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
         mLycheeScriptKey.setTextColor(context.getColor(R.color.lychee_m3_on_primary_container));
-        mLycheeScriptKey.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        // LYCHEE: buttons with a character on them in a fixed heavy font
+        app.lychee.fonts.LycheeFonts.fixHeavy(mLycheeScriptKey);
         mLycheeScriptKey.setIncludeFontPadding(false);
         mLycheeScriptKey.setPadding(0, 0, 0, (int) (getResources().getDisplayMetrics().density * 2));
         mLycheeZhongKey = (TextView)findViewById(R.id.lychee_zhong_key);
         mLycheeZhongKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
-        mLycheeZhongKey.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        app.lychee.fonts.LycheeFonts.fixHeavy(mLycheeZhongKey);
         mLycheeZhongKey.setIncludeFontPadding(false);
         // 英: English words typed come back as Chinese
         mLycheeZhongKey.setText("\u82F1");

@@ -112,6 +112,9 @@ class StrokeOrderView @JvmOverloads constructor(
         matrix.postTranslate(0f, 900f)
         canvas.concat(matrix)
         val done = progress.toInt()
+        // within a stroke: a short rest first, then the brush eases in and out, so one stroke
+        // flows into the next instead of jumping straight on
+        val local = eased(progress - done)
         if (linesOnly) {
             centres.forEachIndexed { i, centre ->
                 when {
@@ -122,7 +125,7 @@ class StrokeOrderView @JvmOverloads constructor(
                         if (i == done && progress > done) {
                             val measure = PathMeasure(centre, false)
                             partial.reset()
-                            measure.getSegment(0f, measure.length * (progress - done), partial, true)
+                            measure.getSegment(0f, measure.length * local, partial, true)
                             brush.color = current
                             canvas.drawPath(partial, brush)
                         }
@@ -145,7 +148,7 @@ class StrokeOrderView @JvmOverloads constructor(
                     // the stroke so far: a broad brush along its centre line, kept inside its outline
                     val measure = PathMeasure(centres.getOrNull(i) ?: return@forEachIndexed, false)
                     partial.reset()
-                    measure.getSegment(0f, measure.length * (progress - done), partial, true)
+                    measure.getSegment(0f, measure.length * local, partial, true)
                     canvas.save()
                     canvas.clipPath(outline)
                     brush.color = current
@@ -161,6 +164,12 @@ class StrokeOrderView @JvmOverloads constructor(
         }
         canvas.restore()
         drawNumbers(canvas, s)
+    }
+
+    /** A stroke's share of its time (0..1) to how much of it is drawn: a rest, then smoothstep. */
+    private fun eased(t: Float): Float {
+        val x = ((t - REST) / (1f - REST)).coerceIn(0f, 1f)
+        return x * x * (3f - 2f * x)
     }
 
     /** Each stroke's number at its start, once every stroke is written. */
@@ -187,7 +196,9 @@ class StrokeOrderView @JvmOverloads constructor(
     }
 
     private companion object {
-        const val STROKE_MS = 550
+        const val STROKE_MS = 650
+        /** The part of each stroke's time spent resting before it is drawn. */
+        const val REST = 0.18f
         /** Past this many strokes the numbers would crowd the character. */
         const val MAX_NUMBERED = 14
     }

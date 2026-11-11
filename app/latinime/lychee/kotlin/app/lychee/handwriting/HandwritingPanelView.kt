@@ -153,17 +153,19 @@ class HandwritingPanelView @JvmOverloads constructor(
     }
 
     override fun setVisibility(visibility: Int) {
-        if (visibility != VISIBLE && this.visibility == VISIBLE) {
+        val closing = visibility != VISIBLE && this.visibility == VISIBLE
+        if (closing) {
             commitPending(now = true)
             main.removeCallbacksAndMessages(null)
             release()
             guesses = emptyList()
-            lycheeHost()?.lycheeShowGuesses(emptyList()) {}
             toolbar()?.let {
                 if (it.mode == app.lychee.toolbar.ToolbarView.Mode.TITLE) it.mode = app.lychee.toolbar.ToolbarView.Mode.NORMAL
             }
         }
         super.setVisibility(visibility)
+        // after the pad has gone, so the bar's 英 comes back (it is hidden while writing)
+        if (closing) lycheeHost()?.lycheeShowGuesses(emptyList()) {}
     }
 
     /** Closes the model on the recognition thread, after any recognition still running. */

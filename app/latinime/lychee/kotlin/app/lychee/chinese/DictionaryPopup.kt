@@ -40,6 +40,9 @@ class DictionaryPopup(private val ctx: Context) {
         const val PREF_SPEAK_LANG = "lychee_card_speak_lang"
         /** The other script under the headword: "hyphens" (only what differs), "full" or "off". */
         const val PREF_OTHER_SCRIPT = "lychee_card_other_script"
+        /** The card's largest height and width (dp): a popup, never the whole screen. */
+        private const val MAX_CARD_DP = 420
+        private const val MAX_CARD_WIDTH_DP = 440
     }
 
     private var host: FrameLayout? = null
@@ -166,8 +169,11 @@ class DictionaryPopup(private val ctx: Context) {
             IntArray(2).also { parent.getLocationInWindow(it) }[1]
         @Suppress("DEPRECATION")
         val statusBar = parent.rootWindowInsets?.stableInsetTop ?: dp(24)
-        val room = keyboardTop - statusBar - dp(12)
-        if (room < dp(96)) return
+        // a popup, not a sheet: at most about half the room above the keys (never the whole
+        // screen), within limits that suit a phone
+        val space = keyboardTop - statusBar - dp(12)
+        if (space < dp(96)) return
+        val room = minOf(space, maxOf(dp(220), (space * 0.6f).toInt()), dp(MAX_CARD_DP))
         val c = M3Colors.of(ctx)
         val body = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -183,9 +189,11 @@ class DictionaryPopup(private val ctx: Context) {
             isClickable = true
             background = GradientDrawable().apply {
                 setColor(c.surfaceContainerHigh)
-                cornerRadius = dp(20).toFloat()
+                cornerRadius = dp(24).toFloat()
+                setStroke(dp(1), androidx.core.graphics.ColorUtils.setAlphaComponent(c.outlineVariant, 0x80))
             }
-            elevation = dp(6).toFloat()
+            elevation = dp(10).toFloat()
+            clipToOutline = true
             addView(ScrollView(ctx).apply { addView(body) },
                 LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             addView(actions)
@@ -215,14 +223,23 @@ class DictionaryPopup(private val ctx: Context) {
             lp.bottomMargin = parent.height - keyboardTop
             panel.layoutParams = lp
         }
-        panel.addView(card, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            setMargins(dp(8), dp(8), dp(8), dp(6))
+        // narrower than the keys, centred, floating a little above them
+        val keysWidth = keys?.width?.takeIf { it > 0 } ?: parent.width
+        val cardWidth = minOf(keysWidth - 2 * dp(16), dp(MAX_CARD_WIDTH_DP))
+        panel.addView(card, FrameLayout.LayoutParams(cardWidth, ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM).apply {
+            setMargins(0, dp(12), 0, dp(10))
         })
         panel.visibility = View.VISIBLE
         panel.bringToFront()
-        card.translationY = dp(16).toFloat()
+        // pops up: rising, growing from just under full size and fading in
+        card.translationY = dp(12).toFloat()
+        card.scaleX = 0.94f
+        card.scaleY = 0.94f
         card.alpha = 0f
-        card.animate().translationY(0f).alpha(1f).setDuration(140).start()
+        card.post { card.pivotX = card.width / 2f; card.pivotY = card.height.toFloat() }
+        card.animate().translationY(0f).scaleX(1f).scaleY(1f).alpha(1f).setDuration(180)
+            .setInterpolator(android.view.animation.DecelerateInterpolator(1.6f)).start()
         host = panel
     }
 
@@ -475,7 +492,7 @@ class DictionaryPopup(private val ctx: Context) {
         /** 粵 or 普: the language the speak buttons use; a tap switches it. */
         private fun speakChip() = TextView(ctx).apply {
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            typeface = app.lychee.fonts.LycheeFonts.chinese(ctx) ?: Typeface.DEFAULT_BOLD
+            app.lychee.fonts.LycheeFonts.fixHeavy(this)
             setTextColor(c.onSecondaryContainer)
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
@@ -507,8 +524,7 @@ class DictionaryPopup(private val ctx: Context) {
             section(ctx.getString(R.string.lychee_card_strokes))
             // every character of a long word, four to a row
             // not another copy of the word: each character on a tinted copybook tile, written in
-            // the accent colour (the stroke being written in another), its strokes numbered, with
-            // the count under it
+            // the accent colour over a faint copy, with its stroke count under it
             found.chunked(4).forEach { chunk ->
                 val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
                 chunk.forEach { ch ->
@@ -525,7 +541,7 @@ class DictionaryPopup(private val ctx: Context) {
                         addView(app.lychee.dict.StrokeOrderView(ctx, ch, c.primary,
                             androidx.core.graphics.ColorUtils.setAlphaComponent(c.onSurface, 0x1C),
                             androidx.core.graphics.ColorUtils.setAlphaComponent(c.outline, 0x70),
-                            current = c.onSurface, numbers = c.onSurfaceVariant),
+                            current = c.primary),
                             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                     }
                     cell.addView(tile, LinearLayout.LayoutParams(dp(72), dp(72)))
@@ -675,9 +691,27 @@ class DictionaryPopup(private val ctx: Context) {
                 .joinToString("  ·  ")
             val gloss = hw.senses.firstOrNull { it.partOfSpeech != "cl" }?.gloss?.let { Annotator.shorten(it, 80) } ?: ""
             val form = if (prefs.simplified) hw.simplified else hw.traditional
-            body.addView(textView("$form  $readings  —  $gloss", 15f, c.onSurface).apply {
-                setPadding(0, dp(4), 0, dp(2))
+            // the part large on the left; its pronunciation in the accent colour, and under it
+            // the meaning on a line of its own (no dash between them)
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, dp(6), 0, dp(6))
+            }
+            row.addView(textView(form, 28f, c.onSurface).apply {
+                typeface = app.lychee.fonts.LycheeFonts.forText(ctx, form, fontLang) ?: Typeface.DEFAULT
+                minWidth = dp(48)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                .apply { marginEnd = dp(14) })
+            val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+            if (readings.isNotEmpty()) col.addView(textView(readings, 15f, c.primary).apply {
+                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
             })
+            if (gloss.isNotEmpty()) col.addView(textView(gloss, 14f, c.onSurfaceVariant).apply {
+                setPadding(0, dp(1), 0, 0)
+            })
+            row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            body.addView(row)
         }
 
         private fun section(title: String) {

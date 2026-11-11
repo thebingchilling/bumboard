@@ -733,13 +733,22 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private fun updateMoreButton() {
         val open = panel?.visibility == View.VISIBLE
         val b = moreButton ?: return
-        // one arrow that turns over as the dropdown opens and closes
-        b.setImageResource(R.drawable.ic_sym_keyboard_arrow_down)
-        val angle = if (open) 180f else 0f
-        if (b.rotation != angle) {
-            if (b.isShown && app.lychee.layout.LycheePanels.animate(b.context)) b.animate().rotation(angle).setDuration(200).start()
-            else b.rotation = angle
+        // ⌄ while closed, ⌃ while open: the icon swaps with a quick fade (turning the whole
+        // button turned its divider and ripple with it)
+        b.rotation = 0f
+        val icon = if (open) R.drawable.ic_sym_keyboard_arrow_up else R.drawable.ic_sym_keyboard_arrow_down
+        if (b.tag == icon) return
+        val first = b.tag == null
+        b.tag = icon
+        if (first || !b.isShown || !app.lychee.layout.LycheePanels.animate(b.context)) {
+            b.setImageResource(icon)
+            return
         }
+        b.animate().cancel()
+        b.animate().alpha(0f).scaleX(0.7f).scaleY(0.7f).setDuration(90).withEndAction {
+            b.setImageResource(icon)
+            b.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(140).start()
+        }.start()
     }
 
     /** Drops any composition, e.g. when the text field changes. */
@@ -896,7 +905,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             updateEdges(stripView)
             return
         }
-        if (englishAvailable) {
+        // no 英 while the handwriting pad is open: it writes characters, not English
+        val writing = stripView.rootView.findViewById<android.view.View>(R.id.lychee_handwriting_panel)
+            ?.visibility == android.view.View.VISIBLE
+        if (englishAvailable && !writing) {
             stripView.setLycheeZhongKey(englishMode, { toggleEnglishMode() }, if (engine == "ko") "영" else "英")
         } else {
             stripView.setLycheeZhongKey(null, null)

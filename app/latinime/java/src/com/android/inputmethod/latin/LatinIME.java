@@ -1030,7 +1030,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         InputMethodSubtype oldSubtype = mRichImm.getCurrentSubtype().getRawSubtype();
         StatsUtils.onSubtypeChanged(oldSubtype, subtype);
         mRichImm.onSubtypeChanged(subtype);
-        if (mLycheeChinese != null) mLycheeChinese.onSubtypeChanged(subtype);
+        if (mLycheeChinese != null) {
+            mLycheeChinese.onSubtypeChanged(app.lychee.typing.FieldKind.getRestricted() ? null : subtype);
+        }
         // LYCHEE: the bar's shortcuts belong to the keyboard showing (no handwriting on English)
         if (mInputView != null) {
             final View pad = mInputView.findViewById(R.id.lychee_handwriting_panel);
@@ -1047,6 +1049,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
     void onStartInputInternal(final EditorInfo editorInfo, final boolean restarting) {
         super.onStartInput(editorInfo, restarting);
+        // LYCHEE: number, password, email and web address fields get a plain English keyboard
+        app.lychee.typing.FieldKind.update(editorInfo);
 
         // If the primary hint language does not match the current subtype language, then try
         // to switch to the primary hint language.
@@ -1068,7 +1072,10 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // LYCHEE: an app restarting its input in the same field (some do after every change)
         // keeps what is being typed: the letters live in Rime, not in the field
         if (!restarting) mLycheeChinese.reset();
-        mLycheeChinese.onSubtypeChanged(mRichImm.getCurrentSubtype().getRawSubtype());
+        // LYCHEE: number, password, email and web address fields: plain English, no engine
+        app.lychee.typing.FieldKind.update(editorInfo);
+        mLycheeChinese.onSubtypeChanged(app.lychee.typing.FieldKind.getRestricted()
+                ? null : mRichImm.getCurrentSubtype().getRawSubtype());
         mLycheeChinese.onSettingsChanged();
         if (mInputView != null) {
             final View lycheeToolbar = mInputView.findViewById(R.id.lychee_toolbar);
@@ -1657,6 +1664,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     // TODO: Revise the language switch key behavior to make it much smarter and more reasonable.
     public void switchToNextSubtype() {
         // LYCHEE: the language key only cycles Lychee's own keyboards, never other apps'.
+        // LYCHEE: a number, password, email or web address field stays English
+        if (app.lychee.typing.FieldKind.getRestricted()) return;
         final List<InputMethodSubtype> subtypes = mRichImm.getMyEnabledInputMethodSubtypeList(true);
         if (subtypes.size() < 2) {
             return;
@@ -1676,6 +1685,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
     // LYCHEE: long-press on the language key lists Lychee's keyboards, not the system picker.
     private void showLycheeLanguagePicker() {
+        if (app.lychee.typing.FieldKind.getRestricted()) return;
         final List<InputMethodSubtype> subtypes = mRichImm.getMyEnabledInputMethodSubtypeList(true);
         if (subtypes.size() < 2) {
             launchLycheeSettingsPage("Languages");
@@ -2498,7 +2508,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // {@link InputMethodManager#shouldOfferSwitchingToNextInputMethod} is defined well.
         // LYCHEE: show the key whenever Lychee itself has more than one keyboard on; it
         // never switches to other input methods, so the system's opinion does not matter.
-        return mSettings.getCurrent().isLanguageSwitchKeyEnabled();
+        // LYCHEE: and never in a number, password, email or web address field (English only)
+        return mSettings.getCurrent().isLanguageSwitchKeyEnabled()
+                && !app.lychee.typing.FieldKind.getRestricted();
     }
 
     private void setNavigationBarVisibility(final boolean visible) {

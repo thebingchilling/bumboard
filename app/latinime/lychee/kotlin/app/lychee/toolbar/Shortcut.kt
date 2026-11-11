@@ -77,7 +77,9 @@ object Shortcuts {
     /** Whether [shortcut] belongs on the current keyboard ([engine]: null for English). */
     fun available(shortcut: Shortcut, engine: String?): Boolean = when (shortcut) {
         // handwriting is for Chinese, Japanese and Korean, never the English keyboards
-        Shortcut.HANDWRITING -> engine != null
+        Shortcut.HANDWRITING -> engine != null && !app.lychee.typing.FieldKind.restricted
+        // a number, password, email or web address field is English only
+        Shortcut.LANGUAGE -> !app.lychee.typing.FieldKind.restricted
         else -> true
     }
 }

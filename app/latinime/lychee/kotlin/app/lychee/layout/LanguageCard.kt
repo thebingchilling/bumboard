@@ -25,6 +25,7 @@ import com.android.inputmethod.latin.R
 object LanguageCard {
     private const val ROW_DP = 48
     private const val TITLE_DP = 36
+    private const val MIN_ROW_DP = 36
     /** The gap kept between the card and the edges of the keys. */
     private const val EDGE_DP = 8
 
@@ -80,6 +81,8 @@ object LanguageCard {
                 this.text = text
                 setTextColor(palette.onSurface)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
                 typeface = LycheeFonts.ui(context, if (ticked) 500 else 400)
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             val mark = if (ticked) R.drawable.ic_sym_check else icon
@@ -98,9 +101,25 @@ object LanguageCard {
         val areaHeight = keyboard.height + extra
         val anchorY = if (anchorTop > 0) anchorTop + extra else -1
 
-        // a title, the keyboards (scrolling, with their scrollbar, when they don't all fit),
-        // then Language settings, always in reach under them
-        card.addView(TextView(context).apply {
+        // a title, every keyboard (never scrolling: the rows get shorter, then go into two
+        // columns, so all of them fit), then Language settings under them
+        val n = names.size.coerceAtLeast(1)
+        val area = areaHeight - 2 * dp(EDGE_DP)
+        // the card's fixed parts: its padding, the divider and Language settings (the title too
+        // while there is room for it)
+        val fixedNoTitle = dp(8 + 8 + 9 + ROW_DP)
+        val withTitle = fixedNoTitle + dp(TITLE_DP) + dp(ROW_DP) * n <= area
+        val fixed = fixedNoTitle + if (withTitle) dp(TITLE_DP) else 0
+        // one column of rows as tall as 48dp, no shorter than 36dp; two columns when even that
+        // is too tall
+        val columns = if (fixed + dp(MIN_ROW_DP) * n <= area) 1 else 2
+        val rowsTall = (n + columns - 1) / columns
+        val rowHeight = ((area - fixed) / rowsTall).coerceIn(dp(MIN_ROW_DP).coerceAtMost(dp(ROW_DP)), dp(ROW_DP))
+        val listHeight = rowHeight * rowsTall
+        // above the key held when it all fits there; otherwise centred over the keys
+        val roomAbove = if (anchorY > 0) anchorY - dp(6) - dp(EDGE_DP) else 0
+        val fitsAbove = anchorY > 0 && fixed + listHeight <= roomAbove
+        if (withTitle) card.addView(TextView(context).apply {
             setText(R.string.lychee_language_card_title)
             setTextColor(palette.onSurfaceVariant)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
@@ -109,31 +128,21 @@ object LanguageCard {
             setPadding(dp(20), 0, dp(20), 0)
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(TITLE_DP)))
         val list = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
-        names.forEachIndexed { i, name ->
-            list.addView(row(name, i == checked, null) { onPick(i) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(ROW_DP)))
+        for (r in 0 until rowsTall) {
+            val line = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+            for (col in 0 until columns) {
+                val i = r * columns + col
+                if (i < names.size) {
+                    line.addView(row(names[i], i == checked, null) { onPick(i) }.apply {
+                        if (columns > 1) setPadding(dp(14), 0, dp(10), 0)
+                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+                } else {
+                    line.addView(View(context), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+                }
+            }
+            list.addView(line, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, rowHeight))
         }
-        // the card's fixed parts: its padding, the title, the divider and Language settings
-        val fixed = dp(8 + 8 + TITLE_DP + 9 + ROW_DP)
-        val wanted = dp(ROW_DP) * names.size
-        // above the key held when it all fits there; otherwise as tall as the area allows
-        val roomAbove = if (anchorY > 0) anchorY - dp(6) - dp(EDGE_DP) else 0
-        val fitsAbove = anchorY > 0 && fixed + wanted <= roomAbove
-        val maxCard = (if (fitsAbove) roomAbove else areaHeight - 2 * dp(EDGE_DP)).coerceAtLeast(fixed + dp(ROW_DP))
-        val listHeight = minOf(wanted, maxCard - fixed)
-        val scroller = android.widget.ScrollView(context).apply {
-            isVerticalScrollBarEnabled = wanted > listHeight
-            isScrollbarFadingEnabled = false
-            scrollBarStyle = View.SCROLLBARS_INSIDE_INSET
-            isVerticalFadingEdgeEnabled = wanted > listHeight
-            setFadingEdgeLength(dp(24))
-            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-            addView(list)
-        }
-        card.addView(scroller, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, listHeight))
-        // the ticked keyboard in view
-        if (checked >= 0 && wanted > listHeight) scroller.post {
-            scroller.scrollTo(0, (dp(ROW_DP) * checked - listHeight / 2 + dp(ROW_DP) / 2).coerceAtLeast(0))
-        }
+        card.addView(list, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, listHeight))
         card.addView(View(context).apply { setBackgroundColor(palette.outlineVariant) },
             LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply { setMargins(dp(16), dp(4), dp(16), dp(4)) })
         card.addView(row(context.getString(R.string.lychee_language_settings), false, R.drawable.ic_sym_settings) { onSettings() },
@@ -141,7 +150,8 @@ object LanguageCard {
 
         // the keys fade behind the card; a tap on them closes it
         val background = app.lychee.ui.LycheeColorStyle.color(context, R.attr.lycheeColorBackground)
-        val width = minOf(dp(320), keyboard.width - 2 * dp(EDGE_DP))
+        // two columns get a wider card
+        val width = minOf(dp(if (columns > 1) 400 else 320), keyboard.width - 2 * dp(EDGE_DP))
         val anchored = anchorX >= 0 && fitsAbove
         val scrim = FrameLayout(context).apply {
             setBackgroundColor((background and 0x00FFFFFF) or 0xB3000000.toInt())

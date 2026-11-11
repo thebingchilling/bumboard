@@ -222,7 +222,8 @@ class CandidateBarView @JvmOverloads constructor(
 
     override fun dispatchDraw(canvas: android.graphics.Canvas) {
         super.dispatchDraw(canvas)
-        if (row.childCount == 0) return
+        // no notch: it looked like a scrollbar, and the ⌄ button already opens the rest
+        if (!SHOW_NOTCH || row.childCount == 0) return
         notch.color = ColorUtils.setAlphaComponent(textColor, 0x40)
         val w = dp(28).toFloat()
         val h = dp(3).toFloat()
@@ -256,7 +257,8 @@ class CandidateBarView @JvmOverloads constructor(
         word.addView(text(candidate.text, CHAR_SP * scale, tag as Int).apply {
             includeFontPadding = false
             setPadding(dp(10), 0, dp(10), 0)
-            app.lychee.fonts.LycheeFonts.forText(context, candidate.text, style.fontLang)?.let { typeface = it }
+            // in its language's own font (Settings > Fonts), never the keyboard's
+            typeface = app.lychee.fonts.LycheeFonts.forText(context, candidate.text, style.fontLang) ?: android.graphics.Typeface.DEFAULT
         }, wrap())
         addView(word, wrap())
         slots(this, 0, false)
@@ -416,6 +418,8 @@ class CandidateBarView @JvmOverloads constructor(
     companion object {
         private val annotator = Executors.newSingleThreadExecutor()
         private val glyphs = Paint()
+        /** The pill under the row (off: it read as a scrollbar). */
+        const val SHOW_NOTCH = false
         const val CHAR_SP = 20f
         /** Candidates made before the bar has a width. */
         private const val FALLBACK_COUNT = 8
