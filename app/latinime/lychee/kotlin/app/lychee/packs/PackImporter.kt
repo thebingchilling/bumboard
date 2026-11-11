@@ -137,10 +137,32 @@ object PackImporter {
                 if (SAMPLE_KO.all { paint.hasGlyph(it.toString()) }) null else "That font has no Korean Hangul."
             PackKind.FONT_KEYS ->
                 if (SAMPLE_KEYS.all { paint.hasGlyph(it.toString()) }) null else "That font has no letters."
-            PackKind.FONT_EMOJI -> if (drawsInColour(typeface)) null
-                else "This phone can't show that emoji font (it may need a newer Android version)."
+            PackKind.FONT_EMOJI -> emojiProblem(file, typeface)
             else -> null
         }
+    }
+
+    /**
+     * Null when [file] is an emoji font Lychee can draw (CBDT or COLR); otherwise what is wrong,
+     * named by the font's format so it is plain what to look for instead.
+     */
+    private fun emojiProblem(file: File, typeface: Typeface): String? {
+        // drawn in colour here: fine, whatever its format (a COLRv1 font may carry COLRv0 layers too)
+        if (drawsInColour(typeface)) return null
+        val format = EmojiFontFormat.of(file)
+        val sdk = Build.VERSION.SDK_INT
+        if (format != null && !format.supportedOn(sdk)) {
+            return when {
+                format.colr != null ->
+                    "That emoji font is COLRv1, which phones show from Android 13. Use a CBDT version of it (like Noto Color Emoji's)."
+                format.sbix ->
+                    "That emoji font is in Apple's format (sbix), which Lychee doesn't support. Use a CBDT or COLR version of it."
+                format.svg ->
+                    "That emoji font is made of SVG pictures, which Lychee doesn't support. Use a CBDT or COLR version of it."
+                else -> "That font has no colour emoji in it (Lychee takes CBDT and COLR emoji fonts)."
+            }
+        }
+        return "That font's emoji didn't draw in colour on this phone (Lychee takes CBDT and COLR emoji fonts)."
     }
 
     fun loadFont(file: File): Typeface? = runCatching {
