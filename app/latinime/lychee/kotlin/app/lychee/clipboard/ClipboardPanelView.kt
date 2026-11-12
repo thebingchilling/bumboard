@@ -236,7 +236,7 @@ class ClipboardPanelView @JvmOverloads constructor(
             box.addView(LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER
-                setBackgroundColor(androidx.core.graphics.ColorUtils.setAlphaComponent(palette.surfaceContainerHighest, 0xF0))
+                setBackgroundColor(androidx.core.graphics.ColorUtils.setAlphaComponent(palette.surfaceContainerHigh, 0xF4))
                 addView(action(R.drawable.lychee_ic_pin, if (item.pinned) R.string.lychee_clipboard_unpin else R.string.lychee_clipboard_pin) {
                     ClipboardStore.setPinned(context, item.text, !item.pinned)
                     actionsFor = null

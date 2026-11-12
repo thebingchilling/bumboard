@@ -577,7 +577,7 @@ class DictionaryPopup(
                     sb.append(mark, ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                     sb.append(" ")
                     sb.append(Annotator.format(reading, lang, prefs), ForegroundColorSpan(c.primary), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    text = sb
+                    this.text = sb
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                     setPadding(0, dp(4), dp(12), dp(4))
                     onSpeak?.let { say -> setOnClickListener { say(wordToSay, lang) } }
