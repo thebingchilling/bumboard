@@ -16,10 +16,22 @@
     <string name="lychee_lookup_in_chinese">In Chinese</string>
     <string name="lychee_sc_clipboard">Clipboard</string>
     <string name="lychee_incognito_badge">Incognito: nothing typed here is learned or kept. Tap for shortcuts</string>
-    <string name="lychee_clipboard_off">The clipboard is off. Turned on, Lychee keeps what you copy here for an hour (pinned ones until you delete them), on this phone only.</string>
+    <string name="lychee_clipboard_off">Turn it on and what you copy shows here for an hour, ready to paste. Pinned copies stay until you delete them. It never leaves this phone.</string>
+    <string name="lychee_clipboard_off_title">The clipboard is off</string>
+    <string name="lychee_clipboard_empty_title">Nothing copied yet</string>
+    <string name="lychee_clipboard_pinned">Pinned</string>
+    <string name="lychee_clipboard_recent">Recent</string>
+    <string name="lychee_clipboard_link">Link</string>
+    <string name="lychee_clipboard_email">Email</string>
+    <string name="lychee_clipboard_number">Number</string>
+    <string name="lychee_clipboard_text">Text</string>
+    <plurals name="lychee_clipboard_count">
+        <item quantity="one">%d copy</item>
+        <item quantity="other">%d copies</item>
+    </plurals>
     <string name="lychee_clipboard_turn_on">Turn on</string>
-    <string name="lychee_clipboard_empty">Copy something and it shows here</string>
-    <string name="lychee_clipboard_clear">Clear</string>
+    <string name="lychee_clipboard_empty">Copy text in any app and it shows up here. Hold a copy to pin it.</string>
+    <string name="lychee_clipboard_clear">Clear all</string>
     <string name="lychee_clipboard_pin">Pin</string>
     <string name="lychee_clipboard_unpin">Unpin</string>
     <string name="lychee_clipboard_delete">Delete</string>
@@ -35,7 +47,7 @@
     <string name="lychee_gallery_title">Shortcuts</string>
     <string name="lychee_gallery_edit">Edit</string>
     <string name="lychee_gallery_all_on_bar">Every shortcut is on the bar. Tap the pencil to change which ones are there.</string>
-    <string name="lychee_gallery_hint">Hold and drag to move · the eye hides one</string>
+    <string name="lychee_gallery_hint">Hold a shortcut and drag it to move it</string>
     <string name="lychee_gallery_close">Close</string>
     <string name="lychee_gallery_hide">Hide from the menu</string>
     <string name="lychee_gallery_show">Show in the menu</string>

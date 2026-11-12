@@ -118,4 +118,14 @@ class AnnotatorTest {
         val ni = annotator.annotate("你好", "ni3 hao3", InputMode.Mandarin, DisplayPrefs(mandarinTaiwan = true))
         assertEquals("ni3 hao3", ni.resolved?.reading)
     }
+
+    @Test
+    fun zhuyinPinyinOrBoth() {
+        val pinyin = Annotator.format("ni3 hao3", Lang.Mandarin, DisplayPrefs())
+        val zhuyin = Annotator.format("ni3 hao3", Lang.Mandarin, DisplayPrefs(zhuyin = true, pinyin = false))
+        val both = Annotator.format("ni3 hao3", Lang.Mandarin, DisplayPrefs(zhuyin = true))
+        assertEquals("nǐ hǎo", pinyin)
+        assertTrue(zhuyin.isNotEmpty() && zhuyin.none { it in 'a'..'z' })
+        assertEquals("$pinyin  $zhuyin", both)
+    }
 }

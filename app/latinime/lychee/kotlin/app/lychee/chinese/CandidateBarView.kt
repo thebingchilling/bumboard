@@ -94,21 +94,51 @@ class CandidateBarView @JvmOverloads constructor(
     }
 
     /**
-     * Shows [candidates] (skipping any the phone cannot draw). [annotate], when given, runs on
-     * a background thread for each candidate in order; results for a superseded list are dropped.
+     * Shows [candidates] (skipping any the phone cannot draw). With [annotate], the candidates
+     * that can fit are read on a background thread first and the row is built once, each cell
+     * measured with its readings and meaning: nothing grows after it shows (cells widening as
+     * their readings arrived pushed the last ones off the bar), and the main thread never waits
+     * for the dictionary, so keys typed meanwhile go straight on. The row on show stays until
+     * the new one is ready; a list superseded by newer typing is dropped.
      */
     fun setCandidates(candidates: List<Candidate>, annotate: ((Candidate) -> Annotation?)?) {
         val gen = ++generation
+        if (annotate == null) {
+            build(candidates.withIndex().filter { renderable(it.value.text) }, emptyMap())
+            return
+        }
+        val list = candidates.toList()
+        annotator.execute {
+            if (gen != generation) return@execute
+            // enough candidates to fill the bar (the rest are in the dropdown)
+            val drawable = ArrayList<IndexedValue<Candidate>>()
+            for ((i, c) in list.withIndex()) {
+                if (renderable(c.text)) drawable += IndexedValue(i, c)
+                if (drawable.size >= MAX_SHOWN) break
+            }
+            val notes = HashMap<Int, Annotation>()
+            for (item in drawable) {
+                if (gen != generation) return@execute
+                runCatching { annotate(item.value) }.getOrNull()?.let { notes[item.index] = it }
+            }
+            post {
+                if (gen != generation) return@post
+                build(drawable, notes)
+                notes.forEach { (index, annotation) -> onAnnotated(index, annotation) }
+            }
+        }
+    }
+
+    /** Builds the row from [items], each cell with its [notes] filled in before it is measured. */
+    private fun build(items: List<IndexedValue<Candidate>>, notes: Map<Int, Annotation>) {
         row.removeAllViews()
         cells.clear()
-        // only the candidates that fit are made (the rest are in the panel): far less work for
-        // each key typed than building every one
         val available = width - paddingLeft - paddingRight
         val shown = ArrayList<IndexedValue<Candidate>>()
         var used = 0
-        for (item in candidates.withIndex()) {
-            if (!renderable(item.value.text)) continue
+        for (item in items) {
             val cell = cell(item.index, item.value, first = cells.isEmpty())
+            notes[item.index]?.let { fill(cell, it) }
             if (available > 0) {
                 cell.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
                 if (shown.isNotEmpty() && used + cell.measuredWidth > available) break
@@ -124,31 +154,6 @@ class CandidateBarView @JvmOverloads constructor(
         }
         lastShown = shown.lastOrNull()?.index ?: -1
         scrollTo(0, 0)
-        if (annotate == null || shown.isEmpty()) return
-        annotator.execute {
-            val batch = ArrayList<Pair<Int, Annotation>>()
-            for ((n, item) in shown.withIndex()) {
-                if (gen != generation) return@execute
-                val annotation = runCatching { annotate(item.value) }.getOrNull() ?: continue
-                batch += item.index to annotation
-                // the first few appear right away, the rest in larger groups
-                if (n < 4 || batch.size >= 8) {
-                    deliver(gen, ArrayList(batch))
-                    batch.clear()
-                }
-            }
-            if (batch.isNotEmpty()) deliver(gen, batch)
-        }
-    }
-
-    private fun deliver(gen: Int, results: List<Pair<Int, Annotation>>) {
-        post {
-            if (gen != generation) return@post
-            results.forEach { (index, annotation) ->
-                cells[index]?.let { fill(it, annotation) }
-                onAnnotated(index, annotation)
-            }
-        }
     }
 
     private var downX = 0f
@@ -418,6 +423,8 @@ class CandidateBarView @JvmOverloads constructor(
     companion object {
         private val annotator = Executors.newSingleThreadExecutor()
         private val glyphs = Paint()
+        /** At most this many candidates are read for the bar (more never fit). */
+        private const val MAX_SHOWN = 12
         /** The pill under the row (off: it read as a scrollbar). */
         const val SHOW_NOTCH = false
         const val CHAR_SP = 20f
@@ -430,6 +437,7 @@ class CandidateBarView @JvmOverloads constructor(
          * Whether the phone's fonts can draw [text] (no empty boxes). Paint.hasGlyph takes one
          * grapheme at a time (a whole word is always "missing"), so each character is checked.
          */
+        @Synchronized
         fun renderable(text: String): Boolean {
             if (text.isEmpty()) return false
             var i = 0

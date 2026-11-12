@@ -269,15 +269,19 @@ def build_en(out: Path, cache: Path, work: Path):
             if form.lower() != key:
                 rows.append((form.lower(), lemma, ipa, None, pos, gloss, rank))
                 covered.setdefault(form.lower(), set())
-    rows += wiktionary_en(order, covered, sounds)
-    # a pronunciation for every word that has none, from the CMU dictionary (US)
+    voices: dict[str, tuple[str | None, str | None]] = {}
+    rows += wiktionary_en(order, covered, sounds, voices)
+    # every word its pronunciation, and both the UK's and the US's where they differ
     cmu = cmu_ipa(cache)
-    filled = 0
+    filled = both = 0
     for i, row in enumerate(rows):
-        if not row[2] and row[1].lower() in cmu:
-            rows[i] = (row[0], row[1], f"/{cmu[row[1].lower()]}/", *row[3:])
-            filled += 1
-    print(f"en.db: {filled} pronunciations from CMUdict", file=sys.stderr)
+        ipa = uk_us(row[1].lower(), row[2], voices.get(row[1].lower(), (None, None)), cmu.get(row[1].lower()))
+        if ipa != row[2]:
+            filled += 1 if not row[2] else 0
+            rows[i] = (row[0], row[1], ipa, *row[3:])
+        if ipa and "(UK)" in ipa:
+            both += 1
+    print(f"en.db: {filled} pronunciations added, {both} forms with UK and US", file=sys.stderr)
     db.executemany("INSERT INTO word VALUES(?,?,?,?,?,?,?)", rows)
     db.execute("CREATE INDEX word_form ON word(form)")
     finish(db)
@@ -294,6 +298,86 @@ def build_en(out: Path, cache: Path, work: Path):
                        "converted from ARPAbet to IPA.\n"
                        "Changes: single words only, up to eight senses each, converted to SQLite.\n",
     })
+
+
+def slashed(ipa: str) -> str:
+    ipa = ipa.strip()
+    return ipa if ipa.startswith(("/", "[")) else f"/{ipa}/"
+
+
+def is_rhotic(ipa: str) -> bool:
+    """Whether a transcription says r after a vowel (American), as in /kɑɹ/ or /bɝd/."""
+    k = ipa.strip("/[] ")
+    return bool(re.search(r"[ɝɚ]|[ɑɔɛɪʊəæeoaʌ]ː?ɹ(?![ɑɔɛɪʊəæeoaʌiuɝɚ])", k))
+
+
+# BATH-looking words said with the vowel of "cat" in the UK too
+BATH_EXCEPTIONS = {
+    "mass", "gas", "lass", "crass", "bass", "math", "maths", "ass", "hassle", "passage", "classic",
+    "classical", "massive", "cant", "ant", "pant", "rant", "hand", "band", "land", "stand", "sand",
+    "grand", "cancel", "cancer", "fancy", "romance", "ample", "lamp", "camp", "damp", "stamp",
+    "champ", "plastic", "fantastic", "elastic", "asterisk", "aspect", "gasoline", "lasso", "passive",
+    "hamster", "astronaut", "asthma", "atlas", "fantasy", "tactic",
+}
+BATH_SPELLING = re.compile(r"a(ss|st|sk|sp|th|ff|ft|lf|lv|ugh|nce|nt|nch|mple|nd)")
+BATH_SOUND = re.compile(r"æ(?=f|θ|s(?!ʃ)|ns|nt|ntʃ|mp|nd)")
+VOWELS = "ɑɔɛɪʊəæeoaʌiuɝɚ"
+
+
+def us_to_uk(us: str, word: str) -> str:
+    """A UK (Received Pronunciation) transcription from an American one: no r after a vowel
+    unless a vowel follows (car /kɑː/, very /ˈveri/), the BATH vowel (grass /ɡɹɑːs/, dance
+    /dɑːns/, but mass, hand), LOT as ɒ (hot /hɒt/), GOAT as əʊ, long vowels marked."""
+    k = us.strip("/[] ")
+    if word not in BATH_EXCEPTIONS and BATH_SPELLING.search(word):
+        k = BATH_SOUND.sub("ɑː", k, count=1)
+    after = r"(?![" + VOWELS + r"])"
+    for us_v, uk_v in (("aɪɚ", "aɪə"), ("aʊɚ", "aʊə"), ("ɑɹ", "ɑː"), ("ɔɹ", "ɔː"), ("ɪɹ", "ɪə"),
+                       ("ɛɹ", "eə"), ("ʊɹ", "ʊə")):
+        k = re.sub(us_v + after, uk_v, k)
+    k = re.sub("ɝ" + after, "ɜː", k).replace("ɝ", "ɜːɹ")
+    k = re.sub("ɚ" + after, "ə", k).replace("ɚ", "əɹ")
+    k = k.replace("oʊ", "əʊ")
+    k = re.sub(r"ɑ(?!ː)", "ɒ" if "o" in word else "ɑː", k)
+    k = re.sub(r"ɔ(?![ːɪ])", "ɔː", k)
+    # FLEECE and GOOSE long; a final unstressed i (happy) stays short
+    k = re.sub(r"i(?![ːə])", "iː", k)
+    if "ˈ" in k:
+        k = re.sub(r"iː$", "i", k)
+    k = re.sub(r"u(?!ː)", "uː", k)
+    k = k.replace("ɛ", "e")
+    return f"/{k}/"
+
+
+def uk_us(word: str, ipa: str | None, wikt: tuple[str | None, str | None], cmu: str | None) -> str | None:
+    """A word's pronunciation as the card shows it: "/UK/ (UK) · /US/ (US)" where they differ,
+    else one. [ipa] is what the entry has (it may be only one of them, or a pronunciation of
+    its own, such as read's past tense /ɹɛd/, which keeps to itself)."""
+    if ipa and "(UK)" in ipa and "(US)" in ipa:
+        return ipa
+    w_uk, w_us = (slashed(x) if x else None for x in wikt)
+    uk = us = None
+    if ipa:
+        own = ipa_key(ipa)
+        # a pronunciation Wiktionary doesn't know for this word (a heteronym's other one):
+        # only its own region's form can be made from it
+        us_known = [x for x in (w_us, cmu and slashed(cmu)) if x]
+        matches = {ipa_key(x) for x in [w_uk, *us_known, *(us_to_uk(x, word) for x in us_known)] if x}
+        if matches and own not in matches:
+            return f"{us_to_uk(ipa, word)} (UK) · {slashed(ipa)} (US)" if is_rhotic(ipa) else slashed(ipa)
+        if is_rhotic(ipa):
+            us = slashed(ipa)
+        else:
+            uk = slashed(ipa)
+    uk = uk or w_uk
+    us = us or w_us or (slashed(cmu) if cmu else None)
+    if us and not uk:
+        uk = us_to_uk(us, word)
+    if not us and not uk:
+        return None
+    if not us or ipa_key(uk) == ipa_key(us):
+        return uk or us
+    return f"{uk} (UK) · {us} (US)"
 
 
 # ARPAbet to IPA (US); vowels as stressed and unstressed
@@ -362,7 +446,8 @@ def ipa_key(ipa: str) -> str:
     return re.sub(r"[ˈˌː.‿ \u0329\u032f]", "", k)
 
 
-def wiktionary_en(order: dict[str, int], covered: dict[str, set], sounds: dict[str, set]) -> list[tuple]:
+def wiktionary_en(order: dict[str, int], covered: dict[str, set], sounds: dict[str, set],
+                  voices: dict[str, tuple[str | None, str | None]] | None = None) -> list[tuple]:
     """English Wiktionary entries for the words people type (FrequencyWords' 50,000) that
     WordNet lacks, or lacks in that part of speech (function words: the, of, because; like as
     a preposition; contractions: don't, I'm), or lacks in that pronunciation (read said
@@ -390,6 +475,18 @@ def wiktionary_en(order: dict[str, int], covered: dict[str, set], sounds: dict[s
             key = word.lower().replace("’", "'")
             if key not in order:
                 continue
+            if voices is not None:
+                # every word's UK and US pronunciations, for the pass that gives each word both
+                vuk, vus = voices.get(key, (None, None))
+                for snd in e.get("sounds", []):
+                    tags = set(snd.get("tags", []))
+                    if not snd.get("ipa") or {"Early", "Middle", "Old", "obsolete", "archaic"} & tags:
+                        continue
+                    if vuk is None and {"UK", "Received-Pronunciation"} & tags:
+                        vuk = snd["ipa"]
+                    elif vus is None and {"US", "General-American"} & tags:
+                        vus = snd["ipa"]
+                voices[key] = (vuk, vus)
             pos = WIKT_POS.get(e.get("pos", ""))
             if pos is None:
                 continue

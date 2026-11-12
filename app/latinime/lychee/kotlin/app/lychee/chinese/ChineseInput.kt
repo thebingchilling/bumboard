@@ -139,6 +139,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     fun showGuesses(list: List<String>, onPick: (Int) -> Unit) {
         guesses = list
         onGuess = onPick
+        predicting = false
         if (list.isNotEmpty()) Readings.open(ime) { if (showingGuesses) show(null) }
         if (!isComposing) show(null)
     }
@@ -257,8 +258,11 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val entry = app.lychee.dict.PackData.words(ime, engine, candidate.text, limit = 1).firstOrNull()
         val meaning = entry?.senses?.firstOrNull()?.takeIf { showMeaning }?.let { app.lychee.core.Annotator.shorten(it) }
         val reading = wordReading(candidate, entry)
-        if (reading == null && meaning == null) return null
-        return Annotation(listOfNotNull(reading), meaning, null, otherScript = entry?.hanja?.takeIf { engine == "ko" })
+        if (reading == null && meaning == null && entry?.hanja == null) return null
+        // Korean: the word's Hanja beside its romanisation (the bar draws only the reading lines)
+        val hanja = entry?.hanja?.takeIf { engine == "ko" && it.isNotBlank() }
+        val line = listOfNotNull(reading, hanja).joinToString("  ").ifEmpty { null }
+        return Annotation(listOfNotNull(line), meaning, null, otherScript = hanja)
     }
 
     /**
@@ -335,13 +339,18 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         if (!Readings.showReadings(prefs)) return null
         // the Japanese and Korean keyboards: the character's own language's readings
         if (engine == "ja" || engine == "ko") {
+            // the same reading and meaning a typed candidate shows; the character's own
+            // readings when the dictionary has no word for it
+            val meaning = prefs.getBoolean(Readings.PREF_MEANING, true)
             return { candidate ->
+                wordAnnotation(candidate, meaning)?.takeIf { it.lines.isNotEmpty() } ?: run {
                 val local = localReadings(candidate.text).orEmpty()
                 val line = local.joinToString("  ") { it.shown.substringBefore("、").let { first ->
                     // under a candidate: the kana (or Hangul) alone, the first of each kind
                     if (engine == "ja") first.substringBefore(' ') else first
                 } }
                 if (line.isBlank()) null else Annotation(listOf(line), null, null)
+                }
             }
         }
         val annotator = Readings.annotator ?: return null
@@ -581,9 +590,43 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private fun packComing(engine: String): Boolean = engine == "ja" &&
         (app.lychee.packs.BundledPacks.isBundled(ime, "rime_ja") || app.lychee.packs.Packs.isInstalled(ime, "rime_ja"))
 
+    /** The bar shows what usually follows the word just typed (see [predictAfter]). */
+    private var predicting = false
+
+    /**
+     * After a word is typed on the Chinese keyboards, the bar suggests what usually follows it
+     * (校, 生, 習 after 學), as handwriting does; a tap types one and suggests what follows
+     * that. Any key typed clears them. Off with Settings > Typing > Next-word suggestions.
+     */
+    private fun predictAfter(typed: String) {
+        if (!isChinese || typed.isEmpty()) return
+        if (!prefs.getBoolean(com.android.inputmethod.latin.settings.Settings.PREF_BIGRAM_PREDICTIONS, true)) return
+        val cp = typed.codePointBefore(typed.length)
+        if (!app.lychee.core.Annotator.isHan(cp)) return
+        val next = runCatching { Readings.db?.continuations(String(Character.toChars(cp)), ChineseScript.candidatesSimplified(prefs)) }
+            .getOrNull().orEmpty()
+        if (next.isEmpty()) return
+        showGuesses(next) { i ->
+            next.getOrNull(i)?.let { text ->
+                ime.currentInputConnection?.commitText(text, 1)
+                predictAfter(text)
+            }
+        }
+        predicting = true
+    }
+
+    private fun stopPredicting() {
+        if (!predicting) return
+        predicting = false
+        guesses = emptyList()
+        onGuess = {}
+        if (!isComposing) show(null)
+    }
+
     /** Returns true when the event was used for Chinese input. */
     fun onEvent(event: Event): Boolean {
         if (!isActive || schemaMissing) return false
+        stopPredicting()
         val code = event.mCodePoint
         if (!RimeService.ready || session == 0L || selectedEngine != engine) {
             // Rime is still loading: letters wait (shown as typed) and go to Rime once it is
@@ -772,6 +815,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     fun reset() {
         popup?.dismiss()
         pending.setLength(0)
+        if (predicting) {
+            predicting = false
+            guesses = emptyList()
+        }
         if (session != 0L) Rime.clearComposition(session)
         if (isComposing) ime.currentInputConnection?.finishComposingText()
         isComposing = false
@@ -795,7 +842,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     private fun sync() {
         val ic = ime.currentInputConnection
-        Rime.commit(session)?.let { ic?.commitText(it, 1) }
+        val committed = Rime.commit(session)
+        committed?.let { ic?.commitText(it, 1) }
         val composition = Rime.composition(session, CANDIDATE_LIMIT)
         if (composition != null) {
             // like Gboard: the letters show above the candidates, not in the text field
@@ -807,6 +855,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             isComposing = false
         }
         show(composition)
+        // a word just typed: what usually follows it
+        if (committed != null && composition == null) predictAfter(committed)
     }
 
     /**
@@ -871,13 +921,22 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         return prefs.getFloat(PREF_CANDIDATE_SIZE, 1f).coerceIn(0.7f, 1.6f)
     }
 
-    /** The most reading lines any of the Chinese, Japanese and Korean keyboards shows. */
-    private fun uniformLines(): CandidateBarView.Lines {
+    /**
+     * The reading lines [engine]'s keyboard shows under its candidates, from its own settings
+     * only: Zhuyin added to Mandarin makes the Mandarin bar taller, never the Korean one.
+     */
+    private fun linesFor(engine: String?): CandidateBarView.Lines {
         if (!Readings.showReadings(prefs)) return CandidateBarView.Lines(0, false)
+        val meaning = prefs.getBoolean(Readings.PREF_MEANING, true)
+        if (engine == "ja" || engine == "ko") return CandidateBarView.Lines(1, meaning)
         val display = Readings.displayPrefs(prefs)
-        val chineseLines = (if (display.showOtherLanguage) 2 else 1) + (if (display.zhuyin) 1 else 0)
-        val meaning = display.showMeaning || prefs.getBoolean(Readings.PREF_MEANING, true)
-        return CandidateBarView.Lines(chineseLines, meaning)
+        val mandarinLines = (if (display.pinyin || !display.zhuyin) 1 else 0) + (if (display.zhuyin) 1 else 0)
+        val cantoneseLines = if (display.cantonese == app.lychee.core.CantoneseRomanization.Both) 2 else 1
+        val lines = when (engine) {
+            "cmn" -> mandarinLines + (if (display.showOtherLanguage) 1 else 0)
+            else -> cantoneseLines + (if (display.showOtherLanguage) mandarinLines else 0)
+        }
+        return CandidateBarView.Lines(lines, display.showMeaning || meaning)
     }
 
     /**
@@ -895,12 +954,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val rime = isActive && !schemaMissing
         val height = if (bar == null || (!rime && !candidates)) standard
         else {
-            // the same height on every Chinese, Japanese and Korean keyboard: as tall as the
-            // roomiest of them needs (its reading lines, its candidate size), so switching
-            // between them never moves the keys
-            bar.setScale(SIZED_ENGINES.maxOf { scaleFor(it) })
-            val tallest = bar.heightFor(uniformLines())
+            // each keyboard's own height: as tall as its own reading lines need (one language's
+            // settings never make another's bar taller); steady while typing on it
             bar.setScale(candidateScale())
+            val tallest = bar.heightFor(linesFor(engine))
             maxOf(standard, tallest + if (rime) line else 0)
         }
         bar?.let { if (it.paddingTop != (if (rime) line else 0)) it.setPadding(0, if (rime) line else 0, 0, 0) }
@@ -974,20 +1031,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** What each candidate shows under its characters, so the bar can scale it to fit. */
     private fun annotationLines(): CandidateBarView.Lines {
         if (!Readings.showReadings(prefs)) return CandidateBarView.Lines(0, false)
-        if (!isChinese && !(shown == null && guesses.isNotEmpty())) {
+        if (!isChinese) {
             return CandidateBarView.Lines(1, prefs.getBoolean(Readings.PREF_MEANING, true) && app.lychee.dict.PackData.hasWords(ime, engine))
         }
-        val display = Readings.displayPrefs(prefs)
-        var lines = 1
-        if (display.showOtherLanguage) lines++
-        // Zhuyin under the pinyin, when a Mandarin line shows
-        if (display.zhuyin && (barMode().lang == app.lychee.core.Lang.Mandarin || display.showOtherLanguage)) lines++
-        return CandidateBarView.Lines(lines, display.showMeaning)
+        // the same lines as the keyboard's own bar (handwriting guesses included)
+        val lines = linesFor(if (barMode().lang == app.lychee.core.Lang.Mandarin) "cmn" else "yue")
+        return CandidateBarView.Lines(lines.readings, Readings.displayPrefs(prefs).showMeaning)
     }
 
     companion object {
-        /** The keyboards whose candidate bars share one height. */
-        private val SIZED_ENGINES = listOf("yue", "cmn", "ja", "ko")
 
         /** ASCII punctuation and its Chinese full-width form. */
         private val PUNCTUATION = mapOf(

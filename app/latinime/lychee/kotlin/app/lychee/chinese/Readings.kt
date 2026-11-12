@@ -84,7 +84,8 @@ object Readings {
         jyutpingTones = tones(prefs, PREF_JYUTPING_TONES, app.lychee.core.ToneStyle.Numbers),
         yaleTones = tones(prefs, PREF_YALE_TONES, app.lychee.core.ToneStyle.Marks),
         pinyinTones = tones(prefs, PREF_PINYIN_TONES, app.lychee.core.ToneStyle.Marks),
-        zhuyin = prefs.getBoolean(PREF_ZHUYIN, false),
+        zhuyin = mandarinScript(prefs) != "pinyin",
+        pinyin = mandarinScript(prefs) != "zhuyin",
         mandarinTaiwan = app.lychee.speech.Pronunciation.mandarinTaiwan(prefs).also {
             app.lychee.speech.Speech.mandarinTaiwan = it
         },
@@ -93,8 +94,14 @@ object Readings {
     /** Chinese readings too on the Japanese and Korean keyboards' Kanji and Hanja cards. */
     const val PREF_CHINESE_ON_KANJI = "lychee_chinese_on_kanji"
 
-    /** Zhuyin (bopomofo) with pinyin. */
+    /** Zhuyin (bopomofo) with pinyin (the old switch; [PREF_MANDARIN_SCRIPT] replaced it). */
     const val PREF_ZHUYIN = "lychee_zhuyin"
+
+    /** How Mandarin is written under candidates: "pinyin", "zhuyin" or "both". */
+    const val PREF_MANDARIN_SCRIPT = "lychee_mandarin_script"
+
+    fun mandarinScript(prefs: SharedPreferences): String = prefs.getString(PREF_MANDARIN_SCRIPT, null)
+        ?: if (prefs.getBoolean(PREF_ZHUYIN, false)) "both" else "pinyin"
 
     private fun tones(prefs: SharedPreferences, key: String, default: app.lychee.core.ToneStyle) =
         runCatching { app.lychee.core.ToneStyle.valueOf(prefs.getString(key, null) ?: default.name) }.getOrDefault(default)

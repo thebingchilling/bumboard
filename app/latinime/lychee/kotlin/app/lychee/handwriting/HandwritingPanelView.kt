@@ -129,7 +129,6 @@ class HandwritingPanelView @JvmOverloads constructor(
         visibility = VISIBLE
         // the bar above shows "Handwriting" (Back is the key bottom left)
         toolbar()?.showTitle(R.string.lychee_sc_handwriting, withBack = false) { visibility = GONE }
-        takeLetterLine()
         pad.clear()
         updateHint()
         lastTyped = null
@@ -328,19 +327,6 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     private fun cancelAutoClear() {
         main.removeCallbacks(autoClear)
-    }
-
-    /**
-     * On the Rime keyboards the bar above keeps a line for the letters typed (pinyin, romaji);
-     * handwriting has none, so the pad reaches up over it.
-     */
-    private fun takeLetterLine() {
-        val bar = rootView.findViewById<View>(R.id.lychee_candidate_bar) ?: return
-        val line = bar.paddingTop
-        val lp = layoutParams as? FrameLayout.LayoutParams ?: return
-        if (line <= 0 || lp.height <= 0) return
-        lp.height += line
-        layoutParams = lp
     }
 
     /** Clears the ink on the pad without typing anything (only a tapped candidate types). */

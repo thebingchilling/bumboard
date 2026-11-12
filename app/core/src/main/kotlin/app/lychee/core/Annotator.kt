@@ -29,8 +29,10 @@ data class DisplayPrefs(
     val showMeaning: Boolean = true,
     /** the Chinese keyboards type Simplified */
     val simplified: Boolean = false,
-    /** Zhuyin (bopomofo) with pinyin, under the candidates and on the cards */
+    /** Zhuyin (bopomofo) for Mandarin, under the candidates and on the cards */
     val zhuyin: Boolean = false,
+    /** pinyin for Mandarin (off only with [zhuyin] on: Zhuyin alone) */
+    val pinyin: Boolean = true,
     /** Mandarin as said in Taiwan (CC-CEDICT's "Taiwan pr." readings) rather than the Mainland */
     val mandarinTaiwan: Boolean = false,
 )
@@ -398,10 +400,7 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
             fun mandarin(reading: String) {
                 lineLang = Lang.Mandarin
                 source = reading
-                emit(Romanization.format(
-                    reading,
-                    pinyinStyle(prefs)
-                ))
+                if (prefs.pinyin || !prefs.zhuyin) emit(Romanization.format(reading, pinyinStyle(prefs)))
                 if (prefs.zhuyin) emit(Zhuyin.format(reading))
             }
             when (r.lang) {
@@ -444,8 +443,10 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
         fun format(reading: String, lang: Lang, prefs: DisplayPrefs): String = when (lang) {
             Lang.Cantonese -> if (prefs.cantonese == CantoneseRomanization.Yale) yale(reading, prefs)
                 else Romanization.format(reading, jyutpingStyle(prefs))
-            else -> Romanization.format(reading, pinyinStyle(prefs)) +
-                if (prefs.zhuyin) "  " + Zhuyin.format(reading) else ""
+            else -> listOfNotNull(
+                Romanization.format(reading, pinyinStyle(prefs)).takeIf { prefs.pinyin || !prefs.zhuyin },
+                Zhuyin.format(reading).takeIf { prefs.zhuyin },
+            ).joinToString("  ")
         }
     }
 }

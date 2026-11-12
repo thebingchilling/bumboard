@@ -300,7 +300,13 @@ public final class MoreKeysKeyboard extends Keyboard {
                         R.dimen.config_more_keys_keyboard_key_horizontal_padding)
                         + (key.hasLabelsInMoreKeys()
                                 ? mParams.mDefaultKeyWidth * LABEL_PADDING_RATIO : 0.0f);
-                keyWidth = getMaxKeyWidth(key, mParams.mDefaultKeyWidth, padding, paintToMeasure);
+                // LYCHEE: each popup key at least as big as the keyboard's own keys (the same
+                // width and height), never smaller cells than the keys they came from
+                final int keysWidth = Math.max(mParams.mDefaultKeyWidth, keyboard.mMostCommonKeyWidth);
+                final int wanted = getMaxKeyWidth(key, keysWidth, padding, paintToMeasure);
+                final int fit = keyboard.mId.mWidth / Math.max(1,
+                        Math.min(key.getMoreKeys().length, key.getMoreKeysColumnNumber()));
+                keyWidth = Math.max(Math.min(wanted, fit), Math.min(mParams.mDefaultKeyWidth, fit));
                 rowHeight = keyboard.mMostCommonKeyHeight;
             }
             final int dividerWidth;

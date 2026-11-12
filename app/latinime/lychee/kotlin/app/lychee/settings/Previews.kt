@@ -107,31 +107,53 @@ private fun PreviewKey(label: String, fill: Color, ink: Color, roundness: Int, v
 }
 
 /**
- * Two candidates as the bar shows them, at [scale] (the candidate size): the characters, their
- * reading over them and, with [meaning], a short meaning under them.
+ * The candidate bars as they will look, for the Cantonese and the Mandarin keyboard: each
+ * candidate's readings (written the way [display] says: Jyutping or Yale, pinyin or Zhuyin or
+ * both, the tone style, the other language), its characters and, with [meaning], its meaning,
+ * all at [scale] (the candidate size).
  */
 @Composable
-fun CandidatePreview(scale: Float, meaning: Boolean, otherLanguage: Boolean) {
+fun CandidatePreview(scale: Float, display: app.lychee.core.DisplayPrefs, meaning: Boolean) {
+    data class Sample(val trad: String, val simp: String, val yue: String, val cmn: String, val gloss: String)
     val samples = listOf(
-        Triple("你好", if (otherLanguage) "nei5 hou2 · nǐ hǎo" else "nei5 hou2", "hello"),
-        Triple("學校", if (otherLanguage) "hok6 haau6 · xué xiào" else "hok6 haau6", "school"),
-        Triple("食", if (otherLanguage) "sik6 · shí" else "sik6", "eat"),
+        Sample("你好", "你好", "nei5 hou2", "ni3 hao3", "hello"),
+        Sample("學校", "学校", "hok6 haau6", "xue2 xiao4", "school"),
+        Sample("食", "食", "sik6", "shi2", "eat"),
     )
     val colors = MaterialTheme.colorScheme
+    fun fmt(r: String, l: app.lychee.core.Lang) = app.lychee.core.Annotator.format(r, l, display)
     PreviewFrame {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Bottom) {
-            samples.forEach { (text, reading, gloss) ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(reading, fontSize = (CandidateBarView.READING_SP * scale).sp, color = colors.primary, maxLines = 1)
-                    Text(text, fontSize = (CandidateBarView.CHAR_SP * scale).sp, color = colors.onSurface, maxLines = 1)
-                    if (meaning) {
-                        Text(gloss, fontSize = (CandidateBarView.MEANING_SP * scale).sp, color = colors.onSurfaceVariant, maxLines = 1)
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            for (mandarin in listOf(false, true)) {
+                Text(
+                    stringResourceSafe(if (mandarin) com.android.inputmethod.latin.R.string.lychee_language_mandarin
+                        else com.android.inputmethod.latin.R.string.lychee_language_cantonese),
+                    style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant,
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Bottom) {
+                    samples.forEach { s ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            val main = if (mandarin) fmt(s.cmn, app.lychee.core.Lang.Mandarin) else fmt(s.yue, app.lychee.core.Lang.Cantonese)
+                            val other = if (mandarin) fmt(s.yue, app.lychee.core.Lang.Cantonese) else fmt(s.cmn, app.lychee.core.Lang.Mandarin)
+                            // pinyin and Zhuyin together are two lines, like the bar
+                            (main.split("  ") + if (display.showOtherLanguage) other.split("  ") else emptyList()).forEach { line ->
+                                Text(line, fontSize = (CandidateBarView.READING_SP * scale).sp, color = colors.primary, maxLines = 1)
+                            }
+                            Text(if (display.simplified) s.simp else s.trad, fontSize = (CandidateBarView.CHAR_SP * scale).sp,
+                                color = colors.onSurface, maxLines = 1)
+                            if (meaning) {
+                                Text(s.gloss, fontSize = (CandidateBarView.MEANING_SP * scale).sp, color = colors.onSurfaceVariant, maxLines = 1)
+                            }
+                        }
                     }
                 }
             }
         }
     }
 }
+
+@Composable
+private fun stringResourceSafe(id: Int): String = androidx.compose.ui.res.stringResource(id)
 
 /** A row of the emoji panel with [columns] emoji across it, at the size they'd be. */
 @Composable

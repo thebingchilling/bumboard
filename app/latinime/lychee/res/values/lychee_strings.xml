@@ -301,4 +301,30 @@
     <string name="lychee_storage_kind_handwriting">Handwriting</string>
     <string name="lychee_storage_kind_voice">Voice</string>
     <string name="lychee_storage_kind_data">Data</string>
+    <!-- Settings > Readings & candidates -->
+    <string name="lychee_readings_intro">What shows above and below each candidate on the Chinese, Japanese and Korean keyboards. The preview changes as you choose.</string>
+    <string name="lychee_readings_group_writing">How it\'s written</string>
+    <string name="lychee_readings_script_summary">學校 or 学校: the candidates you get (the same as the 繁/简 key)</string>
+    <string name="lychee_readings_cantonese">Cantonese romanisation</string>
+    <string name="lychee_readings_cantonese_summary">How Cantonese is spelt, for typing and under candidates: nei5 hou2 or néih hóu</string>
+    <string name="lychee_readings_mandarin">Mandarin reading</string>
+    <string name="lychee_readings_mandarin_summary">Pinyin (nǐ hǎo), Zhuyin (ㄋㄧˇ ㄏㄠˇ), or both</string>
+    <string name="lychee_readings_group_tones">Tones</string>
+    <string name="lychee_readings_group_shown">Under each candidate</string>
+    <string name="lychee_readings_other">The other language too</string>
+    <string name="lychee_readings_other_summary">Mandarin under Cantonese candidates, Cantonese under Mandarin ones</string>
+    <string name="lychee_readings_meaning_summary">A short English meaning under each candidate</string>
+    <string name="lychee_readings_group_typing">Typing</string>
+    <string name="lychee_readings_group_cards">Word cards</string>
+    <string name="lychee_readings_hold">Holding a candidate</string>
+    <string name="lychee_readings_hold_summary">What happens when you touch and hold a candidate</string>
+    <string name="lychee_readings_hold_peek">Show its card while held</string>
+    <string name="lychee_readings_hold_pin">Open its card</string>
+    <string name="lychee_readings_other_script">The other script on cards</string>
+    <string name="lychee_readings_other_script_summary">Under 學校, its Simplified form 学校 (or the Traditional under Simplified)</string>
+    <string name="lychee_readings_other_script_diff">Only the characters that differ</string>
+    <string name="lychee_readings_other_script_full">The whole word</string>
+    <string name="lychee_readings_other_script_off">Don\'t show it</string>
+    <string name="lychee_readings_kanji">Chinese readings on Japanese and Korean cards</string>
+    <string name="lychee_readings_kanji_summary">For words with Kanji or Hanja, their Cantonese and Mandarin readings in a small line</string>
 </resources>

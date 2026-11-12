@@ -256,10 +256,13 @@ public class KeyboardBuilder<KP extends KeyboardParams> {
             // height (LycheeLayout). Every keyboard is laid out at its usual four-row height, so
             // keys, gaps and text keep their size, and the extra height holds one more row.
             final int givenHeight = params.mId.mHeight;
-            // The number and phone pads keep the usual four-row height too, so their keys and
-            // text are the size of every other key (filling the extra height made them a quarter
-            // taller and their letters spilled off the keys).
-            final int height = params.mId.mLycheeNumberRow
+            // The number and phone pads have no number row: they fill the whole height, so the
+            // keyboard is as tall as the letters' (KeyboardView keeps their text the size of
+            // every other key's, so nothing spills off the taller keys).
+            final int element = params.mId.mElementId;
+            final boolean lycheePad = element == KeyboardId.ELEMENT_NUMBER
+                    || element == KeyboardId.ELEMENT_PHONE || element == KeyboardId.ELEMENT_PHONE_SYMBOLS;
+            final int height = params.mId.mLycheeNumberRow && !lycheePad
                     ? Math.round(givenHeight / app.lychee.layout.LycheeLayout.NUMBER_ROW_GROWTH)
                     : givenHeight;
             final int width = params.mId.mWidth;

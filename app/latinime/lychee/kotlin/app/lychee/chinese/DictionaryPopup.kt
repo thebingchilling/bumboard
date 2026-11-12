@@ -303,11 +303,15 @@ class DictionaryPopup(
         } else {
             actions.addView(cornerButton(R.drawable.ic_sym_close, ctx.getString(R.string.lychee_close), c, filled = false) { dismiss() },
                 FrameLayout.LayoutParams(dp(40), dp(40), Gravity.START or Gravity.BOTTOM))
-            actions.addView(cornerButton(actionIcon, ctx.getString(actionLabel), c, filled = true) {
+            // inside the keyboard the candidate itself types the word: the right-hand button
+            // grows the card instead; Look up in Lychee keeps its own action there
+            if (standalone != null) {
+                actions.addView(cornerButton(actionIcon, ctx.getString(actionLabel), c, filled = true) {
                 dismiss()
                 onType()
             }, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.END or Gravity.BOTTOM))
-            if (startCompact) actions.addView(expand, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM))
+            }
+            if (startCompact) actions.addView(expand, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.END or Gravity.BOTTOM))
             body.setPadding(body.paddingLeft, dp(12), body.paddingRight, dp(2))
         }
         // just above the keyboard, rising out of it
@@ -552,9 +556,37 @@ class DictionaryPopup(
 
         /** A Japanese or Korean word's Chinese readings (Cantonese and Mandarin), under a heading. */
         fun chineseReadings(text: String, r: Resolved) {
-            section(ctx.getString(R.string.lychee_card_chinese_readings))
+            // a small, quiet group: one tinted line, 粵 and 普 with their readings, each a tap to hear
+            val hw = r.headwords.firstOrNull()
+            val yue = (if (r.lang == Lang.Cantonese) r.reading else r.otherReading) ?: hw?.readings?.get(Lang.Cantonese)?.firstOrNull()
+            val cmn = (if (r.lang == Lang.Mandarin) r.reading else r.otherReading) ?: hw?.readings?.get(Lang.Mandarin)?.firstOrNull()
+            if (yue == null && cmn == null) return
+            val wordToSay = text
+            val group = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(10), dp(4), dp(6), dp(4))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(10).toFloat()
+                    setColor(c.surfaceContainer)
+                }
+            }
+            for ((lang, mark, reading) in listOfNotNull(yue?.let { Triple(Lang.Cantonese, "粵", it) }, cmn?.let { Triple(Lang.Mandarin, "普", it) })) {
+                group.addView(TextView(ctx).apply {
+                    val sb = SpannableStringBuilder()
+                    sb.append(mark, ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    sb.append(" ")
+                    sb.append(Annotator.format(reading, lang, prefs), ForegroundColorSpan(c.primary), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    text = sb
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                    setPadding(0, dp(4), dp(12), dp(4))
+                    onSpeak?.let { say -> setOnClickListener { say(wordToSay, lang) } }
+                })
+            }
+            body.addView(group, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(6); bottomMargin = dp(2)
+            })
             spokenWord = text
-            readingRows(r, r.headwords.firstOrNull(), text)
         }
 
         /** Each language's main reading on this card, for the meanings read another way. */

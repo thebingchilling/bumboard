@@ -115,10 +115,10 @@ class EmojiSearchBar @JvmOverloads constructor(
         val code = event.mCodePoint
         when {
             event.mKeyCode == Constants.CODE_DELETE -> {
-                // after a pick, the first Delete clears the whole query; with nothing left in the
-                // bar, Delete goes to the app and deletes what was typed (the symbol picked)
+                // one letter of the query at a time (never the whole query at once); with nothing
+                // left in the bar, Delete goes to the app and deletes what was typed (the symbol)
                 if (query.isEmpty()) return false
-                if (picked) query.clear() else query.setLength(query.length - 1)
+                query.setLength(query.length - Character.charCount(query.codePointBefore(query.length)))
                 picked = false
             }
             event.mKeyCode == Constants.CODE_EMOJI -> {

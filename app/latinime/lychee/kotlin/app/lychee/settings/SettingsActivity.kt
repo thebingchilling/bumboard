@@ -601,77 +601,58 @@ private fun ChinesePage() {
     val cantonese = prefs.stringPref(ChineseInput.PREF_CANTONESE_INPUT) {
         prefs.getString(ChineseInput.PREF_CANTONESE_INPUT, null) ?: "jyutping"
     }
-    val otherLanguage = prefs.boolPref(Readings.PREF_OTHER_LANGUAGE) {
-        prefs.getBoolean(Readings.PREF_OTHER_LANGUAGE, false)
-    }
+    val mandarin = prefs.stringPref(Readings.PREF_MANDARIN_SCRIPT) { Readings.mandarinScript(prefs) }
+    val otherLanguage = prefs.boolPref(Readings.PREF_OTHER_LANGUAGE) { prefs.getBoolean(Readings.PREF_OTHER_LANGUAGE, false) }
     val meaning = prefs.boolPref(Readings.PREF_MEANING) { prefs.getBoolean(Readings.PREF_MEANING, true) }
     val toneColours = prefs.boolPref(Readings.PREF_TONE_COLOURS) { prefs.getBoolean(Readings.PREF_TONE_COLOURS, true) }
+    val jyutpingTones = prefs.stringPref(Readings.PREF_JYUTPING_TONES) { prefs.getString(Readings.PREF_JYUTPING_TONES, null) ?: "Numbers" }
+    val yaleTones = prefs.stringPref(Readings.PREF_YALE_TONES) { prefs.getString(Readings.PREF_YALE_TONES, null) ?: "Marks" }
+    val pinyinTones = prefs.stringPref(Readings.PREF_PINYIN_TONES) { prefs.getString(Readings.PREF_PINYIN_TONES, null) ?: "Marks" }
+    val size = prefs.floatPref(ChineseInput.PREF_CANDIDATE_SIZE) { prefs.getFloat(ChineseInput.PREF_CANDIDATE_SIZE, 1f) }
+    var liveSize by remember(size.value) { mutableStateOf(size.value) }
+    fun tone(v: String) = runCatching { app.lychee.core.ToneStyle.valueOf(v) }.getOrDefault(app.lychee.core.ToneStyle.Numbers)
+    val display = app.lychee.core.DisplayPrefs(
+        cantonese = if (cantonese.value == "yale") app.lychee.core.CantoneseRomanization.Yale else app.lychee.core.CantoneseRomanization.Jyutping,
+        jyutpingTones = tone(jyutpingTones.value), yaleTones = tone(yaleTones.value), pinyinTones = tone(pinyinTones.value),
+        showOtherLanguage = otherLanguage.value, showMeaning = meaning.value, simplified = script.value == "simplified",
+        zhuyin = mandarin.value != "pinyin", pinyin = mandarin.value != "zhuyin",
+    )
+
     Text(
-        stringResource(R.string.lychee_chinese_how).let { if (script.value == "simplified") app.lychee.chinese.ChineseScript.simplify(it) else it },
+        stringResource(R.string.lychee_readings_intro),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
     )
-    Group(stringResource(R.string.lychee_group_script)) {
+    // the candidate bars as they will look, changing with every choice below
+    CandidatePreview(liveSize, display, meaning.value)
+    Group(stringResource(R.string.lychee_readings_group_writing)) {
         row {
             ChoiceRow(
-                it, stringResource(R.string.lychee_script), stringResource(R.string.lychee_script_summary),
+                it, stringResource(R.string.lychee_script), stringResource(R.string.lychee_readings_script_summary),
                 options = listOf(
                     "traditional" to stringResource(R.string.lychee_script_traditional),
                     "simplified" to stringResource(R.string.lychee_script_simplified),
                 ),
-                selected = script.value,
-                onSelect = script::set,
-            )
-        }
-        row {
-            val other = prefs.stringPref(app.lychee.chinese.DictionaryPopup.PREF_OTHER_SCRIPT) {
-                prefs.getString(app.lychee.chinese.DictionaryPopup.PREF_OTHER_SCRIPT, null) ?: "hyphens"
-            }
-            ChoiceRow(
-                it, stringResource(R.string.lychee_card_other_script), stringResource(R.string.lychee_card_other_script_summary),
-                options = listOf(
-                    "hyphens" to stringResource(R.string.lychee_card_other_hyphens),
-                    "full" to stringResource(R.string.lychee_card_other_full),
-                    "off" to stringResource(R.string.lychee_card_other_off),
-                ),
-                selected = other.value,
-                onSelect = other::set,
+                selected = script.value, onSelect = script::set,
             )
         }
         row {
             ChoiceRow(
-                it, stringResource(R.string.lychee_cantonese_input),
-                options = listOf(
-                    "jyutping" to stringResource(R.string.lychee_jyutping),
-                    "yale" to stringResource(R.string.lychee_yale),
-                ),
-                selected = cantonese.value,
-                onSelect = cantonese::set,
-            )
-        }
-    }
-    val fuzzyCmn = prefs.boolPref(ChineseInput.PREF_FUZZY + "cmn") { prefs.getBoolean(ChineseInput.PREF_FUZZY + "cmn", false) }
-    val fuzzyYue = prefs.boolPref(ChineseInput.PREF_FUZZY + "yue") { prefs.getBoolean(ChineseInput.PREF_FUZZY + "yue", false) }
-    Group(stringResource(R.string.lychee_group_typing)) {
-        row {
-            SwitchRow(
-                it, stringResource(R.string.lychee_fuzzy_pinyin), stringResource(R.string.lychee_fuzzy_pinyin_summary),
-                fuzzyCmn.value, fuzzyCmn::set,
+                it, stringResource(R.string.lychee_readings_cantonese), stringResource(R.string.lychee_readings_cantonese_summary),
+                options = listOf("jyutping" to "Jyutping", "yale" to "Yale"),
+                selected = cantonese.value, onSelect = cantonese::set,
             )
         }
         row {
-            SwitchRow(
-                it, stringResource(R.string.lychee_fuzzy_jyutping), stringResource(R.string.lychee_fuzzy_jyutping_summary),
-                fuzzyYue.value, fuzzyYue::set,
+            ChoiceRow(
+                it, stringResource(R.string.lychee_readings_mandarin), stringResource(R.string.lychee_readings_mandarin_summary),
+                options = listOf("pinyin" to "Pinyin", "zhuyin" to "Zhuyin", "both" to stringResource(R.string.lychee_pron_both)),
+                selected = mandarin.value, onSelect = mandarin::set,
             )
         }
     }
-    val jyutpingTones = prefs.stringPref(Readings.PREF_JYUTPING_TONES) { prefs.getString(Readings.PREF_JYUTPING_TONES, null) ?: "Numbers" }
-    val yaleTones = prefs.stringPref(Readings.PREF_YALE_TONES) { prefs.getString(Readings.PREF_YALE_TONES, null) ?: "Marks" }
-    val pinyinTones = prefs.stringPref(Readings.PREF_PINYIN_TONES) { prefs.getString(Readings.PREF_PINYIN_TONES, null) ?: "Marks" }
-    val zhuyin = prefs.boolPref(Readings.PREF_ZHUYIN) { prefs.getBoolean(Readings.PREF_ZHUYIN, false) }
-    Group(stringResource(R.string.lychee_group_tones)) {
+    Group(stringResource(R.string.lychee_readings_group_tones)) {
         if (cantonese.value == "yale") {
             row {
                 ChoiceRow(it, stringResource(R.string.lychee_tones_yale), null, listOf(
@@ -685,75 +666,79 @@ private fun ChinesePage() {
                 ), jyutpingTones.value, onSelect = jyutpingTones::set)
             }
         }
-        row {
-            ChoiceRow(it, stringResource(R.string.lychee_tones_pinyin), null, listOf(
-                "Marks" to "nǐ", "Numbers" to "ni3", "Superscript" to "ni³",
-            ), pinyinTones.value, onSelect = pinyinTones::set)
+        if (mandarin.value != "zhuyin") {
+            row {
+                ChoiceRow(it, stringResource(R.string.lychee_tones_pinyin), null, listOf(
+                    "Marks" to "nǐ", "Numbers" to "ni3", "Superscript" to "ni³",
+                ), pinyinTones.value, onSelect = pinyinTones::set)
+            }
         }
         row {
-            SwitchRow(
-                it, stringResource(R.string.lychee_zhuyin), stringResource(R.string.lychee_zhuyin_summary),
-                zhuyin.value, zhuyin::set,
-            )
+            SwitchRow(it, stringResource(R.string.lychee_tone_colours), stringResource(R.string.lychee_tone_colours_summary),
+                toneColours.value, toneColours::set)
         }
     }
-    Group(stringResource(R.string.lychee_under_candidates)) {
-        // readings are always on (no switch): the rest of the group says what they show
-        run {
-            row {
-                SwitchRow(
-                    it, stringResource(R.string.lychee_other_language), stringResource(R.string.lychee_other_language_summary,
-                        stringResource(if (cantonese.value == "yale") R.string.lychee_yale else R.string.lychee_jyutping)),
-                    otherLanguage.value, otherLanguage::set,
-                )
-            }
-            row {
-                SwitchRow(
-                    it, stringResource(R.string.lychee_show_meaning), stringResource(R.string.lychee_show_meaning_summary),
-                    meaning.value, meaning::set,
-                )
-            }
-            row {
-                SwitchRow(
-                    it, stringResource(R.string.lychee_tone_colours), stringResource(R.string.lychee_tone_colours_summary),
-                    toneColours.value, toneColours::set,
-                )
-            }
+    Group(stringResource(R.string.lychee_readings_group_shown)) {
+        row {
+            SwitchRow(it, stringResource(R.string.lychee_readings_other), stringResource(R.string.lychee_readings_other_summary),
+                otherLanguage.value, otherLanguage::set)
+        }
+        row {
+            SwitchRow(it, stringResource(R.string.lychee_show_meaning), stringResource(R.string.lychee_readings_meaning_summary),
+                meaning.value, meaning::set)
+        }
+        row {
+            SliderRow(
+                it, stringResource(R.string.lychee_candidate_size),
+                (size.value * 100).roundToInt(), 70..160, 10, format = { v -> "$v%" },
+                onSlide = { v -> liveSize = v / 100f },
+            ) { v -> size.set(v / 100f) }
         }
     }
-    // one size for every language's candidates, shown as it changes
-    val size = prefs.floatPref(ChineseInput.PREF_CANDIDATE_SIZE) { prefs.getFloat(ChineseInput.PREF_CANDIDATE_SIZE, 1f) }
-    var liveSize by remember(size.value) { mutableStateOf(size.value) }
+    val fuzzyCmn = prefs.boolPref(ChineseInput.PREF_FUZZY + "cmn") { prefs.getBoolean(ChineseInput.PREF_FUZZY + "cmn", false) }
+    val fuzzyYue = prefs.boolPref(ChineseInput.PREF_FUZZY + "yue") { prefs.getBoolean(ChineseInput.PREF_FUZZY + "yue", false) }
+    Group(stringResource(R.string.lychee_readings_group_typing)) {
+        row {
+            SwitchRow(it, stringResource(R.string.lychee_fuzzy_pinyin), stringResource(R.string.lychee_fuzzy_pinyin_summary),
+                fuzzyCmn.value, fuzzyCmn::set)
+        }
+        row {
+            SwitchRow(it, stringResource(R.string.lychee_fuzzy_jyutping), stringResource(R.string.lychee_fuzzy_jyutping_summary),
+                fuzzyYue.value, fuzzyYue::set)
+        }
+    }
     val dictionaryHold = prefs.stringPref(ChineseInput.PREF_DICTIONARY_HOLD) {
         prefs.getString(ChineseInput.PREF_DICTIONARY_HOLD, null) ?: "pin"
     }
     val chineseOnKanji = prefs.boolPref(Readings.PREF_CHINESE_ON_KANJI) { prefs.getBoolean(Readings.PREF_CHINESE_ON_KANJI, true) }
-    Group(stringResource(R.string.lychee_group_candidates)) {
-        row {
-            Column {
-                SliderRow(
-                    it, stringResource(R.string.lychee_candidate_size),
-                    (size.value * 100).roundToInt(), 70..160, 10, format = { v -> "$v%" },
-                    onSlide = { v -> liveSize = v / 100f },
-                ) { v -> size.set(v / 100f) }
-                CandidatePreview(liveSize, meaning.value, otherLanguage.value)
-            }
-        }
+    val other = prefs.stringPref(app.lychee.chinese.DictionaryPopup.PREF_OTHER_SCRIPT) {
+        prefs.getString(app.lychee.chinese.DictionaryPopup.PREF_OTHER_SCRIPT, null) ?: "hyphens"
+    }
+    Group(stringResource(R.string.lychee_readings_group_cards)) {
         row {
             ChoiceRow(
-                it, stringResource(R.string.lychee_pref_dictionary_hold), stringResource(R.string.lychee_pref_dictionary_hold_summary),
+                it, stringResource(R.string.lychee_readings_hold), stringResource(R.string.lychee_readings_hold_summary),
                 listOf(
-                    "peek" to stringResource(R.string.lychee_pref_dictionary_peek),
-                    "pin" to stringResource(R.string.lychee_pref_dictionary_pin),
+                    "peek" to stringResource(R.string.lychee_readings_hold_peek),
+                    "pin" to stringResource(R.string.lychee_readings_hold_pin),
                 ),
                 dictionaryHold.value, onSelect = dictionaryHold::set,
             )
         }
         row {
-            SwitchRow(
-                it, stringResource(R.string.lychee_pref_chinese_on_kanji), stringResource(R.string.lychee_pref_chinese_on_kanji_summary),
-                chineseOnKanji.value, chineseOnKanji::set,
+            ChoiceRow(
+                it, stringResource(R.string.lychee_readings_other_script), stringResource(R.string.lychee_readings_other_script_summary),
+                options = listOf(
+                    "hyphens" to stringResource(R.string.lychee_readings_other_script_diff),
+                    "full" to stringResource(R.string.lychee_readings_other_script_full),
+                    "off" to stringResource(R.string.lychee_readings_other_script_off),
+                ),
+                selected = other.value, onSelect = other::set,
             )
+        }
+        row {
+            SwitchRow(it, stringResource(R.string.lychee_readings_kanji), stringResource(R.string.lychee_readings_kanji_summary),
+                chineseOnKanji.value, chineseOnKanji::set)
         }
     }
 }

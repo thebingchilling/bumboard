@@ -382,8 +382,16 @@ public class KeyboardView extends View {
         final KeyVisualAttributes attr = key.getVisualAttributes();
         // LYCHEE: a taller key (the symbols pages' rows) keeps the letters' text size
         final Keyboard drawn = getKeyboard();
-        final int labelHeight = drawn == null ? key.getHeight()
+        int labelHeight = drawn == null ? key.getHeight()
                 : Math.min(key.getHeight(), drawn.mMostCommonKeyHeight - drawn.mVerticalGap);
+        // LYCHEE: the number pads fill the number row's height too, but their text stays the
+        // size of the letter keys' (as if the keys were their usual height)
+        if (drawn != null && drawn.mId.mLycheeNumberRow
+                && (drawn.mId.mElementId == KeyboardId.ELEMENT_NUMBER
+                        || drawn.mId.mElementId == KeyboardId.ELEMENT_PHONE
+                        || drawn.mId.mElementId == KeyboardId.ELEMENT_PHONE_SYMBOLS)) {
+            labelHeight = Math.round(labelHeight / app.lychee.layout.LycheeLayout.NUMBER_ROW_GROWTH);
+        }
         final KeyDrawParams params = mKeyDrawParams.mayCloneAndUpdateParams(labelHeight, attr);
         params.mAnimAlpha = Constants.Color.ALPHA_OPAQUE;
         // LYCHEE: a key that changed with the last switch of keys fades in (the others stay put)

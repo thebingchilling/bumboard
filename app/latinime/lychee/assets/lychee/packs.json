@@ -69,22 +69,10 @@
       "summary": "Google's 3D emoji, sharp at every size",
       "version": "",
       "url": "https://media.githubusercontent.com/media/googlefonts/noto-emoji/99701e0/3D/fonts/Noto-3D-128.ttf",
-      "size": "141 MB",
+      "size": "66 MB",
       "license": "SIL Open Font License 1.1",
       "credit": "Noto 3D emoji by Google (googlefonts/noto-emoji)",
       "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-emoji-noto3d.zip"
-    },
-    {
-      "id": "emoji_noto3d_small",
-      "kind": "font_emoji",
-      "name": "Noto 3D (small)",
-      "summary": "Google's 3D emoji at a smaller size: a quarter of the download, a little softer when large",
-      "version": "",
-      "url": "https://media.githubusercontent.com/media/googlefonts/noto-emoji/99701e0/3D/fonts/Noto-3D-watch.ttf",
-      "size": "34 MB",
-      "license": "SIL Open Font License 1.1",
-      "credit": "Noto 3D emoji by Google (googlefonts/noto-emoji)",
-      "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-emoji-noto3d-small.zip"
     },
     {
       "id": "rime_ja",

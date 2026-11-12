@@ -138,6 +138,17 @@ def main():
             # one font that cannot be found must not hold the others back
             print(f"::warning::{pack['id']} not mirrored: {e}", file=sys.stderr)
             continue
+        if pack["kind"] == "font_emoji" and b"sbix" in font[:12 + 16 * 64]:
+            # Apple's format (Noto 3D): Android drew its placeholder outlines, black; make it
+            # a bitmap-only CBDT font like Noto Color Emoji
+            import tempfile
+            from sbix_to_cbdt import convert
+            with tempfile.TemporaryDirectory() as tmp:
+                src, dst = Path(tmp) / "in.ttf", Path(tmp) / "out.ttf"
+                src.write_bytes(font)
+                count = convert(str(src), str(dst))
+                font = dst.read_bytes()
+            print(f"{pack['id']}: sbix converted to CBDT ({count} pictures)", file=sys.stderr)
         if not licence:
             # every published zip carries its licence: the catalogue's when the release has no file
             licence = (f"{pack['name']}\n{pack.get('credit', '')}\nLicence: {pack.get('license', '')}\n"
