@@ -31,6 +31,8 @@ data class DisplayPrefs(
     val simplified: Boolean = false,
     /** Zhuyin (bopomofo) with pinyin, under the candidates and on the cards */
     val zhuyin: Boolean = false,
+    /** Mandarin as said in Taiwan (CC-CEDICT's "Taiwan pr." readings) rather than the Mainland */
+    val mandarinTaiwan: Boolean = false,
 )
 
 /** Everything resolved for one candidate, before formatting. */
@@ -82,7 +84,7 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
     }
 
     fun annotate(text: String, comment: String, mode: InputMode, prefs: DisplayPrefs): Annotation {
-        val resolved = resolve(text, comment, mode) ?: return Annotation.Empty
+        val resolved = regional(resolve(text, comment, mode) ?: return Annotation.Empty, prefs)
         val lines = toneLines(resolved, prefs)
         val word = resolved.headwords.firstOrNull()?.takeIf { !resolved.composed }
         return Annotation(
@@ -285,6 +287,38 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
 
     companion object {
         const val MAX_SEGMENT = 6
+
+        private val taiwanNote = Regex("Taiwan pr\\. \\[([^\\]]+)]", RegexOption.IGNORE_CASE)
+
+        /**
+         * The Taiwan reading of a word CC-CEDICT reads [reading] on the Mainland ("Taiwan pr.
+         * [le4 se4]" on 垃圾), or null when it has none.
+         */
+        fun taiwanReading(headwords: List<Headword>, reading: String?): String? {
+            val r = reading?.trim()?.lowercase() ?: return null
+            val syllables = r.split(Regex("\\s+")).size
+            for (hw in headwords) {
+                if (hw.readings[Lang.Mandarin]?.any { it.trim().lowercase() == r } != true) continue
+                for (sense in hw.senses) {
+                    if (sense.lang != Lang.Mandarin && sense.lang != Lang.Any) continue
+                    val found = taiwanNote.find(sense.gloss)?.groupValues?.get(1)?.trim()?.lowercase() ?: continue
+                    if (found.split(Regex("\\s+")).size == syllables) return found
+                }
+            }
+            return null
+        }
+
+        /** [resolved] with its Mandarin said the way [prefs] asks (Taiwan or the Mainland). */
+        fun regional(resolved: Resolved, prefs: DisplayPrefs): Resolved {
+            if (!prefs.mandarinTaiwan || resolved.composed) return resolved
+            return when (resolved.lang) {
+                Lang.Mandarin -> taiwanReading(resolved.headwords, resolved.reading)
+                    ?.let { resolved.copy(reading = it) } ?: resolved
+                Lang.Cantonese -> taiwanReading(resolved.headwords, resolved.otherReading)
+                    ?.let { resolved.copy(otherReading = it) } ?: resolved
+                else -> resolved
+            }
+        }
         private val cantoneseToken = Regex("^[a-z]+[1-6]?$")
         private val mandarinToken = Regex("^[a-zü]+[1-5]?$")
         private val unhelpful = Regex(

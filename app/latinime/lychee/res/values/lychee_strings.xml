@@ -81,6 +81,8 @@
 
     <!-- Dictionary panel -->
     <string name="lychee_close">Close</string>
+    <string name="lychee_card_more">Show the whole entry</string>
+    <string name="lychee_card_less">Show less</string>
     <string name="lychee_type_it">Type it</string>
     <string name="lychee_card_parts">Parts</string>
     <string name="lychee_card_onyomi">On\'yomi</string>
@@ -241,4 +243,26 @@
     <string name="lychee_diagnostics_summary">What the keyboard did lately, to share when something doesn\'t work</string>
     <string name="lychee_diagnostics_body">The keyboard\'s recent steps: packs unpacked, dictionaries loaded and anything that failed. It stays on this phone unless you share it.</string>
     <string name="lychee_diagnostics_clear">Clear</string>
+    <!-- the settings' pages -->
+    <string name="lychee_readings_title">Readings &amp; candidates</string>
+    <string name="lychee_readings_summary">Chinese script, romanisation, tones, meanings, candidate size</string>
+    <string name="lychee_pronunciation_title">Pronunciation</string>
+    <string name="lychee_pronunciation_summary">Mainland or Taiwan Mandarin, UK or US English, voices</string>
+    <string name="lychee_pronunciation_note">How readings are written and words are said, on the candidates, the word cards and the speak buttons. Voices come from the phone\'s text-to-speech.</string>
+    <string name="lychee_typing_title">Typing</string>
+    <string name="lychee_typing_summary">Capitals, clipboard, suggestions, auto-correct, glide typing</string>
+    <string name="lychee_keys_title">Keys &amp; feedback</string>
+    <string name="lychee_keys_summary">Number row, comma key, space bar, sound, vibration</string>
+    <string name="lychee_group_timing">Timing and strength</string>
+    <string name="lychee_pref_key_shape">Key shape</string>
+    <string name="lychee_pron_region">Region</string>
+    <string name="lychee_pron_mandarin_summary">Taiwan says some words differently (垃圾 lèsè, 和 hàn); its readings and voice are used where they differ</string>
+    <string name="lychee_pron_mainland">Mainland</string>
+    <string name="lychee_pron_taiwan">Taiwan</string>
+    <string name="lychee_pron_english">English</string>
+    <string name="lychee_pron_english_summary">Which pronunciations the word cards show, and the voice for words that have none of their own</string>
+    <string name="lychee_pron_both">Both</string>
+    <string name="lychee_pron_us">US</string>
+    <string name="lychee_pron_uk">UK</string>
+    <string name="lychee_pron_cards">Word cards</string>
 </resources>

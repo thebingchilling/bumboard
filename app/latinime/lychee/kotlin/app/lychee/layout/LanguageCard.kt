@@ -42,9 +42,8 @@ object LanguageCard {
             w.dismiss()
             return
         }
-        s.animate().alpha(0f).setDuration(120).start()
-        c.animate().scaleX(0.7f).scaleY(0.7f).alpha(0f).setDuration(120)
-            .withEndAction { runCatching { w.dismiss() } }.start()
+        s.animate().alpha(0f).setDuration(LycheeMotion.OUT).setInterpolator(LycheeMotion.exitEasing).start()
+        LycheeMotion.cardOut(c) { runCatching { w.dismiss() } }
     }
 
     /**
@@ -177,17 +176,15 @@ object LanguageCard {
         this.scrim = scrim
         popup.showAtLocation(keyboard, Gravity.TOP or Gravity.START, keysLoc[0], keysLoc[1] - extra)
         // the scrim fades in, the card springs up out of the key
-        scrim.alpha = 0f
-        scrim.animate().alpha(1f).setDuration(160).start()
-        card.alpha = 0f
-        card.scaleX = 0.4f
-        card.scaleY = 0.4f
+        if (LycheePanels.animate(card.context)) {
+            scrim.alpha = 0f
+            scrim.animate().alpha(1f).setDuration(LycheeMotion.IN).setInterpolator(LycheeMotion.enterEasing).start()
+        }
         card.post {
             val lp = card.layoutParams as FrameLayout.LayoutParams
-            card.pivotX = if (anchored) (anchorX - lp.leftMargin).toFloat().coerceIn(0f, card.width.toFloat()) else card.width / 2f
-            card.pivotY = card.height.toFloat()
-            card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(240)
-                .setInterpolator(android.view.animation.OvershootInterpolator(1.2f)).start()
+            LycheeMotion.cardIn(card,
+                if (anchored) (anchorX - lp.leftMargin).toFloat().coerceIn(0f, card.width.toFloat()) else card.width / 2f,
+                card.height.toFloat())
         }
     }
 }

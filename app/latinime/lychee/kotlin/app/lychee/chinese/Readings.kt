@@ -85,6 +85,9 @@ object Readings {
         yaleTones = tones(prefs, PREF_YALE_TONES, app.lychee.core.ToneStyle.Marks),
         pinyinTones = tones(prefs, PREF_PINYIN_TONES, app.lychee.core.ToneStyle.Marks),
         zhuyin = prefs.getBoolean(PREF_ZHUYIN, false),
+        mandarinTaiwan = app.lychee.speech.Pronunciation.mandarinTaiwan(prefs).also {
+            app.lychee.speech.Speech.mandarinTaiwan = it
+        },
     )
 
     /** Chinese readings too on the Japanese and Korean keyboards' Kanji and Hanja cards. */

@@ -78,13 +78,7 @@ class EmojiInfo(private val ctx: Context) {
         window = popup
         val x = (anchor.width - card.measuredWidth) / 2
         popup.showAsDropDown(anchor, x, -(anchor.height + card.measuredHeight + dp(6)))
-        card.pivotX = card.measuredWidth / 2f
-        card.pivotY = card.measuredHeight.toFloat()
-        card.scaleX = 0.85f
-        card.scaleY = 0.85f
-        card.alpha = 0f
-        card.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(160)
-            .setInterpolator(android.view.animation.OvershootInterpolator(1.3f)).start()
+        app.lychee.layout.LycheeMotion.cardIn(card, card.measuredWidth / 2f, card.measuredHeight.toFloat())
     }
 
     private fun dp(v: Int) = (ctx.resources.displayMetrics.density * v).toInt()

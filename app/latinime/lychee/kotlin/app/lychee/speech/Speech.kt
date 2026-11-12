@@ -20,6 +20,7 @@ object Speech {
      * the first speak button tapped speaks at once.
      */
     fun warmUp(context: Context) {
+        mandarinTaiwan = Pronunciation.mandarinTaiwan(context)
         if (tts != null) return
         val app = context.applicationContext
         tts = TextToSpeech(app) { status ->
@@ -71,13 +72,21 @@ object Speech {
         engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lychee")
     }
 
-    /** Voices to try for a keyboard's engine ("yue", "cmn", "ja", "ko"), best first. */
+    /** Whether Mandarin is said Taiwan's way (Settings > Pronunciation); set by [Pronunciation]'s users. */
+    @Volatile
+    var mandarinTaiwan = false
+
+    /**
+     * Voices to try for a keyboard's engine ("yue", "cmn", "ja", "ko"), best first. Mandarin in
+     * the region chosen in Settings > Pronunciation (the Mainland's or Taiwan's voice).
+     */
+    @Suppress("UNUSED_PARAMETER")
     fun localesFor(engine: String?, simplified: Boolean): List<Locale> = when (engine) {
         "yue" -> listOf(Locale.forLanguageTag("yue-HK"), Locale.forLanguageTag("zh-HK"))
         "ja" -> listOf(Locale.JAPAN)
         "ko" -> listOf(Locale.KOREA)
-        else -> if (simplified) listOf(Locale.SIMPLIFIED_CHINESE, Locale.TRADITIONAL_CHINESE)
-        else listOf(Locale.TRADITIONAL_CHINESE, Locale.SIMPLIFIED_CHINESE)
+        else -> if (mandarinTaiwan) listOf(Locale.TRADITIONAL_CHINESE, Locale.SIMPLIFIED_CHINESE)
+        else listOf(Locale.SIMPLIFIED_CHINESE, Locale.TRADITIONAL_CHINESE)
     }
 
     fun shutdown() {

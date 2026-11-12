@@ -37,8 +37,13 @@ import java.util.concurrent.Executors
  * otherwise deletes.
  *
  * A mode, like text editing: the Handwriting shortcut (Chinese and Japanese keyboards only)
- * opens it over the keys, with Back and its name in the bar above (Back, or the phone's,
- * closes it). Its bottom row: ?123 (the symbols, closing the pad), space, ⌫ and Enter.
+ * opens it over the keys, with its name in the bar above. Its bottom row, like the keyboard's:
+ * Back (a key, bottom left; the phone's Back closes it too), ?123 (the symbols, closing the
+ * pad), space, ⌫ and Enter. With no letters to show, the line the Rime keyboards keep above
+ * the candidates for them is the pad's too.
+ *
+ * Everything moves: the ink fades away moments after the last stroke (and at once, softly, when
+ * a guess is picked), while the next character can already be written over it.
  *
  * Recognition is PaddleOCR's PP-OCRv5 text recogniser ([OcrRecognizer], opened only while the
  * pad is open): the ink is drawn as a picture and read, so stroke order and joined-up strokes
@@ -95,13 +100,17 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     private fun buildBottomRow() {
         bottom.removeAllViews()
+        // Back, a key in the bottom-left corner like the keyboard's own keys
+        bottom.addView(key(R.drawable.ic_sym_arrow_back, R.string.lychee_back) {
+            this@HandwritingPanelView.visibility = GONE
+        }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
         // the symbols: the pad closes and the keyboard shows its symbols page
         bottom.addView(key(null, R.string.lychee_hw_symbols, pill = true) {
             commitPending()
             this@HandwritingPanelView.visibility = GONE
             lycheeHost()?.lycheeSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
         }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
-        bottom.addView(key(null, R.string.lychee_hw_space, isSpace = true) { space() }, LayoutParams(0, LayoutParams.MATCH_PARENT, 4f))
+        bottom.addView(key(null, R.string.lychee_hw_space, isSpace = true) { space() }, LayoutParams(0, LayoutParams.MATCH_PARENT, 3.4f))
         bottom.addView(key(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete) { backspace() },
             LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
         bottom.addView(key(R.drawable.ic_sym_keyboard_return, R.string.lychee_hw_enter, enter = true) {
@@ -118,8 +127,9 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     fun show() {
         visibility = VISIBLE
-        // the bar above shows Back and "Handwriting", like text editing
-        toolbar()?.showTitle(R.string.lychee_sc_handwriting) { visibility = GONE }
+        // the bar above shows "Handwriting" (Back is the key bottom left)
+        toolbar()?.showTitle(R.string.lychee_sc_handwriting, withBack = false) { visibility = GONE }
+        takeLetterLine()
         pad.clear()
         updateHint()
         lastTyped = null
@@ -302,20 +312,12 @@ class HandwritingPanelView @JvmOverloads constructor(
                 main.postDelayed(this, 250)
                 return
             }
-            val ink = pad.strokeList()
-            val finish = {
-                if (pad.hasInk && pad.strokeList().size == ink.size) {
-                    lastInk = ink
-                    pad.clear()
-                    // the guesses on show belong to this ink still: keep them
-                    guessedVersion = ++inkVersion
-                    updateHint()
-                }
-                pad.alpha = 1f
-            }
-            if (LycheePanels.animate(context)) {
-                pad.animate().alpha(0f).setDuration(FADE_MS).withEndAction { finish() }.start()
-            } else finish()
+            lastInk = pad.strokeList()
+            // the ink fades away; the next character can be written over it at once
+            pad.fadeAway()
+            // the guesses on show belong to this ink still: keep them
+            guessedVersion = ++inkVersion
+            updateHint()
         }
     }
 
@@ -326,8 +328,19 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     private fun cancelAutoClear() {
         main.removeCallbacks(autoClear)
-        pad.animate().cancel()
-        pad.alpha = 1f
+    }
+
+    /**
+     * On the Rime keyboards the bar above keeps a line for the letters typed (pinyin, romaji);
+     * handwriting has none, so the pad reaches up over it.
+     */
+    private fun takeLetterLine() {
+        val bar = rootView.findViewById<View>(R.id.lychee_candidate_bar) ?: return
+        val line = bar.paddingTop
+        val lp = layoutParams as? FrameLayout.LayoutParams ?: return
+        if (line <= 0 || lp.height <= 0) return
+        lp.height += line
+        layoutParams = lp
     }
 
     /** Clears the ink on the pad without typing anything (only a tapped candidate types). */
@@ -339,7 +352,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         cancelAutoClear()
         lastInk = null
         if (!pad.hasInk) return
-        pad.clear()
+        pad.fadeAway()
         inkVersion++
         showGuesses(emptyList())
         updateHint()
@@ -353,7 +366,7 @@ class HandwritingPanelView @JvmOverloads constructor(
             main.removeCallbacks(autoCommit)
             cancelAutoClear()
             HandwritingSamples.save(context, pad.strokeList(), text, guesses, lycheeHost()?.lycheeEngine())
-            pad.clear()
+            pad.fadeAway()
             inkVersion++
             updateHint()
         } else if (lastInk != null) {
@@ -398,7 +411,18 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     /** "Write here" while the pad is empty and ready. */
     private fun updateHint() {
-        hint.visibility = if (ready && !pad.hasInk) VISIBLE else GONE
+        val show = ready && !pad.hasInk
+        if (show == (hint.visibility == VISIBLE)) return
+        hint.animate().cancel()
+        if (show && LycheePanels.animate(context)) {
+            hint.alpha = 0f
+            hint.visibility = VISIBLE
+            hint.animate().alpha(0.7f).setStartDelay(INK_FADE_MS).setDuration(app.lychee.layout.LycheeMotion.IN)
+                .setInterpolator(app.lychee.layout.LycheeMotion.enterEasing).start()
+        } else {
+            hint.alpha = 0.7f
+            hint.visibility = if (show) VISIBLE else GONE
+        }
     }
 
     /** The recogniser's guesses for the ink on the pad, in the candidate bar. */
@@ -472,13 +496,56 @@ class HandwritingPanelView @JvmOverloads constructor(
         private val paths = ArrayList<Path>()
         private val points = ArrayList<FloatArray>()
         private var current: ArrayList<Float>? = null
+        /** The last character's ink, fading away under the new one. */
+        private val fading = ArrayList<Path>()
+        private val fadingInk = Paint(ink)
+        private var fader: android.animation.ValueAnimator? = null
+        private var lastX = 0f
+        private var lastY = 0f
 
         val hasInk get() = points.isNotEmpty() || current != null
 
         fun clear() {
+            fader?.cancel()
+            fading.clear()
             paths.clear()
             points.clear()
             current = null
+            invalidate()
+            updateHint()
+        }
+
+        /** Clears the pad softly: the ink fades (and shrinks a touch) while new strokes may start. */
+        fun fadeAway() {
+            if (paths.isEmpty()) {
+                clear()
+                return
+            }
+            if (!LycheePanels.animate(context)) {
+                clear()
+                return
+            }
+            fader?.cancel()
+            fading.clear()
+            fading.addAll(paths)
+            paths.clear()
+            points.clear()
+            current = null
+            fader = android.animation.ValueAnimator.ofFloat(1f, 0f).apply {
+                duration = INK_FADE_MS
+                interpolator = app.lychee.layout.LycheeMotion.exitEasing
+                addUpdateListener {
+                    fadingInk.alpha = ((it.animatedValue as Float) * 255).toInt()
+                    invalidate()
+                }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        fading.clear()
+                        invalidate()
+                    }
+                })
+                start()
+            }
             invalidate()
             updateHint()
         }
@@ -510,6 +577,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         override fun onTouchEvent(event: MotionEvent): Boolean {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
+                    hint.animate().cancel()
                     hint.visibility = GONE
                     main.removeCallbacks(autoCommit)
                     // writing again: the ink stays until a pause, and a new character is not a
@@ -520,6 +588,8 @@ class HandwritingPanelView @JvmOverloads constructor(
                     commitWhenGuessed = false
                     current = arrayListOf(event.x, event.y)
                     paths += Path().apply { moveTo(event.x, event.y) }
+                    lastX = event.x
+                    lastY = event.y
                 }
                 MotionEvent.ACTION_MOVE -> {
                     val stroke = current ?: return true
@@ -541,10 +611,22 @@ class HandwritingPanelView @JvmOverloads constructor(
         private fun add(stroke: ArrayList<Float>, x: Float, y: Float) {
             stroke += x
             stroke += y
-            paths.lastOrNull()?.lineTo(x, y)
+            // smooth curves through the midpoints, not a chain of straight lines
+            paths.lastOrNull()?.quadTo(lastX, lastY, (lastX + x) / 2f, (lastY + y) / 2f)
+            lastX = x
+            lastY = y
         }
 
         override fun onDraw(canvas: Canvas) {
+            if (fading.isNotEmpty()) {
+                // shrinking a touch towards the middle as it fades
+                val f = fadingInk.alpha / 255f
+                val s = 0.96f + 0.04f * f
+                canvas.save()
+                canvas.scale(s, s, width / 2f, height / 2f)
+                for (p in fading) canvas.drawPath(p, fadingInk)
+                canvas.restore()
+            }
             for (p in paths) canvas.drawPath(p, ink)
         }
     }
@@ -553,8 +635,8 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     private companion object {
         /** The pause after the last stroke before the ink fades away, and the fade. */
-        const val AUTO_CLEAR_MS = 2200L
-        const val FADE_MS = 350L
+        const val AUTO_CLEAR_MS = 900L
+        const val INK_FADE_MS = 220L
         /** How much a character that usually follows the one before gains, at most. */
         const val CONTEXT = 0.12f
         /** How much a character picked often before gains, at most. */

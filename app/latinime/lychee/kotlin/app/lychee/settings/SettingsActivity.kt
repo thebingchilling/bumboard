@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -61,6 +62,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -86,12 +89,12 @@ import kotlin.math.roundToInt
 enum class Page(@StringRes val title: Int) {
     Home(R.string.english_ime_name),
     Languages(R.string.language_selection_title),
-    Chinese(R.string.lychee_chinese),
+    Chinese(R.string.lychee_readings_title),
+    Pronunciation(R.string.lychee_pronunciation_title),
     Personal(R.string.lychee_personal_title),
-    Preferences(R.string.settings_screen_preferences),
+    Preferences(R.string.lychee_typing_title),
+    Keys(R.string.lychee_keys_title),
     Theme(R.string.settings_screen_theme),
-    Correction(R.string.settings_screen_correction),
-    Gesture(R.string.settings_screen_gesture),
     Advanced(R.string.settings_screen_advanced),
     Fonts(R.string.lychee_fonts_title),
     Packs(R.string.lychee_packs_title),
@@ -180,13 +183,14 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        containerColor = pageColor(),
         topBar = {
-            // a medium bar (the large one took a third of the screen), on the page's colour
-            androidx.compose.material3.MediumTopAppBar(
+            // Material 3's large title, collapsing as the page scrolls, on the page's colour
+            androidx.compose.material3.LargeTopAppBar(
                 title = { Text(submenu?.title ?: stringResource(page.title)) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                    containerColor = pageColor(),
+                    scrolledContainerColor = pageColor(),
                 ),
                 navigationIcon = {
                     if (page != Page.Home || submenu != null) {
@@ -213,12 +217,14 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                         toMenu == null && fromMenu != null -> false
                         else -> toPage.ordinal > fromPage.ordinal && fromPage != Page.Licences && fromPage != Page.Diagnostics
                     }
+                    // Material's shared X axis: a short slide and a cross-fade
                     val sign = if (deeper) 1 else -1
-                    (androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(280)) { sign * it / 4 } +
-                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220, delayMillis = 60)))
+                    val ease = androidx.compose.animation.core.CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+                    (androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(350, easing = ease)) { sign * it / 10 } +
+                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(210, delayMillis = 90)))
                         .togetherWith(
-                            androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(280)) { -sign * it / 4 } +
-                                androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(160)),
+                            androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(350, easing = ease)) { -sign * it / 10 } +
+                                androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(90)),
                         )
                 },
             ) { (shown, menu) ->
@@ -235,11 +241,11 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                         Page.Home -> HomePage(status.value) { page = it }
                         Page.Languages -> LanguagesPage()
                         Page.Chinese -> ChinesePage()
+                        Page.Pronunciation -> PronunciationPage()
                         Page.Personal -> PersonalDictionaryPage()
                         Page.Preferences -> PreferencesPage()
+                        Page.Keys -> KeysPage()
                         Page.Theme -> ThemePage()
-                        Page.Correction -> CorrectionPage()
-                        Page.Gesture -> GesturePage()
                         Page.Advanced -> AdvancedPage()
                         Page.Fonts -> FontsPage()
                         Page.Packs -> PacksPage()
@@ -275,56 +281,83 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
         }
     }
 
-    if (status.enabled && status.current) {
-        Card {
-            Text(stringResource(R.string.lychee_setup_done_title), style = MaterialTheme.typography.titleLarge)
-            Text(
-                stringResource(R.string.lychee_setup_done_body),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    } else {
-        Card(highlight = true) {
-            Text(stringResource(R.string.lychee_setup_card_title), style = MaterialTheme.typography.titleLarge)
-            SetupStep(
-                number = 1,
-                title = stringResource(R.string.setup_step1_title, appName),
-                body = stringResource(R.string.setup_step1_instruction, appName),
-                action = stringResource(R.string.setup_step1_action),
-                done = status.enabled,
-                enabled = true,
-            ) {
-                context.startActivity(
-                    Intent(SystemSettings.ACTION_INPUT_METHOD_SETTINGS)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
-            }
-            SetupStep(
-                number = 2,
-                title = stringResource(R.string.setup_step2_title, appName),
-                body = stringResource(R.string.setup_step2_instruction, appName),
-                action = stringResource(R.string.setup_step2_action),
-                done = status.current,
-                enabled = status.enabled,
-            ) {
-                context.getSystemService(InputMethodManager::class.java).showInputMethodPicker()
-            }
-        }
-    }
-
-    var sample by rememberSaveable { mutableStateOf("") }
-    OutlinedTextField(
-        value = sample,
-        onValueChange = { sample = it },
-        label = { Text(stringResource(R.string.lychee_try_it)) },
+    // a header: the icon, the name, and a field to try the keyboard in
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-    )
+    ) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(56.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    androidx.compose.foundation.Image(painterResource(R.drawable.lychee_icon_background), null,
+                        Modifier.requiredSize(84.dp))
+                    androidx.compose.foundation.Image(painterResource(R.drawable.lychee_icon_foreground), null,
+                        Modifier.requiredSize(84.dp))
+                }
+                Spacer(Modifier.size(16.dp))
+                // the bar above already says Lychee: here, whether it is ready
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (status.enabled && status.current) {
+                        Text(stringResource(R.string.lychee_setup_done_title), style = MaterialTheme.typography.titleLarge)
+                        Text(stringResource(R.string.lychee_setup_done_body), style = MaterialTheme.typography.bodyMedium)
+                    } else {
+                        Text(stringResource(R.string.lychee_setup_card_title), style = MaterialTheme.typography.titleLarge)
+                    }
+                }
+            }
+            if (!(status.enabled && status.current)) {
+                SetupStep(
+                    number = 1,
+                    title = stringResource(R.string.setup_step1_title, appName),
+                    body = stringResource(R.string.setup_step1_instruction, appName),
+                    action = stringResource(R.string.setup_step1_action),
+                    done = status.enabled,
+                    enabled = true,
+                ) {
+                    context.startActivity(
+                        Intent(SystemSettings.ACTION_INPUT_METHOD_SETTINGS)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
+                }
+                SetupStep(
+                    number = 2,
+                    title = stringResource(R.string.setup_step2_title, appName),
+                    body = stringResource(R.string.setup_step2_instruction, appName),
+                    action = stringResource(R.string.setup_step2_action),
+                    done = status.current,
+                    enabled = status.enabled,
+                ) {
+                    context.getSystemService(InputMethodManager::class.java).showInputMethodPicker()
+                }
+            }
+            var sample by rememberSaveable { mutableStateOf("") }
+            androidx.compose.material3.TextField(
+                value = sample,
+                onValueChange = { sample = it },
+                placeholder = { Text(stringResource(R.string.lychee_try_it)) },
+                singleLine = false,
+                shape = RoundedCornerShape(16.dp),
+                colors = androidx.compose.material3.TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                    unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
 
-    val showGesture = Settings.readFromBuildConfigIfGestureInputEnabled(context.resources)
-    // grouped by what people look for: languages, how typing works, how it looks, downloads
+    // a few short groups, by what people look for
     Group(stringResource(R.string.lychee_section_languages)) {
         row {
             NavRow(
@@ -334,9 +367,15 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
         }
         row {
             NavRow(
-                it, stringResource(R.string.lychee_chinese),
-                stringResource(R.string.lychee_chinese_summary), R.drawable.ic_sym_translate,
+                it, stringResource(R.string.lychee_readings_title),
+                stringResource(R.string.lychee_readings_summary), R.drawable.ic_sym_translate,
             ) { open(Page.Chinese) }
+        }
+        row {
+            NavRow(
+                it, stringResource(R.string.lychee_pronunciation_title),
+                stringResource(R.string.lychee_pronunciation_summary), R.drawable.lychee_ic_volume,
+            ) { open(Page.Pronunciation) }
         }
         row {
             NavRow(
@@ -348,23 +387,15 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
     Group(stringResource(R.string.lychee_section_typing)) {
         row {
             NavRow(
-                it, stringResource(R.string.settings_screen_preferences),
-                stringResource(R.string.lychee_preferences_summary), R.drawable.ic_sym_keyboard,
+                it, stringResource(R.string.lychee_typing_title),
+                stringResource(R.string.lychee_typing_summary), R.drawable.ic_sym_spellcheck,
             ) { open(Page.Preferences) }
         }
         row {
             NavRow(
-                it, stringResource(R.string.settings_screen_correction),
-                stringResource(R.string.lychee_correction_summary), R.drawable.ic_sym_spellcheck,
-            ) { open(Page.Correction) }
-        }
-        if (showGesture) {
-            row {
-                NavRow(
-                    it, stringResource(R.string.settings_screen_gesture),
-                    stringResource(R.string.lychee_gesture_summary), R.drawable.ic_sym_gesture,
-                ) { open(Page.Gesture) }
-            }
+                it, stringResource(R.string.lychee_keys_title),
+                stringResource(R.string.lychee_keys_summary), R.drawable.ic_sym_keyboard,
+            ) { open(Page.Keys) }
         }
     }
     Group(stringResource(R.string.lychee_section_look)) {
@@ -603,21 +634,6 @@ private fun ChinesePage() {
             )
         }
         row {
-            val speak = prefs.stringPref(app.lychee.chinese.DictionaryPopup.PREF_SPEAK_LANG) {
-                prefs.getString(app.lychee.chinese.DictionaryPopup.PREF_SPEAK_LANG, null) ?: "auto"
-            }
-            ChoiceRow(
-                it, stringResource(R.string.lychee_card_speak_language), stringResource(R.string.lychee_card_speak_summary),
-                options = listOf(
-                    "auto" to stringResource(R.string.lychee_card_speak_auto),
-                    "yue" to stringResource(R.string.lychee_card_cantonese),
-                    "cmn" to stringResource(R.string.lychee_card_mandarin),
-                ),
-                selected = speak.value,
-                onSelect = speak::set,
-            )
-        }
-        row {
             ChoiceRow(
                 it, stringResource(R.string.lychee_cantonese_input),
                 options = listOf(
@@ -745,27 +761,13 @@ private fun ChinesePage() {
 @Composable
 private fun PreferencesPage() {
     val prefs = prefs()
-    val res = LocalContext.current.resources
+    val context = LocalContext.current
     val autoCap = prefs.boolPref(Settings.PREF_AUTO_CAP) { prefs.getBoolean(Settings.PREF_AUTO_CAP, true) }
     val doubleSpace = prefs.boolPref(Settings.PREF_KEY_USE_DOUBLE_SPACE_PERIOD) {
         prefs.getBoolean(Settings.PREF_KEY_USE_DOUBLE_SPACE_PERIOD, true)
     }
-    val vibrate = prefs.boolPref(Settings.PREF_VIBRATE_ON) { Settings.readVibrationEnabled(prefs, res) }
-    val sound = prefs.boolPref(Settings.PREF_SOUND_ON) { Settings.readKeypressSoundEnabled(prefs, res) }
-    val keySound = prefs.stringPref(app.lychee.ui.KeySounds.PREF) {
-        prefs.getString(app.lychee.ui.KeySounds.PREF, null) ?: app.lychee.ui.KeySounds.DEFAULT
-    }
-    val popup = prefs.boolPref(Settings.PREF_POPUP_ON) { Settings.readKeyPreviewPopupEnabled(prefs, res) }
-    val voice = prefs.boolPref(Settings.PREF_VOICE_INPUT_KEY) { prefs.getBoolean(Settings.PREF_VOICE_INPUT_KEY, true) }
-    val numberRow = prefs.boolPref(LycheeLayout.PREF_NUMBER_ROW) { prefs.getBoolean(LycheeLayout.PREF_NUMBER_ROW, true) }
-    val commaKey = prefs.stringPref(LycheeLayout.PREF_COMMA_KEY) { prefs.getString(LycheeLayout.PREF_COMMA_KEY, null) ?: "combined" }
-    val hasVibrator = AudioAndHapticFeedbackManager.getInstance().hasVibrator()
-    val context = LocalContext.current
     val clipboard = prefs.boolPref(app.lychee.clipboard.ClipboardStore.PREF_ENABLED) {
         prefs.getBoolean(app.lychee.clipboard.ClipboardStore.PREF_ENABLED, false)
-    }
-    val incognito = prefs.boolPref(app.lychee.typing.Incognito.PREF) {
-        prefs.getBoolean(app.lychee.typing.Incognito.PREF, false)
     }
 
     Group(stringResource(R.string.lychee_group_typing)) {
@@ -788,13 +790,34 @@ private fun PreferencesPage() {
                 if (!on) app.lychee.clipboard.ClipboardStore.setEnabled(context, false)
             }
         }
-        row {
-            SwitchRow(
-                it, stringResource(R.string.lychee_pref_incognito), stringResource(R.string.lychee_pref_incognito_summary),
-                incognito.value, incognito::set,
-            )
-        }
     }
+    CorrectionGroups()
+    if (Settings.readFromBuildConfigIfGestureInputEnabled(context.resources)) GestureGroup()
+}
+
+/** The keys: the number row, the comma's neighbour, the space bar, the comma's menu, and how keys feel. */
+@Composable
+private fun KeysPage() {
+    val prefs = prefs()
+    val context = LocalContext.current
+    val res = context.resources
+    val vibrate = prefs.boolPref(Settings.PREF_VIBRATE_ON) { Settings.readVibrationEnabled(prefs, res) }
+    val sound = prefs.boolPref(Settings.PREF_SOUND_ON) { Settings.readKeypressSoundEnabled(prefs, res) }
+    val keySound = prefs.stringPref(app.lychee.ui.KeySounds.PREF) {
+        prefs.getString(app.lychee.ui.KeySounds.PREF, null) ?: app.lychee.ui.KeySounds.DEFAULT
+    }
+    val popup = prefs.boolPref(Settings.PREF_POPUP_ON) { Settings.readKeyPreviewPopupEnabled(prefs, res) }
+    val voice = prefs.boolPref(Settings.PREF_VOICE_INPUT_KEY) { prefs.getBoolean(Settings.PREF_VOICE_INPUT_KEY, true) }
+    val numberRow = prefs.boolPref(LycheeLayout.PREF_NUMBER_ROW) { prefs.getBoolean(LycheeLayout.PREF_NUMBER_ROW, true) }
+    val commaKey = prefs.stringPref(LycheeLayout.PREF_COMMA_KEY) { prefs.getString(LycheeLayout.PREF_COMMA_KEY, null) ?: "combined" }
+    val hasVibrator = AudioAndHapticFeedbackManager.getInstance().hasVibrator()
+    val spacebar = prefs.stringPref(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR) {
+        prefs.getString(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR, null) ?: "language"
+    }
+    // the key next to the comma: which one, then whether it is folded into the comma or beside it
+    val extra = when (commaKey.value) { "combined", "emoji" -> "emoji"; "language", "language_comma" -> "language"; else -> "none" }
+    val besides = commaKey.value == "emoji" || commaKey.value == "language"
+
     Group(stringResource(R.string.lychee_group_keys)) {
         row {
             SwitchRow(
@@ -802,21 +825,19 @@ private fun PreferencesPage() {
                 stringResource(R.string.lychee_pref_number_row_summary), numberRow.value, numberRow::set,
             )
         }
-    }
-    // the key next to the comma: which one, then whether it is folded into the comma or beside it
-    val extra = when (commaKey.value) { "combined", "emoji" -> "emoji"; "language", "language_comma" -> "language"; else -> "none" }
-    val besides = commaKey.value == "emoji" || commaKey.value == "language"
-    Group(stringResource(R.string.lychee_pref_comma_key)) {
-        listOf(
-            Triple("emoji", R.string.lychee_pref_comma_key_emoji, R.drawable.ic_sym_mood),
-            Triple("language", R.string.lychee_pref_comma_key_language, R.drawable.ic_sym_language),
-            Triple("none", R.string.lychee_pref_comma_key_none, R.drawable.ic_sym_close),
-        ).forEach { (id, label, icon) ->
-            row { shape ->
-                IconRadioRow(shape, icon, stringResource(label), extra == id) {
-                    commaKey.set(commaKeyValue(id, besides))
-                }
-            }
+        row { SwitchRow(it, stringResource(R.string.voice_input), null, voice.value, voice::set) }
+        row {
+            ChoiceRow(
+                it, stringResource(R.string.lychee_pref_comma_key), null,
+                listOf(
+                    "emoji" to stringResource(R.string.lychee_pref_comma_key_emoji),
+                    "language" to stringResource(R.string.lychee_pref_comma_key_language),
+                    "none" to stringResource(R.string.lychee_pref_comma_key_none),
+                ),
+                extra,
+                icons = listOf(R.drawable.ic_sym_mood, R.drawable.ic_sym_language, R.drawable.ic_sym_close),
+                onSelect = { id -> commaKey.set(commaKeyValue(id, besides)) },
+            )
         }
         if (extra != "none") {
             row {
@@ -831,11 +852,6 @@ private fun PreferencesPage() {
                 )
             }
         }
-    }
-    val spacebar = prefs.stringPref(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR) {
-        prefs.getString(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR, null) ?: "language"
-    }
-    Group(stringResource(R.string.lychee_pref_spacebar)) {
         row {
             ChoiceRow(
                 it, stringResource(R.string.lychee_pref_spacebar), stringResource(R.string.lychee_pref_spacebar_summary),
@@ -855,17 +871,16 @@ private fun PreferencesPage() {
         row { SwitchRow(it, stringResource(R.string.sound_on_keypress), null, sound.value, sound::set) }
         if (sound.value) {
             row {
-                RadioChoice(it, stringResource(R.string.lychee_pref_key_sound), keySound.value,
-                    app.lychee.ui.KeySounds.STYLES.map { s -> s to stringResource(keySoundName(s)) }) { s ->
-                    keySound.set(s)
-                }
+                ChoiceRow(it, stringResource(R.string.lychee_pref_key_sound), null,
+                    app.lychee.ui.KeySounds.STYLES.map { st -> st to stringResource(keySoundName(st)) },
+                    keySound.value, onSelect = keySound::set)
             }
         }
         if (Settings.readFromBuildConfigIfToShowKeyPreviewPopupOption(res)) {
             row { SwitchRow(it, stringResource(R.string.popup_on_keypress), null, popup.value, popup::set) }
         }
-        row { SwitchRow(it, stringResource(R.string.voice_input), null, voice.value, voice::set) }
     }
+    FeelGroups()
 }
 
 /** What the comma's long-press shows: the shortcuts switched on here, in order (the first is where it opens), then Settings. */
@@ -943,17 +958,20 @@ private fun ThemePage() {
         }
     }
     Group(stringResource(R.string.lychee_pref_colors)) {
-        listOf(
-            app.lychee.ui.LycheeColorStyle.NEUTRAL to R.string.lychee_pref_colors_neutral,
-            app.lychee.ui.LycheeColorStyle.WALLPAPER to R.string.lychee_pref_colors_wallpaper,
-            app.lychee.ui.LycheeColorStyle.ROSE to R.string.lychee_pref_colors_rose,
-            app.lychee.ui.LycheeColorStyle.OCEAN to R.string.lychee_pref_colors_ocean,
-            app.lychee.ui.LycheeColorStyle.FOREST to R.string.lychee_pref_colors_forest,
-            app.lychee.ui.LycheeColorStyle.LAVENDER to R.string.lychee_pref_colors_lavender,
-            app.lychee.ui.LycheeColorStyle.SUNSET to R.string.lychee_pref_colors_sunset,
-            app.lychee.ui.LycheeColorStyle.MONO to R.string.lychee_pref_colors_mono,
-        ).forEach { (id, name) ->
-            row { shape -> PaletteRow(shape, stringResource(name), id, colors.value == id) { colors.set(id) } }
+        row {
+            PaletteGrid(
+                listOf(
+                    app.lychee.ui.LycheeColorStyle.NEUTRAL to R.string.lychee_pref_colors_neutral,
+                    app.lychee.ui.LycheeColorStyle.WALLPAPER to R.string.lychee_pref_colors_wallpaper,
+                    app.lychee.ui.LycheeColorStyle.ROSE to R.string.lychee_pref_colors_rose,
+                    app.lychee.ui.LycheeColorStyle.OCEAN to R.string.lychee_pref_colors_ocean,
+                    app.lychee.ui.LycheeColorStyle.FOREST to R.string.lychee_pref_colors_forest,
+                    app.lychee.ui.LycheeColorStyle.LAVENDER to R.string.lychee_pref_colors_lavender,
+                    app.lychee.ui.LycheeColorStyle.SUNSET to R.string.lychee_pref_colors_sunset,
+                    app.lychee.ui.LycheeColorStyle.MONO to R.string.lychee_pref_colors_mono,
+                ),
+                colors.value,
+            ) { id -> colors.set(id) }
         }
     }
     Group(stringResource(R.string.lychee_group_key_style)) {
@@ -965,12 +983,13 @@ private fun ThemePage() {
             SliderRow(it, stringResource(R.string.lychee_pref_key_roundness), roundness.value, 0..100, 5,
                 format = { v -> "$v%" }) { v -> roundness.set(v) }
         }
-        names.indices.forEach { i ->
-            row { shape ->
-                RadioRow(shape, names[i], selected == ids[i]) {
-                    selected = ids[i]
-                    KeyboardTheme.saveKeyboardThemeId(ids[i], prefs)
-                }
+        row {
+            ChoiceRow(
+                it, stringResource(R.string.lychee_pref_key_shape), null,
+                names.indices.map { i -> ids[i] to names[i] }, selected,
+            ) { id ->
+                selected = id
+                KeyboardTheme.saveKeyboardThemeId(id, prefs)
             }
         }
     }
@@ -1011,6 +1030,55 @@ private fun ThemePage() {
     )
 }
 
+/**
+ * The palettes as a grid of swatches, like the phone's wallpaper colours: each a circle of its
+ * background, keys and accent, its name under it; the chosen one ringed and ticked.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun PaletteGrid(palettes: List<Pair<String, Int>>, chosen: String, onPick: (String) -> Unit) {
+    val context = LocalContext.current
+    androidx.compose.foundation.layout.FlowRow(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        maxItemsInEachRow = 4,
+    ) {
+        palettes.forEach { (id, name) ->
+            val swatch = remember(id) { app.lychee.ui.LycheeColorStyle.swatch(context, id) }
+            val selected = id == chosen
+            val ring = MaterialTheme.colorScheme.primary
+            Column(
+                Modifier
+                    .width(76.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable { onPick(id) }
+                    .padding(vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                androidx.compose.foundation.Canvas(Modifier.size(52.dp)) {
+                    val r = size.minDimension / 2
+                    if (selected) drawCircle(ring, r)
+                    val inner = if (selected) r - 4.dp.toPx() else r
+                    // the background, with the keys' colour in the lower half and the accent as a dot
+                    drawCircle(androidx.compose.ui.graphics.Color(swatch[0]), inner)
+                    drawArc(androidx.compose.ui.graphics.Color(swatch[1]), 0f, 180f, true,
+                        topLeft = androidx.compose.ui.geometry.Offset(center.x - inner, center.y - inner),
+                        size = androidx.compose.ui.geometry.Size(inner * 2, inner * 2))
+                    drawCircle(androidx.compose.ui.graphics.Color(swatch[3]), inner * 0.32f)
+                }
+                Text(
+                    name, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+        }
+    }
+}
+
 /** A palette to choose: its name, and a swatch of its colours (background, keys, accent). */
 @Composable
 private fun PaletteRow(shape: androidx.compose.ui.graphics.Shape, title: String, style: String, selected: Boolean, onClick: () -> Unit) {
@@ -1048,7 +1116,7 @@ private fun RadioRow(shape: androidx.compose.ui.graphics.Shape, title: String, s
 // ---------------------------------------------------------------- text correction
 
 @Composable
-private fun CorrectionPage() {
+private fun CorrectionGroups() {
     val prefs = prefs()
     val context = LocalContext.current
     val res = context.resources
@@ -1116,7 +1184,7 @@ private fun CorrectionPage() {
 // ---------------------------------------------------------------- gesture typing
 
 @Composable
-private fun GesturePage() {
+private fun GestureGroup() {
     val prefs = prefs()
     val res = LocalContext.current.resources
     val gesture = prefs.boolPref(Settings.PREF_GESTURE_INPUT) { Settings.readGestureInputEnabled(prefs, res) }
@@ -1126,7 +1194,7 @@ private fun GesturePage() {
     val trail = prefs.boolPref(Settings.PREF_GESTURE_PREVIEW_TRAIL) {
         prefs.getBoolean(Settings.PREF_GESTURE_PREVIEW_TRAIL, true)
     }
-    Group {
+    Group(stringResource(R.string.settings_screen_gesture)) {
         row {
             SwitchRow(
                 it, stringResource(R.string.gesture_input), stringResource(R.string.gesture_input_summary),
@@ -1145,8 +1213,9 @@ private fun GesturePage() {
 
 // ---------------------------------------------------------------- advanced
 
+/** How the keys feel: how long a hold takes, the key popup, and the strength of sound and vibration. */
 @Composable
-private fun AdvancedPage() {
+private fun FeelGroups() {
     val prefs = prefs()
     val context = LocalContext.current
     val res = context.resources
@@ -1162,17 +1231,8 @@ private fun AdvancedPage() {
     }
     val volume = prefs.floatPref(Settings.PREF_KEYPRESS_SOUND_VOLUME) { Settings.readKeypressSoundVolume(prefs, res) }
     val longPress = prefs.intPref(Settings.PREF_KEY_LONGPRESS_TIMEOUT) { Settings.readKeyLongpressTimeout(prefs, res) }
-    val split = prefs.boolPref(Settings.PREF_ENABLE_SPLIT_KEYBOARD) {
-        prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD, false)
-    }
-    val emojiAlt = prefs.boolPref(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY) {
-        prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY, true)
-    }
-    val hwSamples = prefs.boolPref(app.lychee.handwriting.HandwritingSamples.PREF) {
-        prefs.getBoolean(app.lychee.handwriting.HandwritingSamples.PREF, false)
-    }
 
-    Group(stringResource(R.string.lychee_group_popups)) {
+    Group(stringResource(R.string.lychee_group_timing)) {
         if (Settings.readFromBuildConfigIfToShowKeyPreviewPopupOption(res)) {
             row {
                 ChoiceRow(
@@ -1197,8 +1257,6 @@ private fun AdvancedPage() {
                 onChange = longPress::set,
             )
         }
-    }
-    Group(stringResource(R.string.lychee_group_feedback)) {
         if (feedback.hasVibrator()) {
             row {
                 // -1 means "system default"; the slider starts at 0 and stores real durations.
@@ -1226,7 +1284,21 @@ private fun AdvancedPage() {
             }
         }
     }
-    Group(stringResource(R.string.lychee_group_other)) {
+}
+
+@Composable
+private fun AdvancedPage() {
+    val prefs = prefs()
+    val split = prefs.boolPref(Settings.PREF_ENABLE_SPLIT_KEYBOARD) {
+        prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD, false)
+    }
+    val emojiAlt = prefs.boolPref(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY) {
+        prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY, true)
+    }
+    val hwSamples = prefs.boolPref(app.lychee.handwriting.HandwritingSamples.PREF) {
+        prefs.getBoolean(app.lychee.handwriting.HandwritingSamples.PREF, false)
+    }
+    Group {
         row {
             SwitchRow(it, stringResource(R.string.enable_split_keyboard), null, split.value, split::set)
         }
@@ -1239,6 +1311,69 @@ private fun AdvancedPage() {
             SwitchRow(
                 it, stringResource(R.string.prefs_enable_emoji_alt_physical_key),
                 stringResource(R.string.prefs_enable_emoji_alt_physical_key_summary), emojiAlt.value, emojiAlt::set,
+            )
+        }
+    }
+}
+
+// ---------------------------------------------------------------- pronunciation
+
+/** How each language is said: Mandarin's region, English's, and the word card's voice. */
+@Composable
+private fun PronunciationPage() {
+    val prefs = prefs()
+    val P = app.lychee.speech.Pronunciation
+    val mandarin = prefs.stringPref(P.PREF_MANDARIN) { prefs.getString(P.PREF_MANDARIN, null) ?: P.MAINLAND }
+    val english = prefs.stringPref(P.PREF_ENGLISH) { prefs.getString(P.PREF_ENGLISH, null) ?: P.BOTH }
+    val speak = prefs.stringPref(app.lychee.chinese.DictionaryPopup.PREF_SPEAK_LANG) {
+        prefs.getString(app.lychee.chinese.DictionaryPopup.PREF_SPEAK_LANG, null) ?: "auto"
+    }
+    Text(
+        stringResource(R.string.lychee_pronunciation_note),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
+    )
+    Group(stringResource(R.string.lychee_language_mandarin)) {
+        row {
+            ChoiceRow(
+                it, stringResource(R.string.lychee_pron_region), stringResource(R.string.lychee_pron_mandarin_summary),
+                listOf(
+                    P.MAINLAND to stringResource(R.string.lychee_pron_mainland),
+                    P.TAIWAN to stringResource(R.string.lychee_pron_taiwan),
+                ),
+                mandarin.value,
+                onSelect = { v ->
+                    mandarin.set(v)
+                    app.lychee.speech.Speech.mandarinTaiwan = v == P.TAIWAN
+                },
+            )
+        }
+    }
+    Group(stringResource(R.string.lychee_pron_english)) {
+        row {
+            ChoiceRow(
+                it, stringResource(R.string.lychee_pron_region), stringResource(R.string.lychee_pron_english_summary),
+                listOf(
+                    P.BOTH to stringResource(R.string.lychee_pron_both),
+                    P.US to stringResource(R.string.lychee_pron_us),
+                    P.UK to stringResource(R.string.lychee_pron_uk),
+                ),
+                english.value, onSelect = english::set,
+            )
+        }
+    }
+    Group(stringResource(R.string.lychee_pron_cards)) {
+        row {
+            ChoiceRow(
+                it, stringResource(R.string.lychee_card_speak_language), stringResource(R.string.lychee_card_speak_summary),
+                options = listOf(
+                    "auto" to stringResource(R.string.lychee_card_speak_auto),
+                    "yue" to stringResource(R.string.lychee_card_cantonese),
+                    "cmn" to stringResource(R.string.lychee_card_mandarin),
+                ),
+                selected = speak.value,
+                onSelect = speak::set,
             )
         }
     }

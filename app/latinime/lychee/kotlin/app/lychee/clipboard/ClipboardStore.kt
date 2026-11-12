@@ -4,7 +4,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.preference.PreferenceManager
-import app.lychee.typing.Incognito
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -12,7 +11,8 @@ import org.json.JSONObject
  * What was copied, for the clipboard panel. Off until turned on (Settings > Preferences >
  * Clipboard); then the last [MAX_RECENT] copies are kept on the phone, in Lychee's own storage
  * (never sent anywhere). Unpinned ones go after an hour; pinned ones stay until deleted.
- * Nothing is kept from password fields, while incognito, or that the app marks as sensitive.
+ * Nothing is kept that the app marks as sensitive (passwords from a password manager); incognito
+ * doesn't change it, as copies are made in other apps.
  */
 object ClipboardStore {
     const val PREF_ENABLED = "lychee_clipboard"
@@ -56,7 +56,7 @@ object ClipboardStore {
     /** Keeps what is on the clipboard now, unless it shouldn't be kept. */
     @JvmStatic
     fun capture(context: Context) {
-        if (!enabled(context) || Incognito.active) return
+        if (!enabled(context)) return
         val cm = context.getSystemService(ClipboardManager::class.java) ?: return
         val clip = runCatching { cm.primaryClip }.getOrNull() ?: return
         if (clip.description?.extras?.getBoolean(EXTRA_SENSITIVE, false) == true) return

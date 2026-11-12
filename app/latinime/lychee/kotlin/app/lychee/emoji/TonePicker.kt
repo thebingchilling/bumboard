@@ -147,13 +147,7 @@ class TonePicker(private val ctx: Context) {
         // centred above the emoji, kept on screen by PopupWindow; it springs up from the emoji
         val x = (anchor.width - content.measuredWidth) / 2
         popup.showAsDropDown(anchor, x, -(anchor.height + content.measuredHeight))
-        content.pivotX = content.measuredWidth / 2f
-        content.pivotY = content.measuredHeight.toFloat()
-        content.scaleX = 0.85f
-        content.scaleY = 0.85f
-        content.alpha = 0f
-        content.animate().scaleX(1f).scaleY(1f).alpha(1f).setDuration(180)
-            .setInterpolator(android.view.animation.OvershootInterpolator(1.4f)).start()
+        app.lychee.layout.LycheeMotion.cardIn(content, content.measuredWidth / 2f, content.measuredHeight.toFloat())
     }
 
     private fun bounce(view: View) {

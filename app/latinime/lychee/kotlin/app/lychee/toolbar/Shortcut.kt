@@ -17,7 +17,6 @@ enum class Shortcut(val id: String, @DrawableRes val icon: Int, @StringRes val l
     HANDWRITING("handwriting", R.drawable.ic_sym_edit, R.string.lychee_sc_handwriting),
     UNICODE("unicode", R.drawable.ic_sym_unicode, R.string.lychee_sc_unicode),
     CLIPBOARD("clipboard", R.drawable.ic_sym_content_paste, R.string.lychee_sc_clipboard),
-    INCOGNITO("incognito", R.drawable.ic_sym_visibility_off, R.string.lychee_sc_incognito),
     SETTINGS("settings", R.drawable.ic_sym_settings, R.string.lychee_sc_settings);
 
     companion object {
@@ -80,8 +79,9 @@ object Shortcuts {
     fun available(shortcut: Shortcut, engine: String?): Boolean = when (shortcut) {
         // handwriting is for Chinese, Japanese and Korean, never the English keyboards
         Shortcut.HANDWRITING -> engine != null && !app.lychee.typing.FieldKind.restricted
-        // a number, password, email or web address field is English only
-        Shortcut.LANGUAGE -> !app.lychee.typing.FieldKind.restricted
+        // number, phone and date fields have the number pad only; password, email and web
+        // address fields open in English but may switch
+        Shortcut.LANGUAGE -> !app.lychee.typing.FieldKind.languageLocked
         else -> true
     }
 }

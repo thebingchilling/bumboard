@@ -13,7 +13,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import app.lychee.layout.LycheePanels
 import app.lychee.lycheeHost
@@ -48,15 +48,27 @@ class ClipboardPanelView @JvmOverloads constructor(
         ClipboardStore.capture(context)
         load()
     }
-    private val clear = pill(R.string.lychee_clipboard_clear, filled = false) {
-        ClipboardStore.clear(context)
-        load()
+    /** Clear: an icon button, bottom left, removing the unpinned copies. */
+    private val clear = ImageView(context).apply {
+        setImageResource(R.drawable.lychee_ic_clear_all)
+        imageTintList = ColorStateList.valueOf(palette.onSurfaceVariant)
+        scaleType = ImageView.ScaleType.CENTER
+        contentDescription = context.getString(R.string.lychee_clipboard_clear)
+        background = TypedValue().let { v ->
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v, true)
+            context.getDrawable(v.resourceId)
+        }
+        setOnClickListener {
+            ClipboardStore.clear(context)
+            load()
+        }
     }
 
     init {
         isClickable = true
         setBackgroundColor(palette.surface)
-        list.layoutManager = GridLayoutManager(context, 2)
+        // two columns of cards as tall as their text (up to four lines), like Gboard's
+        list.layoutManager = StaggeredGridLayoutManager(2, StaggeredGridLayoutManager.VERTICAL)
         list.adapter = adapter
         list.clipToPadding = false
         list.setPadding(dp(8), dp(6), dp(8), dp(6))
@@ -72,8 +84,8 @@ class ClipboardPanelView @JvmOverloads constructor(
             }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         }, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         column.addView(FrameLayout(context).apply {
-            addView(clear, LayoutParams(LayoutParams.WRAP_CONTENT, dp(36), Gravity.START or Gravity.CENTER_VERTICAL)
-                .apply { leftMargin = dp(12) })
+            addView(clear, LayoutParams(dp(44), dp(44), Gravity.START or Gravity.CENTER_VERTICAL)
+                .apply { leftMargin = dp(6) })
         }, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(48)))
         addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         visibility = GONE
@@ -101,11 +113,7 @@ class ClipboardPanelView @JvmOverloads constructor(
         val on = ClipboardStore.enabled(context)
         items = if (on) ClipboardStore.items(context) else emptyList()
         adapter.notifyDataSetChanged()
-        empty.setText(when {
-            !on -> R.string.lychee_clipboard_off
-            app.lychee.typing.Incognito.active -> R.string.lychee_clipboard_incognito
-            else -> R.string.lychee_clipboard_empty
-        })
+        empty.setText(if (on) R.string.lychee_clipboard_empty else R.string.lychee_clipboard_off)
         (empty.parent as View).visibility = if (items.isEmpty()) VISIBLE else GONE
         turnOn.visibility = if (on) GONE else VISIBLE
         clear.visibility = if (items.any { !it.pinned }) VISIBLE else INVISIBLE
@@ -126,10 +134,14 @@ class ClipboardPanelView @JvmOverloads constructor(
             text = item.text
             setTextColor(palette.onSurface)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            maxLines = 3
+            maxLines = 4
             ellipsize = TextUtils.TruncateAt.END
-            setPadding(dp(12), dp(10), dp(if (item.pinned) 28 else 12), dp(10))
-        }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            gravity = Gravity.CENTER_VERTICAL
+            // room for two lines and the Pin and Delete buttons, at least
+            minHeight = dp(60)
+            setLineSpacing(0f, 1.1f)
+            setPadding(dp(14), dp(12), dp(if (item.pinned) 30 else 14), dp(12))
+        }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         if (item.pinned) box.addView(ImageView(context).apply {
             setImageResource(R.drawable.lychee_ic_pin)
             imageTintList = ColorStateList.valueOf(palette.primary)
@@ -199,14 +211,14 @@ class ClipboardPanelView @JvmOverloads constructor(
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
             object : RecyclerView.ViewHolder(FrameLayout(context).apply {
-                layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(84))
+                layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 setPadding(dp(4), dp(4), dp(4), dp(4))
             }) {}
 
         override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
             val cell = holder.itemView as FrameLayout
             cell.removeAllViews()
-            cell.addView(card(items[position]), LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            cell.addView(card(items[position]), LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         }
     }
 

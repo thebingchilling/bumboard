@@ -26,17 +26,12 @@ object LycheePanels {
         panel.layoutParams = lp
     }
 
-    /** A panel opening over the keys: it fades in, rising a little, unless motion is off. */
+    /** A panel opening over the keys: it cross-fades in place, like the keys changing (LycheeMotion). */
     @JvmStatic
     fun reveal(panel: View) {
-        if (!animate(panel.context)) return
-        // the input view's own transition already brings it in (LycheeMotion)
+        // the input view's own transition already brings it in
         if ((panel.parent as? android.view.ViewGroup)?.layoutTransition != null) return
-        panel.animate().cancel()
-        panel.alpha = 0f
-        panel.translationY = panel.resources.displayMetrics.density * 12
-        panel.animate().alpha(1f).translationY(0f).setDuration(200)
-            .setInterpolator(android.view.animation.DecelerateInterpolator(2f)).start()
+        LycheeMotion.enter(panel)
     }
 
     /** Whether the phone wants animations (Settings > Accessibility > Remove animations). */

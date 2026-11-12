@@ -623,7 +623,6 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         KeyboardSwitcher.init(this);
         super.onCreate();
         app.lychee.chinese.ChineseScript.init(this); // LYCHEE
-        app.lychee.typing.Incognito.init(this); // LYCHEE
         app.lychee.clipboard.ClipboardStore.watch(this); // LYCHEE: only keeps copies once turned on
         // LYCHEE: the packs that come with Lychee, unpacked in the background the first time
         final android.content.Context lycheeApp = getApplicationContext();
@@ -1675,12 +1674,14 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     // TODO: Revise the language switch key behavior to make it much smarter and more reasonable.
     public void switchToNextSubtype() {
         // LYCHEE: the language key only cycles Lychee's own keyboards, never other apps'.
-        // LYCHEE: a number, password, email or web address field stays English
-        if (app.lychee.typing.FieldKind.getRestricted()) return;
+        // LYCHEE: a number, phone or date field has the number pad only; a password, email or
+        // web address field opens in English, and switching brings the keyboards back to it
+        if (app.lychee.typing.FieldKind.getLanguageLocked()) return;
         final List<InputMethodSubtype> subtypes = mRichImm.getMyEnabledInputMethodSubtypeList(true);
         if (subtypes.size() < 2) {
             return;
         }
+        app.lychee.typing.FieldKind.unlock();
         final int index = subtypes.indexOf(mRichImm.getCurrentSubtype().getRawSubtype());
         switchToLycheeSubtype(subtypes.get((index + 1) % subtypes.size()));
     }
@@ -1696,7 +1697,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
     // LYCHEE: long-press on the language key lists Lychee's keyboards, not the system picker.
     private void showLycheeLanguagePicker() {
-        if (app.lychee.typing.FieldKind.getRestricted()) return;
+        if (app.lychee.typing.FieldKind.getLanguageLocked()) return;
         final List<InputMethodSubtype> subtypes = mRichImm.getMyEnabledInputMethodSubtypeList(true);
         if (subtypes.size() < 2) {
             launchLycheeSettingsPage("Languages");
@@ -1723,6 +1724,13 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             anchorTop = keys.getPaddingTop() + space.getY();
         }
         app.lychee.layout.LanguageCard.show(keys, names, checked, position -> {
+            // LYCHEE: in a password, email or web address field a pick brings the keyboards back
+            final boolean wasRestricted = app.lychee.typing.FieldKind.getRestricted();
+            app.lychee.typing.FieldKind.unlock();
+            if (wasRestricted && subtypes.get(position).equals(current)) {
+                onCurrentInputMethodSubtypeChanged(current);
+                return kotlin.Unit.INSTANCE;
+            }
             switchToLycheeSubtype(subtypes.get(position));
             return kotlin.Unit.INSTANCE;
         }, () -> {
@@ -2322,14 +2330,6 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         case CLIPBOARD:
             showLycheePanel(R.id.lychee_clipboard_panel);
             break;
-        case INCOGNITO: {
-            // on until turned off again; the bar shows it while on
-            final boolean on = app.lychee.typing.Incognito.toggle(this);
-            android.widget.Toast.makeText(this, on ? R.string.lychee_incognito_on
-                    : R.string.lychee_incognito_off, android.widget.Toast.LENGTH_SHORT).show();
-            if (mSuggestionStripView != null) mSuggestionStripView.getLycheeToolbar().refresh();
-            break;
-        }
         case HANDWRITING: {
             // the shortcut opens and closes it
             final View pad = mInputView == null ? null
@@ -2556,9 +2556,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // {@link InputMethodManager#shouldOfferSwitchingToNextInputMethod} is defined well.
         // LYCHEE: show the key whenever Lychee itself has more than one keyboard on; it
         // never switches to other input methods, so the system's opinion does not matter.
-        // LYCHEE: and never in a number, password, email or web address field (English only)
+        // LYCHEE: and never in a number, phone or date field (the number pad)
         return mSettings.getCurrent().isLanguageSwitchKeyEnabled()
-                && !app.lychee.typing.FieldKind.getRestricted();
+                && !app.lychee.typing.FieldKind.getLanguageLocked();
     }
 
     private void setNavigationBarVisibility(final boolean visible) {

@@ -10,7 +10,8 @@
     </style>
     <!-- LYCHEE: pop-ups over the keys grow in and shrink away (res/anim/lychee_pop_*) -->
     <style name="LycheePopupAnimation">
-        <item name="android:windowEnterAnimation">@anim/lychee_pop_in</item>
+        <!-- the card itself grows in (LycheeMotion.cardIn), as part of the keyboard -->
+        <item name="android:windowEnterAnimation">@null</item>
         <item name="android:windowExitAnimation">@anim/lychee_pop_out</item>
     </style>
 </resources>

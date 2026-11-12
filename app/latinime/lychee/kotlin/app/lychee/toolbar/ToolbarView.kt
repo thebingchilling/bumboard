@@ -65,9 +65,10 @@ class ToolbarView @JvmOverloads constructor(
                 rebuild()
                 // the bar's new contents fade in (a panel's Back and title, the menu's buttons)
                 if (app.lychee.layout.LycheePanels.animate(context)) {
+                    row.animate().cancel()
                     row.alpha = 0f
-                    row.translationX = resources.displayMetrics.density * -6
-                    row.animate().alpha(1f).translationX(0f).setDuration(180).start()
+                    row.animate().alpha(1f).setDuration(app.lychee.layout.LycheeMotion.IN)
+                        .setInterpolator(app.lychee.layout.LycheeMotion.enterEasing).start()
                 }
                 // the strip hides its suggestions and mic while a title shows here
                 (parent as? com.android.inputmethod.latin.suggestions.SuggestionStripView)?.lycheeRefresh()
@@ -92,10 +93,19 @@ class ToolbarView @JvmOverloads constructor(
             }
         }
 
-    /** Shows Back and [title] for an open panel; Back runs [back]. NORMAL mode ends it. */
-    fun showTitle(title: Int, back: () -> Unit) {
+    /** Whether the panel's title has a Back beside it (handwriting has its own Back key). */
+    var titleBack = true
+        private set
+
+    /**
+     * Shows Back and [title] for an open panel; Back runs [back]. NORMAL mode ends it.
+     * [withBack] false: the title alone (the panel has a Back key of its own).
+     */
+    @JvmOverloads
+    fun showTitle(title: Int, withBack: Boolean = true, back: () -> Unit) {
         this.title = title
         onBack = back
+        titleBack = withBack
         if (mode == Mode.TITLE) rebuild() else mode = Mode.TITLE
     }
 
@@ -126,14 +136,25 @@ class ToolbarView @JvmOverloads constructor(
         row.removeAllViews()
         if (mode == Mode.TITLE) {
             // the same raised round Back as every other panel's (voice, emoji search, resizing)
-            row.addView(app.lychee.layout.LycheePanels.backButton(context) { onBack() },
+            if (titleBack) row.addView(app.lychee.layout.LycheePanels.backButton(context) { onBack() },
                 LinearLayout.LayoutParams(slot(), LinearLayout.LayoutParams.MATCH_PARENT))
-            if (titleShown) row.addView(titleText(title), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+            if (titleShown) row.addView(titleText(title).apply { if (!titleBack) setPadding(dp(16), 0, 0, 0) },
+                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
             return
         }
         when (mode) {
             // the menu button: outlined while the menu is closed, filled while it is open
-            Mode.NORMAL -> row.addView(button(R.drawable.ic_sym_apps_outlined, R.string.lychee_sc_gallery) { onGallery() }.also { pop(it) })
+            // in incognito (password fields, private tabs) the incognito mark stands in for it,
+            // and still opens the menu
+            Mode.NORMAL -> {
+                val menu = if (app.lychee.typing.Incognito.active) {
+                    button(R.drawable.lychee_ic_incognito, R.string.lychee_incognito_badge, highlighted = true) { onGallery() }
+                } else {
+                    button(R.drawable.ic_sym_apps_outlined, R.string.lychee_sc_gallery) { onGallery() }
+                }
+                pop(menu)
+                row.addView(menu)
+            }
             Mode.GALLERY -> row.addView(button(R.drawable.ic_sym_apps_filled, R.string.lychee_gallery_close, highlighted = true) { onGallery() }.also { pop(it) })
             Mode.EDIT -> row.addView(button(R.drawable.ic_sym_check, R.string.lychee_resize_done, highlighted = true) { onEditToggle() })
             Mode.TITLE -> Unit
@@ -168,12 +189,6 @@ class ToolbarView @JvmOverloads constructor(
             })
             return
         }
-        // incognito shows beside the menu button while it is on (a tap turns off the hand-made one)
-        if (mode == Mode.NORMAL && app.lychee.typing.Incognito.active) {
-            row.addView(button(R.drawable.ic_sym_visibility_off, R.string.lychee_incognito_badge, highlighted = true) {
-                if (app.lychee.typing.Incognito.manualOn) lycheeHost()?.lycheeRunShortcut(Shortcut.INCOGNITO)
-            }, shortcutParams())
-        }
         shortcuts.forEach { sc ->
             row.addView(button(sc.icon, sc.label) { lycheeHost()?.lycheeRunShortcut(sc) }, shortcutParams())
         }
@@ -184,10 +199,10 @@ class ToolbarView @JvmOverloads constructor(
 
     private fun pop(view: View) {
         if (lastMenuMode != null && lastMenuMode != mode) {
-            view.scaleX = 0.6f
-            view.scaleY = 0.6f
-            view.animate().scaleX(1f).scaleY(1f).setDuration(220)
-                .setInterpolator(android.view.animation.OvershootInterpolator(2.5f)).start()
+            view.scaleX = 0.8f
+            view.scaleY = 0.8f
+            view.animate().scaleX(1f).scaleY(1f).setDuration(app.lychee.layout.LycheeMotion.IN)
+                .setInterpolator(app.lychee.layout.LycheeMotion.enterEasing).start()
         }
         lastMenuMode = mode
     }

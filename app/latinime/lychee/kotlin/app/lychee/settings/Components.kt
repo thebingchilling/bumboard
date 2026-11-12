@@ -4,6 +4,7 @@ import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,8 +43,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * Rows inside a [Group]: a plain Material 3 list on the page itself (no grey blocks), the rows
- * set apart by thin dividers.
+ * Rows inside a [Group]: Material 3's segmented list, each row a card of its own with small
+ * inner corners and large outer ones, a hair apart, on the page's tinted background.
  */
 class GroupScope internal constructor(private val rows: MutableList<@Composable (Shape) -> Unit>) {
     fun row(content: @Composable (Shape) -> Unit) {
@@ -51,32 +52,52 @@ class GroupScope internal constructor(private val rows: MutableList<@Composable 
     }
 }
 
+/** The colour of a settings card: brighter than the page in light, lifted in dark. */
+@Composable
+fun cardColor(): androidx.compose.ui.graphics.Color =
+    if (androidx.compose.foundation.isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceContainerHigh
+    else MaterialTheme.colorScheme.surfaceContainerLowest
+
+/** The page behind the cards. */
+@Composable
+fun pageColor(): androidx.compose.ui.graphics.Color =
+    if (androidx.compose.foundation.isSystemInDarkTheme()) MaterialTheme.colorScheme.surface
+    else MaterialTheme.colorScheme.surfaceContainer
+
+/** A row's corners in a group of [count]: large on the group's outer edges, small between rows. */
+fun segmentShape(index: Int, count: Int): Shape {
+    val outer = 24.dp
+    val inner = 6.dp
+    return RoundedCornerShape(
+        topStart = if (index == 0) outer else inner, topEnd = if (index == 0) outer else inner,
+        bottomStart = if (index == count - 1) outer else inner, bottomEnd = if (index == count - 1) outer else inner,
+    )
+}
+
 @Composable
 fun Group(title: String? = null, build: GroupScope.() -> Unit) {
     val rows = mutableListOf<@Composable (Shape) -> Unit>()
     GroupScope(rows).build()
+    if (rows.isEmpty()) return
     Column(
         Modifier
+            .padding(horizontal = 16.dp)
             .padding(top = if (title != null) 20.dp else 8.dp, bottom = 4.dp)
             .animateContentSize(),
     ) {
         if (title != null) {
             Text(
                 title,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 4.dp),
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             )
         }
-        rows.forEachIndexed { i, row ->
-            if (i > 0) {
-                HorizontalDivider(
-                    Modifier.padding(horizontal = 24.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                )
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            rows.forEachIndexed { i, row ->
+                val shape = segmentShape(i, rows.size)
+                Surface(shape = shape, color = cardColor(), modifier = Modifier.fillMaxWidth()) { row(shape) }
             }
-            row(RectangleShape)
         }
     }
 }
@@ -97,7 +118,7 @@ fun RaisedCard(
         shape = shape,
         color = color,
         contentColor = contentColor,
-        shadowElevation = 3.dp,
+        shadowElevation = 0.dp,
         tonalElevation = 0.dp,
         modifier = modifier
             .fillMaxWidth()
@@ -132,7 +153,7 @@ fun CompactRow(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 64.dp)
-            .padding(start = 24.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (leading != null || icon != null) {
@@ -255,8 +276,9 @@ class Submenu(
 val LocalSubmenu = androidx.compose.runtime.staticCompositionLocalOf<(Submenu) -> Unit> { {} }
 
 /**
- * A setting with a few choices, listed right in the menu: its title (and what it does), then
- * each choice as a radio row under it; tapping one picks it. No dropdowns, no submenus.
+ * A setting with a few choices. Two or three short ones are Material 3 segmented buttons right
+ * in the row; more (or longer) ones show the current choice under the title, and a tap opens a
+ * dialog listing them, like the phone's own settings.
  */
 @Composable
 fun <T> ChoiceRow(
@@ -265,37 +287,83 @@ fun <T> ChoiceRow(
     @DrawableRes icons: List<Int>? = null,
     onSelect: (T) -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth()) {
+    val segmented = icons == null && options.size in 2..3 && options.all { it.second.length <= 12 }
+    if (segmented) {
         Column(
-            Modifier.padding(start = 24.dp, end = 20.dp, top = 14.dp, bottom = 4.dp),
+            Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
             if (summary != null) {
                 Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-        }
-        options.forEachIndexed { i, (value, label) ->
-            val chosen = value == selected
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelect(value) }
-                    .heightIn(min = 48.dp)
-                    .padding(start = 12.dp, end = 20.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                androidx.compose.material3.RadioButton(selected = chosen, onClick = { onSelect(value) })
-                icons?.getOrNull(i)?.let { res ->
-                    Icon(painterResource(res), contentDescription = null, modifier = Modifier.padding(end = 10.dp).size(20.dp))
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                options.forEachIndexed { i, (value, label) ->
+                    androidx.compose.material3.SegmentedButton(
+                        selected = value == selected,
+                        onClick = { onSelect(value) },
+                        shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, options.size),
+                        label = { Text(label, maxLines = 1, softWrap = false) },
+                    )
                 }
-                Text(
-                    label, style = MaterialTheme.typography.bodyLarge,
-                    color = if (chosen) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                )
             }
         }
-        Spacer(Modifier.height(6.dp))
+        return
+    }
+    var open by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    val current = options.indexOfFirst { it.first == selected }
+    RowSurface(shape, { open = true }) {
+        CompactRow(
+            icons?.getOrNull(current), title, options.getOrNull(current)?.second ?: summary,
+            summaryColor = MaterialTheme.colorScheme.primary,
+        )
+    }
+    if (open) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text(title) },
+            text = {
+                Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                    if (summary != null) {
+                        Text(
+                            summary, style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 12.dp),
+                        )
+                    }
+                    options.forEachIndexed { i, (value, label) ->
+                        val chosen = value == selected
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    onSelect(value)
+                                    open = false
+                                }
+                                .heightIn(min = 52.dp)
+                                .padding(end = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            androidx.compose.material3.RadioButton(selected = chosen, onClick = null,
+                                modifier = Modifier.padding(horizontal = 12.dp))
+                            icons?.getOrNull(i)?.let { res ->
+                                Icon(painterResource(res), contentDescription = null, modifier = Modifier.padding(end = 12.dp).size(20.dp))
+                            }
+                            Text(label, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { open = false }) {
+                    Text(androidx.compose.ui.res.stringResource(android.R.string.cancel))
+                }
+            },
+        )
     }
 }
 
@@ -344,7 +412,7 @@ fun SliderRow(
 ) {
     var current by remember(value) { mutableFloatStateOf(value.toFloat()) }
     RowSurface(shape, null) {
-        Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 6.dp)) {
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 Text(format(current.roundToInt()), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
@@ -363,7 +431,7 @@ fun SliderRow(
 @Composable
 fun TextRow(shape: Shape, title: String, body: String) {
     RowSurface(shape, null) {
-        Column(Modifier.padding(horizontal = 24.dp, vertical = 14.dp)) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(4.dp))
             Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

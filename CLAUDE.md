@@ -82,6 +82,13 @@ packs page). Public facing, so be careful:
   (`typing/Incognito`, automatic in password and no-learning fields) keeps nothing; anything
   that learns or stores what is typed must check `Incognito.active`.
 - The keyboard follows Gboard's look and behaviour unless the owner chose otherwise.
+- Incognito has no switch: it follows the field. While on, its mark replaces the shortcuts
+  menu button (a tap still opens the menu). Password, email and web address fields open in
+  English, but the language key still switches (`typing/FieldKind`); number fields don't.
+- Motion: one way of moving everywhere (`layout/LycheeMotion`): things cross-fade in place,
+  never slide in like a window; cards grow out of what was touched.
+- Pronunciation (Settings > Pronunciation): Mandarin Mainland or Taiwan (CC-CEDICT's
+  "Taiwan pr." readings, a zh-TW voice), English both, US or UK (`speech/Pronunciation`).
 
 ## Layout
 

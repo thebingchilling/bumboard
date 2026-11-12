@@ -27,8 +27,16 @@ class AnnotatorTest {
         mapOf(Lang.Mandarin to listOf("wo3"), Lang.Cantonese to listOf("ngo5")),
         listOf(Sense(Lang.Mandarin, "wo3", "I; me"))
     )
+    private val laji = Headword(
+        4, "垃圾", "垃圾", 300,
+        mapOf(Lang.Mandarin to listOf("la1 ji1"), Lang.Cantonese to listOf("laap6 saap3")),
+        listOf(
+            Sense(Lang.Mandarin, "la1 ji1", "trash; refuse; garbage"),
+            Sense(Lang.Mandarin, "la1 ji1", "Taiwan pr. [le4 se4]"),
+        )
+    )
     private val dict = Dictionary { form ->
-        listOf(hang, neihou, ngo).filter { it.traditional == form || it.simplified == form }
+        listOf(hang, neihou, ngo, laji).filter { it.traditional == form || it.simplified == form }
     }
     private val annotator = Annotator(dict)
 
@@ -94,5 +102,20 @@ class AnnotatorTest {
     fun measureWords() {
         val info = WordInfo(measureWords = "個|个[ge4],本[ben3]")
         assertEquals(listOf(Triple("個", "个", "ge4"), Triple("本", "本", "ben3")), info.measureWordList())
+    }
+
+    @Test
+    fun taiwanPronunciation() {
+        val mainland = annotator.annotate("垃圾", "la1 ji1", InputMode.Mandarin, DisplayPrefs())
+        assertEquals("la1 ji1", mainland.resolved?.reading)
+        val taiwan = annotator.annotate("垃圾", "la1 ji1", InputMode.Mandarin, DisplayPrefs(mandarinTaiwan = true))
+        assertEquals("le4 se4", taiwan.resolved?.reading)
+        // pinyin under a Cantonese candidate follows it too
+        val other = annotator.annotate("垃圾", "laap6 saap3", InputMode.Cantonese,
+            DisplayPrefs(showOtherLanguage = true, mandarinTaiwan = true))
+        assertEquals("le4 se4", other.resolved?.otherReading)
+        // a word with no Taiwan reading keeps its own
+        val ni = annotator.annotate("你好", "ni3 hao3", InputMode.Mandarin, DisplayPrefs(mandarinTaiwan = true))
+        assertEquals("ni3 hao3", ni.resolved?.reading)
     }
 }

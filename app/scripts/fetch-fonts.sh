@@ -74,3 +74,7 @@ if [ ! -f "$OUT/LycheeSymbols0.ttf" ]; then
         "$TMP2/fonts/ofl/notosanssymbols2/NotoSansSymbols2-Regular.ttf"
     rm -rf "$TMP2"
 fi
+
+# the emoji the text fonts have (✋ ⭐ ✅ ☝ ...) are drawn by the emoji font, not flat by them
+python3 "$ROOT/scripts/strip-emoji.py" "$OUT"/GoogleSansFlex.ttf "$OUT"/NotoSans.ttf \
+    "$OUT"/LXGWWenKai-Regular.ttf "$OUT"/LXGWWenKaiKeys.ttf "$OUT"/LycheeSymbols*.ttf

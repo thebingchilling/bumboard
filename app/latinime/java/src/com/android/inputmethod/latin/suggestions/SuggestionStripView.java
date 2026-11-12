@@ -286,6 +286,7 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
      */
     public int getLycheeStartWidth() {
         return mLycheeToolbar.getMode() == app.lychee.toolbar.ToolbarView.Mode.TITLE
+                && mLycheeToolbar.getTitleBack()
                 ? (int) (getResources().getDisplayMetrics().density * 48) : 0;
     }
 
