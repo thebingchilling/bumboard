@@ -760,6 +760,13 @@ private fun PreferencesPage() {
     val numberRow = prefs.boolPref(LycheeLayout.PREF_NUMBER_ROW) { prefs.getBoolean(LycheeLayout.PREF_NUMBER_ROW, true) }
     val commaKey = prefs.stringPref(LycheeLayout.PREF_COMMA_KEY) { prefs.getString(LycheeLayout.PREF_COMMA_KEY, null) ?: "combined" }
     val hasVibrator = AudioAndHapticFeedbackManager.getInstance().hasVibrator()
+    val context = LocalContext.current
+    val clipboard = prefs.boolPref(app.lychee.clipboard.ClipboardStore.PREF_ENABLED) {
+        prefs.getBoolean(app.lychee.clipboard.ClipboardStore.PREF_ENABLED, false)
+    }
+    val incognito = prefs.boolPref(app.lychee.typing.Incognito.PREF) {
+        prefs.getBoolean(app.lychee.typing.Incognito.PREF, false)
+    }
 
     Group(stringResource(R.string.lychee_group_typing)) {
         row {
@@ -769,6 +776,22 @@ private fun PreferencesPage() {
             SwitchRow(
                 it, stringResource(R.string.use_double_space_period),
                 stringResource(R.string.use_double_space_period_summary), doubleSpace.value, doubleSpace::set,
+            )
+        }
+        // off unless turned on; turning it off forgets what was kept
+        row {
+            SwitchRow(
+                it, stringResource(R.string.lychee_pref_clipboard), stringResource(R.string.lychee_pref_clipboard_summary),
+                clipboard.value,
+            ) { on ->
+                clipboard.set(on)
+                if (!on) app.lychee.clipboard.ClipboardStore.setEnabled(context, false)
+            }
+        }
+        row {
+            SwitchRow(
+                it, stringResource(R.string.lychee_pref_incognito), stringResource(R.string.lychee_pref_incognito_summary),
+                incognito.value, incognito::set,
             )
         }
     }

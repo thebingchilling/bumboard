@@ -76,7 +76,11 @@ packs page). Public facing, so be careful:
   ONNX Runtime), in the APK (`app/scripts/fetch-ocr.sh`), opened only while the pad is open.
 - A learning app: Japanese and Korean are typed in romanisation on QWERTY (no native kana or
   Hangul layouts). Candidates show readings and meanings.
-- Freemium later; no billing or unlocking yet (`Features.isEnabled` is always true).
+- Freemium later; no billing or unlocking yet (`Features.isEnabled` is always true). Data in
+  packs must allow commercial use (no NC or ND licences; CC BY / BY-SA / BSD are fine).
+- Privacy: the clipboard panel is off until turned on (`clipboard/ClipboardStore`); incognito
+  (`typing/Incognito`, automatic in password and no-learning fields) keeps nothing; anything
+  that learns or stores what is typed must check `Incognito.active`.
 - The keyboard follows Gboard's look and behaviour unless the owner chose otherwise.
 
 ## Layout

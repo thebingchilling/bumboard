@@ -48,6 +48,8 @@ OEWN = "https://github.com/globalwordnet/english-wordnet/releases/download/2025-
 # because, don't ...); streamed, never cached (it is half a gigabyte)
 KAIKKI_EN = "https://kaikki.org/dictionary/English/kaikki.org-dictionary-English.jsonl.gz"
 EN_WORDS = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/en/en_50k.txt"
+# CMU Pronouncing Dictionary (BSD-2-Clause): US pronunciations for words the others lack
+CMUDICT = "https://raw.githubusercontent.com/cmusphinx/cmudict/master/cmudict.dict"
 KANJIVG = "https://github.com/KanjiVG/kanjivg/releases/download/r20260714/kanjivg-20260714-main.zip"
 PACK_VERSION = "1"
 
@@ -268,6 +270,14 @@ def build_en(out: Path, cache: Path, work: Path):
                 rows.append((form.lower(), lemma, ipa, None, pos, gloss, rank))
                 covered.setdefault(form.lower(), set())
     rows += wiktionary_en(order, covered, sounds)
+    # a pronunciation for every word that has none, from the CMU dictionary (US)
+    cmu = cmu_ipa(cache)
+    filled = 0
+    for i, row in enumerate(rows):
+        if not row[2] and row[1].lower() in cmu:
+            rows[i] = (row[0], row[1], f"/{cmu[row[1].lower()]}/", *row[3:])
+            filled += 1
+    print(f"en.db: {filled} pronunciations from CMUdict", file=sys.stderr)
     db.executemany("INSERT INTO word VALUES(?,?,?,?,?,?,?)", rows)
     db.execute("CREATE INDEX word_form ON word(form)")
     finish(db)
@@ -279,8 +289,59 @@ def build_en(out: Path, cache: Path, work: Path):
                        "(https://en.wiktionary.org), extracted by kaikki.org (Tatu Ylonen, Wiktextract), "
                        "CC BY-SA 4.0 and GFDL.\n"
                        "Word order from FrequencyWords (Hermit Dave, OpenSubtitles 2018), CC BY-SA 4.0.\n"
+                       "Pronunciations the others lack from the CMU Pronouncing Dictionary "
+                       "(https://github.com/cmusphinx/cmudict), BSD 2-Clause licence, "
+                       "converted from ARPAbet to IPA.\n"
                        "Changes: single words only, up to eight senses each, converted to SQLite.\n",
     })
+
+
+# ARPAbet to IPA (US); vowels as stressed and unstressed
+ARPA_VOWELS = {
+    "AA": ("ɑ", "ɑ"), "AE": ("æ", "æ"), "AH": ("ʌ", "ə"), "AO": ("ɔ", "ɔ"), "AW": ("aʊ", "aʊ"),
+    "AY": ("aɪ", "aɪ"), "EH": ("ɛ", "ɛ"), "ER": ("ɝ", "ɚ"), "EY": ("eɪ", "eɪ"), "IH": ("ɪ", "ɪ"),
+    "IY": ("i", "i"), "OW": ("oʊ", "oʊ"), "OY": ("ɔɪ", "ɔɪ"), "UH": ("ʊ", "ʊ"), "UW": ("u", "u"),
+}
+ARPA_CONSONANTS = {
+    "B": "b", "CH": "tʃ", "D": "d", "DH": "ð", "F": "f", "G": "ɡ", "HH": "h", "JH": "dʒ", "K": "k",
+    "L": "l", "M": "m", "N": "n", "NG": "ŋ", "P": "p", "R": "ɹ", "S": "s", "SH": "ʃ", "T": "t",
+    "TH": "θ", "V": "v", "W": "w", "Y": "j", "Z": "z", "ZH": "ʒ",
+}
+
+
+def arpabet_ipa(phones: list[str]) -> str | None:
+    """CMUdict's phones in IPA, the main stress marked (ˈ) before its syllable's onset."""
+    out: list[str] = []
+    vowels = sum(1 for p in phones if p[:2] in ARPA_VOWELS)
+    for p in phones:
+        base, stress = p.rstrip("012"), p[len(p.rstrip("012")):]
+        if base in ARPA_VOWELS:
+            ipa = ARPA_VOWELS[base][0 if stress in ("1", "2") else 1]
+            if stress == "1" and vowels > 1:
+                # the stress mark before the consonant that starts the syllable, if any
+                at = len(out)
+                if out and out[-1] in ARPA_CONSONANTS.values():
+                    at -= 1
+                out.insert(at, "ˈ")
+            out.append(ipa)
+        elif base in ARPA_CONSONANTS:
+            out.append(ARPA_CONSONANTS[base])
+        else:
+            return None
+    return "".join(out) or None
+
+
+def cmu_ipa(cache: Path) -> dict[str, str]:
+    """Each word's first CMUdict pronunciation, in IPA."""
+    out: dict[str, str] = {}
+    for line in fetch(CMUDICT, cache, "cmudict.dict").read_text(encoding="utf-8", errors="replace").splitlines():
+        parts = line.split("#")[0].split()
+        if len(parts) < 2 or "(" in parts[0]:
+            continue
+        ipa = arpabet_ipa(parts[1:])
+        if ipa:
+            out.setdefault(parts[0].lower(), ipa)
+    return out
 
 
 WIKT_POS = {

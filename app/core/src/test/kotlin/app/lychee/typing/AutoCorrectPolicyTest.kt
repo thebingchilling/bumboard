@@ -36,6 +36,31 @@ class AutoCorrectPolicyTest {
     }
 
     @Test
+    fun slipsOntoNeighbouringKeysAreCorrected() {
+        // typos from a real message, which used to be left alone
+        assertEquals(Decision.CORRECT, AutoCorrectPolicy.decide("doesnr", "doesn't"))
+        assertEquals(Decision.CORRECT, AutoCorrectPolicy.decide("fratures", "features"))
+        assertEquals(Decision.DEFAULT, AutoCorrectPolicy.decide("habr", "have"))
+        assertEquals(Decision.DEFAULT, AutoCorrectPolicy.decide("autoecocrect", "autocorrect"))
+    }
+
+    @Test
+    fun missingApostrophesAreCorrected() {
+        assertEquals(Decision.CORRECT, AutoCorrectPolicy.decide("dont", "don't"))
+        assertEquals(Decision.CORRECT, AutoCorrectPolicy.decide("theyre", "they're"))
+    }
+
+    @Test
+    fun keyDistance() {
+        assertTrue(AutoCorrectPolicy.neighbours('r', 't'))
+        assertTrue(AutoCorrectPolicy.neighbours('e', 's'))
+        assertTrue(AutoCorrectPolicy.neighbours('b', 'v'))
+        assertFalse(AutoCorrectPolicy.neighbours('a', 'p'))
+        assertEquals(0.5f, AutoCorrectPolicy.keyDistance("doesnr", "doesn't"), 0.001f)
+        assertEquals(0f, AutoCorrectPolicy.keyDistance("dont", "don't"), 0.001f)
+    }
+
+    @Test
     fun shapes() {
         assertTrue(AutoCorrectPolicy.wordLike("strengths"))
         assertFalse(AutoCorrectPolicy.wordLike("xkcdq"))

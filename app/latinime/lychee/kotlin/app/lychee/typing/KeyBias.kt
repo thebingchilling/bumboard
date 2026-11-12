@@ -119,6 +119,8 @@ object KeyBias {
     }
 
     private fun remember(code: Int, x: Int, y: Int) {
+        // incognito: the touches teach nothing
+        if (Incognito.active) return
         val kb = keyboard ?: return
         if (x < 0 || y < 0 || !kb.mId.isAlphabetKeyboard) return
         val key = kb.getKey(code) ?: return

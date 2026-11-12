@@ -623,6 +623,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         KeyboardSwitcher.init(this);
         super.onCreate();
         app.lychee.chinese.ChineseScript.init(this); // LYCHEE
+        app.lychee.typing.Incognito.init(this); // LYCHEE
+        app.lychee.clipboard.ClipboardStore.watch(this); // LYCHEE: only keeps copies once turned on
         // LYCHEE: the packs that come with Lychee, unpacked in the background the first time
         final android.content.Context lycheeApp = getApplicationContext();
         new Thread(() -> app.lychee.packs.BundledPacks.installAll(lycheeApp), "LycheeBundled").start();
@@ -714,7 +716,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
     public void onUpdateMainDictionaryAvailability(final boolean isMainDictionaryAvailable) {
         final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
         if (mainKeyboardView != null) {
-            mainKeyboardView.setMainDictionaryAvailability(isMainDictionaryAvailable);
+            // LYCHEE: the Rime keyboards glide with their own word lists (app.lychee.glide)
+            mainKeyboardView.setMainDictionaryAvailability(isMainDictionaryAvailable
+                    || lycheeEngine() != null);
         }
         if (mHandler.hasPendingWaitForDictionaryLoad()) {
             mHandler.cancelWaitForDictionaryLoad();
@@ -1051,6 +1055,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         super.onStartInput(editorInfo, restarting);
         // LYCHEE: number, password, email and web address fields get a plain English keyboard
         app.lychee.typing.FieldKind.update(editorInfo);
+        // LYCHEE: incognito by itself in password fields and apps that ask for no learning
+        app.lychee.typing.Incognito.update(editorInfo);
 
         // If the primary hint language does not match the current subtype language, then try
         // to switch to the primary hint language.
@@ -1074,6 +1080,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         if (!restarting) mLycheeChinese.reset();
         // LYCHEE: number, password, email and web address fields: plain English, no engine
         app.lychee.typing.FieldKind.update(editorInfo);
+        app.lychee.typing.Incognito.update(editorInfo);
         mLycheeChinese.onSubtypeChanged(app.lychee.typing.FieldKind.getRestricted()
                 ? null : mRichImm.getCurrentSubtype().getRawSubtype());
         mLycheeChinese.onSettingsChanged();
@@ -1243,20 +1250,24 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         mHandler.cancelUpdateSuggestionStrip();
 
         mainKeyboardView.setMainDictionaryAvailability(
-                mDictionaryFacilitator.hasAtLeastOneInitializedMainDictionary());
+                mDictionaryFacilitator.hasAtLeastOneInitializedMainDictionary()
+                        || lycheeEngine() != null); // LYCHEE: their own glide word lists
         mainKeyboardView.setKeyPreviewPopupEnabled(currentSettingsValues.mKeyPreviewPopupOn,
                 currentSettingsValues.mKeyPreviewPopupDismissDelay);
         mainKeyboardView.setSlidingKeyInputPreviewEnabled(
                 currentSettingsValues.mSlidingKeyInputPreviewEnabled);
-        // LYCHEE: glide typing on the keyboards with a word list (not Chinese or Korean),
-        // decoded by app.lychee.glide; its word list loads in the background.
+        // LYCHEE: glide typing on every keyboard, decoded by app.lychee.glide; its word list
+        // loads in the background (English words, or the Rime keyboards' words spelled in
+        // letters: Jyutping, pinyin, romaji, romanised Korean)
+        final String lycheeGlideEngine = lycheeEngine();
         final boolean lycheeGlide = currentSettingsValues.mGestureInputEnabled
-                && app.lychee.Features.isEnabled(app.lychee.Feature.GLIDE_TYPING)
-                && mRichImm.getCurrentSubtype().getRawSubtype().getExtraValueOf("LycheeEngine") == null;
+                && app.lychee.Features.isEnabled(app.lychee.Feature.GLIDE_TYPING);
         // LYCHEE: the keys' model of likely letters for this keyboard's language
         app.lychee.typing.KeyBias.prepare(this, lycheeEngine(), mRichImm.getCurrentSubtypeLocale());
         app.lychee.typing.KeyBias.reset();
-        if (lycheeGlide) {
+        if (lycheeGlide && lycheeGlideEngine != null) {
+            app.lychee.glide.GlideTyping.prepareEngine(this, lycheeGlideEngine);
+        } else if (lycheeGlide) {
             app.lychee.glide.GlideTyping.prepare(this, mRichImm.getCurrentSubtypeLocale());
         }
         mainKeyboardView.setGestureHandlingEnabledByUser(
@@ -1854,8 +1865,17 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         mKeyboardSwitcher.onEvent(event, getCurrentAutoCapsState(), getCurrentRecapitalizeState());
     }
 
+    /**
+     * LYCHEE: a glide on a Rime keyboard: the letters of the best word it spells go to Rime
+     * like typed keys (Rime then shows the characters), rather than into the text.
+     */
+    private boolean lycheeRimeGlide() {
+        return lycheeEngine() != null;
+    }
+
     @Override
     public void onStartBatchInput() {
+        if (lycheeRimeGlide()) return;
         mInputLogic.onStartBatchInput(mSettings.getCurrent(), mKeyboardSwitcher, mHandler);
         mGestureConsumer.onGestureStarted(
                 mRichImm.getCurrentSubtypeLocale(),
@@ -1864,17 +1884,32 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
     @Override
     public void onUpdateBatchInput(final InputPointers batchPointers) {
+        if (lycheeRimeGlide()) return;
         mInputLogic.onUpdateBatchInput(batchPointers);
     }
 
     @Override
     public void onEndBatchInput(final InputPointers batchPointers) {
+        if (lycheeRimeGlide()) {
+            final com.android.inputmethod.keyboard.Keyboard keyboard = mKeyboardSwitcher.getKeyboard();
+            if (keyboard == null) return;
+            final java.util.List<app.lychee.glide.GlideMatch> matches =
+                    app.lychee.glide.GlideTyping.decode(batchPointers, keyboard);
+            if (matches.isEmpty()) return;
+            final String letters = matches.get(0).getWord();
+            for (int i = 0; i < letters.length(); i++) {
+                // as typed keys, without a key sound or buzz for each letter
+                onCodeInput(letters.charAt(i), Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false);
+            }
+            return;
+        }
         mInputLogic.onEndBatchInput(batchPointers);
         mGestureConsumer.onGestureCompleted(batchPointers);
     }
 
     @Override
     public void onCancelBatchInput() {
+        if (lycheeRimeGlide()) return;
         mInputLogic.onCancelBatchInput(mHandler);
         mGestureConsumer.onGestureCanceled();
     }
@@ -2284,6 +2319,17 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         case SETTINGS:
             launchSettings(null);
             break;
+        case CLIPBOARD:
+            showLycheePanel(R.id.lychee_clipboard_panel);
+            break;
+        case INCOGNITO: {
+            // on until turned off again; the bar shows it while on
+            final boolean on = app.lychee.typing.Incognito.toggle(this);
+            android.widget.Toast.makeText(this, on ? R.string.lychee_incognito_on
+                    : R.string.lychee_incognito_off, android.widget.Toast.LENGTH_SHORT).show();
+            if (mSuggestionStripView != null) mSuggestionStripView.getLycheeToolbar().refresh();
+            break;
+        }
         case HANDWRITING: {
             // the shortcut opens and closes it
             final View pad = mInputView == null ? null
@@ -2385,6 +2431,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             ((app.lychee.toolbar.TextEditPanelView) panel).show();
         } else if (panel instanceof app.lychee.handwriting.HandwritingPanelView) {
             ((app.lychee.handwriting.HandwritingPanelView) panel).show();
+        } else if (panel instanceof app.lychee.clipboard.ClipboardPanelView) {
+            ((app.lychee.clipboard.ClipboardPanelView) panel).show();
         } else {
             panel.setVisibility(View.VISIBLE);
         }

@@ -36,16 +36,73 @@ object AutoCorrectPolicy {
         if (word.isEmpty() || word == target) return Decision.DEFAULT
         if (word in INFORMAL) return Decision.KEEP
         if (word.length < 3 || !word.all { it.isLetter() || it == '\'' }) return Decision.DEFAULT
+        // only the apostrophe missing (dont, doesnt, theyre): corrected
+        if (word.replace("'", "") == target.replace("'", "") && target.contains('\'')) return Decision.CORRECT
         // the same letters in another order: a jumble, corrected
         if (word.toCharArray().sorted() == target.toCharArray().sorted()) return Decision.CORRECT
         // nothing like a word: corrected
         if (!wordLike(word)) return Decision.CORRECT
-        // a word-like word more than one slip from the suggestion: kept as typed
-        if (distance(word, target) >= 2) return Decision.KEEP
+        // how far apart, counting a slip onto a neighbouring key as half a mistake and
+        // apostrophes as nothing ("doesnr" is one slip from "doesn't", "fratures" from "features")
+        val far = keyDistance(word, target)
+        // one slip onto a neighbouring key in a longer word: corrected
+        if (word.length >= 4 && far <= 0.5f) return Decision.CORRECT
+        // a word-like word further from the suggestion than its length allows: kept as typed
+        // (a longer word may have more slips: "autoecocrect" is still autocorrect)
+        if (far >= allowance(word.length)) return Decision.KEEP
         return Decision.DEFAULT
     }
 
     private const val VOWELS = "aeiouy"
+
+    /** How many mistakes (neighbouring slips at half) a word of [length] letters may have. */
+    fun allowance(length: Int): Float = when {
+        length <= 5 -> 1.5f
+        length <= 9 -> 2f
+        else -> 3f
+    }
+
+    /** QWERTY's rows, each shifted right of the one above (in key widths). */
+    private val ROWS = listOf("qwertyuiop" to 0f, "asdfghjkl" to 0.5f, "zxcvbnm" to 1f)
+    private val POSITION: Map<Char, Pair<Float, Int>> = buildMap {
+        ROWS.forEachIndexed { row, (keys, shift) -> keys.forEachIndexed { i, c -> put(c, i + shift to row) } }
+    }
+
+    /** Whether [a] and [b] are next to each other on the keys. */
+    fun neighbours(a: Char, b: Char): Boolean {
+        val (ax, ar) = POSITION[a] ?: return false
+        val (bx, br) = POSITION[b] ?: return false
+        val dx = kotlin.math.abs(ax - bx)
+        return when (kotlin.math.abs(ar - br)) {
+            0 -> dx <= 1.01f
+            1 -> dx <= 0.76f
+            else -> false
+        }
+    }
+
+    /**
+     * Edit distance where a letter typed on a neighbouring key costs half, a swap of two
+     * neighbouring letters one, and apostrophes nothing.
+     */
+    fun keyDistance(typed: String, word: String): Float {
+        val a = typed.lowercase().replace("'", "")
+        val b = word.lowercase().replace("'", "")
+        val d = Array(a.length + 1) { FloatArray(b.length + 1) }
+        for (i in 0..a.length) d[i][0] = i.toFloat()
+        for (j in 0..b.length) d[0][j] = j.toFloat()
+        for (i in 1..a.length) for (j in 1..b.length) {
+            val cost = when {
+                a[i - 1] == b[j - 1] -> 0f
+                neighbours(a[i - 1], b[j - 1]) -> 0.5f
+                else -> 1f
+            }
+            d[i][j] = minOf(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost)
+            if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1]) {
+                d[i][j] = minOf(d[i][j], d[i - 2][j - 2] + 1)
+            }
+        }
+        return d[a.length][b.length]
+    }
 
     /** Whether [word] has the shape of an English word: a vowel, and no long runs of consonants
      *  or vowels or of one letter. */

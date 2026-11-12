@@ -23,7 +23,7 @@ object HandwritingSamples {
 
     @Synchronized
     fun save(context: Context, strokes: List<FloatArray>, typed: String?, guesses: List<String>, engine: String?) {
-        if (!enabled(context) || strokes.isEmpty()) return
+        if (!enabled(context) || strokes.isEmpty() || app.lychee.typing.Incognito.active) return
         runCatching {
             val ink = JSONArray()
             strokes.forEach { s -> ink.put(JSONArray().also { a -> s.forEach { a.put(Math.round(it).toInt()) } }) }

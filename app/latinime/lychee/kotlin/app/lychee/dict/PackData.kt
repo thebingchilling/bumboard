@@ -121,6 +121,36 @@ object PackData {
         }.getOrNull()
     }
 
+    /**
+     * The Japanese or Korean dictionary's words for glide typing, commonest first: Japanese
+     * readings (kana), Korean words (Hangul), each with its rank (0 the commonest).
+     */
+    fun glideWords(context: Context, engine: String, limit: Int): List<Pair<String, Int>> {
+        val db = wordDb(context, engine) ?: return emptyList()
+        val column = if (engine == "ja") "reading" else "form"
+        return runCatching {
+            db.rawQuery(
+                "SELECT $column, MIN(rank) AS k FROM word WHERE $column IS NOT NULL AND $column != '' " +
+                    "GROUP BY $column ORDER BY k LIMIT $limit", null,
+            ).use { c -> buildList { while (c.moveToNext()) add(c.getString(0) to c.getInt(1)) } }
+        }.getOrDefault(emptyList())
+    }
+
+    /** A kanji's KANJIDIC2 entry (in the Japanese pack): readings, meanings, grade, strokes. */
+    data class KanjiInfo(val onyomi: String, val kunyomi: String, val meanings: String, val grade: Int?, val strokes: Int?)
+
+    fun kanji(context: Context, ch: String): KanjiInfo? {
+        val db = wordDb(context, "ja") ?: return null
+        return runCatching {
+            db.rawQuery("SELECT onyomi, kunyomi, meanings, grade, strokes FROM kanji WHERE ch = ?", arrayOf(ch)).use { c ->
+                if (!c.moveToFirst()) null else KanjiInfo(
+                    c.getString(0).orEmpty(), c.getString(1).orEmpty(), c.getString(2).orEmpty(),
+                    if (c.isNull(3)) null else c.getInt(3), if (c.isNull(4)) null else c.getInt(4),
+                )
+            }
+        }.getOrNull() // an older pack has no kanji table
+    }
+
     /** Entries for [text] typed on the [engine] keyboard, the word itself before forms of others. */
     fun words(context: Context, engine: String?, text: String, limit: Int = 4): List<WordEntry> {
         val db = wordDb(context, engine) ?: return emptyList()

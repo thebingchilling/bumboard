@@ -16,6 +16,8 @@ enum class Shortcut(val id: String, @DrawableRes val icon: Int, @StringRes val l
     REDO("redo", R.drawable.ic_sym_redo, R.string.lychee_sc_redo),
     HANDWRITING("handwriting", R.drawable.ic_sym_edit, R.string.lychee_sc_handwriting),
     UNICODE("unicode", R.drawable.ic_sym_unicode, R.string.lychee_sc_unicode),
+    CLIPBOARD("clipboard", R.drawable.ic_sym_content_paste, R.string.lychee_sc_clipboard),
+    INCOGNITO("incognito", R.drawable.ic_sym_visibility_off, R.string.lychee_sc_incognito),
     SETTINGS("settings", R.drawable.ic_sym_settings, R.string.lychee_sc_settings);
 
     companion object {

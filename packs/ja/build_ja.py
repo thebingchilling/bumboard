@@ -35,6 +35,8 @@ HERE = Path(__file__).resolve().parent
 RIME = HERE.parent.parent / "app" / "data" / "rime"
 MOZC = "https://raw.githubusercontent.com/google/mozc/master/src/data/dictionary_oss/dictionary{:02d}.txt"
 JMDICT = "http://ftp.edrdg.org/pub/Nihongo/JMdict_e.gz"
+# KANJIDIC2 (EDRDG, CC BY-SA 4.0): each kanji's readings, meanings, school grade, strokes
+KANJIDIC = "http://ftp.edrdg.org/pub/Nihongo/kanjidic2.xml.gz"
 PACK_VERSION = "2"
 
 # hiragana -> Hepburn romaji
@@ -188,10 +190,41 @@ def build_meanings(cache: Path, path: Path, english: list | None = None) -> int:
                 rows.append((form, lemma, kana[0], None, pos, gloss, r))
     db.executemany("INSERT INTO word VALUES(?,?,?,?,?,?,?)", rows)
     db.execute("CREATE INDEX word_form ON word(form)")
+    add_kanji(cache, db)
     db.commit()
     db.execute("VACUUM")
     db.close()
     return len(rows)
+
+
+def add_kanji(cache: Path, db: sqlite3.Connection):
+    """KANJIDIC2 into ja.db's kanji table, kept short for the card: up to four on and kun
+    readings, three meanings, the school grade (1-6, 8 for the rest of the jōyō kanji) and the
+    stroke count."""
+    src = cache / "kanjidic2.xml.gz"
+    if not src.exists():
+        urllib.request.urlretrieve(KANJIDIC, src)
+    db.execute("CREATE TABLE kanji(ch TEXT PRIMARY KEY, onyomi TEXT, kunyomi TEXT, meanings TEXT, "
+               "grade INTEGER, strokes INTEGER) WITHOUT ROWID")
+    rows = []
+    with gzip.open(src) as f:
+        for _, e in ET.iterparse(f, events=("end",)):
+            if e.tag != "character":
+                continue
+            ch = e.findtext("literal")
+            on = [r.text for r in e.iter("reading") if r.get("r_type") == "ja_on" and r.text][:4]
+            kun = [r.text for r in e.iter("reading") if r.get("r_type") == "ja_kun" and r.text][:4]
+            # English meanings only (the others carry m_lang)
+            meanings = [m.text for m in e.iter("meaning") if m.get("m_lang") is None and m.text][:3]
+            grade = e.findtext("misc/grade")
+            strokes = e.findtext("misc/stroke_count")
+            e.clear()
+            if ch and (on or kun or meanings):
+                rows.append((ch, "、".join(on), "、".join(kun), "; ".join(meanings),
+                             int(grade) if grade and grade.isdigit() else None,
+                             int(strokes) if strokes and strokes.isdigit() else None))
+    db.executemany("INSERT OR IGNORE INTO kanji VALUES(?,?,?,?,?,?)", rows)
+    print(f"ja.db: {len(rows)} kanji from KANJIDIC2", file=sys.stderr)
 
 
 def short_pos(p: str) -> str:
@@ -314,7 +347,10 @@ def main():
                    "the Electronic Dictionary Research and Development Group "
                    "(https://www.edrdg.org/edrdg/licence.html), used under CC BY-SA 4.0; this file "
                    "is shared under the same licence. Changes: reduced to the first glosses of each "
-                   "sense and converted to SQLite.\n")
+                   "sense and converted to SQLite.\n"
+                   "Kanji readings, meanings, grades and stroke counts (the kanji table) from "
+                   "KANJIDIC2, also the property of the EDRDG, used under CC BY-SA 4.0. Changes: "
+                   "up to four readings and three meanings each, converted to SQLite.\n")
     print(f"{pack}: {len(lines)} entries, {pack.stat().st_size >> 20} MB", file=sys.stderr)
 
 

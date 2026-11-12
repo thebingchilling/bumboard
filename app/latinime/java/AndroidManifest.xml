@@ -111,6 +111,21 @@
 
         <!-- Activities -->
         <!-- LYCHEE: asks for the microphone on the voice key's first use. -->
+        <!-- LYCHEE: "Look up in Lychee" in the menu for selected text (Copy, Paste, Share ...):
+             the word card, from the dictionaries on the phone. -->
+        <activity android:name="app.lychee.lookup.LookupActivity"
+             android:theme="@style/Theme.Lychee.Translucent"
+             android:label="@string/lychee_lookup"
+             android:icon="@mipmap/ic_launcher"
+             android:excludeFromRecents="true"
+             android:taskAffinity=""
+             android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
+        </activity>
         <!-- LYCHEE: opening a downloaded pack (the browser's "Open", or sharing it) installs it;
              lychee://updates links from the packs page record and install pack updates. -->
         <activity android:name="app.lychee.packs.PackImportActivity"

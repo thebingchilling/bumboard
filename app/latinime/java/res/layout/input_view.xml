@@ -60,6 +60,12 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|start"
         android:visibility="gone" />
+    <app.lychee.clipboard.ClipboardPanelView
+        android:id="@+id/lychee_clipboard_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:visibility="gone" />
     <app.lychee.handwriting.HandwritingPanelView
         android:id="@+id/lychee_handwriting_panel"
         android:layout_width="match_parent"

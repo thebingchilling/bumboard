@@ -85,6 +85,8 @@
     <string name="lychee_card_parts">Parts</string>
     <string name="lychee_card_onyomi">On\'yomi</string>
     <string name="lychee_card_kunyomi">Kun\'yomi</string>
+    <string name="lychee_card_kanji_grade">School grade %d</string>
+    <string name="lychee_card_kanji_joyo">Jōyō kanji</string>
     <string name="lychee_card_korean">Korean</string>
     <string name="lychee_card_meanings">Meanings</string>
     <string name="lychee_pref_chinese_on_kanji">Chinese readings on Kanji and Hanja</string>

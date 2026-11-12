@@ -100,6 +100,8 @@ object CorrectionMemory {
     }
 
     private fun keep(word: String) {
+        // incognito: nothing kept for later
+        if (Incognito.active) return
         val key = word.lowercase()
         if (!kept.add(key)) return
         // the newest few hundred

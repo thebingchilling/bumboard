@@ -24,20 +24,86 @@ object GlideTyping {
     @Volatile
     private var locale: Locale? = null
 
+    /** What the loaded list is for: a locale (English ...) or a Rime engine ("yue" ...). */
+    @Volatile
+    private var engine: String? = null
+
     /** Reads the word list for [newLocale] if it is not already loaded (or loading). */
     @JvmStatic
     fun prepare(context: Context, newLocale: Locale?) {
-        if (newLocale == null || newLocale == locale) return
+        if (newLocale == null || (newLocale == locale && engine == null)) return
         locale = newLocale
+        engine = null
         decoder = null
         val app = context.applicationContext
         executor.execute {
-            if (locale != newLocale) return@execute
+            if (locale != newLocale || engine != null) return@execute
             val built = runCatching { build(app, newLocale) }
                 .onFailure { Log.w(TAG, "glide word list unavailable", it) }.getOrNull()
-            if (locale == newLocale) decoder = built
+            if (locale == newLocale && engine == null) decoder = built
         }
     }
+
+    /**
+     * The glide list for a Rime keyboard ([newEngine] "yue", "cmn", "ja", "ko"): its words as
+     * they are typed in letters (Jyutping, pinyin, romaji, romanised Korean), commonest first.
+     * The letters a glide spells go to Rime like typed keys, and Rime shows the characters.
+     */
+    @JvmStatic
+    fun prepareEngine(context: Context, newEngine: String) {
+        if (newEngine == engine) return
+        engine = newEngine
+        locale = null
+        decoder = null
+        val app = context.applicationContext
+        val build = {
+            if (engine == newEngine) {
+                val built = runCatching { buildRoman(app, newEngine) }
+                    .onFailure { Log.w(TAG, "glide word list for $newEngine unavailable", it) }.getOrNull()
+                if (engine == newEngine) decoder = built
+            }
+        }
+        if (newEngine == "yue" || newEngine == "cmn") {
+            // the readings dictionary opens first (it may already be open)
+            app.lychee.chinese.Readings.open(app) { executor.execute { build() } }
+        } else {
+            executor.execute { build() }
+        }
+    }
+
+    private fun buildRoman(context: Context, engine: String): GlideDecoder? {
+        val builder = GlideWords.Builder()
+        when (engine) {
+            "yue", "cmn" -> {
+                val list = app.lychee.chinese.Readings.db?.readingsByFrequency(engine, MAX_ROMAN).orEmpty()
+                val top = list.firstOrNull()?.second?.coerceAtLeast(1L) ?: 1L
+                for ((reading, freq) in list) {
+                    // "nei5 hou2" → neihou; pinyin's ü as Rime takes it (v)
+                    val letters = reading.lowercase().replace("u:", "v").replace('ü', 'v').filter { it in 'a'..'z' }
+                    if (letters.isEmpty()) continue
+                    builder.add(letters, scale(kotlin.math.ln(freq + 1.0) / kotlin.math.ln(top + 1.0)))
+                }
+            }
+            "ja", "ko" -> {
+                val list = app.lychee.dict.PackData.glideWords(context, engine, MAX_ROMAN)
+                val n = list.size.coerceAtLeast(1)
+                list.forEachIndexed { i, (word, _) ->
+                    val roman = if (engine == "ja") app.lychee.core.SentenceRomanizer.kana(word)
+                        else app.lychee.core.SentenceRomanizer.korean(word)
+                    val letters = roman.lowercase().filter { it in 'a'..'z' }
+                    if (letters.isNotEmpty()) builder.add(letters, scale(1.0 - i.toDouble() / n))
+                }
+            }
+        }
+        val words = builder.build()
+        Log.i(TAG, "glide words for $engine: ${words.size}")
+        return if (words.size > 0) GlideDecoder(words) else null
+    }
+
+    /** 0..1 to the list's 0..255 frequency (never 0, so rare words still come up). */
+    private fun scale(x: Double) = (20 + 235 * x.coerceIn(0.0, 1.0)).toInt()
+
+    private const val MAX_ROMAN = 60_000
 
     private fun build(context: Context, locale: Locale): GlideDecoder? {
         val builder = GlideWords.Builder()

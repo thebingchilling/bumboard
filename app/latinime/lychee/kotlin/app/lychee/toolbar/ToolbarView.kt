@@ -168,6 +168,12 @@ class ToolbarView @JvmOverloads constructor(
             })
             return
         }
+        // incognito shows beside the menu button while it is on (a tap turns off the hand-made one)
+        if (mode == Mode.NORMAL && app.lychee.typing.Incognito.active) {
+            row.addView(button(R.drawable.ic_sym_visibility_off, R.string.lychee_incognito_badge, highlighted = true) {
+                if (app.lychee.typing.Incognito.manualOn) lycheeHost()?.lycheeRunShortcut(Shortcut.INCOGNITO)
+            }, shortcutParams())
+        }
         shortcuts.forEach { sc ->
             row.addView(button(sc.icon, sc.label) { lycheeHost()?.lycheeRunShortcut(sc) }, shortcutParams())
         }

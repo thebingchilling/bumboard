@@ -121,6 +121,8 @@ class EmojiStore(private val prefs: SharedPreferences) {
         prefs.getString(RECENTS, null)?.split(SEPARATOR)?.filter { it.isNotEmpty() }.orEmpty()
 
     fun addRecent(emoji: String) {
+        // incognito keeps no recent emoji
+        if (app.lychee.typing.Incognito.active) return
         val list = listOf(emoji) + recents().filter { it != emoji }
         prefs.edit().putString(RECENTS, list.take(MAX_RECENTS).joinToString(SEPARATOR)).apply()
     }

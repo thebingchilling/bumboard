@@ -194,9 +194,13 @@ class HandwritingPanelView @JvmOverloads constructor(
         val o = ocr
         val m = matcher
         val engine = lycheeHost()?.lycheeEngine()
+        // the character before the cursor: what usually follows it ranks a little higher
+        val before = runCatching {
+            lycheeHost()?.lycheeInputConnection()?.getTextBeforeCursor(2, 0)?.toString()
+        }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { t -> String(Character.toChars(t.codePointBefore(t.length))) }
         worker.execute {
             val started = System.currentTimeMillis()
-            val result = runCatching { rank(o, m, ink, engine).take(10) }
+            val result = runCatching { rank(o, m, ink, engine, before).take(10) }
                 .onFailure { app.lychee.DiagLog.log("handwriting failed", it) }
                 .getOrDefault(emptyList())
             val took = System.currentTimeMillis() - started
@@ -218,7 +222,7 @@ class HandwritingPanelView @JvmOverloads constructor(
      * little ahead (the readings dictionary's frequency). On Japanese the stroke matcher's
      * kana come in too.
      */
-    private fun rank(o: OcrRecognizer?, m: StrokeMatcher?, ink: List<FloatArray>, engine: String?): List<String> {
+    private fun rank(o: OcrRecognizer?, m: StrokeMatcher?, ink: List<FloatArray>, engine: String?, before: String? = null): List<String> {
         // each keyboard only its own language's characters: Korean, Hangul; Japanese, kana and
         // kanji; Chinese, the characters its dictionary has (no kana, Hangul, or characters
         // only Japanese or Korean use)
@@ -246,6 +250,23 @@ class HandwritingPanelView @JvmOverloads constructor(
                 val s = (1f - distance / KANA_DISTANCE).coerceAtLeast(0f) * KANA_WEIGHT
                 if (s > (score[ch] ?: 0f)) score[ch] = s
             }
+        }
+        if (engine != "ko" && before != null && isHan(before)) {
+            // characters that usually follow the one before the cursor (學 → 校, 生, 習)
+            @Suppress("DEPRECATION")
+            val simplified = app.lychee.chinese.ChineseScript.candidatesSimplified(
+                android.preference.PreferenceManager.getDefaultSharedPreferences(context))
+            val next = runCatching { app.lychee.chinese.Readings.db?.continuations(before, simplified, 40) }
+                .getOrNull().orEmpty()
+            next.forEachIndexed { i, word ->
+                val ch = String(Character.toChars(word.codePointAt(0)))
+                score[ch]?.let { score[ch] = it + CONTEXT * (1f - i / 40f) }
+            }
+        }
+        // characters this person has picked before: a little higher each time (up to a limit)
+        for (ch in score.keys.toList()) {
+            val n = HandwritingPicks.count(context, ch)
+            if (n > 0) score[ch] = score.getValue(ch) + PERSONAL * kotlin.math.min(1f, kotlin.math.ln(1f + n) / 3f)
         }
         if (engine != "ko") {
             val db = app.lychee.chinese.Readings.db
@@ -347,6 +368,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         }
         lycheeHost()?.lycheeType(text)
         lastTyped = text
+        HandwritingPicks.picked(context, text)
         showNext(text)
     }
 
@@ -533,6 +555,10 @@ class HandwritingPanelView @JvmOverloads constructor(
         /** The pause after the last stroke before the ink fades away, and the fade. */
         const val AUTO_CLEAR_MS = 2200L
         const val FADE_MS = 350L
+        /** How much a character that usually follows the one before gains, at most. */
+        const val CONTEXT = 0.12f
+        /** How much a character picked often before gains, at most. */
+        const val PERSONAL = 0.08f
         /** How much a common character gains (see rank): a tie-breaker between look-alikes. */
         const val COMMON = 0.06f
         /** The stroke matcher's say on Chinese characters: past this distance none; its weight. */

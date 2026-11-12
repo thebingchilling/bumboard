@@ -18,6 +18,34 @@ class ReadingsDb(private val sql: Sql) : Dictionary {
         "SELECT MAX(hw.freq) FROM form JOIN hw ON hw.id = form.hw WHERE form.form = ?", arrayOf(form)
     ) { it.long(0) }.firstOrNull() ?: 0L
 
+    /**
+     * Chinese words whose meaning is the English [word] ("eat" finds 食, 吃): an exact meaning
+     * ("eat", "to eat") first, then one meaning among several ("eat; dine"), commonest first.
+     * Traditional and Simplified, as pairs.
+     */
+    fun english(word: String, limit: Int = 8): List<Pair<String, String>> {
+        val w = word.trim().lowercase()
+        if (w.isEmpty() || w.any { it == '%' || it == '_' }) return emptyList()
+        return sql.query(
+            "SELECT h.trad, h.simp, MIN(s.score) AS sc, h.freq FROM (" +
+                "SELECT hw, CASE " +
+                "WHEN lg = ?1 OR lg = ?2 THEN 0 " +
+                "WHEN lg LIKE ?3 OR lg LIKE ?4 OR lg LIKE ?5 OR lg LIKE ?6 OR lg LIKE ?7 OR lg LIKE ?8 THEN 1 " +
+                "ELSE 2 END AS score FROM (SELECT hw, lower(gloss) AS lg FROM sense)" +
+                ") s JOIN hw h ON h.id = s.hw WHERE s.score < 2 GROUP BY h.id ORDER BY sc, h.freq DESC LIMIT " + limit,
+            arrayOf(w, "to $w", "$w;%", "to $w;%", "%; $w", "%; to $w", "%; $w;%", "%; to $w;%"),
+        ) { it.string(0)!! to it.string(1)!! }
+    }
+
+    /**
+     * Every reading in [lang] ("yue" Jyutping, "cmn" pinyin) with its commonest headword's
+     * frequency, commonest first: what glide typing on the Chinese keyboards can spell.
+     */
+    fun readingsByFrequency(lang: String, limit: Int): List<Pair<String, Long>> = sql.query(
+        "SELECT r.r, MAX(h.freq) AS f FROM reading r JOIN hw h ON h.id = r.hw WHERE r.lang = ? " +
+            "GROUP BY r.r ORDER BY f DESC LIMIT " + limit, arrayOf(lang),
+    ) { it.string(0)!! to it.long(1) }
+
     /** The highest frequency of any headword. */
     val maxFrequency: Long by lazy {
         sql.query("SELECT MAX(freq) FROM hw", emptyArray()) { it.long(0) }.firstOrNull() ?: 0L
