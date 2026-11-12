@@ -4,6 +4,11 @@ import android.graphics.BitmapFactory
 import android.graphics.Typeface
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -64,8 +69,8 @@ fun FontsPage() {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
     )
-    PackPending(actions)
     PackMessage(actions)
+    AddonSheetHost(actions)
 
     val gsf = stringResource(R.string.lychee_fonts_gsf)
     val gsfSummary = stringResource(R.string.lychee_fonts_gsf_summary)
@@ -165,21 +170,57 @@ private fun FontSection(
         v.isEmpty() || options.any { it.value == v && (it.pack == null || Packs.isInstalled(context, it.pack.id)) }
     } ?: ""
 
-    Text(
-        title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 8.dp),
-    )
-    Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // the section's font as it is now, large, then each choice as a row in its own font
+    val shown = options.firstOrNull { it.value == current }
+    Group(title) {
+        row { FontPreview(shown, sample, actions.version) }
         options.forEach { option ->
-            FontCard(option, sample, selected = current == option.value, actions,
-                onSelect = {
-                    choice.set(option.value)
-                    onChosen(option.value)
-                },
-                onWant = { wanted = option.value })
+            row {
+                FontCard(option, sample, selected = current == option.value, actions,
+                    onSelect = {
+                        choice.set(option.value)
+                        onChosen(option.value)
+                    },
+                    onWant = { wanted = option.value })
+            }
         }
+    }
+}
+
+/** The face of [option]: built in, or its installed pack's font; null when it isn't here. */
+@Composable
+private fun optionFamily(option: FontOption?, version: Int): FontFamily? {
+    val context = LocalContext.current
+    val pack = option?.pack
+    val installed = pack == null || Packs.isInstalled(context, pack.id)
+    return remember(option?.value, pack?.id, installed, version) {
+        val face = when {
+            option == null -> null
+            option.face != null -> option.face.invoke(context)
+            pack != null && installed -> Packs.mainFile(context, pack.id)?.let { PackImporter.loadFont(it) }
+            else -> null
+        }
+        face?.let { FontFamily(it) }
+    }
+}
+
+/** The chosen font's sample, large, so a change shows at once. */
+@Composable
+private fun FontPreview(option: FontOption?, sample: String, version: Int) {
+    val family = optionFamily(option, version)
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+    ) {
+        Text(
+            sample, fontFamily = family,
+            fontSize = if (option?.emoji == true) 34.sp else 30.sp, lineHeight = 42.sp,
+            maxLines = 2, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface,
+        )
     }
 }
 
@@ -232,75 +273,49 @@ private fun FontCard(
                 actions.import(pack)
             }
             else -> {
+                // the add-on's sheet walks through downloading and installing it
                 onWant()
-                actions.get(pack!!)
+                AddonSheet.open = pack
             }
         }
     }
     val colors = MaterialTheme.colorScheme
-    // a raised tile; the chosen one tinted and outlined
-    Surface(
-        onClick = select,
-        shape = RoundedCornerShape(20.dp),
-        color = if (selected) colors.secondaryContainer else colors.surface,
-        shadowElevation = if (selected) 1.dp else 3.dp,
-        border = if (selected) BorderStroke(2.dp, colors.primary) else null,
-        modifier = Modifier
+    // a list row: the radio, the name drawn in the font itself (or a picture of it), what it
+    // is, and its button
+    Row(
+        Modifier
             .fillMaxWidth()
+            .clickable(onClick = select)
+            .padding(start = 12.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
             .semantics { if (selected) contentDescription = "$title, selected" },
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.padding(start = 18.dp, end = 12.dp, top = 16.dp, bottom = 12.dp)) {
+        RadioButton(selected = selected, onClick = select)
+        Column(Modifier.weight(1f).padding(start = 4.dp)) {
             when {
                 picture != null -> Image(
                     picture, contentDescription = null,
                     contentScale = ContentScale.Fit, alignment = Alignment.CenterStart,
-                    modifier = Modifier.height(34.dp).fillMaxWidth(),
+                    modifier = Modifier.height(26.dp).fillMaxWidth(),
                 )
-                family != null || pack == null -> Text(
-                    sample,
-                    fontFamily = family,
-                    fontSize = if (option.emoji) 28.sp else 24.sp,
-                    lineHeight = 36.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Clip,
-                    color = colors.onSurface,
+                family != null -> Text(
+                    title, fontFamily = family, fontSize = 17.sp, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, color = colors.onSurface,
                 )
-                // your own font, not chosen yet
-                else -> Text(
-                    "Aa",
-                    fontSize = 24.sp,
-                    lineHeight = 36.sp,
-                    color = colors.onSurfaceVariant,
-                )
+                else -> Text(title, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
             }
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painterResource(if (selected) R.drawable.ic_sym_check_circle else R.drawable.ic_sym_radio_button_unchecked),
-                    contentDescription = null,
-                    tint = if (selected) colors.primary else colors.outline,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(title, style = MaterialTheme.typography.titleSmall, color = colors.onSurface)
-                    if (detail.isNotEmpty()) {
-                        Text(detail, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
-                    }
-                }
-                when {
-                    pack == null -> {}
-                    !installed && own -> FilledTonalButton(onClick = select) { Text(stringResource(R.string.lychee_fonts_choose)) }
-                    !installed -> FilledTonalButton(onClick = select) { Text(stringResource(R.string.lychee_packs_get)) }
-                    else -> {
-                        if (own) TextButton(onClick = { onWant(); actions.import(pack) }) { Text(stringResource(R.string.lychee_fonts_change)) }
-                        else if (app.lychee.packs.Updates.hasUpdate(context, pack)) {
-                            FilledTonalButton(onClick = { actions.get(pack) }) { Text(stringResource(R.string.lychee_packs_update)) }
-                        }
-                        TextButton(onClick = { actions.remove(pack) }) { Text(stringResource(R.string.lychee_packs_remove)) }
-                    }
-                }
+            if (picture != null) Text(title, style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
+            if (detail.isNotEmpty()) {
+                Text(detail, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2)
             }
+        }
+        when {
+            pack == null -> {}
+            !installed && own -> TextButton(onClick = select) { Text(stringResource(R.string.lychee_fonts_choose)) }
+            !installed -> FilledTonalButton(onClick = select) { Text(stringResource(R.string.lychee_packs_get)) }
+            own -> TextButton(onClick = { onWant(); actions.import(pack) }) { Text(stringResource(R.string.lychee_fonts_change)) }
+            app.lychee.packs.Updates.hasUpdate(context, pack) ->
+                FilledTonalButton(onClick = { actions.get(pack) }) { Text(stringResource(R.string.lychee_packs_update)) }
         }
     }
 }

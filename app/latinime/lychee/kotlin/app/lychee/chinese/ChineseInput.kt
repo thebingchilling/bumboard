@@ -179,7 +179,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val localVoices = app.lychee.speech.Speech.localesFor(engine, false)
         popup?.show(frame, candidate.text, resolved, Readings.displayPrefs(prefs), peek,
             local = local,
-            showChinese = prefs.getBoolean(Readings.PREF_CHINESE_ON_KANJI, false),
+            showChinese = prefs.getBoolean(Readings.PREF_CHINESE_ON_KANJI, true),
             onSpeakLocal = { text -> app.lychee.speech.Speech.speak(ime, text, localVoices) },
             onSpeak = { text, lang ->
                 // YUE and PU: the word in Cantonese or in Mandarin, whichever keyboard this is
@@ -225,9 +225,26 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val forms = listOf(candidate.text) + entries.map { it.lemma }.take(1)
         val examples = app.lychee.dict.PackData.examples(ime, lang, forms)
         val locales = app.lychee.speech.Speech.localesFor(engine, false)
+        // a word with Kanji or Hanja: its Chinese readings too (Cantonese and Mandarin), unless
+        // turned off in Settings
+        val display = Readings.displayPrefs(prefs)
+        val hasHan = candidate.text.codePoints().anyMatch { Character.UnicodeScript.of(it) == Character.UnicodeScript.HAN }
+        val chinese = if (hasHan && prefs.getBoolean(Readings.PREF_CHINESE_ON_KANJI, true)) {
+            Readings.annotator?.resolve(candidate.text, "", InputMode.Cantonese)
+                ?.takeIf { r -> r.reading?.contains("?") == false }
+                ?.let { r -> app.lychee.core.Annotator.regional(r, display) }
+        } else null
         popup?.showWord(frame, candidate.text, wordReading(candidate, entries.firstOrNull()), entries,
-            examples, peek, onSpeak = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }, lang = lang,
-            onSpeakAs = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }) {
+            examples, peek, onSpeak = { text, l ->
+                val voices = when (l) {
+                    app.lychee.core.Lang.Cantonese -> app.lychee.speech.Speech.localesFor("yue", false)
+                    app.lychee.core.Lang.Mandarin -> app.lychee.speech.Speech.localesFor("cmn", false)
+                    else -> locales
+                }
+                app.lychee.speech.Speech.speak(ime, text, voices)
+            }, lang = lang,
+            onSpeakAs = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) },
+            chinese = chinese, chinesePrefs = display) {
             pick(index)
         }
     }
@@ -850,8 +867,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /** The candidate size chosen for [engine]'s keyboard. */
     private fun scaleFor(engine: String?): Float {
-        val all = prefs.getFloat(PREF_CANDIDATE_SIZE, 1f)
-        return prefs.getFloat(PREF_CANDIDATE_SIZE + "_" + engine, all).coerceIn(0.7f, 1.6f)
+        // one size for every language (Settings > Readings & candidates)
+        return prefs.getFloat(PREF_CANDIDATE_SIZE, 1f).coerceIn(0.7f, 1.6f)
     }
 
     /** The most reading lines any of the Chinese, Japanese and Korean keyboards shows. */

@@ -87,6 +87,12 @@ packs page). Public facing, so be careful:
   English, but the language key still switches (`typing/FieldKind`); number fields don't.
 - Motion: one way of moving everywhere (`layout/LycheeMotion`): things cross-fade in place,
   never slide in like a window; cards grow out of what was touched.
+- Settings: plain Material 3 lists with subtle dividers; visual settings (theme, key shape,
+  height, candidate size, emoji size, fonts) show a live preview where they are changed.
+  Add-ons (`settings/AddonsPage.kt`) gets downloads through a sheet (download, then open or
+  choose the file); Storage lists everything kept by language and kind, and removes one pack
+  or a whole language. A removed bundled pack stays out (`packs/PackStorage`, honoured by
+  `BundledPacks.installAll`) until restored there.
 - Pronunciation (Settings > Pronunciation): Mandarin Mainland or Taiwan (CC-CEDICT's
   "Taiwan pr." readings, a zh-TW voice), English both, US or UK (`speech/Pronunciation`).
 

@@ -95,9 +95,9 @@ enum class Page(@StringRes val title: Int) {
     Preferences(R.string.lychee_typing_title),
     Keys(R.string.lychee_keys_title),
     Theme(R.string.settings_screen_theme),
-    Advanced(R.string.settings_screen_advanced),
     Fonts(R.string.lychee_fonts_title),
-    Packs(R.string.lychee_packs_title),
+    Packs(R.string.lychee_addons_title),
+    Storage(R.string.lychee_storage_title),
     About(R.string.lychee_about),
     Licences(R.string.lychee_licences),
     Diagnostics(R.string.lychee_diagnostics),
@@ -176,7 +176,11 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
     LaunchedEffect(page) { submenu = null }
     val back = {
         if (submenu != null) submenu = null
-        else page = if (page == Page.Licences || page == Page.Diagnostics) Page.About else Page.Home
+        else page = when (page) {
+            Page.Licences, Page.Diagnostics -> Page.About
+            Page.Storage -> Page.Packs
+            else -> Page.Home
+        }
     }
     BackHandler(enabled = page != Page.Home || submenu != null) { back() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -215,7 +219,8 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                     val deeper = when {
                         toMenu != null && fromMenu == null -> true
                         toMenu == null && fromMenu != null -> false
-                        else -> toPage.ordinal > fromPage.ordinal && fromPage != Page.Licences && fromPage != Page.Diagnostics
+                        else -> toPage.ordinal > fromPage.ordinal && fromPage != Page.Licences && fromPage != Page.Diagnostics &&
+                            fromPage != Page.Storage
                     }
                     // Material's shared X axis: a short slide and a cross-fade
                     val sign = if (deeper) 1 else -1
@@ -246,9 +251,10 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                         Page.Preferences -> PreferencesPage()
                         Page.Keys -> KeysPage()
                         Page.Theme -> ThemePage()
-                        Page.Advanced -> AdvancedPage()
+
                         Page.Fonts -> FontsPage()
-                        Page.Packs -> PacksPage()
+                        Page.Packs -> AddonsPage { page = Page.Storage }
+                        Page.Storage -> StoragePage()
                         Page.About -> AboutPage({ page = Page.Licences }) { page = Page.Diagnostics }
                         Page.Licences -> LicencesPage()
                         Page.Diagnostics -> DiagnosticsPage()
@@ -415,15 +421,15 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
     Group(stringResource(R.string.lychee_section_more)) {
         row {
             NavRow(
-                it, stringResource(R.string.lychee_packs_title),
-                stringResource(R.string.lychee_packs_summary), R.drawable.ic_sym_download,
+                it, stringResource(R.string.lychee_addons_title),
+                stringResource(R.string.lychee_addons_summary), R.drawable.ic_sym_download,
             ) { open(Page.Packs) }
         }
         row {
             NavRow(
-                it, stringResource(R.string.settings_screen_advanced),
-                stringResource(R.string.lychee_advanced_summary), R.drawable.ic_sym_build,
-            ) { open(Page.Advanced) }
+                it, stringResource(R.string.lychee_storage_title),
+                stringResource(R.string.lychee_storage_summary), R.drawable.ic_sym_grid_view,
+            ) { open(Page.Storage) }
         }
         row {
             NavRow(
@@ -715,26 +721,22 @@ private fun ChinesePage() {
             }
         }
     }
-    val baseSize = prefs.getFloat(ChineseInput.PREF_CANDIDATE_SIZE, 1f)
-    // one size per language: characters and kana read best at different sizes
-    val sizes = listOf(
-        "yue" to R.string.lychee_language_cantonese, "cmn" to R.string.lychee_language_mandarin,
-        "ja" to R.string.lychee_language_japanese, "ko" to R.string.lychee_language_korean,
-    ).map { (engine, name) ->
-        val key = ChineseInput.PREF_CANDIDATE_SIZE + "_" + engine
-        Triple(engine, name, prefs.floatPref(key) { prefs.getFloat(key, baseSize) })
-    }
+    // one size for every language's candidates, shown as it changes
+    val size = prefs.floatPref(ChineseInput.PREF_CANDIDATE_SIZE) { prefs.getFloat(ChineseInput.PREF_CANDIDATE_SIZE, 1f) }
+    var liveSize by remember(size.value) { mutableStateOf(size.value) }
     val dictionaryHold = prefs.stringPref(ChineseInput.PREF_DICTIONARY_HOLD) {
         prefs.getString(ChineseInput.PREF_DICTIONARY_HOLD, null) ?: "pin"
     }
-    val chineseOnKanji = prefs.boolPref(Readings.PREF_CHINESE_ON_KANJI) { prefs.getBoolean(Readings.PREF_CHINESE_ON_KANJI, false) }
+    val chineseOnKanji = prefs.boolPref(Readings.PREF_CHINESE_ON_KANJI) { prefs.getBoolean(Readings.PREF_CHINESE_ON_KANJI, true) }
     Group(stringResource(R.string.lychee_group_candidates)) {
-        for ((_, name, size) in sizes) {
-            row {
+        row {
+            Column {
                 SliderRow(
-                    it, stringResource(R.string.lychee_candidate_size_for, stringResource(name)),
+                    it, stringResource(R.string.lychee_candidate_size),
                     (size.value * 100).roundToInt(), 70..160, 10, format = { v -> "$v%" },
+                    onSlide = { v -> liveSize = v / 100f },
                 ) { v -> size.set(v / 100f) }
+                CandidatePreview(liveSize, meaning.value, otherLanguage.value)
             }
         }
         row {
@@ -881,6 +883,7 @@ private fun KeysPage() {
         }
     }
     FeelGroups()
+    OtherKeysGroup()
 }
 
 /** What the comma's long-press shows: the shortcuts switched on here, in order (the first is where it opens), then Settings. */
@@ -943,20 +946,16 @@ private fun ThemePage() {
     val roundness = prefs.intPref(app.lychee.ui.KeyStyle.PREF_ROUNDNESS) {
         prefs.getInt(app.lychee.ui.KeyStyle.PREF_ROUNDNESS, app.lychee.ui.KeyStyle.DEFAULT_ROUNDNESS)
     }
-    Group(stringResource(R.string.lychee_group_appearance)) {
-        row {
-            ChoiceRow(
-                it, stringResource(R.string.lychee_pref_theme_mode), stringResource(R.string.lychee_pref_theme_mode_summary),
-                listOf(
-                    app.lychee.ui.KeyStyle.MODE_SYSTEM to stringResource(R.string.lychee_theme_system),
-                    app.lychee.ui.KeyStyle.MODE_LIGHT to stringResource(R.string.lychee_theme_light),
-                    app.lychee.ui.KeyStyle.MODE_DARK to stringResource(R.string.lychee_theme_dark),
-                    app.lychee.ui.KeyStyle.MODE_TIME to stringResource(R.string.lychee_theme_time),
-                ),
-                themeMode.value, onSelect = themeMode::set,
-            )
-        }
-    }
+    val mode = prefs.stringPref(LycheeLayout.PREF_MODE) { prefs.getString(LycheeLayout.PREF_MODE, null) ?: "normal" }
+    val height = prefs.floatPref(LycheeLayout.PREF_HEIGHT_SCALE) { prefs.getFloat(LycheeLayout.PREF_HEIGHT_SCALE, 1f) }
+    val columns = prefs.intPref(EmojiPanelView.PREF_COLUMNS) { prefs.getInt(EmojiPanelView.PREF_COLUMNS, 0) }
+    // what the sliders show while they move, before they are let go
+    var liveRound by remember(roundness.value) { mutableStateOf(roundness.value) }
+    var liveHeight by remember(height.value) { mutableStateOf(height.value) }
+    var liveColumns by remember(columns.value) { mutableStateOf(if (columns.value > 0) columns.value else 9) }
+
+    // the keys as they will look, changing with every setting below
+    KeyboardPreview(colors.value, liveRound, borders.value, selected == KeyboardTheme.THEME_ID_LYCHEE_RAISED, liveHeight)
     Group(stringResource(R.string.lychee_pref_colors)) {
         row {
             PaletteGrid(
@@ -976,14 +975,6 @@ private fun ThemePage() {
     }
     Group(stringResource(R.string.lychee_group_key_style)) {
         row {
-            SwitchRow(it, stringResource(R.string.lychee_pref_key_borders), stringResource(R.string.lychee_pref_key_borders_summary),
-                borders.value, borders::set)
-        }
-        row {
-            SliderRow(it, stringResource(R.string.lychee_pref_key_roundness), roundness.value, 0..100, 5,
-                format = { v -> "$v%" }) { v -> roundness.set(v) }
-        }
-        row {
             ChoiceRow(
                 it, stringResource(R.string.lychee_pref_key_shape), null,
                 names.indices.map { i -> ids[i] to names[i] }, selected,
@@ -992,10 +983,22 @@ private fun ThemePage() {
                 KeyboardTheme.saveKeyboardThemeId(id, prefs)
             }
         }
+        row {
+            SwitchRow(it, stringResource(R.string.lychee_pref_key_borders), stringResource(R.string.lychee_pref_key_borders_summary),
+                borders.value, borders::set)
+        }
+        row {
+            SliderRow(it, stringResource(R.string.lychee_pref_key_roundness), roundness.value, 0..100, 5,
+                format = { v -> "$v%" }, onSlide = { v -> liveRound = v }) { v -> roundness.set(v) }
+        }
+        row {
+            SliderRow(
+                it, stringResource(R.string.lychee_pref_height), (height.value * 100).roundToInt(),
+                (LycheeLayout.MIN_HEIGHT * 100).roundToInt()..(LycheeLayout.MAX_HEIGHT * 100).roundToInt(), 5,
+                format = { v -> "$v%" }, onSlide = { v -> liveHeight = v / 100f },
+            ) { v -> height.set(v / 100f) }
+        }
     }
-    val mode = prefs.stringPref(LycheeLayout.PREF_MODE) { prefs.getString(LycheeLayout.PREF_MODE, null) ?: "normal" }
-    val height = prefs.floatPref(LycheeLayout.PREF_HEIGHT_SCALE) { prefs.getFloat(LycheeLayout.PREF_HEIGHT_SCALE, 1f) }
-    val columns = prefs.intPref(EmojiPanelView.PREF_COLUMNS) { prefs.getInt(EmojiPanelView.PREF_COLUMNS, 0) }
     Group(stringResource(R.string.lychee_group_size)) {
         row {
             ChoiceRow(
@@ -1008,26 +1011,31 @@ private fun ThemePage() {
             )
         }
         row {
-            SliderRow(
-                it, stringResource(R.string.lychee_pref_height), (height.value * 100).roundToInt(),
-                (LycheeLayout.MIN_HEIGHT * 100).roundToInt()..(LycheeLayout.MAX_HEIGHT * 100).roundToInt(), 5,
-                format = { v -> "$v%" },
-            ) { v -> height.set(v / 100f) }
-        }
-        row {
-            SliderRow(
-                it, stringResource(R.string.lychee_pref_emoji_size),
-                if (columns.value > 0) columns.value else 9,
-                EmojiPanelView.MIN_COLUMNS..EmojiPanelView.MAX_COLUMNS,
-            ) { v -> columns.set(v) }
+            Column {
+                SliderRow(
+                    it, stringResource(R.string.lychee_pref_emoji_size), liveColumns,
+                    EmojiPanelView.MIN_COLUMNS..EmojiPanelView.MAX_COLUMNS,
+                    onSlide = { v -> liveColumns = v },
+                ) { v -> columns.set(v) }
+                // the emoji at that size
+                EmojiPreview(liveColumns)
+            }
         }
     }
-    Text(
-        stringResource(R.string.lychee_pref_emoji_size_summary),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 32.dp, vertical = 4.dp),
-    )
+    Group(stringResource(R.string.lychee_group_appearance)) {
+        row {
+            ChoiceRow(
+                it, stringResource(R.string.lychee_pref_theme_mode), stringResource(R.string.lychee_pref_theme_mode_summary),
+                listOf(
+                    app.lychee.ui.KeyStyle.MODE_SYSTEM to stringResource(R.string.lychee_theme_system),
+                    app.lychee.ui.KeyStyle.MODE_LIGHT to stringResource(R.string.lychee_theme_light),
+                    app.lychee.ui.KeyStyle.MODE_DARK to stringResource(R.string.lychee_theme_dark),
+                    app.lychee.ui.KeyStyle.MODE_TIME to stringResource(R.string.lychee_theme_time),
+                ),
+                themeMode.value, onSelect = themeMode::set,
+            )
+        }
+    }
 }
 
 /**
@@ -1286,8 +1294,9 @@ private fun FeelGroups() {
     }
 }
 
+/** The keyboard's other options: split keyboard on a tablet, emoji from a physical keyboard. */
 @Composable
-private fun AdvancedPage() {
+private fun OtherKeysGroup() {
     val prefs = prefs()
     val split = prefs.boolPref(Settings.PREF_ENABLE_SPLIT_KEYBOARD) {
         prefs.getBoolean(Settings.PREF_ENABLE_SPLIT_KEYBOARD, false)
@@ -1295,17 +1304,9 @@ private fun AdvancedPage() {
     val emojiAlt = prefs.boolPref(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY) {
         prefs.getBoolean(Settings.PREF_ENABLE_EMOJI_ALT_PHYSICAL_KEY, true)
     }
-    val hwSamples = prefs.boolPref(app.lychee.handwriting.HandwritingSamples.PREF) {
-        prefs.getBoolean(app.lychee.handwriting.HandwritingSamples.PREF, false)
-    }
-    Group {
+    Group(stringResource(R.string.lychee_group_other)) {
         row {
             SwitchRow(it, stringResource(R.string.enable_split_keyboard), null, split.value, split::set)
-        }
-        // characters written on the handwriting pad, kept on the phone to check misreadings
-        row {
-            SwitchRow(it, stringResource(R.string.lychee_hw_samples), stringResource(R.string.lychee_hw_samples_summary),
-                hwSamples.value, hwSamples::set)
         }
         row {
             SwitchRow(
@@ -1418,6 +1419,17 @@ private fun DiagnosticsPage() {
     val report = "Lychee $version\nAndroid ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}), ${Build.MANUFACTURER} ${Build.MODEL}\n\n" +
         "Installed packs:\n$packs\n\n$text"
     var samples by remember { mutableStateOf(app.lychee.handwriting.HandwritingSamples.count(context)) }
+    val prefs = prefs()
+    val hwSamples = prefs.boolPref(app.lychee.handwriting.HandwritingSamples.PREF) {
+        prefs.getBoolean(app.lychee.handwriting.HandwritingSamples.PREF, false)
+    }
+    // characters written on the handwriting pad, kept on the phone to check misreadings
+    Group {
+        row {
+            SwitchRow(it, stringResource(R.string.lychee_hw_samples), stringResource(R.string.lychee_hw_samples_summary),
+                hwSamples.value, hwSamples::set)
+        }
+    }
     Text(
         stringResource(R.string.lychee_diagnostics_body),
         style = MaterialTheme.typography.bodyMedium,

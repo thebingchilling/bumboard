@@ -44,8 +44,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * Rows inside a [Group]: Material 3's segmented list, each row a card of its own with small
- * inner corners and large outer ones, a hair apart, on the page's tinted background.
+ * Rows inside a [Group]: a plain Material 3 list on the page itself, no boxes, the rows set
+ * apart by subtle inset dividers.
  */
 class GroupScope internal constructor(private val rows: MutableList<@Composable (Shape) -> Unit>) {
     fun row(content: @Composable (Shape) -> Unit) {
@@ -53,27 +53,9 @@ class GroupScope internal constructor(private val rows: MutableList<@Composable 
     }
 }
 
-/** The colour of a settings card: brighter than the page in light, lifted in dark. */
+/** The page behind the lists. */
 @Composable
-fun cardColor(): androidx.compose.ui.graphics.Color =
-    if (androidx.compose.foundation.isSystemInDarkTheme()) MaterialTheme.colorScheme.surfaceContainerHigh
-    else MaterialTheme.colorScheme.surfaceContainerLowest
-
-/** The page behind the cards. */
-@Composable
-fun pageColor(): androidx.compose.ui.graphics.Color =
-    if (androidx.compose.foundation.isSystemInDarkTheme()) MaterialTheme.colorScheme.surface
-    else MaterialTheme.colorScheme.surfaceContainer
-
-/** A row's corners in a group of [count]: large on the group's outer edges, small between rows. */
-fun segmentShape(index: Int, count: Int): Shape {
-    val outer = 24.dp
-    val inner = 6.dp
-    return RoundedCornerShape(
-        topStart = if (index == 0) outer else inner, topEnd = if (index == 0) outer else inner,
-        bottomStart = if (index == count - 1) outer else inner, bottomEnd = if (index == count - 1) outer else inner,
-    )
-}
+fun pageColor(): androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface
 
 @Composable
 fun Group(title: String? = null, build: GroupScope.() -> Unit) {
@@ -82,8 +64,7 @@ fun Group(title: String? = null, build: GroupScope.() -> Unit) {
     if (rows.isEmpty()) return
     Column(
         Modifier
-            .padding(horizontal = 16.dp)
-            .padding(top = if (title != null) 20.dp else 8.dp, bottom = 4.dp)
+            .padding(top = if (title != null) 16.dp else 4.dp, bottom = 4.dp)
             .animateContentSize(),
     ) {
         if (title != null) {
@@ -91,14 +72,18 @@ fun Group(title: String? = null, build: GroupScope.() -> Unit) {
                 title,
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 4.dp),
             )
         }
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            rows.forEachIndexed { i, row ->
-                val shape = segmentShape(i, rows.size)
-                Surface(shape = shape, color = cardColor(), modifier = Modifier.fillMaxWidth()) { row(shape) }
+        rows.forEachIndexed { i, row ->
+            if (i > 0) {
+                HorizontalDivider(
+                    Modifier.padding(horizontal = 24.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                )
             }
+            row(RectangleShape)
         }
     }
 }
@@ -154,7 +139,7 @@ fun CompactRow(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 64.dp)
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+            .padding(start = 24.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (leading != null || icon != null) {
@@ -288,12 +273,15 @@ fun <T> ChoiceRow(
     @DrawableRes icons: List<Int>? = null,
     onSelect: (T) -> Unit,
 ) {
-    val segmented = icons == null && options.size in 2..3 && options.all { it.second.length <= 12 }
+    // only when every label fits its button whole (no tick icon, which takes room): two short
+    // ones, or three very short ones; anything longer is a dialog
+    val longest = options.maxOfOrNull { it.second.length } ?: 0
+    val segmented = icons == null && ((options.size == 2 && longest <= 11) || (options.size == 3 && longest <= 7))
     if (segmented) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 14.dp),
+                .padding(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 14.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
@@ -307,7 +295,11 @@ fun <T> ChoiceRow(
                         selected = value == selected,
                         onClick = { onSelect(value) },
                         shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, options.size),
-                        label = { Text(label, maxLines = 1, softWrap = false) },
+                        icon = {},
+                        label = {
+                            Text(label, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelLarge)
+                        },
                     )
                 }
             }
@@ -409,18 +401,24 @@ fun SubmenuPage(menu: Submenu, onDone: () -> Unit) {
 @Composable
 fun SliderRow(
     shape: Shape, title: String, value: Int, range: IntRange, step: Int = 1,
-    format: (Int) -> String = { it.toString() }, onChange: (Int) -> Unit,
+    format: (Int) -> String = { it.toString() },
+    /** Called as the slider moves (a live preview); [onChange] when it is let go. */
+    onSlide: ((Int) -> Unit)? = null,
+    onChange: (Int) -> Unit,
 ) {
     var current by remember(value) { mutableFloatStateOf(value.toFloat()) }
     RowSurface(shape, null) {
-        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 6.dp)) {
+        Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 Text(format(current.roundToInt()), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             }
             Slider(
                 value = current,
-                onValueChange = { current = it },
+                onValueChange = {
+                    current = it
+                    onSlide?.invoke(it.roundToInt())
+                },
                 onValueChangeFinished = { onChange(current.roundToInt()) },
                 valueRange = range.first.toFloat()..range.last.toFloat(),
                 steps = ((range.last - range.first) / step - 1).coerceAtLeast(0),
@@ -432,7 +430,7 @@ fun SliderRow(
 @Composable
 fun TextRow(shape: Shape, title: String, body: String) {
     RowSurface(shape, null) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+        Column(Modifier.padding(horizontal = 24.dp, vertical = 14.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(4.dp))
             Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

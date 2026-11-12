@@ -58,8 +58,6 @@ class DictionaryPopup(
         /** The card's largest height and width (dp): a popup, never the whole screen. */
         private const val MAX_CARD_DP = 420
         private const val MAX_CARD_WIDTH_DP = 440
-        /** The condensed card's height (dp), buttons included. */
-        private const val COMPACT_CARD_DP = 230
     }
 
     private var host: FrameLayout? = null
@@ -89,8 +87,9 @@ class DictionaryPopup(
         onSpeakLocal: ((String) -> Unit)? = null,
         onType: () -> Unit,
     ) {
-        present(keyboard, peek, onType) { c, body ->
+        present(keyboard, peek, onType) { c, body, compact ->
             Content(ctx, c, prefs, body, onSpeak).apply {
+                this.compact = compact
                 this.local = local
                 this.showChinese = local == null || showChinese
                 this.onSpeakLocal = onSpeakLocal
@@ -114,10 +113,14 @@ class DictionaryPopup(
         /** Look up in Lychee, on an English word: the word in Chinese, each one to tap. */
         translations: List<String> = emptyList(),
         onTranslation: (String) -> Unit = {},
+        /** A word with Kanji or Hanja: its Chinese readings, shown under its own. */
+        chinese: Resolved? = null,
+        chinesePrefs: DisplayPrefs? = null,
         onType: () -> Unit,
     ) {
-        present(keyboard, peek, onType) { c, body ->
-            val content = Content(ctx, c, DisplayPrefs(), body, onSpeak)
+        present(keyboard, peek, onType) { c, body, compact ->
+            val content = Content(ctx, c, chinesePrefs ?: DisplayPrefs(), body, onSpeak)
+            content.compact = compact
             content.fontLang = lang
             // a single kanji: its KANJIDIC2 readings and meanings, briefly, under the heading
             val kanji = if (lang == "ja" && text.codePointCount(0, text.length) == 1 &&
@@ -135,22 +138,25 @@ class DictionaryPopup(
                 if (k.onyomi.isNotBlank()) body.addView(content.labelled(ctx.getString(R.string.lychee_card_onyomi), k.onyomi))
                 if (kun.isNotBlank()) body.addView(content.labelled(ctx.getString(R.string.lychee_card_kunyomi), kun))
                 if (k.meanings.isNotBlank()) body.addView(content.textView(k.meanings, 15f, c.onSurface).apply {
+                    if (compact) { maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END }
                     setPadding(0, dp(4), 0, 0)
                 })
                 val facts = listOfNotNull(
                     k.grade?.let { g -> if (g in 1..6) ctx.getString(R.string.lychee_card_kanji_grade, g) else ctx.getString(R.string.lychee_card_kanji_joyo).takeIf { g == 8 } },
                     k.strokes?.let { n -> ctx.resources.getQuantityString(R.plurals.lychee_card_stroke_count, n, n) },
                 ).joinToString(" · ")
-                if (facts.isNotEmpty()) body.addView(content.textView(facts, 13f, c.onSurfaceVariant).apply {
+                if (facts.isNotEmpty() && !compact) body.addView(content.textView(facts, 13f, c.onSurfaceVariant).apply {
                     setPadding(0, dp(2), 0, dp(4))
                 })
             }
             romanisation?.let { body.addView(content.labelled(ctx.getString(R.string.lychee_card_romanisation), it)) }
+            chinese?.let { content.chineseReadings(text, it) }
             // a word written alike but said differently by meaning (lead, wind, tear): each
             // pronunciation says itself
             val pronunciations = entries.mapNotNull { e -> e.reading?.takeIf { it.isNotBlank() } }.distinct()
             val heteronym = lang == "en" && pronunciations.size > 1
-            entries.forEachIndexed { i, e ->
+            // condensed: the first entry, its readings and first meanings only
+            (if (compact) entries.take(1) else entries).forEachIndexed { i, e ->
                 if (i > 0 || e.lemma != text) {
                     if (i > 0) body.addView(content.divider())
                     body.addView(content.textView(e.lemma, 22f, c.onSurface).apply {
@@ -188,12 +194,14 @@ class DictionaryPopup(
                 }
                 e.hanja?.let { body.addView(content.labelled("Hanja", it)) }
                 e.partOfSpeech?.let { body.addView(content.labelled(ctx.getString(R.string.lychee_card_pos), it)) }
-                e.senses.take(Content.MAX_SENSES).forEachIndexed { n, s -> content.plainSense(n + 1, s) }
+                e.senses.take(if (compact) Content.SUMMARY_SENSES else Content.MAX_SENSES)
+                    .forEachIndexed { n, s -> content.plainSense(n + 1, s) }
             }
             // a word the dictionary doesn't have still gets its card: the word and its voice
             if (entries.isEmpty()) body.addView(content.textView(ctx.getString(R.string.lychee_card_no_definition), 14f, c.onSurfaceVariant).apply {
                 setPadding(0, dp(8), 0, dp(4))
             })
+            if (compact) return@present
             if (lang == "ja" || lang == "ko") content.strokes(text)
             content.examples(examples) { sentence ->
                 when (lang) {
@@ -207,7 +215,7 @@ class DictionaryPopup(
         }
     }
 
-    private fun present(keyboard: View, peek: Boolean, onType: () -> Unit, fill: (M3Colors, LinearLayout) -> Unit) {
+    private fun present(keyboard: View, peek: Boolean, onType: () -> Unit, fill: (M3Colors, LinearLayout, Boolean) -> Unit) {
         host?.removeAllViews()
         host = null
         val panel = standalone ?: keyboard.rootView.findViewById<FrameLayout>(R.id.lychee_dictionary_panel) ?: return
@@ -223,98 +231,84 @@ class DictionaryPopup(
         val space = if (standalone != null) standaloneRoom else keyboardTop - statusBar - dp(12)
         if (space < dp(96)) return
         val room = if (standalone != null) space else minOf(space, maxOf(dp(220), (space * 0.6f).toInt()), dp(MAX_CARD_DP))
-        // inside the keyboard it opens condensed (Look up in Lychee has the screen to itself)
-        val compactRoom = if (standalone != null) room else minOf(room, dp(COMPACT_CARD_DP))
+        // inside the keyboard it opens as a short summary (Look up in Lychee has the screen to itself)
+        val startCompact = standalone == null
         val c = M3Colors.of(ctx)
         val body = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(14), dp(18), dp(4))
+            setPadding(dp(16), dp(12), dp(16), dp(2))
         }
-        fill(c, body)
+        fill(c, body, startCompact)
 
         // its two buttons along the bottom, where the thumb is: close (X) on the left, type the
         // word on the right
         val actions = FrameLayout(ctx).apply { setPadding(dp(10), dp(4), dp(10), dp(10)) }
-        val scroll = LockableScrollView(ctx).apply {
+        val scroll = ScrollView(ctx).apply {
             addView(body)
-            locked = compactRoom < room
-            isVerticalFadingEdgeEnabled = false
             overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
         }
-        // the condensed card's foot fades out over what doesn't fit
-        val fadeEdge = View(ctx).apply {
-            background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(androidx.core.graphics.ColorUtils.setAlphaComponent(c.surfaceContainerHigh, 0), c.surfaceContainerHigh))
-            visibility = View.GONE
-        }
-        val viewport = FrameLayout(ctx).apply {
-            addView(scroll, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            addView(fadeEdge, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(36), Gravity.BOTTOM))
-        }
-        val card = MaxHeightLayout(ctx, compactRoom).apply {
+        val card = MaxHeightLayout(ctx, room).apply {
             orientation = LinearLayout.VERTICAL
             isClickable = true
             background = GradientDrawable().apply {
                 setColor(c.surfaceContainerHigh)
-                cornerRadius = dp(24).toFloat()
+                cornerRadius = dp(20).toFloat()
                 setStroke(dp(1), androidx.core.graphics.ColorUtils.setAlphaComponent(c.outlineVariant, 0x80))
             }
             elevation = dp(10).toFloat()
             clipToOutline = true
-            addView(viewport, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+            addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             addView(actions)
         }
-        // condensed or full: ⌃ grows the card to the whole entry (it scrolls then), ⌄ shrinks it
-        var expanded = compactRoom >= room
+        // the summary or the whole entry: ⌃ rebuilds the card as the full entry, growing up out
+        // of the keyboard; ⌄ goes back to the summary
+        var expanded = !startCompact
         val expand = cornerButton(R.drawable.ic_sym_keyboard_arrow_up, ctx.getString(R.string.lychee_card_more), c, filled = false) {}
-        expand.visibility = View.GONE
-        fun overflowing() = body.height > scroll.height + 1
         fun setExpanded(open: Boolean) {
             if (expanded == open) return
             expanded = open
-            scroll.locked = !open
-            if (!open) scroll.smoothScrollTo(0, 0)
+            val from = card.height
+            body.removeAllViews()
+            fill(c, body, !open)
+            scroll.scrollTo(0, 0)
             expand.setImageResource(if (open) R.drawable.ic_sym_keyboard_arrow_down else R.drawable.ic_sym_keyboard_arrow_up)
             expand.contentDescription = ctx.getString(if (open) R.string.lychee_card_less else R.string.lychee_card_more)
-            fadeEdge.animate().alpha(if (open) 0f else 1f).setDuration(app.lychee.layout.LycheeMotion.OUT).start()
-            val target = if (open) room else compactRoom
-            if (!app.lychee.layout.LycheePanels.animate(ctx)) {
-                card.maxHeight = target
-                card.requestLayout()
-                return
-            }
-            android.animation.ValueAnimator.ofInt(card.height, target).apply {
-                duration = app.lychee.layout.LycheeMotion.IN
+            if (!app.lychee.layout.LycheePanels.animate(ctx)) return
+            // the card's bottom stays on the keyboard; its top travels
+            body.alpha = 0f
+            body.animate().alpha(1f).setDuration(app.lychee.layout.LycheeMotion.IN)
+                .setInterpolator(app.lychee.layout.LycheeMotion.enterEasing).start()
+            card.measure(View.MeasureSpec.makeMeasureSpec(card.width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(room, View.MeasureSpec.AT_MOST))
+            val to = card.measuredHeight
+            android.animation.ValueAnimator.ofInt(from, to).apply {
+                duration = app.lychee.layout.LycheeMotion.IN + 60
                 interpolator = app.lychee.layout.LycheeMotion.enterEasing
                 addUpdateListener {
                     card.maxHeight = it.animatedValue as Int
                     card.requestLayout()
                 }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) {
+                        card.maxHeight = room
+                        card.requestLayout()
+                    }
+                })
                 start()
             }
         }
         expand.setOnClickListener { setExpanded(!expanded) }
-        scroll.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            val more = overflowing()
-            if (!expanded) {
-                fadeEdge.visibility = if (more) View.VISIBLE else View.GONE
-                fadeEdge.alpha = 1f
-            }
-            // only an entry longer than the condensed card has anything to show
-            val wanted = if (more || expanded && compactRoom < room) View.VISIBLE else View.GONE
-            if (!peek && expand.visibility != wanted) expand.post { expand.visibility = wanted }
-        }
         if (peek) {
             actions.visibility = View.GONE
         } else {
             actions.addView(cornerButton(R.drawable.ic_sym_close, ctx.getString(R.string.lychee_close), c, filled = false) { dismiss() },
-                FrameLayout.LayoutParams(dp(48), dp(48), Gravity.START or Gravity.BOTTOM))
+                FrameLayout.LayoutParams(dp(40), dp(40), Gravity.START or Gravity.BOTTOM))
             actions.addView(cornerButton(actionIcon, ctx.getString(actionLabel), c, filled = true) {
                 dismiss()
                 onType()
-            }, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.END or Gravity.BOTTOM))
-            actions.addView(expand, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM))
-            body.setPadding(body.paddingLeft, dp(14), body.paddingRight, dp(4))
+            }, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.END or Gravity.BOTTOM))
+            if (startCompact) actions.addView(expand, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM))
+            body.setPadding(body.paddingLeft, dp(12), body.paddingRight, dp(2))
         }
         // just above the keyboard, rising out of it
         // over the keys only: in one-handed mode the card keeps to the narrowed keyboard
@@ -340,8 +334,9 @@ class DictionaryPopup(
         })
         panel.visibility = View.VISIBLE
         panel.bringToFront()
-        // grows up out of the candidate bar, fading in (LycheeMotion, like every card)
-        app.lychee.layout.LycheeMotion.cardIn(card, Float.NaN, Float.NaN)
+        // grows up out of the keyboard like a popup, fading in (LycheeMotion, like every card)
+        if (app.lychee.layout.LycheePanels.animate(ctx)) card.alpha = 0f
+        card.post { app.lychee.layout.LycheeMotion.cardIn(card, card.width / 2f, card.height.toFloat()) }
         host = panel
     }
 
@@ -350,16 +345,6 @@ class DictionaryPopup(
         override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
             super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(maxHeight, MeasureSpec.AT_MOST))
         }
-    }
-
-    /** A scroll view that holds still while [locked] (the condensed card): its buttons still work. */
-    private class LockableScrollView(ctx: Context) : ScrollView(ctx) {
-        var locked = false
-
-        override fun onInterceptTouchEvent(ev: android.view.MotionEvent): Boolean = !locked && super.onInterceptTouchEvent(ev)
-
-        @android.annotation.SuppressLint("ClickableViewAccessibility")
-        override fun onTouchEvent(ev: android.view.MotionEvent): Boolean = !locked && super.onTouchEvent(ev)
     }
 
     /** A round icon button in a corner of the card. */
@@ -401,6 +386,8 @@ class DictionaryPopup(
     ) {
         /** The word's language ("ja", "ko"; null for Chinese), which picks the font. */
         var fontLang: String? = null
+        /** The short summary: the word, its readings and first meanings, the essentials only. */
+        var compact = false
         /** A Kanji or Hanja's Japanese or Korean readings, shown first. */
         var local: List<LocalReading>? = null
         /** Whether the Chinese readings (and Chinese examples) show. */
@@ -440,6 +427,10 @@ class DictionaryPopup(
                 body.addView(readingRow(labelled(lr.label, lr.shown), onSpeakLocal?.let { say -> smallSpeaker { say(lr.say) } }))
             }
             if (showChinese) readingRows(r, main, text)
+            if (compact) {
+                summary(r)
+                return
+            }
             if (main != null && !r.composed) facts(main)
             strokes(text)
             val lang = if (r.lang == Lang.Cantonese) "yue" else "cmn"
@@ -466,6 +457,34 @@ class DictionaryPopup(
                     if (showChinese) readingRows(Resolved(r.lang, null, null, null, listOf(hw), false), hw, null)
                 }
                 senses(hw, r)
+            }
+        }
+
+        /**
+         * The summary's meanings: the first few of the keyboard's language (else any), one or two
+         * lines each, and the measure word, enough to tell whether this is the word wanted.
+         */
+        private fun summary(r: Resolved) {
+            if (r.composed) {
+                // a phrase read piece by piece: each piece's meaning on one line
+                r.headwords.take(SUMMARY_SENSES).forEach { hw ->
+                    val form = if (prefs.simplified) hw.simplified else hw.traditional
+                    val gloss = hw.senses.firstOrNull { it.partOfSpeech != "cl" }?.gloss?.let { Annotator.shorten(it, 40) }.orEmpty()
+                    body.addView(textView("$form  $gloss", 14f, c.onSurface).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
+                }
+                return
+            }
+            val hw = r.headwords.firstOrNull() ?: return
+            val wanted = if (r.lang == Lang.Mandarin) Lang.Mandarin else Lang.Cantonese
+            val all = hw.senses.filter { it.partOfSpeech != "cl" && !it.gloss.startsWith("variant of") && !it.gloss.startsWith("see ") }
+            val list = (all.filter { it.lang == wanted } + all.filter { it.lang != wanted }).distinctBy { it.gloss.lowercase() }
+            list.take(SUMMARY_SENSES).forEachIndexed { i, s -> plainSense(i + 1, s.gloss, lines = 2) }
+            if (!showChinese) return
+            val measure = hw.info.measureWordList()
+            if (measure.isNotEmpty()) {
+                val script = { t: String, s: String -> if (prefs.simplified) s else t }
+                body.addView(labelled(ctx.getString(R.string.lychee_card_measure_word).trimEnd(':'),
+                    measure.take(2).joinToString("  ·  ") { (t, s, _) -> script(t, s) }))
             }
         }
 
@@ -531,6 +550,13 @@ class DictionaryPopup(
             }
         }
 
+        /** A Japanese or Korean word's Chinese readings (Cantonese and Mandarin), under a heading. */
+        fun chineseReadings(text: String, r: Resolved) {
+            section(ctx.getString(R.string.lychee_card_chinese_readings))
+            spokenWord = text
+            readingRows(r, r.headwords.firstOrNull(), text)
+        }
+
         /** Each language's main reading on this card, for the meanings read another way. */
         private val mainReading = HashMap<Lang, String>()
 
@@ -583,12 +609,12 @@ class DictionaryPopup(
                 gravity = Gravity.CENTER_VERTICAL
             }
             val words = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-            words.addView(textView(shown, 44f, c.onSurface).apply {
+            words.addView(textView(shown, if (compact) 30f else 40f, c.onSurface).apply {
                 app.lychee.fonts.LycheeFonts.forText(ctx, shown, fontLang)?.let { typeface = it }
             })
             if (other != null) {
                 // the other script's form: large too, a step smaller, the same colour
-                words.addView(textView(other, 30f, c.onSurface).apply {
+                words.addView(textView(other, if (compact) 20f else 26f, c.onSurface).apply {
                     app.lychee.fonts.LycheeFonts.forText(ctx, shown, fontLang)?.let { typeface = it }
                     letterSpacing = 0.1f
                 })
@@ -725,27 +751,33 @@ class DictionaryPopup(
             }
         }
 
-        fun plainSense(n: Int, gloss: String) {
-            senseBlock(n, gloss, emptyList())
+        fun plainSense(n: Int, gloss: String, lines: Int = Int.MAX_VALUE) {
+            senseBlock(n, gloss, emptyList(), lines)
         }
 
         /** One definition: its number in the accent colour, then the meaning and any notes under it. */
-        private fun senseBlock(n: Int, gloss: String, notes: List<String>) {
+        private fun senseBlock(n: Int, gloss: String, notes: List<String>, lines: Int = Int.MAX_VALUE) {
             val block = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
-                setPadding(0, dp(4), 0, dp(4))
+                setPadding(0, dp(if (compact) 2 else 4), 0, dp(if (compact) 2 else 4))
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             }
             // the number in the accent colour, the meaning beside it: no box around it
             block.addView(TextView(ctx).apply {
                 text = "$n."
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 12f else 13f)
                 typeface = app.lychee.fonts.LycheeFonts.appFont(ctx, 700)
                 setTextColor(c.primary)
                 includeFontPadding = false
-            }, LinearLayout.LayoutParams(dp(26), ViewGroup.LayoutParams.WRAP_CONTENT))
+            }, LinearLayout.LayoutParams(dp(22), ViewGroup.LayoutParams.WRAP_CONTENT))
             val column = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-            column.addView(textView(gloss, 15f, c.onSurface).apply { setLineSpacing(0f, 1.1f) })
+            column.addView(textView(gloss, 15f, c.onSurface).apply {
+                setLineSpacing(0f, 1.1f)
+                if (lines != Int.MAX_VALUE) {
+                    maxLines = lines
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                }
+            })
             notes.forEach { column.addView(textView(it, 13f, c.onSurfaceVariant).apply { setPadding(0, dp(4), 0, 0) }) }
             block.addView(column, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             body.addView(block)
@@ -770,12 +802,12 @@ class DictionaryPopup(
             setImageResource(R.drawable.lychee_ic_volume)
             imageTintList = android.content.res.ColorStateList.valueOf(c.onPrimaryContainer)
             contentDescription = ctx.getString(R.string.lychee_card_listen)
-            setPadding(dp(10), dp(10), dp(10), dp(10))
+            setPadding(dp(9), dp(9), dp(9), dp(9))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(c.primaryContainer)
             }
-            layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
+            layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
             setOnClickListener { onClick() }
         }
 
@@ -856,7 +888,7 @@ class DictionaryPopup(
         private fun section(title: String) {
             body.addView(textView(title, 14f, c.primary).apply {
                 typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
-                setPadding(0, dp(16), 0, dp(4))
+                setPadding(0, dp(12), 0, dp(2))
             })
         }
 
@@ -884,7 +916,8 @@ class DictionaryPopup(
 
         fun textView(t: CharSequence, sp: Float, color: Int) = TextView(ctx).apply {
             text = t
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, sp)
+            // everything on the card a step smaller than a page's text; the summary smaller still
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, sp * if (compact) 0.84f else 0.88f)
             setTextColor(color)
         }
 
@@ -892,6 +925,8 @@ class DictionaryPopup(
 
         companion object {
             const val MAX_SENSES = 12
+            /** Meanings in the summary. */
+            const val SUMMARY_SENSES = 3
             /** Characters whose stroke order a card shows (a long word wraps onto more rows). */
             const val MAX_STROKE_CHARS = 16
             // TypeDuck codes

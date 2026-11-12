@@ -55,7 +55,10 @@ object BundledPacks {
             val app = context.applicationContext
             val enabled = enabledEngines(app)
             val engines = enabled.orEmpty() + listOfNotNull(engine)
+            val purged = PackStorage.purged(app)
             for ((id, version) in versions(app)) {
+                // removed in Settings > Storage: stays out until restored there
+                if (id in purged) continue
                 val needed = USED_BY[id]?.any { it in engines } ?: true
                 if (!needed) {
                     // only when the enabled keyboards are known for sure
