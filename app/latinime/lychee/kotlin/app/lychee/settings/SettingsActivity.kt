@@ -1070,7 +1070,7 @@ private fun PaletteGrid(palettes: List<Pair<String, Int>>, chosen: String, onPic
                     drawCircle(androidx.compose.ui.graphics.Color(swatch[3]), inner * 0.32f)
                 }
                 Text(
-                    name, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                    stringResource(name), style = MaterialTheme.typography.labelMedium, maxLines = 1,
                     color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 6.dp),
                 )

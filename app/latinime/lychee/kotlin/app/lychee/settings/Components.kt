@@ -22,6 +22,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -302,7 +303,7 @@ fun <T> ChoiceRow(
             Spacer(Modifier.height(10.dp))
             androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 options.forEachIndexed { i, (value, label) ->
-                    androidx.compose.material3.SegmentedButton(
+                    SegmentedButton(
                         selected = value == selected,
                         onClick = { onSelect(value) },
                         shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, options.size),
