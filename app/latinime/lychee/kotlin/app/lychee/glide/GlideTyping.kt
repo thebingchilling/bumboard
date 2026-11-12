@@ -55,17 +55,17 @@ object GlideTyping {
         engine = newEngine
         locale = null
         decoder = null
-        val app = context.applicationContext
+        val appContext = context.applicationContext
         val build = {
             if (engine == newEngine) {
-                val built = runCatching { buildRoman(app, newEngine) }
+                val built = runCatching { buildRoman(appContext, newEngine) }
                     .onFailure { Log.w(TAG, "glide word list for $newEngine unavailable", it) }.getOrNull()
                 if (engine == newEngine) decoder = built
             }
         }
         if (newEngine == "yue" || newEngine == "cmn") {
             // the readings dictionary opens first (it may already be open)
-            app.lychee.chinese.Readings.open(app) { executor.execute { build() } }
+            app.lychee.chinese.Readings.open(appContext) { executor.execute { build() } }
         } else {
             executor.execute { build() }
         }
