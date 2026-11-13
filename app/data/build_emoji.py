@@ -136,6 +136,30 @@ def romanisers(readings_db: Path):
     return romanise
 
 
+# bump to rebuild the cached font (build_noto.py changed)
+NOTO_BUILD = "v1"
+
+
+def noto_sources(cache: Path) -> Path:
+    """Noto's SVG sources (2D/svg and the waved flags) at the commit the font is pinned to."""
+    import subprocess
+    url = json.loads((HERE / "emoji_sources.json").read_text())["NotoColorEmoji.ttf"]["url"]
+    commit = re.search(r"/noto-emoji/([0-9a-f]{40})/", url).group(1)
+    repo = cache / f"noto-emoji-{commit[:12]}"
+    if (repo / "2D/svg").is_dir() and (repo / "third_party/region-flags/waved-svg").is_dir():
+        return repo
+    shutil.rmtree(repo, ignore_errors=True)
+    repo.mkdir(parents=True)
+    def git(*a):
+        subprocess.run(["git", "-C", str(repo), *a], check=True)
+    git("init", "-q")
+    git("remote", "add", "origin", "https://github.com/googlefonts/noto-emoji")
+    git("sparse-checkout", "set", "--no-cone", "/2D/svg/*", "/third_party/region-flags/waved-svg/*")
+    git("fetch", "-q", "--depth", "1", "--filter=blob:none", "origin", commit)
+    git("checkout", "-q", "FETCH_HEAD")
+    return repo
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, default=HERE / "out")
@@ -211,7 +235,15 @@ def main():
     data = {"version": "18.0", "groups": groups}
     (assets / "emoji.json").write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")),
                                        encoding="utf-8")
-    shutil.copy(src["NotoColorEmoji.ttf"], assets / "NotoColorEmoji.ttf")
+    # Google's font with every picture rebuilt from its SVG (the release's bitmaps have broken
+    # gradients); cached, as it takes a minute
+    rebuilt = args.cache / f"NotoColorEmoji-rebuilt-{sha256(src['NotoColorEmoji.ttf'])[:12]}-{NOTO_BUILD}.ttf"
+    if not rebuilt.exists():
+        from build_noto import build
+        repo = noto_sources(args.cache)
+        done, kept = build(str(src["NotoColorEmoji.ttf"]), str(repo), str(src["emoji-test.txt"]), str(rebuilt))
+        print(f"NotoColorEmoji.ttf: {done} pictures rebuilt from SVG, {kept} kept", file=sys.stderr)
+    shutil.copy(rebuilt, assets / "NotoColorEmoji.ttf")
     total = sum(len(g["items"]) for g in groups)
     toned = sum(1 for g in groups for i in g["items"] if len(i) > 3)
     print(f"emoji.json: {total} emoji ({toned} with skin tones) in {len(groups)} groups", file=sys.stderr)
