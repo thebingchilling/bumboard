@@ -61,14 +61,26 @@ object Speech {
     }
 
     private fun say(context: Context, engine: TextToSpeech, text: String, locales: List<Locale>) {
-        val locale = locales.firstOrNull {
-            engine.isLanguageAvailable(it) >= TextToSpeech.LANG_AVAILABLE
+        if (text.isBlank()) return
+        // the exact region first (ja-JP, ko-KR, zh-TW ...), else any installed voice of the
+        // language (some engines list only "ja" or "ko"), never one that needs the internet
+        val voices = runCatching { engine.voices }.getOrNull().orEmpty()
+            .filter { !it.isNetworkConnectionRequired && !it.features.orEmpty().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) }
+        val voice = locales.firstNotNullOfOrNull { l ->
+            voices.filter { it.locale.language == l.language && (l.country.isEmpty() || it.locale.country == l.country) }
+                .maxByOrNull { it.quality }
+        } ?: locales.firstNotNullOfOrNull { l -> voices.filter { it.locale.language == l.language }.maxByOrNull { it.quality } }
+        val ok = if (voice != null) {
+            runCatching { engine.setVoice(voice) == TextToSpeech.SUCCESS }.getOrDefault(false)
+        } else {
+            val locale = locales.firstOrNull { engine.isLanguageAvailable(it) >= TextToSpeech.LANG_AVAILABLE }
+                ?: locales.map { Locale(it.language) }.firstOrNull { engine.isLanguageAvailable(it) >= TextToSpeech.LANG_AVAILABLE }
+            locale != null && engine.setLanguage(locale) >= TextToSpeech.LANG_AVAILABLE
         }
-        if (locale == null) {
+        if (!ok) {
             Toast.makeText(context, R.string.lychee_speech_no_voice, Toast.LENGTH_LONG).show()
             return
         }
-        engine.language = locale
         engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lychee")
     }
 
@@ -83,8 +95,8 @@ object Speech {
     @Suppress("UNUSED_PARAMETER")
     fun localesFor(engine: String?, simplified: Boolean): List<Locale> = when (engine) {
         "yue" -> listOf(Locale.forLanguageTag("yue-HK"), Locale.forLanguageTag("zh-HK"))
-        "ja" -> listOf(Locale.JAPAN)
-        "ko" -> listOf(Locale.KOREA)
+        "ja" -> listOf(Locale.JAPAN, Locale.JAPANESE)
+        "ko" -> listOf(Locale.KOREA, Locale.KOREAN)
         else -> if (mandarinTaiwan) listOf(Locale.TRADITIONAL_CHINESE, Locale.SIMPLIFIED_CHINESE)
         else listOf(Locale.SIMPLIFIED_CHINESE, Locale.TRADITIONAL_CHINESE)
     }

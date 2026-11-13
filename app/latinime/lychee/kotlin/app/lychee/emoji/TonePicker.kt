@@ -52,12 +52,10 @@ class TonePicker(private val ctx: Context) {
             popup.dismiss()
             onPick(text)
         }
-        fun cell(text: String, size: Int = 46, onClick: () -> Unit = { pick(text) }) = TextView(ctx).apply {
+        fun cell(text: String, size: Int = 46, onClick: () -> Unit = { pick(text) }) = EmojiView(ctx).apply {
+            // drawn whole and centred by the emoji renderer
             this.text = text
-            typeface = app.lychee.fonts.LycheeFonts.emoji(context)
-            setTextSize(TypedValue.COMPLEX_UNIT_PX, dp(size) * 0.62f)
-            gravity = Gravity.CENTER
-            includeFontPadding = false
+            fill = 0.68f
             layoutParams = LinearLayout.LayoutParams(dp(size), dp(size))
             background = pressable(if (text == selected) c.primaryContainer else Color.TRANSPARENT, size / 3, c.onSurface)
             setOnClickListener { onClick() }

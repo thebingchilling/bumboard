@@ -129,7 +129,9 @@ class DictionaryPopup(
             // each pronunciation has its own speak button; only a word with none keeps the
             // heading's
             val anyReading = entries.any { !it.reading.isNullOrBlank() }
-            content.heading(text, if (anyReading && onSpeakAs != null) null else text)
+            // (English: each UK and US pronunciation has its own speaker instead; Japanese and
+            // Korean always keep the word's, as their reading rows can be left out)
+            content.heading(text, if (anyReading && onSpeakAs != null && lang == "en") null else text)
             if (translations.isNotEmpty()) content.translations(translations, onTranslation)
             kanji?.let { k ->
                 // kun readings with their okurigana in brackets: まな.ぶ → まな(ぶ)
@@ -202,7 +204,6 @@ class DictionaryPopup(
                 setPadding(0, dp(8), 0, dp(4))
             })
             if (compact) return@present
-            if (lang == "ja" || lang == "ko") content.strokes(text)
             content.examples(examples) { sentence ->
                 when (lang) {
                     "ja" -> app.lychee.core.SentenceRomanizer.japanese(sentence) { form ->
@@ -212,6 +213,7 @@ class DictionaryPopup(
                     else -> null
                 }
             }
+            if (lang == "ja" || lang == "ko") content.strokes(text)
         }
     }
 
@@ -247,7 +249,8 @@ class DictionaryPopup(
             addView(body)
             overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
         }
-        val card = MaxHeightLayout(ctx, room).apply {
+        // the summary may take all the room above the keys, so it never scrolls
+        val card = MaxHeightLayout(ctx, if (startCompact) space else room).apply {
             orientation = LinearLayout.VERTICAL
             isClickable = true
             background = GradientDrawable().apply {
@@ -273,13 +276,20 @@ class DictionaryPopup(
             scroll.scrollTo(0, 0)
             expand.setImageResource(if (open) R.drawable.ic_sym_keyboard_arrow_down else R.drawable.ic_sym_keyboard_arrow_up)
             expand.contentDescription = ctx.getString(if (open) R.string.lychee_card_less else R.string.lychee_card_more)
-            if (!app.lychee.layout.LycheePanels.animate(ctx)) return
+            // the full entry at least as tall as the summary was; the summary all the room it needs
+            val limit = if (open) maxOf(room, from) else space
+            if (!app.lychee.layout.LycheePanels.animate(ctx)) {
+                card.maxHeight = limit
+                card.requestLayout()
+                return
+            }
             // the card's bottom stays on the keyboard; its top travels
             body.alpha = 0f
             body.animate().alpha(1f).setDuration(app.lychee.layout.LycheeMotion.IN)
                 .setInterpolator(app.lychee.layout.LycheeMotion.enterEasing).start()
+            card.maxHeight = limit
             card.measure(View.MeasureSpec.makeMeasureSpec(card.width, View.MeasureSpec.EXACTLY),
-                View.MeasureSpec.makeMeasureSpec(room, View.MeasureSpec.AT_MOST))
+                View.MeasureSpec.makeMeasureSpec(card.maxHeight, View.MeasureSpec.AT_MOST))
             val to = card.measuredHeight
             android.animation.ValueAnimator.ofInt(from, to).apply {
                 duration = app.lychee.layout.LycheeMotion.IN + 60
@@ -290,7 +300,7 @@ class DictionaryPopup(
                 }
                 addListener(object : android.animation.AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: android.animation.Animator) {
-                        card.maxHeight = room
+                        card.maxHeight = limit
                         card.requestLayout()
                     }
                 })
@@ -436,32 +446,32 @@ class DictionaryPopup(
                 return
             }
             if (main != null && !r.composed) facts(main)
-            strokes(text)
+            // the definitions first, then example sentences, then the stroke order
+            if (r.composed) {
+                // a candidate the dictionary has nothing for: its pieces, readings and meanings
+                if (r.headwords.isNotEmpty()) {
+                    section(ctx.getString(R.string.lychee_card_parts))
+                    r.headwords.forEach { hw -> part(hw, r.lang) }
+                }
+            } else {
+                r.headwords.forEachIndexed { i, hw ->
+                    if (i > 0) {
+                        body.addView(divider())
+                        // each entry's word as large as the first's, its other script under it
+                        val first = if (prefs.simplified) hw.simplified else hw.traditional
+                        heading(first, null, otherForm(first, if (prefs.simplified) hw.traditional else hw.simplified))
+                        if (showChinese) readingRows(Resolved(r.lang, null, null, null, listOf(hw), false), hw, null)
+                    }
+                    senses(hw, r)
+                }
+            }
             val lang = if (r.lang == Lang.Cantonese) "yue" else "cmn"
             val forms2 = listOfNotNull(text, main?.traditional, main?.simplified)
             val romanLang = if (r.lang == Lang.Mandarin) Lang.Mandarin else Lang.Cantonese
             if (showChinese) examples(app.lychee.dict.PackData.examples(ctx, lang, forms2)) { sentence ->
                 Readings.annotator?.romanise(sentence, romanLang, prefs)
             }
-
-            if (r.composed) {
-                // a candidate the dictionary has nothing for shows just its strokes and readings
-                if (r.headwords.isNotEmpty()) {
-                    section(ctx.getString(R.string.lychee_card_parts))
-                    r.headwords.forEach { hw -> part(hw, r.lang) }
-                }
-                return
-            }
-            r.headwords.forEachIndexed { i, hw ->
-                if (i > 0) {
-                    body.addView(divider())
-                    // each entry's word as large as the first's, its other script under it
-                    val first = if (prefs.simplified) hw.simplified else hw.traditional
-                    heading(first, null, otherForm(first, if (prefs.simplified) hw.traditional else hw.simplified))
-                    if (showChinese) readingRows(Resolved(r.lang, null, null, null, listOf(hw), false), hw, null)
-                }
-                senses(hw, r)
-            }
+            strokes(text)
         }
 
         /**
@@ -546,12 +556,19 @@ class DictionaryPopup(
                 yue?.let { Triple(Lang.Cantonese, R.string.lychee_card_cantonese, it) },
                 cmn?.let { Triple(Lang.Mandarin, R.string.lychee_card_mandarin, it) },
             ).let { if (r.lang == Lang.Mandarin) it.reversed() else it }
+            // side by side, each with its speaker, to save room
+            val pair = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
             for ((lang, label, reading) in rows) {
                 mainReading[lang] = norm(reading)
                 // the main reading only; a reading with meanings of its own comes with them
-                body.addView(readingRow(labelled(ctx.getString(label), Annotator.format(reading, lang, prefs)),
-                    readingSpeaker(hw, reading, lang, spoken)))
+                pair.addView(readingRow(labelled(ctx.getString(label), Annotator.format(reading, lang, prefs)),
+                    readingSpeaker(hw, reading, lang, spoken)),
+                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = dp(8) })
             }
+            if (pair.childCount > 0) body.addView(pair)
         }
 
         /** A Japanese or Korean word's Chinese readings (Cantonese and Mandarin), under a heading. */
@@ -641,12 +658,12 @@ class DictionaryPopup(
                 gravity = Gravity.CENTER_VERTICAL
             }
             val words = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-            words.addView(textView(shown, if (compact) 30f else 40f, c.onSurface).apply {
+            words.addView(textView(shown, 38f, c.onSurface).apply {
                 app.lychee.fonts.LycheeFonts.forText(ctx, shown, fontLang)?.let { typeface = it }
             })
             if (other != null) {
                 // the other script's form: large too, a step smaller, the same colour
-                words.addView(textView(other, if (compact) 20f else 26f, c.onSurface).apply {
+                words.addView(textView(other, 24f, c.onSurface).apply {
                     app.lychee.fonts.LycheeFonts.forText(ctx, shown, fontLang)?.let { typeface = it }
                     letterSpacing = 0.1f
                 })
@@ -797,7 +814,7 @@ class DictionaryPopup(
             // the number in the accent colour, the meaning beside it: no box around it
             block.addView(TextView(ctx).apply {
                 text = "$n."
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, if (compact) 12f else 13f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f * TEXT_SCALE)
                 typeface = app.lychee.fonts.LycheeFonts.appFont(ctx, 700)
                 setTextColor(c.primary)
                 includeFontPadding = false
@@ -949,7 +966,7 @@ class DictionaryPopup(
         fun textView(t: CharSequence, sp: Float, color: Int) = TextView(ctx).apply {
             text = t
             // everything on the card a step smaller than a page's text; the summary smaller still
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, sp * if (compact) 0.84f else 0.88f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, sp * TEXT_SCALE)
             setTextColor(color)
         }
 
@@ -959,6 +976,8 @@ class DictionaryPopup(
             const val MAX_SENSES = 12
             /** Meanings in the summary. */
             const val SUMMARY_SENSES = 3
+            /** Every text on the card a step smaller than a page's (summary and full alike). */
+            const val TEXT_SCALE = 0.86f
             /** Characters whose stroke order a card shows (a long word wraps onto more rows). */
             const val MAX_STROKE_CHARS = 16
             // TypeDuck codes

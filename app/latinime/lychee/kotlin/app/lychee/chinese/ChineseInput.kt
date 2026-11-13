@@ -629,26 +629,24 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         stopPredicting()
         val code = event.mCodePoint
         if (!RimeService.ready || session == 0L || selectedEngine != engine) {
-            // Rime is still loading: letters wait (shown as typed) and go to Rime once it is
-            // ready, so nothing typed in the first moment is lost; punctuation is Chinese already
+            // the dictionaries are still loading: nothing reaches the text field yet (letters
+            // left there were remnants once Rime took over); the letters wait in the bar's line
+            // for what is typed and go to Rime as soon as it is ready
             val ic = ime.currentInputConnection
             when {
                 code in 'a'.code..'z'.code || (engine == "ko" && code in 'A'.code..'Z'.code) ||
                     (pending.isNotEmpty() && (code in '0'.code..'9'.code || code == '\''.code)) -> {
                     pending.appendCodePoint(if (code in 'A'.code..'Z'.code) code + 32 else code)
-                    ic?.setComposingText(pending, 1)
+                    showPending()
                     return true
                 }
                 event.mKeyCode == Constants.CODE_DELETE && pending.isNotEmpty() -> {
                     pending.setLength(pending.length - 1)
-                    ic?.setComposingText(pending, 1)
+                    showPending()
                     return true
                 }
-            }
-            // anything else first keeps the waiting letters as they are
-            if (pending.isNotEmpty()) {
-                ic?.finishComposingText()
-                pending.setLength(0)
+                // anything else waits too while letters are waiting
+                pending.isNotEmpty() -> return true
             }
             val mark = when {
                 code in PUNCTUATION || code == '"'.code || code == '\''.code -> fullWidth(code)
@@ -714,18 +712,29 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** Letters typed while Rime was starting, given to it once it is ready. */
     private val pending = StringBuilder()
 
-    /** Leaves the waiting letters in the text as they are. */
+    /** Drops the waiting letters (Rime couldn't start); nothing of them is in the text. */
     private fun flushPending() {
         if (pending.isEmpty()) return
-        ime.currentInputConnection?.finishComposingText()
         pending.setLength(0)
+        showPending()
+    }
+
+    /** The waiting letters in the bar's line for what is typed (they never go into the text). */
+    private fun showPending() {
+        preedit?.let { p ->
+            if (pending.isNotEmpty()) {
+                p.text = pending.toString() + " …"
+                p.visibility = View.VISIBLE
+            } else {
+                p.visibility = View.GONE
+            }
+        }
     }
 
     private fun replayPending() {
         if (pending.isEmpty() || session == 0L) return
         val letters = pending.toString()
         pending.setLength(0)
-        ime.currentInputConnection?.setComposingText("", 1)
         letters.forEach { Rime.processKey(session, it.code) }
         sync()
     }
@@ -960,8 +969,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             val tallest = bar.heightFor(linesFor(engine))
             maxOf(standard, tallest + if (rime) line else 0)
         }
-        bar?.let { if (it.paddingTop != (if (rime) line else 0)) it.setPadding(0, if (rime) line else 0, 0, 0) }
-        for (view in listOfNotNull(stripView, bar)) {
+        // the line for the letters typed is above the candidates; while handwriting (no letters)
+        // the candidates move up into it and the pad takes the line below them
+        val writing = stripView?.rootView?.findViewById<View>(R.id.lychee_handwriting_panel)?.visibility == View.VISIBLE
+        val top = if (rime && !writing) line else 0
+        val bottom = if (rime && writing) line else 0
+        bar?.let { if (it.paddingTop != top || it.paddingBottom != bottom) it.setPadding(0, top, 0, bottom) }
+        // voice typing takes the bar's place, so it is as tall as the bar
+        val voice = stripView?.rootView?.findViewById<View>(R.id.lychee_voice_panel)
+        for (view in listOfNotNull(stripView, bar, voice)) {
             val lp = view.layoutParams ?: continue
             if (lp.height != height) {
                 lp.height = height

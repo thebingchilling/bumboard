@@ -497,6 +497,7 @@ class EmojiPanelView @JvmOverloads constructor(
                 is Row.Header -> {
                     view.text = context.getString(row.title)
                     (view as EmojiCell).hasTones = false
+                    view.emoji = false
                 }
                 is Row.Cell -> {
                     // the emoji fills its cell
@@ -512,6 +513,8 @@ class EmojiPanelView @JvmOverloads constructor(
                     view.text = shown
                     view.contentDescription = row.emoji.name
                     (view as EmojiCell).hasTones = row.emoji.tones != null
+                    // emoji drawn whole and centred by the emoji renderer; kaomoji as text
+                    view.emoji = !row.kaomoji
                     view.setOnClickListener { type(shown) }
                     view.setOnLongClickListener {
                         // no skin tones, or a recent one already in its tone (nothing more to
@@ -544,6 +547,12 @@ class EmojiPanelView @JvmOverloads constructor(
             set(value) {
                 if (field != value) { field = value; invalidate() }
             }
+        /** Drawn by [EmojiRenderer] (an emoji) rather than as text (headers, kaomoji). */
+        var emoji = false
+            set(value) {
+                if (field != value) { field = value; invalidate() }
+            }
+        private val box = android.graphics.RectF()
         private val marker = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
             color = palette.onSurfaceVariant
             alpha = 0x90
@@ -551,7 +560,12 @@ class EmojiPanelView @JvmOverloads constructor(
         private val path = android.graphics.Path()
 
         override fun onDraw(canvas: android.graphics.Canvas) {
-            super.onDraw(canvas)
+            if (emoji) {
+                box.set(0f, 0f, width.toFloat(), height.toFloat())
+                EmojiRenderer.draw(context, canvas, text, box, EMOJI_FILL)
+            } else {
+                super.onDraw(canvas)
+            }
             if (!hasTones) return
             val s = dp(6).toFloat()
             val inset = dp(4).toFloat()

@@ -49,8 +49,11 @@ def convert(src: str, dst: str) -> int:
 
     from PIL import Image
 
-    # one scale for every picture: the tallest becomes 128 pixels
-    tallest = max(png_size(g.imageData)[1] for g in (image(n) for n in order) if g is not None)
+    # one scale for every picture, so each fits CBDT's byte-sized metrics whole (the tallest at
+    # most 128 pixels); each sits on the baseline as Noto Color Emoji's do, about four fifths
+    # above it (sbix's own offsets put them above the line, and clamping them cut their feet)
+    pictures = [g for g in (image(n) for n in order) if g is not None]
+    tallest = max(png_size(g.imageData)[1] for g in pictures)
     scale = min(1.0, 128 / tallest)
     out_ppem = max(1, round(ppem * scale))
 
@@ -67,7 +70,9 @@ def convert(src: str, dst: str) -> int:
             Image.open(io.BytesIO(png)).convert("RGBA").resize((w2, h2), Image.LANCZOS).save(buf, "PNG", optimize=True)
             png, w, h = buf.getvalue(), w2, h2
         bearing_x = round(g.originOffsetX * scale)
-        bearing_y = min(127, h + round(g.originOffsetY * scale))
+        bearing_y = round(h * 0.79)
+        if not -128 <= bearing_y <= 127 or not -128 <= bearing_x <= 127:
+            raise ValueError(f"{name}: bearing {bearing_x},{bearing_y} out of range")
         advance = min(255, round(hmtx[name][0] * out_ppem / upem))
         entries.append((gid, name, png, (h, w, bearing_x, bearing_y, advance)))
     if not entries:
@@ -81,8 +86,15 @@ def convert(src: str, dst: str) -> int:
         else:
             runs.append([e])
 
-    ascent = min(127, round(font["hhea"].ascent * out_ppem / upem))
-    descent = max(-128, round(font["hhea"].descent * out_ppem / upem))
+    # the line is as tall as the pictures, so nothing drawing a line of text clips them
+    import math
+    top = max(e[3][3] for e in entries)
+    below = max(e[3][0] - e[3][3] for e in entries)
+    ascent, descent = top, -max(0, below)
+    font["hhea"].ascent = font["OS/2"].sTypoAscender = font["OS/2"].usWinAscent = math.ceil(top * upem / out_ppem)
+    font["hhea"].descent = font["OS/2"].sTypoDescender = -math.ceil(max(0, below) * upem / out_ppem)
+    font["OS/2"].usWinDescent = math.ceil(max(0, below) * upem / out_ppem)
+    font["hhea"].lineGap = font["OS/2"].sTypoLineGap = 0
     width_max = max(e[3][1] for e in entries)
 
     def line_metrics(direction: str) -> str:

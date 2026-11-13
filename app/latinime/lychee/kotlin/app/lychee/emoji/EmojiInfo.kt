@@ -39,14 +39,22 @@ class EmojiInfo(private val ctx: Context) {
             }
             elevation = dp(8).toFloat()
         }
-        card.addView(TextView(ctx).apply {
-            this.text = text
-            typeface = if (emoji) app.lychee.fonts.LycheeFonts.emoji(ctx) else app.lychee.fonts.LycheeFonts.ui(ctx)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 56f)
-            setTextColor(c.onSurface)
-            includeFontPadding = false
-            gravity = Gravity.CENTER
-        })
+        if (emoji) {
+            // the emoji large, drawn whole by the emoji renderer
+            card.addView(EmojiView(ctx).apply {
+                this.text = text
+                fill = 0.92f
+            }, android.widget.LinearLayout.LayoutParams(dp(80), dp(80)).apply { gravity = Gravity.CENTER_HORIZONTAL })
+        } else {
+            card.addView(TextView(ctx).apply {
+                this.text = text
+                typeface = app.lychee.fonts.LycheeFonts.ui(ctx)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 56f)
+                setTextColor(c.onSurface)
+                includeFontPadding = false
+                gravity = Gravity.CENTER
+            })
+        }
         name?.takeIf { it.isNotBlank() }?.let { n ->
             card.addView(TextView(ctx).apply {
                 this.text = n.replaceFirstChar { it.uppercase() }

@@ -314,12 +314,20 @@ class EmojiSearchBar @JvmOverloads constructor(
 
     /** One result. */
     private inner class EmojiCell : TextView(context) {
+        private val box = android.graphics.RectF()
+
         init {
             typeface = app.lychee.fonts.LycheeFonts.emoji(context)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 30f)
             gravity = Gravity.CENTER
             includeFontPadding = false
             background = app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_suggestion)
+        }
+
+        // drawn whole and centred by the emoji renderer (as text, tall pictures were cut)
+        override fun onDraw(canvas: android.graphics.Canvas) {
+            box.set(0f, 0f, width.toFloat(), height.toFloat())
+            EmojiRenderer.draw(context, canvas, text, box, 0.7f)
         }
     }
 

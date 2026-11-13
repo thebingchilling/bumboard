@@ -86,6 +86,11 @@ class HandwritingPanelView @JvmOverloads constructor(
         orientation = VERTICAL
         isClickable = true
         setBackgroundColor(palette.surface)
+        // a hairline between the candidates above and the pad, like the clipboard's
+        addView(View(context).apply {
+            setBackgroundColor(palette.outlineVariant)
+            alpha = 0.7f
+        }, LayoutParams(LayoutParams.MATCH_PARENT, 1))
         // the guesses show in the candidate bar above (lycheeShowGuesses), so the pad gets the room
         // the pad has no background of its own: write straight on the keyboard
         addView(FrameLayout(context).apply {
@@ -129,6 +134,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         visibility = VISIBLE
         // the bar above shows "Handwriting" (Back is the key bottom left)
         toolbar()?.showTitle(R.string.lychee_sc_handwriting, withBack = false) { visibility = GONE }
+        takeLetterLine()
         pad.clear()
         updateHint()
         lastTyped = null
@@ -327,6 +333,20 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     private fun cancelAutoClear() {
         main.removeCallbacks(autoClear)
+    }
+
+    /**
+     * On the Chinese, Japanese and Korean keyboards the bar keeps a line for the letters typed;
+     * handwriting has none, so its candidates move up into that line (ChineseInput) and the pad
+     * reaches up into the space they leave below them, a divider between the two.
+     */
+    private fun takeLetterLine() {
+        if (lycheeHost()?.lycheeEngine() == null) return
+        val line = resources.getDimensionPixelSize(R.dimen.lychee_preedit_height)
+        val lp = layoutParams as? FrameLayout.LayoutParams ?: return
+        if (lp.height <= 0) return
+        lp.height += line
+        layoutParams = lp
     }
 
     /** Clears the ink on the pad without typing anything (only a tapped candidate types). */
