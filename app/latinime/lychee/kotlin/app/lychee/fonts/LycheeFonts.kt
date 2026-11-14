@@ -46,6 +46,14 @@ object LycheeFonts {
     const val WENKAI = "wenkai"
 
     private const val BUNDLED_EMOJI = "lychee/NotoColorEmoji.ttf"
+
+    /**
+     * Whether Lychee's own Noto Color Emoji can be drawn: it is Google Fonts' COLRv1 font (the
+     * newest emoji, Google's current art), which Android draws from Android 13; before that the
+     * phone's own emoji are used instead.
+     */
+    @JvmStatic
+    val bundledEmojiDrawable: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
     private const val BUNDLED_WENKAI = "lychee/LXGWWenKai-Regular.ttf"
     /** WenKai Medium, cut to the keys' letters and symbols: the keyboard font "LXGW WenKai". */
     private const val KEYS_WENKAI = "lychee/LXGWWenKaiKeys.ttf"
@@ -102,9 +110,9 @@ object LycheeFonts {
         return runCatching {
             when (val c = choice(app, PREF_EMOJI)) {
                 SYSTEM -> null
-                "" -> FontFamily.Builder(Font.Builder(app.assets, BUNDLED_EMOJI).build()).build()
+                "" -> if (bundledEmojiDrawable) FontFamily.Builder(Font.Builder(app.assets, BUNDLED_EMOJI).build()).build() else null
                 else -> packFile(app, c)?.let { FontFamily.Builder(Font.Builder(it).build()).build() }
-                    ?: FontFamily.Builder(Font.Builder(app.assets, BUNDLED_EMOJI).build()).build()
+                    ?: if (bundledEmojiDrawable) FontFamily.Builder(Font.Builder(app.assets, BUNDLED_EMOJI).build()).build() else null
             }
         }.getOrNull()
     }
@@ -466,7 +474,7 @@ object LycheeFonts {
 
     /** Lychee's own copy of Noto Color Emoji. */
     @JvmStatic
-    fun bundledEmoji(context: Context): Typeface = load(BUNDLED_EMOJI) {
+    fun bundledEmoji(context: Context): Typeface = if (!bundledEmojiDrawable) Typeface.DEFAULT else load(BUNDLED_EMOJI) {
         val assets = app(context).assets
         // the phone's fonts behind it, for anything it lacks
         (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) runCatching {
@@ -496,7 +504,7 @@ object LycheeFonts {
             // the phone's: an emoji newer than the font still shows whole
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) runCatching {
                 val builder = Typeface.CustomFallbackBuilder(FontFamily.Builder(Font.Builder(file).build()).build())
-                runCatching { Font.Builder(app(context).assets, BUNDLED_EMOJI).build() }.getOrNull()
+                runCatching { Font.Builder(app(context).assets, BUNDLED_EMOJI).build() }.getOrNull()?.takeIf { bundledEmojiDrawable }
                     ?.let { builder.addCustomFallback(FontFamily.Builder(it).build()) }
                 builder.setSystemFallback("sans-serif").build()
             }.getOrNull() ?: PackImporter.loadFont(file) else PackImporter.loadFont(file)

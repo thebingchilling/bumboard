@@ -68,7 +68,8 @@
     <string name="lychee_fonts_choose">Choose file</string>
     <string name="lychee_fonts_change">Change</string>
     <string name="lychee_fonts_noto">Noto Color Emoji</string>
-    <string name="lychee_fonts_noto_summary">Built in · the newest release, Emoji 18</string>
+    <string name="lychee_fonts_noto_summary">Built in · Google\'s newest Noto, Emoji 18</string>
+    <string name="lychee_fonts_noto_old">Needs Android 13 or later; this phone\'s own emoji are used instead</string>
     <string name="lychee_fonts_system_emoji">Phone\'s emoji</string>
     <string name="lychee_fonts_system_emoji_summary">The emoji this phone shows everywhere else</string>
     <string name="lychee_fonts_emoji_version">Emoji %1$s</string>

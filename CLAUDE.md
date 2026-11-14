@@ -122,9 +122,9 @@ is outside it.
   stroke order (Chinese, Japanese from KanjiVG, Korean made from letter strokes) and example
   sentences are bundled in the APK (`app/scripts/bundle-packs.py` fetches the newest
   published ones; `packs/BundledPacks.kt` in the app unpacks them). Only fonts are downloads. Emoji are
-  the bundled Noto Color Emoji by default (`app/data/emoji_sources.json`, the newest release,
-  every picture rebuilt from Google's SVG sources by `app/data/build_noto.py`: the release's
-  bitmaps have broken gradients);
+  the bundled Noto Color Emoji by default: Google Fonts' build (google/fonts
+  `ofl/notocoloremoji`, COLRv1, pinned in `app/data/emoji_sources.json`; Google's own CBDT
+  release has broken gradients), drawn from Android 13 (older phones use their own emoji);
   Noto 3D is a download pack mirrored by `packs.yml` (its Apple sbix format converted to
   CBDT by `packs/fonts/sbix_to_cbdt.py`; Android drew sbix fonts' outlines, black), and the user may pick their
   own emoji font or the phone's. Emoji font zips stay out of Actions artifacts (storage).

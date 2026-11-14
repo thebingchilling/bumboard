@@ -113,7 +113,7 @@ fun FontsPage() {
     FontSection(
         stringResource(R.string.lychee_fonts_emoji), LycheeFonts.PREF_EMOJI, stringResource(R.string.lychee_fonts_sample_emoji), actions,
         listOf(
-            FontOption("", stringResource(R.string.lychee_fonts_noto), stringResource(R.string.lychee_fonts_noto_summary),
+            FontOption("", stringResource(R.string.lychee_fonts_noto), stringResource(if (LycheeFonts.bundledEmojiDrawable) R.string.lychee_fonts_noto_summary else R.string.lychee_fonts_noto_old),
                 face = { LycheeFonts.bundledEmoji(it) }, emoji = true),
         ) + Packs.ofKind(context, PackKind.FONT_EMOJI).filter { !it.custom }.map {
             FontOption(it.id, it.name, listOf(it.summary, it.size).filter { s -> s.isNotEmpty() }.joinToString(" · "), pack = it, emoji = true)
