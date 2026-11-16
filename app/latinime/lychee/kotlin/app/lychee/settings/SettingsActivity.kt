@@ -924,6 +924,7 @@ private fun ThemePage() {
     KeyboardPreview(
         palette = colors.value, roundness = liveRound, borders = borders.value,
         raised = selected == ids.firstOrNull(), height = liveHeight, oneHanded = mode.value == "one_handed",
+        themeMode = themeMode.value,
     )
     Group(stringResource(R.string.lychee_pref_colors)) {
         row {

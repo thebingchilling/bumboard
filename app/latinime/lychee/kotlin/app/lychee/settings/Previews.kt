@@ -50,63 +50,35 @@ private fun PreviewFrame(content: @Composable () -> Unit) {
 }
 
 /**
- * The keyboard as it will look: the chosen [palette] (Settings > Theme), corners at [roundness] %,
- * key borders on or off, raised or flat keys, as tall as [height] makes them; and, where a page
- * changes them, the number row, one-handed mode, the space bar's label and the comma key's
- * neighbour ([comma]: combined, emoji, language, language_comma or none).
+ * The keyboard as it will look, drawn as the keyboard itself draws it ([KeyboardPreviewView]:
+ * the same key drawables, colours, proportions and icons, edge to edge, with its bar): the
+ * chosen [palette], corners at [roundness] %, key borders, raised or flat keys, [height]; and,
+ * where a page changes them, the number row, one-handed mode, the spacebar's label and the
+ * comma key's neighbour ([comma]). [themeMode] only redraws it when light or dark changes.
  */
 @Composable
 fun KeyboardPreview(
     palette: String, roundness: Int, borders: Boolean, raised: Boolean, height: Float,
     numberRow: Boolean = false, oneHanded: Boolean = false, spacebar: String? = null, comma: String = "combined",
+    themeMode: String? = null,
 ) {
-    val context = LocalContext.current
-    val swatch = remember(palette) { app.lychee.ui.LycheeColorStyle.swatch(context, palette) }
-    val background = Color(swatch[0])
-    val key = Color(swatch[1])
-    val functional = Color(swatch[2])
-    val accent = Color(swatch[3])
-    val ink = if (androidx.core.graphics.ColorUtils.calculateLuminance(swatch[1]) > 0.5) Color(0xFF1F1F1F) else Color(0xFFE8E8E8)
-    val rows = listOfNotNull("1234567890".takeIf { numberRow }, "qwertyuiop", "asdfghjkl", "zxcvbnm")
-    PreviewFrame {
-        val keyHeight = (34 * height).dp
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = if (oneHanded) Arrangement.End else Arrangement.Center) {
-            Column(
-                Modifier
-                    .fillMaxWidth(if (oneHanded) 0.82f else 1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(background)
-                    .padding(4.dp),
-                verticalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                rows.forEach { letters ->
-                    Row(
-                        Modifier.fillMaxWidth().height(keyHeight),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
-                    ) {
-                        val last = letters == "zxcvbnm"
-                        if (last) PreviewKey("⇧", functional, ink, roundness, true, raised, Modifier.weight(1.5f))
-                        letters.forEach { c -> PreviewKey(c.toString(), key, ink, roundness, borders, raised, Modifier.weight(1f)) }
-                        if (last) PreviewKey("⌫", functional, ink, roundness, true, raised, Modifier.weight(1.5f))
-                    }
-                }
-                // the bottom row: ?123, the comma (and its neighbour), space, the period, Enter
-                Row(
-                    Modifier.fillMaxWidth().height(keyHeight),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
-                ) {
-                    PreviewKey("?123", functional, ink, roundness, true, raised, Modifier.weight(1.5f), small = true)
-                    val commaLabel = when (comma) { "combined" -> ",☺"; "language_comma" -> ",🌐"; else -> "," }
-                    PreviewKey(commaLabel, functional, ink, roundness, true, raised, Modifier.weight(1f), small = true)
-                    if (comma == "emoji") PreviewKey("☺", functional, ink, roundness, true, raised, Modifier.weight(1f))
-                    if (comma == "language") PreviewKey("🌐", functional, ink, roundness, true, raised, Modifier.weight(1f), small = true)
-                    PreviewKey(spacebar ?: "", key, ink.copy(alpha = 0.7f), roundness, true, raised, Modifier.weight(4f), small = true)
-                    PreviewKey(".", functional, ink, roundness, true, raised, Modifier.weight(1f))
-                    PreviewKey("↵", accent, Color.White, roundness, true, raised, Modifier.weight(1.5f))
-                }
-            }
-        }
-    }
+    androidx.compose.ui.viewinterop.AndroidView(
+        factory = { KeyboardPreviewView(it) },
+        update = { v ->
+            v.palette = palette
+            v.roundness = roundness
+            v.borders = borders
+            v.raised = raised
+            v.heightScale = height
+            v.numberRow = numberRow
+            v.oneHanded = oneHanded
+            v.spacebar = spacebar
+            v.comma = comma
+            v.tag = themeMode
+            v.refresh()
+        },
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+    )
 }
 
 /**

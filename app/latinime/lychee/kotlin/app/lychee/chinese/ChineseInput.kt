@@ -262,13 +262,13 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private fun wordAnnotation(candidate: Candidate, showMeaning: Boolean): Annotation? {
         val entry = app.lychee.dict.PackData.words(ime, engine, candidate.text, limit = 1).firstOrNull()
         val meaning = entry?.senses?.firstOrNull()?.takeIf { showMeaning }?.let { app.lychee.core.Annotator.shorten(it) }
-        // the readings in Latin letters only (kana and Hangul readings are on the word's card);
-        // a Korean word's Hanja beside it, leading its meaning line (學校 · school)
+        // the readings in Latin letters only (kana and Hangul readings are on the word's card),
+        // never Kanji or Hanja: a Korean word's Hanja are a candidate of their own (withHanja)
         val lines = readingLines(candidate, entry, native = false)
-        val hanja = entry?.hanja?.takeIf { engine == "ko" && showMeaning && it.isNotBlank() && it != candidate.text }
-        val under = listOfNotNull(hanja, meaning).joinToString(" · ").ifEmpty { null }
+            .filter { line -> line.codePoints().noneMatch { app.lychee.core.Annotator.isHan(it) } }
+        val under = meaning
         if (lines.isEmpty() && under == null) return null
-        return Annotation(lines, under, null, otherScript = hanja)
+        return Annotation(lines, under, null)
     }
 
     /** The word card's reading: the kana (always, for words with kanji or katakana) and the romanisation. */
@@ -823,8 +823,50 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     fun pick(index: Int) {
         if (session == 0L) return
-        Rime.selectCandidate(session, index)
+        val map = displayMap
+        if (map != null && index in map.indices && map[index] < 0) {
+            // a Hanja alternative: typed as it is, and the composition ends
+            val text = shown?.candidates?.getOrNull(index)?.text ?: return
+            Rime.clearComposition(session)
+            ime.currentInputConnection?.commitText(text, 1)
+            sync()
+            return
+        }
+        Rime.selectCandidate(session, map?.getOrNull(index)?.takeIf { it >= 0 } ?: index)
         sync()
+    }
+
+    /** Korean: each shown candidate's index in Rime's list, or -1 for a Hanja alternative. */
+    private var displayMap: IntArray? = null
+
+    /**
+     * Korean, like Japanese with its Kanji: a word's Hanja (from the Korean dictionary pack) as a
+     * candidate of its own, right after the word in Hangul (학교, 學校).
+     */
+    private fun withHanja(c: Composition?): Composition? {
+        displayMap = null
+        if (c == null || engine != "ko" || englishMode || c.candidates.isEmpty()) return c
+        val out = ArrayList<Candidate>(c.candidates.size + 4)
+        val map = ArrayList<Int>(c.candidates.size + 4)
+        val seen = c.candidates.mapTo(HashSet()) { it.text }
+        c.candidates.forEachIndexed { i, cand ->
+            out += cand
+            map += i
+            if (i < HANJA_LOOKUPS) {
+                val hanja = runCatching { app.lychee.dict.PackData.words(ime, "ko", cand.text, 2)
+                    // the word itself (not a dictionary form found for an inflected one)
+                    .firstOrNull { it.form == cand.text || it.lemma == cand.text }?.hanja }.getOrNull()
+                    ?.trim()
+                    ?.takeIf { h -> h.isNotEmpty() && h.codePoints().anyMatch { app.lychee.core.Annotator.isHan(it) } && seen.add(h) }
+                if (hanja != null) {
+                    out += Candidate(hanja, cand.comment)
+                    map += -1
+                }
+            }
+        }
+        if (out.size == c.candidates.size) return c
+        displayMap = map.toIntArray()
+        return c.copy(candidates = out)
     }
 
     /** Whether the next " and ' open a quotation (they alternate, like Chinese IMEs). */
@@ -932,7 +974,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val ic = ime.currentInputConnection
         val committed = Rime.commit(session)
         committed?.let { ic?.commitText(it, 1) }
-        val composition = Rime.composition(session, CANDIDATE_LIMIT)
+        val composition = withHanja(Rime.composition(session, CANDIDATE_LIMIT))
         if (composition != null) {
             // like Gboard: the letters show above the candidates, not in the text field
             ic?.setComposingText("", 1)
@@ -1053,10 +1095,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             val tallest = bar.heightFor(linesFor(engine))
             maxOf(standard, tallest + if (rime) line else 0)
         }
-        // the line for the letters typed is above the candidates (the same while handwriting:
-        // its bar is the keyboard's own, as it is)
-        val top = if (rime) line else 0
-        bar?.let { if (it.paddingTop != top || it.paddingBottom != 0) it.setPadding(0, top, 0, 0) }
+        // the line for the letters typed is above the candidates; while handwriting nothing is
+        // typed there, so the candidates move up to the bar's top and the pad takes that line
+        // (laid over the bar's bottom, under a clean divider)
+        lastBarCandidates = candidates
+        val writing = stripView?.rootView?.findViewById<View>(R.id.lychee_handwriting_panel)?.visibility == View.VISIBLE
+        lastWriting = writing
+        val top = if (rime && !writing) line else 0
+        val bottom = if (rime && writing) line else 0
+        bar?.let { if (it.paddingTop != top || it.paddingBottom != bottom) it.setPadding(0, top, 0, bottom) }
         // voice typing takes the bar's place, so it is as tall as the bar
         val voice = stripView?.rootView?.findViewById<View>(R.id.lychee_voice_panel)
         for (view in listOfNotNull(stripView, bar, voice)) {
@@ -1068,22 +1115,63 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         }
     }
 
+    /**
+     * Whether the main (letters) keyboard is what shows: not the symbols or number pages, the
+     * emoji, or any panel over the keys (handwriting, clipboard, numpad ...).
+     */
+    private fun onMainKeys(root: View): Boolean {
+        val switcher = com.android.inputmethod.keyboard.KeyboardSwitcher.getInstance()
+        val alphabet = switcher.keyboard?.mId?.isAlphabetKeyboard ?: true
+        return alphabet && !switcher.isShowingEmojiPalettes && !app.lychee.layout.LycheePanels.anyShown(root)
+    }
+
+    /** What updateScriptKey was last asked (whether candidates fill the bar). */
+    private var lastHidden = false
+    /** What updateBarHeight last laid out for: candidates showing, the handwriting pad open. */
+    private var lastBarCandidates = false
+    private var lastWriting = false
+    /** Whether 英 shows now, and the input view watched for pages and panels changing. */
+    private var englishKeyShown = false
+    private var watchedRoot: View? = null
+
+    /**
+     * Re-checks 英 whenever the input view lays out (the keys turning to symbols, a panel or the
+     * emoji opening or closing), so it is only ever on the main keyboard.
+     */
+    private fun watchPages(stripView: SuggestionStripView) {
+        val root = stripView.rootView
+        if (watchedRoot === root) return
+        watchedRoot = root
+        root.viewTreeObserver.addOnGlobalLayoutListener {
+            val bar = strip as? SuggestionStripView ?: return@addOnGlobalLayoutListener
+            val want = isActive && !lastHidden && !schemaMissing && englishAvailable && onMainKeys(bar.rootView)
+            if (want != englishKeyShown) updateScriptKey(bar, lastHidden)
+            // the handwriting pad opening or closing moves the candidates in the bar
+            val writing = bar.rootView.findViewById<View>(R.id.lychee_handwriting_panel)?.visibility == View.VISIBLE
+            if (writing != lastWriting) updateBarHeight(bar, lastBarCandidates)
+        }
+    }
+
     /** 繁 or 简 on the strip's left edge on the Chinese keyboards; a tap switches. */
     private fun updateScriptKey(stripView: SuggestionStripView?, hidden: Boolean = false) {
         stripView ?: return
+        lastHidden = hidden
+        watchPages(stripView)
         if (!isActive || hidden || schemaMissing) {
             stripView.setLycheeScriptKey(null, null)
             stripView.setLycheeZhongKey(null, null)
+            englishKeyShown = false
             updateEdges(stripView)
             return
         }
-        // no 英 while the handwriting pad is open: it writes characters, not English
-        val writing = stripView.rootView.findViewById<android.view.View>(R.id.lychee_handwriting_panel)
-            ?.visibility == android.view.View.VISIBLE
-        if (englishAvailable && !writing) {
+        // 英 only on the main keyboard: not on the symbols or number pages, the emoji, or any
+        // panel (the handwriting pad writes characters, not English)
+        if (englishAvailable && onMainKeys(stripView.rootView)) {
             stripView.setLycheeZhongKey(englishMode, { toggleEnglishMode() }, if (engine == "ko") "영" else "英")
+            englishKeyShown = true
         } else {
             stripView.setLycheeZhongKey(null, null)
+            englishKeyShown = false
         }
         if (!isChinese) {
             stripView.setLycheeScriptKey(null, null)
@@ -1166,6 +1254,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         const val PREF_FUZZY = "lychee_fuzzy_"
         /** Per keyboard ("…yue", "…cmn", "…ja", "…ko"): 英 (영) is on. */
         const val PREF_ENGLISH_MODE = "lychee_english_mode_"
+        /** Korean candidates whose Hanja are looked up (the first few, typing never waits long). */
+        const val HANJA_LOOKUPS = 6
         private const val KEY_BACKSPACE = 0xff08
         /** A key taking longer than this (Rime and the candidates) is noted in Diagnostics. */
         private const val SLOW_KEY_MS = 60L

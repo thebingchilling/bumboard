@@ -295,36 +295,46 @@ class DictionaryPopup(
             if (expanded == open) return
             expanded = open
             val from = card.height
+            val animate = app.lychee.layout.LycheePanels.animate(ctx)
+            // hold the card at its size before the new content lays out, so nothing jumps
+            if (animate) card.fixedHeight = from
             body.removeAllViews()
             fill(c, body, !open)
             scroll.scrollTo(0, 0)
-            expand.setImageResource(if (open) R.drawable.ic_sym_keyboard_arrow_down else R.drawable.ic_sym_keyboard_arrow_up)
+            // the arrow turns over: up to grow, down to fold back
             expand.contentDescription = ctx.getString(if (open) R.string.lychee_card_less else R.string.lychee_card_more)
             // the full entry at least as tall as the summary was; the summary all the room it needs
             val limit = if (open) maxOf(room, from) else space
-            if (!app.lychee.layout.LycheePanels.animate(ctx)) {
-                card.maxHeight = limit
+            card.maxHeight = limit
+            if (!animate) {
+                expand.rotation = if (open) 180f else 0f
                 card.requestLayout()
                 return
             }
-            // the card's bottom stays on the keyboard; its top travels
-            body.alpha = 0f
-            body.animate().alpha(1f).setDuration(app.lychee.layout.LycheeMotion.IN)
+            expand.animate().rotation(if (open) 180f else 0f).setDuration(app.lychee.layout.LycheeMotion.IN)
                 .setInterpolator(app.lychee.layout.LycheeMotion.enterEasing).start()
-            card.maxHeight = limit
+            // the height the card will settle at
+            card.fixedHeight = -1
             card.measure(View.MeasureSpec.makeMeasureSpec(card.width, View.MeasureSpec.EXACTLY),
-                View.MeasureSpec.makeMeasureSpec(card.maxHeight, View.MeasureSpec.AT_MOST))
+                View.MeasureSpec.makeMeasureSpec(limit, View.MeasureSpec.AT_MOST))
             val to = card.measuredHeight
+            card.fixedHeight = from
+            card.requestLayout()
+            // the card's bottom stays on the keyboard; its top travels up (or back down) while
+            // the new content fades in
+            body.alpha = 0.2f
+            body.animate().alpha(1f).setDuration(app.lychee.layout.LycheeMotion.IN + 80)
+                .setInterpolator(app.lychee.layout.LycheeMotion.enterEasing).start()
             android.animation.ValueAnimator.ofInt(from, to).apply {
-                duration = app.lychee.layout.LycheeMotion.IN + 60
+                duration = app.lychee.layout.LycheeMotion.IN + 80
                 interpolator = app.lychee.layout.LycheeMotion.enterEasing
                 addUpdateListener {
-                    card.maxHeight = it.animatedValue as Int
+                    card.fixedHeight = it.animatedValue as Int
                     card.requestLayout()
                 }
                 addListener(object : android.animation.AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: android.animation.Animator) {
-                        card.maxHeight = limit
+                        card.fixedHeight = -1
                         card.requestLayout()
                     }
                 })
@@ -378,10 +388,65 @@ class DictionaryPopup(
         host = panel
     }
 
-    /** A column that never grows taller than [maxHeight]. */
-    private class MaxHeightLayout(ctx: Context, var maxHeight: Int) : LinearLayout(ctx) {
+    /** Children left to right, wrapping onto new lines, [gap] apart both ways. */
+    private class FlowRow(ctx: Context, val gap: Int) : ViewGroup(ctx) {
         override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-            super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(maxHeight, MeasureSpec.AT_MOST))
+            val width = MeasureSpec.getSize(widthMeasureSpec).takeIf { MeasureSpec.getMode(widthMeasureSpec) != MeasureSpec.UNSPECIFIED }
+                ?: Int.MAX_VALUE
+            var x = 0
+            var y = 0
+            var line = 0
+            var widest = 0
+            for (i in 0 until childCount) {
+                val child = getChildAt(i)
+                if (child.visibility == GONE) continue
+                child.measure(
+                    if (width == Int.MAX_VALUE) MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
+                    else MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST),
+                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
+                )
+                if (x > 0 && x + child.measuredWidth > width) {
+                    x = 0
+                    y += line + gap
+                    line = 0
+                }
+                x += child.measuredWidth + gap
+                widest = maxOf(widest, x - gap)
+                line = maxOf(line, child.measuredHeight)
+            }
+            setMeasuredDimension(if (width == Int.MAX_VALUE) widest else width, y + line)
+        }
+
+        override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+            val width = r - l
+            var x = 0
+            var y = 0
+            var line = 0
+            for (i in 0 until childCount) {
+                val child = getChildAt(i)
+                if (child.visibility == GONE) continue
+                if (x > 0 && x + child.measuredWidth > width) {
+                    x = 0
+                    y += line + gap
+                    line = 0
+                }
+                child.layout(x, y, x + child.measuredWidth, y + child.measuredHeight)
+                x += child.measuredWidth + gap
+                line = maxOf(line, child.measuredHeight)
+            }
+        }
+    }
+
+    /**
+     * A column that never grows taller than [maxHeight]; while it grows or folds, exactly
+     * [fixedHeight] tall (-1: as tall as its content).
+     */
+    private class MaxHeightLayout(ctx: Context, var maxHeight: Int) : LinearLayout(ctx) {
+        var fixedHeight = -1
+        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+            val spec = if (fixedHeight >= 0) MeasureSpec.makeMeasureSpec(fixedHeight, MeasureSpec.EXACTLY)
+                else MeasureSpec.makeMeasureSpec(maxHeight, MeasureSpec.AT_MOST)
+            super.onMeasure(widthMeasureSpec, spec)
         }
     }
 
@@ -672,7 +737,7 @@ class DictionaryPopup(
             }
         }
 
-        /** A reading as a chip: [top] in the accent colour over [bottom], a small speaker after them. */
+        /** A reading as a chip: [bottom] (kana or Hangul) large, [top] (its romanisation) beside it, a small speaker after them. */
         class ReadingChip(val top: String, val bottom: String?, val onClick: (() -> Unit)?)
 
         private fun chipView(chip: ReadingChip): View = LinearLayout(ctx).apply {
@@ -683,16 +748,20 @@ class DictionaryPopup(
                 cornerRadius = dp(10).toFloat()
                 setColor(c.surfaceContainerHigh)
             }
+            // the kana or Hangul large, its romanisation beside it in the accent colour (the
+            // same for Japanese and Korean)
             addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                addView(textView(chip.top, 14f, c.primary).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                chip.bottom?.takeIf { it.isNotBlank() && it != chip.top }?.let { b ->
+                    addView(textView(b, 18f, c.onSurface).apply {
+                        app.lychee.fonts.LycheeFonts.forText(ctx, b, fontLang)?.let { typeface = it }
+                    }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                        .apply { marginEnd = dp(6) })
+                }
+                addView(textView(chip.top, 13f, c.primary).apply {
                     typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
                 })
-                chip.bottom?.takeIf { it.isNotBlank() && it != chip.top }?.let { b ->
-                    addView(textView(b, 12f, c.onSurfaceVariant).apply {
-                        app.lychee.fonts.LycheeFonts.forText(ctx, b, fontLang)?.let { typeface = it }
-                    })
-                }
             })
             chip.onClick?.let { click ->
                 addView(android.widget.ImageView(ctx).apply {
@@ -709,25 +778,21 @@ class DictionaryPopup(
             }
         }
 
-        /**
-         * A kind of reading ([label]: on, kun, Korean) and its readings as chips, [perLine] to a
-         * line; the label only on the first line, the others lined up under its chips.
-         */
-        fun chipLines(label: String?, chips: List<ReadingChip>, perLine: Int, labelWidth: Int = 64): List<View> =
-            chips.chunked(perLine).mapIndexed { i, part ->
-                LinearLayout(ctx).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    setPadding(0, dp(3), 0, dp(3))
-                    if (label != null) addView(textView(if (i == 0) label else "", 11f, c.onSurfaceVariant).apply {
-                        typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
-                    }, LinearLayout.LayoutParams(dp(labelWidth), ViewGroup.LayoutParams.WRAP_CONTENT))
-                    part.forEachIndexed { n, chip ->
-                        addView(chipView(chip), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                            .apply { if (n > 0) marginStart = dp(6) })
-                    }
-                }
-            }
+        /** A kind of reading ([label]: on, kun, Korean) and its readings as chips, wrapping onto new lines. */
+        fun chipLines(label: String?, chips: List<ReadingChip>, @Suppress("UNUSED_PARAMETER") perLine: Int, labelWidth: Int = 64): List<View> =
+            listOf(LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.TOP
+                setPadding(0, dp(3), 0, dp(3))
+                if (label != null) addView(textView(label, 11f, c.onSurfaceVariant).apply {
+                    typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
+                    // level with the middle of the first line of chips
+                    setPadding(0, dp(10), 0, 0)
+                }, LinearLayout.LayoutParams(dp(labelWidth), ViewGroup.LayoutParams.WRAP_CONTENT))
+                // the chips wrap onto as many lines as they need
+                addView(FlowRow(ctx, dp(6)).apply { chips.forEach { addView(chipView(it)) } },
+                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            })
 
         /**
          * Each Kanji or Hanja of a Japanese or Korean word as a tidy block: the character on a
@@ -821,18 +886,22 @@ class DictionaryPopup(
             box.addView(LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
-                val forms = if (simp == trad) listOf(null to tradText) else listOf("繁" to tradText, "简" to simpText)
+                // marked in English: Trad and Simp
+                val forms = if (simp == trad) listOf(null to tradText) else listOf("Trad" to tradText, "Simp" to simpText)
                 for ((mark, word) in forms) {
                     if (mark != null) addView(textView(mark, 11f, c.onSurfaceVariant).apply { setPadding(0, 0, dp(4), 0) })
                     addView(textView(word, 20f, c.onSurface).apply {
-                        textLocale = java.util.Locale.TRADITIONAL_CHINESE.takeIf { mark != "简" } ?: java.util.Locale.SIMPLIFIED_CHINESE
+                        textLocale = java.util.Locale.TRADITIONAL_CHINESE.takeIf { mark != "Simp" } ?: java.util.Locale.SIMPLIFIED_CHINESE
                         setPadding(0, 0, dp(14), 0)
                     })
                 }
                 setPadding(0, dp(2), 0, dp(2))
             })
             // the readings: 粵 hok6 haau6 🔈   普 xuéxiào 🔈, wrapping onto two lines when narrow
-            val readings = listOfNotNull(yue?.let { Triple(Lang.Cantonese, "粵", it) }, cmn?.let { Triple(Lang.Mandarin, "普", it) })
+            val readings = listOfNotNull(
+                yue?.let { Triple(Lang.Cantonese, ctx.getString(R.string.lychee_card_cantonese), it) },
+                cmn?.let { Triple(Lang.Mandarin, ctx.getString(R.string.lychee_card_mandarin), it) },
+            )
             for ((lang, mark, reading) in readings) {
                 val line = TextView(ctx).apply {
                     val sb = SpannableStringBuilder()
@@ -961,16 +1030,18 @@ class DictionaryPopup(
 
         /** 粵 or 普: the language the speak buttons use; a tap switches it. */
         private fun speakChip() = TextView(ctx).apply {
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            app.lychee.fonts.LycheeFonts.fixHeavy(this)
+            // the language in English (Cantonese or Mandarin), a tap switches
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
             setTextColor(c.onSecondaryContainer)
             gravity = Gravity.CENTER
+            setPadding(dp(12), 0, dp(12), 0)
             background = GradientDrawable().apply {
                 cornerRadius = dp(16).toFloat()
                 setColor(c.secondaryContainer)
             }
             contentDescription = ctx.getString(R.string.lychee_card_speak_language)
-            layoutParams = LinearLayout.LayoutParams(dp(44), dp(32)).apply { marginEnd = dp(8) }
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(32)).apply { marginEnd = dp(8) }
             speakChips += this
             updateChip(this)
             setOnClickListener {
@@ -980,7 +1051,7 @@ class DictionaryPopup(
         }
 
         private fun updateChip(chip: TextView) {
-            chip.text = ChineseScript.ui(if (speakLang == Lang.Mandarin) "普" else "粵", ctx)
+            chip.text = ctx.getString(if (speakLang == Lang.Mandarin) R.string.lychee_card_mandarin else R.string.lychee_card_cantonese)
         }
 
         /**
@@ -1177,7 +1248,7 @@ class DictionaryPopup(
             for ((key, senses) in rarer) {
                 val (lang, _) = key
                 val reading = senses.first().reading!!
-                val mark = if (lang == Lang.Cantonese) "粵" else "普"
+                val mark = ctx.getString(if (lang == Lang.Cantonese) R.string.lychee_card_cantonese else R.string.lychee_card_mandarin)
                 body.addView(readingRow(textView(SpannableStringBuilder().apply {
                     append(mark, ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                     append("  ")

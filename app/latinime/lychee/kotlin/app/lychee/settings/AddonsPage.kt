@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -71,8 +72,6 @@ fun AddonsPage() {
     val tick = version + actions.version + PackRefresh.tick
     remember { Packs.removeUnlisted(context) }
     val total = remember(tick) { Packs.totalSize(context) }
-    // a removal waiting for "Remove" in its dialog
-    var confirm by remember { mutableStateOf<Pack?>(null) }
     val colors = MaterialTheme.colorScheme
 
     // how much is on the phone, and the ways to get more
@@ -97,7 +96,7 @@ fun AddonsPage() {
         val packs = catalog.filter { PackStorage.section(it) == section }
         if (packs.isEmpty()) continue
         SectionTitle(stringResource(sectionName(section)))
-        packs.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { confirm = pack }) { version++ } }
+        packs.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { PackStorage.remove(context, pack); version++ }) { version++ } }
     }
     // your own fonts: folded away at the bottom
     val own = catalog.filter { PackStorage.section(it) == PackStorage.Section.OWN }
@@ -124,7 +123,7 @@ fun AddonsPage() {
             enter = androidx.compose.animation.expandVertically(expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(),
             exit = androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top) + androidx.compose.animation.fadeOut(),
         ) {
-            Column { own.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { confirm = pack }) { version++ } } }
+            Column { own.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { PackStorage.remove(context, pack); version++ }) { version++ } } }
         }
     }
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp), horizontalArrangement = Arrangement.Center) {
@@ -132,25 +131,6 @@ fun AddonsPage() {
             Icon(painterResource(R.drawable.ic_sym_open_in_new), null, modifier = Modifier.size(18.dp))
             Text(stringResource(R.string.lychee_addons_page), modifier = Modifier.padding(start = 8.dp))
         }
-    }
-    confirm?.let { pack ->
-        val needed = pack.id == "rime_ja" || pack.id == "dict_ko" || pack.id == "dict_en"
-        AlertDialog(
-            onDismissRequest = { confirm = null },
-            title = { Text(stringResource(R.string.lychee_storage_confirm_title, addonNameOf(context, pack))) },
-            text = {
-                Text(stringResource(if (needed) R.string.lychee_storage_confirm_needed else R.string.lychee_storage_confirm_body,
-                    Packs.formatSize(Packs.sizeOnDisk(context, pack.id))))
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    PackStorage.remove(context, pack)
-                    confirm = null
-                    version++
-                }) { Text(stringResource(R.string.lychee_packs_remove), color = colors.error) }
-            },
-            dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(android.R.string.cancel)) } },
-        )
     }
     AddonSheetHost(actions)
 }
@@ -218,8 +198,36 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
             }
             when {
                 busy -> androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                installed -> IconButton(onClick = onRemove) {
-                    Icon(painterResource(R.drawable.lychee_ic_delete), stringResource(R.string.lychee_packs_remove), tint = colors.onSurfaceVariant)
+                // removing asks first, in a menu dropped from the bin (not a dialog)
+                installed -> Box {
+                    var asking by remember { mutableStateOf(false) }
+                    IconButton(onClick = { asking = true }) {
+                        Icon(painterResource(R.drawable.lychee_ic_delete), stringResource(R.string.lychee_packs_remove), tint = colors.onSurfaceVariant)
+                    }
+                    androidx.compose.material3.DropdownMenu(
+                        expanded = asking, onDismissRequest = { asking = false },
+                        shape = M2Corner, containerColor = colors.surfaceContainer, shadowElevation = 8.dp,
+                        modifier = Modifier.widthIn(max = 300.dp),
+                    ) {
+                        val needed = pack.id == "rime_ja" || pack.id == "dict_ko" || pack.id == "dict_en"
+                        Text(
+                            stringResource(if (needed) R.string.lychee_storage_confirm_needed else R.string.lychee_storage_confirm_body,
+                                Packs.formatSize(Packs.sizeOnDisk(context, pack.id))),
+                            style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        )
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(stringResource(R.string.lychee_packs_remove), color = colors.error) },
+                            onClick = {
+                                asking = false
+                                onRemove()
+                            },
+                        )
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(stringResource(android.R.string.cancel)) },
+                            onClick = { asking = false },
+                        )
+                    }
                 }
                 bundled -> TextButton(onClick = {
                     busy = true

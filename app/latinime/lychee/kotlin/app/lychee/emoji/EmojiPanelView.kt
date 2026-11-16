@@ -356,7 +356,7 @@ class EmojiPanelView @JvmOverloads constructor(
                 setOnClickListener { jumpTo(s) }
             }
             tabViews += tab
-            // the tabs share the bar between ABC and delete, so every category fits
+            // the tabs share the whole bar, so every category fits
             tabs.addView(tab, LayoutParams(0, dp(36), 1f).apply { gravity = Gravity.CENTER_VERTICAL })
         }
     }
@@ -394,28 +394,30 @@ class EmojiPanelView @JvmOverloads constructor(
 
     // ------------------------------------------------------------ chrome
 
+    /**
+     * The top row, exactly the emoji search's: Back (to the letters, in place of an ABC key),
+     * then the search pill; a tap on the pill opens the search.
+     */
     private fun searchBox() = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(16), 0, dp(16), 0)
-        background = pill(palette.surfaceContainerHigh, 24)
-        addView(ImageView(context).apply {
-            setImageResource(R.drawable.ic_sym_search)
-            imageTintList = ColorStateList.valueOf(palette.onSurfaceVariant)
-        })
+        setPadding(dp(4), dp(2), dp(8), dp(4))
+        addView(app.lychee.layout.LycheePanels.backButton(context) { sendCode(Constants.CODE_ALPHA_FROM_EMOJI) },
+            LayoutParams(dp(48), LayoutParams.MATCH_PARENT))
         addView(TextView(context).apply {
             text = context.getString(R.string.lychee_emoji_search)
             setTextColor(palette.onSurfaceVariant)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            setPadding(dp(12), 0, 0, 0)
-        })
-        setOnClickListener { onSearch() }
-    }.let { box ->
-        // inset so it reads as a pill rather than a bar
-        LinearLayout(context).apply {
-            setPadding(dp(8), dp(6), dp(8), dp(2))
-            addView(box, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-        }
+            isSingleLine = true
+            gravity = Gravity.CENTER_VERTICAL
+            compoundDrawablePadding = dp(12)
+            setCompoundDrawablesRelativeWithIntrinsicBounds(context.getDrawable(R.drawable.ic_sym_search)?.mutate()?.apply {
+                setTint(palette.onSurfaceVariant)
+            }, null, null, null)
+            setPadding(dp(16), 0, dp(16), 0)
+            background = pill(palette.surfaceContainerHigh, 24)
+            setOnClickListener { onSearch() }
+        }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(4) })
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -423,16 +425,7 @@ class EmojiPanelView @JvmOverloads constructor(
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(dp(6), dp(2), dp(6), dp(4))
-        // ABC and delete are drawn as the keyboard's own functional keys, flat or raised.
-        addView(TextView(context).apply {
-            text = context.getString(R.string.lychee_emoji_abc)
-            setTextColor(palette.onSecondaryContainer)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-            typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
-            gravity = Gravity.CENTER
-            background = functionalKey()
-            setOnClickListener { sendCode(Constants.CODE_ALPHA_FROM_EMOJI) }
-        }, LayoutParams(dp(50), dp(40)))
+        // the categories get the whole bar: Back to the letters is in the top row, like search's
         tabs.gravity = Gravity.CENTER_VERTICAL
         addView(tabs, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(2); marginEnd = dp(2) })
     }

@@ -52,18 +52,7 @@ class CandidatePanelView @JvmOverloads constructor(
         }
         grid.layoutManager = layoutManager
         grid.adapter = adapter
-        grid.addItemDecoration(object : RecyclerView.ItemDecoration() {
-            override fun onDrawOver(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
-                // a plain grid: a full line under every cell and between cells in a row
-                for (i in 0 until parent.childCount) {
-                    val v = parent.getChildAt(i)
-                    c.drawLine(v.left.toFloat(), v.bottom.toFloat(), v.right.toFloat(), v.bottom.toFloat(), divider)
-                    if (v.right < parent.width - parent.paddingRight - 1) {
-                        c.drawLine(v.right.toFloat(), v.top.toFloat(), v.right.toFloat(), v.bottom.toFloat(), divider)
-                    }
-                }
-            }
-        })
+        // no grid lines: the candidates sit on the page as they do on the bar
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         visibility = GONE
     }
@@ -140,19 +129,29 @@ class CandidatePanelView @JvmOverloads constructor(
             val cell = LinearLayout(context).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(4), 0, dp(4), 0)
+                setPadding(0, dp(2), 0, dp(2))
                 layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(54))
-                background = app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_suggestion)
-                // as on the bar: the readings above, the word, the meaning under it
+                // exactly the bar's cell: a plain ripple, the word, its readings and meaning under it
+                background = TypedValue().let { v ->
+                    context.theme.resolveAttribute(android.R.attr.selectableItemBackground, v, true)
+                    context.getDrawable(v.resourceId)
+                }
                 repeat(3) { i ->
                     addView(TextView(context).apply {
                         gravity = Gravity.CENTER
                         isSingleLine = true
                         ellipsize = android.text.TextUtils.TruncateAt.END
                         includeFontPadding = false
-                        if (i != 1) visibility = GONE
+                        if (i == 0) setPadding(dp(10), 0, dp(10), 0)
+                        else {
+                            visibility = GONE
+                            typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
+                            setPadding(dp(2), 0, dp(2), 0)
+                        }
                     }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                 }
+                // the meaning in the app's own font, like the bar's
+                (getChildAt(2) as TextView).typeface = android.graphics.Typeface.DEFAULT
             }
             return object : RecyclerView.ViewHolder(cell) {}
         }
@@ -163,8 +162,8 @@ class CandidatePanelView @JvmOverloads constructor(
             val english = style.fontLang == "en"
             // every cell the same height (the bar's lines), so the rows line up whatever arrives
             cell.layoutParams.height = cellHeight(english)
-            val reading = cell.getChildAt(0) as TextView
-            val word = cell.getChildAt(1) as TextView
+            val word = cell.getChildAt(0) as TextView
+            val reading = cell.getChildAt(1) as TextView
             val meaning = cell.getChildAt(2) as TextView
             val color = if (index == 0 && style.fontLang != "en") palette.primary else palette.onSurface
             word.text = candidate.text
@@ -181,19 +180,19 @@ class CandidatePanelView @JvmOverloads constructor(
                 val text = android.text.SpannableStringBuilder()
                 lines.forEachIndexed { i, line ->
                     if (i > 0) text.append('\n')
-                    text.append(if (style.toneColours) ToneColours.apply(line, a.tones.getOrNull(i), palette.onSurface) else line)
+                    text.append(if (style.toneColours) ToneColours.apply(line, a.tones.getOrNull(i), color) else line)
                 }
                 reading.isSingleLine = false
                 reading.maxLines = lines.size
                 reading.text = text
                 reading.setTextSize(TypedValue.COMPLEX_UNIT_SP, CandidateBarView.READING_SP * scale)
-                reading.setTextColor(palette.primary)
+                reading.setTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(color, 0xD0))
             }
             meaning.visibility = if (a?.meaning != null) VISIBLE else if (annotated) INVISIBLE else GONE
             a?.meaning?.let {
                 meaning.text = it
                 meaning.setTextSize(TypedValue.COMPLEX_UNIT_SP, CandidateBarView.MEANING_SP * scale)
-                meaning.setTextColor(palette.onSurfaceVariant)
+                meaning.setTextColor(androidx.core.graphics.ColorUtils.setAlphaComponent(color, 0xA0))
             }
             cell.setOnClickListener {
                 visibility = GONE

@@ -67,15 +67,15 @@ object PersonalDictionary {
 
 /**
  * The personal dictionary, as LatinIME's user dictionary is: the language, then the words as a
- * plain list (the word, what is typed for it under it). "Add a word" and a tap on a word open a
- * dialog with the two fields; a word being edited can be removed there.
+ * plain list (the word, what is typed for it under it). "Add a word" and a tap on a word open the
+ * two fields in place under that row; a word being edited can be removed there.
  */
 @Composable
 fun PersonalDictionaryPage() {
     val context = LocalContext.current
     var lang by remember { mutableStateOf("yue") }
     var entries by remember(lang) { mutableStateOf(PersonalDictionary.read(context, lang)) }
-    // the dialog: null when closed; the entry being edited, or ("", "") for a new word
+    // the editor open in place: null when closed; the entry being edited, or ("", "") for a new word
     var editing by remember(lang) { mutableStateOf<Pair<String, String>?>(null) }
     fun save(list: List<Pair<String, String>>) {
         entries = list
@@ -95,65 +95,75 @@ fun PersonalDictionaryPage() {
     }
     Group(stringResource(R.string.lychee_personal_words, entries.size)) {
         row {
-            NavRow(it, stringResource(R.string.lychee_personal_add_word), icon = R.drawable.ic_sym_add) { editing = "" to "" }
+            Column {
+                NavRow(it, stringResource(R.string.lychee_personal_add_word), icon = R.drawable.ic_sym_add) {
+                    editing = if (editing == ("" to "")) null else "" to ""
+                }
+                WordEditor(editing == ("" to ""), "" to "", entries, onSave = { list -> save(list); editing = null }) { editing = null }
+            }
         }
         if (entries.isEmpty()) {
             row { TextRow(it, stringResource(R.string.lychee_personal_none), stringResource(R.string.lychee_personal_none_hint)) }
         }
         entries.sortedBy { it.first }.forEach { entry ->
-            row { NavRow(it, entry.first, entry.second) { editing = entry } }
+            row {
+                Column {
+                    NavRow(it, entry.first, entry.second) { editing = if (editing == entry) null else entry }
+                    WordEditor(editing == entry, entry, entries, onSave = { list -> save(list); editing = null }) { editing = null }
+                }
+            }
         }
     }
+}
 
-    editing?.let { old ->
+/**
+ * The word being added or changed, opening in place under its row (growing down from it, no
+ * dialog): the word and what is typed for it, then Remove (for a word already kept), Cancel
+ * and Save.
+ */
+@Composable
+private fun WordEditor(
+    open: Boolean, old: Pair<String, String>, entries: List<Pair<String, String>>,
+    onSave: (List<Pair<String, String>>) -> Unit, onClose: () -> Unit,
+) {
+    androidx.compose.animation.AnimatedVisibility(
+        open,
+        enter = androidx.compose.animation.expandVertically(expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(),
+        exit = androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top) + androidx.compose.animation.fadeOut(),
+    ) {
         val isNew = old.first.isEmpty() && old.second.isEmpty()
         var word by remember(old) { mutableStateOf(old.first) }
         var code by remember(old) { mutableStateOf(old.second) }
         val typed = PersonalDictionary.normalise(code)
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { editing = null },
-            shape = M2Corner,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            title = {
-                Text(stringResource(if (isNew) R.string.lychee_personal_add_word else R.string.lychee_personal_edit_word),
-                    style = MaterialTheme.typography.titleLarge)
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = word, onValueChange = { word = it }, singleLine = true,
-                        label = { Text(stringResource(R.string.lychee_personal_word)) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedTextField(
-                        value = code, onValueChange = { code = it }, singleLine = true,
-                        label = { Text(stringResource(R.string.lychee_personal_code)) },
-                        supportingText = { Text(stringResource(R.string.lychee_personal_code_hint)) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val entry = word.trim() to typed
-                        save((entries - old).filterNot { it == entry } + entry)
-                        editing = null
-                    },
-                    enabled = word.isNotBlank() && typed.isNotEmpty(),
-                ) { Text(stringResource(R.string.lychee_personal_save)) }
-            },
-            dismissButton = {
-                Row {
+        RaisedCard {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = word, onValueChange = { word = it }, singleLine = true,
+                    label = { Text(stringResource(R.string.lychee_personal_word)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = code, onValueChange = { code = it }, singleLine = true,
+                    label = { Text(stringResource(R.string.lychee_personal_code)) },
+                    supportingText = { Text(stringResource(R.string.lychee_personal_code_hint)) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                     if (!isNew) {
-                        TextButton(onClick = {
-                            save(entries - old)
-                            editing = null
-                        }) { Text(stringResource(R.string.lychee_personal_remove)) }
+                        TextButton(onClick = { onSave(entries - old) }) {
+                            Text(stringResource(R.string.lychee_personal_remove), color = MaterialTheme.colorScheme.error)
+                        }
                     }
-                    TextButton(onClick = { editing = null }) { Text(stringResource(android.R.string.cancel)) }
+                    TextButton(onClick = onClose) { Text(stringResource(android.R.string.cancel)) }
+                    TextButton(
+                        onClick = {
+                            val entry = word.trim() to typed
+                            onSave((entries - old).filterNot { it == entry } + entry)
+                        },
+                        enabled = word.isNotBlank() && typed.isNotEmpty(),
+                    ) { Text(stringResource(R.string.lychee_personal_save)) }
                 }
-            },
-        )
+            }
+        }
     }
 }

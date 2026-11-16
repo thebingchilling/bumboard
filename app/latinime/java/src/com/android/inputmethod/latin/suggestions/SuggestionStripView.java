@@ -234,8 +234,10 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mLycheeScriptKey.setVisibility(shown ? VISIBLE : GONE);
         mLycheeScriptKey.setOnClickListener(onClick);
         if (shown) {
-            // the script in use, one character on a round raised button; a tap switches
-            mLycheeScriptKey.setText(simplified ? "\u7B80" : "\u7E41");
+            // LYCHEE: the script in use in English (Trad or Simp) on a round raised button; a
+            // tap switches
+            mLycheeScriptKey.setText(simplified ? "Simp" : "Trad");
+            mLycheeScriptKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f);
             mLycheeScriptKey.setContentDescription(getContext().getString(simplified
                     ? R.string.lychee_script_key_simplified : R.string.lychee_script_key_traditional));
         }
