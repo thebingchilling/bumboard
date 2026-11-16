@@ -110,6 +110,8 @@
     animation: spin 0.9s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .badge { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 8px;
+    background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -142,7 +144,7 @@
     </div>
 
     <div id="current-block" class="hidden">
-      <h2>Up to date</h2>
+      <h2>Installed</h2>
       <div class="list" id="current"></div>
     </div>
 
@@ -151,9 +153,9 @@
     </div>
 
     <div id="all-block" class="hidden">
-      <h2>All packs</h2>
+      <h2 id="all-heading">All packs</h2>
       <div class="list" id="all"></div>
-      <p class="muted">In Lychee, open Settings › Downloads and tap Check for updates to see what's new for your packs.</p>
+      <p class="muted" id="all-note">In Lychee, open Settings › Add-ons and tap Check for updates to see what you have installed and what's new.</p>
     </div>
   </section>
 </main>
@@ -241,14 +243,33 @@
     const current = installed.filter((id) => packs[id].version === have.get(id));
     const latest = installed.map((id) => id + ':' + packs[id].version).join(',');
 
-    current.forEach((id) => $('current').append(row(packs[id])));
+    current.forEach((id) => {
+      const item = row(packs[id]);
+      item.append(el('span', 'badge', 'Installed'));
+      $('current').append(item);
+    });
     $('current-block').classList.toggle('hidden', current.length === 0);
+
+    // the packs not on the phone, each to download (opening the file installs it in Lychee)
+    const missing = ids.filter((id) => !have.has(id));
+    if (missing.length) {
+      $('all-block').classList.remove('hidden');
+      $('all-heading').textContent = 'Not installed';
+      $('all-note').classList.add('hidden');
+      missing.forEach((id) => {
+        const item = row(packs[id]);
+        const get = el('a', 'button tonal small', 'Download');
+        get.href = packs[id].url;
+        item.append(get);
+        $('all').append(item);
+      });
+    }
 
     if (updates.length === 0) {
       $('headline').textContent = installed.length ? 'All up to date' : 'No packs installed';
-      $('subline').textContent = installed.length
-        ? 'Your packs are the newest versions.'
-        : 'Packs you install in Lychee show up here when they have updates.';
+      $('subline').textContent = (installed.length
+        ? 'Your ' + installed.length + (installed.length === 1 ? ' pack is' : ' packs are') + ' the newest versions.'
+        : 'Nothing installed yet.') + (missing.length ? ' Download more below; open a downloaded file to install it.' : '');
       $('updates-block').classList.add('hidden');
       $('uptodate-actions').classList.remove('hidden');
       $('back-done').href = back(latest, false);

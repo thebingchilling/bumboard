@@ -32,8 +32,11 @@ object Updates {
     fun installed(context: Context): List<Pack> =
         Packs.catalog(context).filter { !it.custom && Packs.isInstalled(context, it.id) }
 
-    /** Opens the packs page on its list of every pack, to get ones not installed. */
-    fun openAll(context: Context) = Packs.openPage(context, PAGE)
+    /**
+     * Opens the packs page with what is installed (versions after the '#'): it lists those, with
+     * any updates, and every pack not installed with its download.
+     */
+    fun openAll(context: Context) = check(context)
 
     /**
      * The page's address for the installed packs; with [all], the page starts downloading every
