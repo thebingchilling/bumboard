@@ -212,7 +212,7 @@ private fun FontPreview(option: FontOption?, sample: String, version: Int) {
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(4.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(horizontal = 20.dp, vertical = 16.dp),
     ) {
