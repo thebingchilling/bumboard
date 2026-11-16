@@ -140,10 +140,6 @@ class DictionaryPopup(
             val content = Content(ctx, c, chinesePrefs ?: DisplayPrefs(), body, onSpeak)
             content.compact = compact
             content.fontLang = lang
-            // a single kanji: its KANJIDIC2 readings and meanings, briefly, under the heading
-            val kanji = if (lang == "ja" && text.codePointCount(0, text.length) == 1 &&
-                Character.UnicodeScript.of(text.codePointAt(0)) == Character.UnicodeScript.HAN
-            ) app.lychee.dict.PackData.kanji(ctx, text) else null
             // each pronunciation has its own speak button; only a word with none keeps the
             // heading's
             val anyReading = entries.any { !it.reading.isNullOrBlank() }
@@ -152,30 +148,11 @@ class DictionaryPopup(
             content.heading(text, if (anyReading && onSpeakAs != null && lang == "en") null else text,
                 strokesOf = text.takeIf { lang == "ja" || lang == "ko" })
             if (translations.isNotEmpty()) content.translations(translations, onTranslation)
-            kanji?.let { k ->
-                // kun readings with their okurigana in brackets: まな.ぶ → まな(ぶ)
-                // the first three of each: the common ones, not the whole list
-                val kun = k.kunyomi.split('、').filter { it.isNotBlank() }.take(3)
-                    .joinToString("、") { r -> r.replace(Regex("\\.(.+)$"), "($1)") }
-                val on = k.onyomi.split('、').filter { it.isNotBlank() }.take(3).joinToString("、")
-                if (on.isNotBlank()) body.addView(content.labelled(ctx.getString(R.string.lychee_card_onyomi), on))
-                if (kun.isNotBlank()) body.addView(content.labelled(ctx.getString(R.string.lychee_card_kunyomi), kun))
-                if (k.meanings.isNotBlank()) body.addView(content.textView(k.meanings, 15f, c.onSurface).apply {
-                    if (compact) { maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END }
-                    setPadding(0, dp(4), 0, 0)
-                })
-                val facts = listOfNotNull(
-                    k.grade?.let { g -> if (g in 1..6) ctx.getString(R.string.lychee_card_kanji_grade, g) else ctx.getString(R.string.lychee_card_kanji_joyo).takeIf { g == 8 } },
-                    k.strokes?.let { n -> ctx.resources.getQuantityString(R.plurals.lychee_card_stroke_count, n, n) },
-                ).joinToString(" · ")
-                if (facts.isNotEmpty() && !compact) body.addView(content.textView(facts, 13f, c.onSurfaceVariant).apply {
-                    setPadding(0, dp(2), 0, dp(4))
-                })
-            }
             // the reading under the word, as one quiet line (no label): the kana and romaji, or
             // the romanisation and the Hanja
             val hanja = entries.firstOrNull()?.hanja?.takeIf { lang == "ko" && it.isNotBlank() }
-            val subtitle = listOfNotNull(romanisation, hanja).joinToString("  ·  ")
+            // (a Korean word's Hanja are in its Hanja section, as a Japanese word's Kanji are)
+            val subtitle = romanisation.orEmpty()
             if (subtitle.isNotEmpty()) body.addView(content.textView(subtitle, 16f, c.primary).apply {
                 typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
                 setPadding(0, 0, 0, dp(4))
@@ -435,9 +412,39 @@ class DictionaryPopup(
 
     /** Fills the scrolling body with the entry. */
     private class Content(
-        val ctx: Context, val c: M3Colors, val prefs: DisplayPrefs, val body: LinearLayout,
+        val ctx: Context, val c: M3Colors, val prefs: DisplayPrefs, val root: LinearLayout,
         val onSpeak: ((String, Lang?) -> Unit)?,
     ) {
+        /** Where content goes: the card itself, or the card of the section begun last. */
+        var body: LinearLayout = root
+
+        /** Back to the card itself, after a section (what follows is not part of it). */
+        fun endSection() {
+            body = root
+        }
+
+        /**
+         * A section of its own: a distinct rounded card (Material 3's surface on the popup's
+         * container), its title inside; what follows goes in it until the next section.
+         */
+        private fun sectionCard(title: String?, color: Int = c.surface): LinearLayout {
+            val card = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(14), dp(10), dp(14), dp(12))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(16).toFloat()
+                    setColor(color)
+                }
+            }
+            root.addView(card, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(8)
+            })
+            if (title != null) card.addView(textView(title, 13f, c.onSurfaceVariant).apply {
+                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
+                setPadding(0, 0, 0, dp(4))
+            })
+            return card
+        }
         /** The word's language ("ja", "ko"; null for Chinese), which picks the font. */
         var fontLang: String? = null
         /** The short summary: the word, its readings and first meanings, the essentials only. */
@@ -496,6 +503,7 @@ class DictionaryPopup(
             } else {
                 r.headwords.forEachIndexed { i, hw ->
                     if (i > 0) {
+                        endSection()
                         body.addView(divider())
                         // each entry's word as large as the first's, its other script under it
                         val first = if (prefs.simplified) hw.simplified else hw.traditional
@@ -632,7 +640,7 @@ class DictionaryPopup(
             setPadding(dp(12), dp(8), dp(6), dp(8))
             background = GradientDrawable().apply {
                 cornerRadius = dp(14).toFloat()
-                setColor(c.surfaceContainer)
+                setColor(c.surface)
             }
             addView(LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
@@ -669,19 +677,38 @@ class DictionaryPopup(
                 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                     .apply { marginEnd = dp(12) })
                 val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-                // a line per kind (on'yomi, kun'yomi), at most two readings each
+                // a line per kind (on'yomi, kun'yomi; Korean): its label, then each reading as a
+                // small chip, the romanisation over the kana or Hangul
                 for ((label, readings) in cr.rows) {
-                    val sb = SpannableStringBuilder()
-                    label?.let { sb.append(it, ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); sb.append("  ") }
-                    readings.forEachIndexed { i, (native, roman) ->
-                        if (i > 0) sb.append(",  ", ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                        sb.append(roman, ForegroundColorSpan(c.primary), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                        sb.append(" ")
-                        sb.append(native, ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    val line = LinearLayout(ctx).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.CENTER_VERTICAL
+                        setPadding(0, dp(2), 0, dp(2))
                     }
-                    col.addView(textView(sb, 14f, c.primary).apply {
-                        maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-                    })
+                    label?.let {
+                        line.addView(textView(it, 11f, c.onSurfaceVariant).apply {
+                            typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
+                            minWidth = dp(30)
+                        })
+                    }
+                    for ((native, roman) in readings) {
+                        line.addView(LinearLayout(ctx).apply {
+                            orientation = LinearLayout.VERTICAL
+                            gravity = Gravity.CENTER_HORIZONTAL
+                            setPadding(dp(10), dp(3), dp(10), dp(4))
+                            background = GradientDrawable().apply {
+                                cornerRadius = dp(10).toFloat()
+                                setColor(c.surfaceContainerHigh)
+                            }
+                            addView(textView(roman, 13f, c.primary).apply {
+                                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
+                            })
+                            addView(textView(native, 11f, c.onSurfaceVariant))
+                        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                            marginStart = dp(6)
+                        })
+                    }
+                    col.addView(line)
                 }
                 cr.meaning?.takeIf { it.isNotBlank() }?.let { m ->
                     col.addView(textView(m, 13f, c.onSurfaceVariant).apply {
@@ -723,14 +750,9 @@ class DictionaryPopup(
                 }
                 return sb to differs
             }
-            val box = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(12), dp(8), dp(6), dp(6))
-                background = GradientDrawable().apply {
-                    cornerRadius = dp(12).toFloat()
-                    setColor(c.surfaceContainer)
-                }
-            }
+            // a card of its own, tinted apart from the rest: this is Chinese, not the word's language
+            endSection()
+            val box = sectionCard(null, c.secondaryContainer)
             val (tradText, tradDiffers) = marked(trad)
             val (simpText, simpDiffers) = marked(simp)
             val same = !tradDiffers && !simpDiffers
@@ -767,9 +789,6 @@ class DictionaryPopup(
                 val speaker = onSpeak?.let { say -> smallSpeaker { say(wordToSay, lang) } }
                 box.addView(readingRow(line, speaker))
             }
-            body.addView(box, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(6); bottomMargin = dp(4)
-            })
             spokenWord = spokenWord ?: form
         }
 
@@ -1149,10 +1168,7 @@ class DictionaryPopup(
         }
 
         private fun section(title: String) {
-            body.addView(textView(title, 14f, c.primary).apply {
-                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
-                setPadding(0, dp(12), 0, dp(2))
-            })
+            body = sectionCard(title)
         }
 
         fun labelled(label: String, value: String): TextView {

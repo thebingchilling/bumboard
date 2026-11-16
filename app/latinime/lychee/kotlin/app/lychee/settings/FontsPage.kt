@@ -298,6 +298,11 @@ private fun FontCard(
                     contentScale = ContentScale.Fit, alignment = Alignment.CenterStart,
                     modifier = Modifier.height(26.dp).fillMaxWidth(),
                 )
+                // an emoji font has no letters: its name in the usual font, then emoji drawn in it
+                family != null && option.emoji -> {
+                    Text(title, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
+                    Text("😀 😍 🐼 🍜 🎉", fontFamily = family, fontSize = 20.sp, maxLines = 1)
+                }
                 family != null -> Text(
                     title, fontFamily = family, fontSize = 17.sp, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, color = colors.onSurface,

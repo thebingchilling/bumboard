@@ -162,8 +162,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val candidate = (if (showingGuesses) guesses.getOrNull(index)?.let { Candidate(it, "") }
             else shown?.candidates?.getOrNull(index)) ?: return
         val guessing = showingGuesses
-        if (!isChinese && !guessing) {
-            showWordCard(index, candidate)
+        // Japanese and Korean: one card for typed words and handwritten characters alike
+        if (!isChinese) {
+            showWordCard(candidate) { if (guessing) onGuess(index) else pick(index) }
             return
         }
         val annotator = Readings.annotator ?: return
@@ -217,7 +218,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     }
 
     /** Japanese and Korean: the word's entry from the installed dictionary pack. */
-    private fun showWordCard(index: Int, candidate: Candidate) {
+    private fun showWordCard(candidate: Candidate, onType: () -> Unit) {
         // every candidate has a card: one the dictionary lacks shows its readings and strokes
         val entries = app.lychee.dict.PackData.words(ime, engine, candidate.text)
         val frame = keyboardFrame?.takeIf { it.height > 0 } ?: return
@@ -248,9 +249,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             }, lang = lang,
             onSpeakAs = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) },
             chinese = chinese, chinesePrefs = display, chineseForm = hanForm,
-            characters = characterReadings(hanForm, single = candidate.text.codePointCount(0, candidate.text.length) == 1),
+            characters = characterReadings(hanForm),
             charactersTitle = ime.getString(if (engine == "ko") R.string.lychee_card_hanja else R.string.lychee_card_kanji)) {
-            pick(index)
+            onType()
         }
     }
 
@@ -273,6 +274,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** The word card's reading: the kana (always, for words with kanji or katakana) and the romanisation. */
     private fun wordReading(candidate: Candidate, entry: app.lychee.dict.WordEntry?): String? =
         readingLines(candidate, entry, native = true).joinToString("  ").ifEmpty { null }
+            ?: characterReadings(candidate.text).singleOrNull()?.takeIf { candidate.text.codePointCount(0, candidate.text.length) == 1 }
+                ?.rows?.firstOrNull()?.second?.firstOrNull()?.let { (native, roman) -> "$native  $roman" }
 
     /**
      * Every Japanese and Korean candidate's reading lines, made when the dictionary has none.
@@ -345,34 +348,36 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /**
      * Each Kanji or Hanja of [form] with its Japanese (on'yomi, kun'yomi) or Korean readings
-     * and a short meaning, for the word card. A single Japanese kanji has its own readings
-     * under the heading already ([single]), so it gets none here.
+     * and a short meaning, for the word card: the same card section on both keyboards, for a
+     * single character as for a word. Japanese from KANJIDIC2 (the Japanese pack) when it has
+     * the kanji, else Unihan; Korean from Unihan.
      */
-    private fun characterReadings(form: String, single: Boolean): List<DictionaryPopup.CharReading> {
-        val db = Readings.db ?: return emptyList()
-        if (engine == "ja" && single) return emptyList()
+    private fun characterReadings(form: String): List<DictionaryPopup.CharReading> {
+        val db = Readings.db
         val chars = form.codePoints().toArray().filter { app.lychee.core.Annotator.isHan(it) }
             .map { String(Character.toChars(it)) }.distinct().take(6)
         return chars.mapNotNull { ch ->
             fun kana(r: String): Pair<String, String> {
-                val plain = r.replace("-", "")
+                val plain = r.trim().replace("-", "")
                 return plain.replace(Regex("\\.(.+)$"), "($1)") to app.lychee.core.SentenceRomanizer.kana(plain.replace(".", ""))
             }
-            // a line each for on'yomi and kun'yomi, two readings at most: the common ones
+            fun isKatakana(r: String) = r.any { it in '\u30A1'..'\u30FA' }
+            val kanji = if (engine == "ja") app.lychee.dict.PackData.kanji(ime, ch) else null
+            // a line each, two readings at most: the common ones
             val rows: List<Pair<String?, List<Pair<String, String>>>> = if (engine == "ja") {
-                val all = db.charReadings(ch, "ja")
-                val on = all.filter { r -> r.any { it in '\u30A1'..'\u30FA' } }.take(2).map(::kana)
-                val kun = all.filter { r -> r.none { it in '\u30A1'..'\u30FA' } }.take(2).map(::kana)
+                val all = db?.charReadings(ch, "ja").orEmpty()
+                val on = (kanji?.onyomi?.split('、')?.filter { it.isNotBlank() } ?: all.filter(::isKatakana)).take(2).map(::kana)
+                val kun = (kanji?.kunyomi?.split('、')?.filter { it.isNotBlank() } ?: all.filterNot(::isKatakana)).take(2).map(::kana)
                 listOfNotNull(
                     on.takeIf { it.isNotEmpty() }?.let { ime.getString(R.string.lychee_card_on) to it },
                     kun.takeIf { it.isNotEmpty() }?.let { ime.getString(R.string.lychee_card_kun) to it },
                 )
             } else {
-                db.charReadings(ch, "ko").take(1).map { h -> h to app.lychee.core.SentenceRomanizer.korean(h) }
-                    .takeIf { it.isNotEmpty() }?.let { listOf(null to it) }.orEmpty()
+                db?.charReadings(ch, "ko").orEmpty().take(2).map { h -> h to app.lychee.core.SentenceRomanizer.korean(h) }
+                    .takeIf { it.isNotEmpty() }?.let { listOf(ime.getString(R.string.lychee_card_korean) to it) }.orEmpty()
             }
             if (rows.isEmpty()) return@mapNotNull null
-            val meaning = (if (engine == "ja") app.lychee.dict.PackData.kanji(ime, ch)?.meanings?.takeIf { it.isNotBlank() } else null)
+            val meaning = kanji?.meanings?.takeIf { it.isNotBlank() }
                 ?: Readings.annotator?.resolve(ch, "", InputMode.Cantonese)?.meaning
             // the first reading as written, without its okurigana brackets: まな(ぶ) says まなぶ
             val say = rows.first().second.first().first.replace("(", "").replace(")", "")

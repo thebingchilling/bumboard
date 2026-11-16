@@ -89,16 +89,15 @@ class HandwritingPanelView @JvmOverloads constructor(
     private val backKey: View by lazy {
         key(R.drawable.ic_sym_arrow_back, R.string.lychee_back) { this@HandwritingPanelView.visibility = GONE }
     }
-    /** ⌫ floating over the pad's corner: a round button, not a key, so the pad stays open. */
+    /** ⌫ floating over the pad's corner, exactly like the emoji panel's: a functional key, lifted. */
     private val deleteKey: View by lazy {
-        FrameLayout(context).apply {
-            addView(ImageView(context).apply {
-                setImageResource(R.drawable.ic_sym_backspace)
-                imageTintList = ColorStateList.valueOf(palette.onSurface)
-                scaleType = ImageView.ScaleType.CENTER
-                background = LycheePanels.raisedRound(context, palette.surfaceContainerHigh)
-                contentDescription = context.getString(R.string.lychee_emoji_delete)
-            }, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.CENTER))
+        ImageView(context).apply {
+            setImageResource(R.drawable.ic_sym_backspace)
+            imageTintList = ColorStateList.valueOf(palette.onSecondaryContainer)
+            scaleType = ImageView.ScaleType.CENTER
+            background = LycheePanels.functionalKey(context)
+            contentDescription = context.getString(R.string.lychee_emoji_delete)
+            elevation = dp(3).toFloat()
         }.also { repeatOnHold(it, ::backspace) }
     }
 
@@ -120,8 +119,8 @@ class HandwritingPanelView @JvmOverloads constructor(
             addView(hint, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(pad, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(message, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-            addView(deleteKey, FrameLayout.LayoutParams(dp(60), dp(60), Gravity.BOTTOM or Gravity.END).apply {
-                setMargins(0, 0, dp(8), dp(8))
+            addView(deleteKey, FrameLayout.LayoutParams(dp(56), dp(44), Gravity.BOTTOM or Gravity.END).apply {
+                setMargins(0, 0, dp(4), dp(4))
             })
         }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         visibility = GONE
