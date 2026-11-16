@@ -38,10 +38,10 @@ import java.util.concurrent.Executors
  * otherwise deletes.
  *
  * A mode, like text editing: the Handwriting shortcut (Chinese and Japanese keyboards only)
- * opens it over the keys, with its name in the bar above. Its bottom row, like the keyboard's:
- * Back (a key, bottom left; the phone's Back closes it too), ?123 (the symbols, closing the
- * pad), space, ⌫ and Enter. With no letters to show, the line the Rime keyboards keep above
- * the candidates for them is the pad's too.
+ * opens it over the keys, with its name in the bar above, leaving the keyboard's own bottom row
+ * and candidate bar as they are; Back and ⌫ are keys in the pad's corners (the phone's Back
+ * closes it too). The keys of that bottom row reach the pad first ([onKey]): what is written
+ * goes in before them, and ?123 or emoji close the pad.
  *
  * Everything moves: the ink fades away moments after the last stroke (and at once, softly, when
  * a guess is picked), while the next character can already be written over it.
@@ -68,10 +68,6 @@ class HandwritingPanelView @JvmOverloads constructor(
         gravity = Gravity.CENTER
         visibility = GONE
     }
-    private val bottom = LinearLayout(context).apply {
-        orientation = HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-    }
     private val message = TextView(context).apply {
         setTextColor(palette.onSurfaceVariant)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
@@ -89,6 +85,14 @@ class HandwritingPanelView @JvmOverloads constructor(
      */
     private var unpicked: String? = null
 
+    // before init, which places them
+    private val backKey: View by lazy {
+        key(R.drawable.ic_sym_arrow_back, R.string.lychee_back) { this@HandwritingPanelView.visibility = GONE }
+    }
+    private val deleteKey: View by lazy {
+        key(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete) { backspace() }.also { repeatOnHold(it, ::backspace) }
+    }
+
     init {
         orientation = VERTICAL
         isClickable = true
@@ -100,35 +104,71 @@ class HandwritingPanelView @JvmOverloads constructor(
         }, LayoutParams(LayoutParams.MATCH_PARENT, 1))
         // the guesses show in the candidate bar above (lycheeShowGuesses), so the pad gets the room
         // the pad has no background of its own: write straight on the keyboard
+        // the pad over the keyboard's upper rows; its bottom row (?123, the comma, space, the
+        // period, Enter) and the candidate bar above stay the keyboard's own. Back and ⌫ are keys
+        // in the pad's bottom corners, as on Gboard
         addView(FrameLayout(context).apply {
             addView(hint, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(pad, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(message, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-        }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { setMargins(dp(8), dp(6), dp(8), dp(4)) })
-        addView(bottom, LayoutParams(LayoutParams.MATCH_PARENT, dp(52)).apply { setMargins(dp(4), 0, dp(4), dp(4)) })
-        buildBottomRow()
+            addView(backKey, FrameLayout.LayoutParams(dp(64), dp(48), Gravity.BOTTOM or Gravity.START))
+            addView(deleteKey, FrameLayout.LayoutParams(dp(64), dp(48), Gravity.BOTTOM or Gravity.END))
+        }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         visibility = GONE
     }
 
-    private fun buildBottomRow() {
-        bottom.removeAllViews()
-        // Back, a key in the bottom-left corner like the keyboard's own keys
-        bottom.addView(key(R.drawable.ic_sym_arrow_back, R.string.lychee_back) {
-            this@HandwritingPanelView.visibility = GONE
-        }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
-        // the symbols: the pad closes and the keyboard shows its symbols page
-        bottom.addView(key(null, R.string.lychee_hw_symbols, pill = true) {
-            commitPending()
-            this@HandwritingPanelView.visibility = GONE
-            lycheeHost()?.lycheeSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
-        }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
-        bottom.addView(key(null, R.string.lychee_hw_space, isSpace = true) { space() }, LayoutParams(0, LayoutParams.MATCH_PARENT, 3.4f))
-        bottom.addView(key(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete) { backspace() }.also { repeatOnHold(it, ::backspace) },
-            LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
-        bottom.addView(key(R.drawable.ic_sym_keyboard_return, R.string.lychee_hw_enter, enter = true) {
-            commitPending(); lycheeHost()?.lycheeSendCode(Constants.CODE_ENTER)
-        }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
+    /**
+     * Over the keys but their bottom row (the keyboard's own stays usable), Back and ⌫ the size
+     * of the keyboard's keys, in its gaps.
+     */
+    private fun fitToKeys() {
+        val row = LycheePanels.keyRow(this)
+        val lp = layoutParams as? FrameLayout.LayoutParams ?: return
+        if (lp.height <= 0) return
+        val bottomRow = row.height + row.bottomPadding
+        lp.height -= bottomRow
+        lp.bottomMargin += bottomRow
+        layoutParams = lp
+        val keysWidth = (rootView.findViewById<View>(R.id.keyboard_view)?.width ?: width).takeIf { it > 0 }
+            ?: resources.displayMetrics.widthPixels
+        val keyWidth = (keysWidth / 10f * 1.5f).toInt()
+        val half = row.gap / 2
+        for (key in listOf(backKey, deleteKey)) {
+            val klp = key.layoutParams as FrameLayout.LayoutParams
+            klp.width = keyWidth
+            klp.height = row.height
+            key.layoutParams = klp
+            key.setPadding(half, half, half, half)
+        }
     }
+
+    /**
+     * A key of the keyboard pressed while writing: what is on the pad goes in first; keys that
+     * change the keyboard (the symbols, emoji) close the pad. Returns true when the pad used it.
+     */
+    fun onKey(code: Int): Boolean {
+        if (visibility != VISIBLE) return false
+        when (code) {
+            Constants.CODE_DELETE -> {
+                // ⌫ while guesses show drops them, as the pad's own ⌫ does
+                if (guesses.isNotEmpty()) {
+                    backspace()
+                    return true
+                }
+                lastTyped = null
+                return false
+            }
+            Constants.CODE_SWITCH_ALPHA_SYMBOL, Constants.CODE_EMOJI, Constants.CODE_SHORTCUT -> {
+                commitPending()
+                visibility = GONE
+                return false
+            }
+        }
+        commitPending()
+        lastTyped = null
+        return false
+    }
+
 
     /** Held, [frame]'s key repeats [action] like the keyboard's ⌫ (after a pause, then quickly). */
     @SuppressLint("ClickableViewAccessibility")
@@ -167,8 +207,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         visibility = VISIBLE
         // the bar above shows "Handwriting" (Back is the key bottom left)
         toolbar()?.showTitle(R.string.lychee_sc_handwriting, withBack = false) { visibility = GONE }
-        takeLetterLine()
-        matchKeyRow()
+        fitToKeys()
         pad.clear()
         updateHint()
         lastTyped = null
@@ -369,34 +408,6 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     private fun cancelAutoClear() {
         main.removeCallbacks(autoClear)
-    }
-
-    /**
-     * On the Chinese, Japanese and Korean keyboards the bar keeps a line for the letters typed;
-     * handwriting has none, so its candidates move up into that line (ChineseInput) and the pad
-     * reaches up into the space they leave below them, a divider between the two.
-     */
-    private fun takeLetterLine() {
-        if (lycheeHost()?.lycheeEngine() == null) return
-        val line = resources.getDimensionPixelSize(R.dimen.lychee_preedit_height)
-        val lp = layoutParams as? FrameLayout.LayoutParams ?: return
-        if (lp.height <= 0) return
-        lp.height += line
-        layoutParams = lp
-    }
-
-    /**
-     * The bottom row exactly like the keyboard's: the same row height, the same gaps between
-     * keys, the same space under it.
-     */
-    private fun matchKeyRow() {
-        val row = LycheePanels.keyRow(this)
-        val lp = bottom.layoutParams as LayoutParams
-        lp.height = row.height
-        lp.setMargins(0, 0, 0, row.bottomPadding)
-        bottom.layoutParams = lp
-        val half = row.gap / 2
-        for (i in 0 until bottom.childCount) bottom.getChildAt(i).setPadding(half, half, half, half)
     }
 
     /**

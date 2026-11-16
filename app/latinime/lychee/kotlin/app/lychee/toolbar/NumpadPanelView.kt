@@ -37,6 +37,7 @@ class NumpadPanelView @JvmOverloads constructor(
     // before init, which fills them in
     private var abc: TextView? = null
     private var symbolsKey: TextView? = null
+    private var operatorsColumn: View? = null
 
     init {
         orientation = VERTICAL
@@ -76,6 +77,7 @@ class NumpadPanelView @JvmOverloads constructor(
             addView(operators)
         }
         top.addView(scroll, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_OPERATORS).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
+        operatorsColumn = scroll
         scroll.addOnLayoutChangeListener { _, _, t, _, b, _, ot, _, ob ->
             if (b - t != ob - ot) {
                 // three and a bit showing, so it's plain there's more below
@@ -145,12 +147,14 @@ class NumpadPanelView @JvmOverloads constructor(
 
     /**
      * Number, phone and date fields: this pad is their keyboard (the same pad as the symbols
-     * page's, rather than LatinIME's own). With no letters or symbols page to go to, ABC types +
-     * and !?# types −.
+     * page's, rather than LatinIME's own), with only what they need: no column of symbols and no
+     * ABC (there are no letters to go to); !?# types − instead.
      */
     var forced = false
         set(value) {
             field = value
+            operatorsColumn?.visibility = if (value) GONE else VISIBLE
+            abc?.visibility = if (value) GONE else VISIBLE
             abc?.text = if (value) "+" else context.getString(R.string.lychee_emoji_abc)
             abc?.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (value) 22f else 15f)
             symbolsKey?.text = if (value) "−" else "!?#"

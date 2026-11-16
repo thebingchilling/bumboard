@@ -1817,7 +1817,10 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         if (mInputView != null) {
             final View pad = mInputView.findViewById(R.id.lychee_handwriting_panel);
             if (pad instanceof app.lychee.handwriting.HandwritingPanelView) {
-                ((app.lychee.handwriting.HandwritingPanelView) pad).flush();
+                // the keyboard's own bottom row while writing: the pad sees its keys first
+                if (((app.lychee.handwriting.HandwritingPanelView) pad).onKey(event.mKeyCode)) {
+                    return;
+                }
             }
         }
         // LYCHEE: Chinese subtypes send keys to Rime first.

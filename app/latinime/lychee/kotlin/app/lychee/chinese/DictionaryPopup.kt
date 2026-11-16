@@ -137,7 +137,8 @@ class DictionaryPopup(
             val anyReading = entries.any { !it.reading.isNullOrBlank() }
             // (English: each UK and US pronunciation has its own speaker instead; Japanese and
             // Korean always keep the word's, as their reading rows can be left out)
-            content.heading(text, if (anyReading && onSpeakAs != null && lang == "en") null else text)
+            content.heading(text, if (anyReading && onSpeakAs != null && lang == "en") null else text,
+                strokesOf = text.takeIf { lang == "ja" || lang == "ko" })
             if (translations.isNotEmpty()) content.translations(translations, onTranslation)
             kanji?.let { k ->
                 // kun readings with their okurigana in brackets: まな.ぶ → まな(ぶ)
@@ -438,10 +439,10 @@ class DictionaryPopup(
             if (main != null && !r.composed && main.traditional != main.simplified) {
                 val first = if (prefs.simplified) main.simplified else main.traditional
                 val second = if (prefs.simplified) main.traditional else main.simplified
-                heading(first, null, otherForm(first, second))
+                heading(first, null, otherForm(first, second), strokesOf = text)
             } else {
                 // a phrase (read piece by piece) still shows its other script under it
-                heading(text, null, (Annotator.otherScript(text, r) ?: charByChar(text))?.let { otherForm(text, it) })
+                heading(text, null, (Annotator.otherScript(text, r) ?: charByChar(text))?.let { otherForm(text, it) }, strokesOf = text)
             }
             // both languages' readings, always
             spokenWord = text
@@ -693,7 +694,41 @@ class DictionaryPopup(
          * card's speak button for [spoken]; on a Chinese card the 粵/普 chip beside it switches
          * which language every speak button uses.
          */
-        fun heading(shown: String, spoken: String?, other: String? = null) {
+        /** The characters whose stroke order the heading shows on its right (not repeated below). */
+        private var strokesInHeading: String? = null
+
+        /**
+         * The stroke order of a one- or two-character word as small animated tiles, for the
+         * heading's right; null for a longer word (its strokes keep their own section).
+         */
+        private fun headingStrokes(text: String): View? {
+            val chars = text.codePoints().toArray().filter {
+                Annotator.isHan(it) || it in 0x3040..0x30FF || it in 0xAC00..0xD7A3
+            }.map { String(Character.toChars(it)) }.distinct()
+            if (chars.isEmpty() || chars.size > 2) return null
+            val found = chars.mapNotNull { app.lychee.dict.PackData.strokes(ctx, it, fontLang) }
+            if (found.size != chars.size) return null
+            return LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                found.forEach { ch ->
+                    addView(FrameLayout(ctx).apply {
+                        background = GradientDrawable().apply {
+                            cornerRadius = dp(12).toFloat()
+                            setColor(c.surfaceContainer)
+                        }
+                        setPadding(dp(4), dp(4), dp(4), dp(4))
+                        addView(app.lychee.dict.StrokeOrderView(ctx, ch, c.primary,
+                            androidx.core.graphics.ColorUtils.setAlphaComponent(c.onSurface, 0x1C),
+                            androidx.core.graphics.ColorUtils.setAlphaComponent(c.outline, 0x70),
+                            current = c.primary),
+                            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                        contentDescription = ctx.getString(R.string.lychee_card_strokes)
+                    }, LinearLayout.LayoutParams(dp(56), dp(56)).apply { marginStart = dp(6) })
+                }
+            }
+        }
+
+        fun heading(shown: String, spoken: String?, other: String? = null, strokesOf: String? = null) {
             val head = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -710,6 +745,11 @@ class DictionaryPopup(
                 })
             }
             head.addView(words, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            // a short word's stroke order on the right, written out beside it (not again below)
+            strokesOf?.let { t -> headingStrokes(t)?.let { tiles ->
+                head.addView(tiles)
+                strokesInHeading = t
+            } }
             if (spoken != null) onSpeak?.let { speak ->
                 if (speakLang != null) head.addView(speakChip())
                 head.addView(speaker { speak(spoken, speakLang) })
@@ -770,6 +810,8 @@ class DictionaryPopup(
 
         /** Stroke order and breakdown of each character (up to four), when the pack is installed. */
         fun strokes(text: String) {
+            // shown by the heading already
+            if (strokesInHeading == text) return
             // Chinese characters, kana and Hangul (Japanese and Korean have their own order)
             val chars = text.codePoints().toArray().filter {
                 Annotator.isHan(it) || it in 0x3040..0x30FF || it in 0xAC00..0xD7A3
