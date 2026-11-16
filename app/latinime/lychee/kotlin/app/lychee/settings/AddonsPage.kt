@@ -34,6 +34,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -112,10 +113,17 @@ fun AddonsPage() {
         ) {
             Text(stringResource(R.string.lychee_addons_fonts), style = MaterialTheme.typography.titleSmall,
                 color = colors.primary, modifier = Modifier.weight(1f))
-            Icon(painterResource(if (open) R.drawable.ic_sym_keyboard_arrow_up else R.drawable.ic_sym_keyboard_arrow_down),
-                null, tint = colors.onSurfaceVariant)
+            // the arrow turns over as it opens
+            val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, label = "arrow")
+            Icon(painterResource(R.drawable.ic_sym_keyboard_arrow_down), null, tint = colors.onSurfaceVariant,
+                modifier = Modifier.graphicsLayer { rotationZ = turn })
         }
-        androidx.compose.animation.AnimatedVisibility(open) {
+        // a fold that drops down from its heading (and folds back up), never growing from a corner
+        androidx.compose.animation.AnimatedVisibility(
+            open,
+            enter = androidx.compose.animation.expandVertically(expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top) + androidx.compose.animation.fadeOut(),
+        ) {
             Column { own.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { confirm = pack }) { version++ } } }
         }
     }

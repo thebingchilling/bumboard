@@ -91,7 +91,7 @@ packs page). Public facing, so be careful:
   `settings/Buttons.kt`, `settings/Theme.kt`): a one-line app bar with a shadow, plain
   full-width lists, group headings in the accent colour with a thin divider between groups, 24 dp
   grey icons on a 72 dp keyline, Material 2 switches, sliders, 4 dp buttons, cards and dialogs,
-  choices in radio-button dialogs; coloured by Material 3's scheme (Material You's tonal palette,
+  choices in dropdown menus dropped from their row; coloured by Material 3's scheme (Material You's tonal palette,
   tinted surfaces). Visual settings (theme, keys, key shape, height, candidate size, emoji size,
   fonts, pronunciation) show a live preview where they are changed. The packs page
   (`packs/site`) is the same: Material 2's components in Material 3's tonal colours.

@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
@@ -332,66 +333,73 @@ class Submenu(
 val LocalSubmenu = androidx.compose.runtime.staticCompositionLocalOf<(Submenu) -> Unit> { {} }
 
 /**
- * A setting with a few choices, as LatinIME's list preferences are: the title with the current
- * choice under it; a tap opens a Material 2 dialog of radio buttons, and picking one closes it.
+ * A setting with a few choices: the title with the current choice under it; a tap drops a
+ * Material 2 menu down from the row (growing from it), the current choice ticked, and picking one
+ * closes it.
  */
 @Composable
 fun <T> ChoiceRow(
     shape: Shape, title: String, summary: String? = null, options: List<Pair<T, String>>, selected: T,
     /** An icon for each option (shown before its label), or null for text only. */
     @DrawableRes icons: List<Int>? = null,
-    /** The dialog stays open after a choice (to try each one, as with voices), closed by Done. */
+    /** The menu stays open after a choice (to try each one, as with voices), closed by Done. */
     keepOpen: Boolean = false,
     onSelect: (T) -> Unit,
 ) {
     var open by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     val current = options.indexOfFirst { it.first == selected }
-    RowSurface(shape, { open = true }) {
-        CompactRow(icons?.getOrNull(current), title, options.getOrNull(current)?.second ?: summary)
-    }
-    if (open) {
-        androidx.compose.material3.AlertDialog(
+    val colors = MaterialTheme.colorScheme
+    Box(Modifier.fillMaxWidth()) {
+        RowSurface(shape, { open = true }) {
+            CompactRow(icons?.getOrNull(current), title, options.getOrNull(current)?.second ?: summary)
+        }
+        androidx.compose.material3.DropdownMenu(
+            expanded = open,
             onDismissRequest = { open = false },
+            // under the row's text, as a menu dropped from it
+            offset = androidx.compose.ui.unit.DpOffset(16.dp, 0.dp),
             shape = M2Corner,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            title = { Text(title, style = MaterialTheme.typography.titleLarge) },
-            text = {
-                Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
-                    if (summary != null) {
-                        Text(
-                            summary, style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 8.dp),
-                        )
-                    }
-                    options.forEachIndexed { i, (value, label) ->
-                        val chosen = value == selected
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSelect(value)
-                                    if (!keepOpen) open = false
-                                }
-                                .heightIn(min = 48.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            androidx.compose.material3.RadioButton(selected = chosen, onClick = null,
-                                modifier = Modifier.padding(end = 20.dp))
-                            icons?.getOrNull(i)?.let { res ->
-                                Icon(painterResource(res), contentDescription = null, modifier = Modifier.padding(end = 12.dp).size(20.dp))
-                            }
-                            Text(label, style = MaterialTheme.typography.bodyLarge)
+            containerColor = colors.surfaceContainer,
+            shadowElevation = 8.dp,
+            modifier = Modifier.widthIn(min = 224.dp, max = 320.dp),
+        ) {
+            if (summary != null) {
+                Text(
+                    summary, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 8.dp),
+                )
+            }
+            options.forEachIndexed { i, (value, label) ->
+                val chosen = value == selected
+                androidx.compose.material3.DropdownMenuItem(
+                    text = {
+                        Text(label, style = MaterialTheme.typography.bodyLarge,
+                            color = if (chosen) colors.primary else colors.onSurface)
+                    },
+                    onClick = {
+                        onSelect(value)
+                        if (!keepOpen) open = false
+                    },
+                    leadingIcon = icons?.getOrNull(i)?.let { res ->
+                        { Icon(painterResource(res), contentDescription = null, modifier = Modifier.size(20.dp)) }
+                    },
+                    trailingIcon = if (chosen) {
+                        {
+                            Icon(painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_check), contentDescription = null,
+                                tint = colors.primary, modifier = Modifier.size(20.dp))
                         }
+                    } else null,
+                    modifier = Modifier.background(if (chosen) colors.primary.copy(alpha = 0.08f) else Color.Transparent),
+                )
+            }
+            if (keepOpen) {
+                Row(Modifier.fillMaxWidth().padding(end = 8.dp), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = { open = false }) {
+                        Text(androidx.compose.ui.res.stringResource(com.android.inputmethod.latin.R.string.lychee_addons_done))
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { open = false }) {
-                    Text(androidx.compose.ui.res.stringResource(if (keepOpen) com.android.inputmethod.latin.R.string.lychee_addons_done else android.R.string.cancel))
-                }
-            },
-        )
+            }
+        }
     }
 }
 
