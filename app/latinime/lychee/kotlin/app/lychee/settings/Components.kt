@@ -2,6 +2,7 @@
 
 package app.lychee.settings
 
+import androidx.compose.material3.TextButton
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -56,11 +57,11 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /*
- * The settings' building blocks, in Material 2's style (like LatinIME's own preference screens):
+ * The settings' building blocks: the page laid out in Material 2's style (like LatinIME's own preference screens):
  * plain full-width lists on the page's colour, each group under a small heading in the accent
  * colour with a thin divider between groups, icons in the list's grey on a 72 dp text keyline,
- * and a setting with several choices opening a dialog of radio buttons. The controls themselves
- * (switches, sliders, radio buttons) are Material 3's.
+ * and a setting with several choices opening a dialog of radio buttons. Every component in it
+ * (buttons, dialogs, sheets, text fields, switches, sliders, radio buttons) is Material 3's own.
  */
 
 /** Rows inside a [Group]. */
@@ -77,8 +78,6 @@ fun pageColor(): Color = MaterialTheme.colorScheme.surface
 /** The shape of a row (rectangular, as Material 2's lists are). */
 val CardShape: Shape = RectangleShape
 
-/** Material 2's card and dialog corners. */
-val M2Corner = RoundedCornerShape(4.dp)
 
 /**
  * Counts the groups on a page, so the first has no divider above it (the settings screen gives
@@ -132,22 +131,22 @@ fun PageNote(text: String) {
 }
 
 /**
- * A Material 2 card for what isn't a list (setup, notices, messages): 4 dp corners, lifted by a
- * soft shadow. ([shape] is kept for callers; every card has Material 2's corners.)
+ * A card for what isn't a list (setup, notices, messages): Material 3's rounded card, lifted from
+ * the white page by a soft shadow. ([shape] is kept for callers; every card has the same corners.)
  */
 @Composable
 fun RaisedCard(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
-    @Suppress("UNUSED_PARAMETER") shape: Shape = M2Corner,
+    @Suppress("UNUSED_PARAMETER") shape: Shape = RoundedCornerShape(12.dp),
     content: @Composable () -> Unit,
 ) {
     Surface(
-        shape = M2Corner,
+        shape = MaterialTheme.shapes.medium,
         color = color,
         contentColor = contentColor,
-        shadowElevation = 2.dp,
+        shadowElevation = 1.dp,
         tonalElevation = 0.dp,
         modifier = modifier
             .fillMaxWidth()
@@ -310,9 +309,7 @@ fun <T> ChoiceRow(
     if (open) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { open = false },
-            shape = M2Corner,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+            title = { Text(title) },
             text = {
                 Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
                     if (summary != null) {

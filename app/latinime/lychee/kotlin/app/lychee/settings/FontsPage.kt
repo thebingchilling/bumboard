@@ -1,5 +1,7 @@
 package app.lychee.settings
 
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.TextButton
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
 import androidx.compose.foundation.BorderStroke

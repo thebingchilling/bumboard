@@ -42,7 +42,7 @@ private fun PreviewFrame(content: @Composable () -> Unit) {
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(4.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(12.dp),
         contentAlignment = Alignment.Center,

@@ -1,5 +1,6 @@
 package app.lychee.settings
 
+import androidx.compose.material3.TextButton
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -112,11 +113,8 @@ fun PersonalDictionaryPage() {
         val typed = PersonalDictionary.normalise(code)
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { editing = null },
-            shape = M2Corner,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             title = {
-                Text(stringResource(if (isNew) R.string.lychee_personal_add_word else R.string.lychee_personal_edit_word),
-                    style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(if (isNew) R.string.lychee_personal_add_word else R.string.lychee_personal_edit_word))
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
