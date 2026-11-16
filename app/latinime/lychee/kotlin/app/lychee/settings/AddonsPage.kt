@@ -18,16 +18,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -79,7 +75,7 @@ fun AddonsPage() {
     val colors = MaterialTheme.colorScheme
 
     // how much is on the phone, and the ways to get more
-    Column(Modifier.padding(horizontal = 24.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(R.string.lychee_addons_used, Packs.formatSize(total)), style = MaterialTheme.typography.titleLarge,
             color = colors.onSurface)
         Text(stringResource(R.string.lychee_addons_how), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
@@ -105,17 +101,17 @@ fun AddonsPage() {
     // your own fonts: folded away at the bottom
     val own = catalog.filter { PackStorage.section(it) == PackStorage.Section.OWN }
     if (own.isNotEmpty()) {
+        SectionDivider()
         var open by remember { mutableStateOf(own.any { Packs.isInstalled(context, it.id) }) }
         Row(
             Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp)
                 .clickable { open = !open }
-                .padding(horizontal = 24.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(stringResource(R.string.lychee_addons_fonts), style = MaterialTheme.typography.titleSmall,
-                color = colors.onSurfaceVariant, modifier = Modifier.weight(1f))
+                color = colors.primary, modifier = Modifier.weight(1f))
             Icon(painterResource(if (open) R.drawable.ic_sym_keyboard_arrow_up else R.drawable.ic_sym_keyboard_arrow_down),
                 null, tint = colors.onSurfaceVariant)
         }
@@ -154,8 +150,9 @@ fun AddonsPage() {
 /** A section's heading on the add-ons page. */
 @Composable
 private fun SectionTitle(title: String) {
-    Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 4.dp))
+    // a Material 2 list's heading, a divider above it
+    SectionDivider()
+    GroupHeader(title)
 }
 
 /** [Settings > Add-ons] for screens that still link to the old Storage page. */
@@ -189,13 +186,14 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
     var busy by remember { mutableStateOf(false) }
     androidx.compose.material3.Surface(
         onClick = { AddonSheet.open = pack },
-        shape = RoundedCornerShape(20.dp),
-        color = colors.surfaceContainerLow,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        // a Material 2 list row: full width, no card
+        shape = androidx.compose.ui.graphics.RectangleShape,
+        color = colors.surface,
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(Modifier.padding(start = 20.dp, end = 12.dp, top = 14.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(addonName(pack), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
+        Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(addonName(pack), style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
                 if (pack.summary.isNotEmpty()) {
                     Text(pack.summary, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2)
                 }
@@ -238,7 +236,7 @@ private fun Badge(text: String, strong: Boolean, check: Boolean = false) {
     val colors = MaterialTheme.colorScheme
     Row(
         Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(4.dp))
             .background(if (strong) colors.secondaryContainer else colors.surfaceContainerHighest)
             .padding(horizontal = 8.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -284,7 +282,7 @@ fun AddonSheetHost(actions: PackActions) {
                 .navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(addonName(pack), style = MaterialTheme.typography.headlineSmall)
+            Text(addonName(pack), style = MaterialTheme.typography.titleLarge)
             if (pack.summary.isNotEmpty()) Text(pack.summary, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
             val picture = remember(pack.preview) {
                 pack.preview?.let { path ->

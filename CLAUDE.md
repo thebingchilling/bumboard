@@ -87,8 +87,13 @@ packs page). Public facing, so be careful:
   English, but the language key still switches (`typing/FieldKind`); number fields don't.
 - Motion: one way of moving everywhere (`layout/LycheeMotion`): things cross-fade in place,
   never slide in like a window; cards grow out of what was touched.
-- Settings: plain Material 3 lists with subtle dividers; visual settings (theme, key shape,
-  height, candidate size, emoji size, fonts) show a live preview where they are changed.
+- Settings: Material 2, like LatinIME's own preference screens (`settings/Components.kt`,
+  `settings/Buttons.kt`): a one-line app bar with a shadow, plain full-width lists on white
+  (#121212 in dark), group headings in the accent colour with a thin divider between groups,
+  24 dp grey icons on a 72 dp keyline, Material 2 switches, sliders and 4 dp buttons, choices in
+  radio-button dialogs. Visual settings (theme, keys, key shape, height, candidate size, emoji
+  size, fonts, pronunciation) show a live preview where they are changed. The packs page
+  (`packs/site`) is Material 2 too.
   Add-ons (`settings/AddonsPage.kt`) gets downloads through a sheet (download, then open or
   choose the file); Storage lists everything kept by language and kind, and removes one pack
   or a whole language. A removed bundled pack stays out (`packs/PackStorage`, honoured by

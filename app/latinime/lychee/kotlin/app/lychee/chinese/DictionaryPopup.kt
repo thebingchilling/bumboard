@@ -109,8 +109,15 @@ class DictionaryPopup(
      */
     class CharReading(val ch: String, val rows: List<Pair<String?, List<Pair<String, String>>>>, val say: String, val meaning: String?)
 
-    /** One of a character's Japanese or Korean readings: its label, as shown, and what is said. */
-    class LocalReading(val label: String, val shown: String, val say: String)
+    /**
+     * One kind of a character's Japanese or Korean readings: its label, as shown, and what is
+     * said; and each reading on its own ([items]: the kana or Hangul, its romanisation, what its
+     * speaker says), so every reading, the rarer ones too, has a speaker.
+     */
+    class LocalReading(
+        val label: String, val shown: String, val say: String,
+        val items: List<Triple<String, String, String>> = emptyList(),
+    )
 
     /**
      * A Japanese or Korean word's card: its reading (kana, or romanisation and Hanja), part of
@@ -485,7 +492,14 @@ class DictionaryPopup(
             spokenWord = text
             // a Kanji or Hanja: its Japanese or Korean readings first
             local?.forEach { lr ->
-                body.addView(readingRow(labelled(lr.label, lr.shown), onSpeakLocal?.let { say -> smallSpeaker { say(lr.say) } }))
+                val speak = onSpeakLocal
+                if (lr.items.isEmpty() || speak == null) {
+                    body.addView(readingRow(labelled(lr.label, lr.shown), speak?.let { say -> smallSpeaker { say(lr.say) } }))
+                } else {
+                    // each reading a chip that says itself
+                    chipLines(lr.label, lr.items.map { (native, roman, said) -> ReadingChip(roman, native) { speak(said) } }, perLine = 2)
+                        .forEach { body.addView(it) }
+                }
             }
             if (showChinese) readingRows(r, main, text)
             if (compact) {
@@ -658,66 +672,108 @@ class DictionaryPopup(
             }
         }
 
+        /** A reading as a chip: [top] in the accent colour over [bottom], a small speaker after them. */
+        class ReadingChip(val top: String, val bottom: String?, val onClick: (() -> Unit)?)
+
+        private fun chipView(chip: ReadingChip): View = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(4), dp(if (chip.onClick != null) 6 else 8), dp(5))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(10).toFloat()
+                setColor(c.surfaceContainerHigh)
+            }
+            addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(textView(chip.top, 14f, c.primary).apply {
+                    typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
+                })
+                chip.bottom?.takeIf { it.isNotBlank() && it != chip.top }?.let { b ->
+                    addView(textView(b, 12f, c.onSurfaceVariant).apply {
+                        app.lychee.fonts.LycheeFonts.forText(ctx, b, fontLang)?.let { typeface = it }
+                    })
+                }
+            })
+            chip.onClick?.let { click ->
+                addView(android.widget.ImageView(ctx).apply {
+                    setImageResource(R.drawable.lychee_ic_volume)
+                    imageTintList = android.content.res.ColorStateList.valueOf(c.primary)
+                }, LinearLayout.LayoutParams(dp(16), dp(16)).apply { marginStart = dp(6) })
+                contentDescription = ctx.getString(R.string.lychee_card_listen) + " " + chip.top
+                isClickable = true
+                foreground = TypedValue().let { v ->
+                    ctx.theme.resolveAttribute(android.R.attr.selectableItemBackground, v, true)
+                    if (v.resourceId != 0) ctx.getDrawable(v.resourceId) else null
+                }
+                setOnClickListener { click() }
+            }
+        }
+
         /**
-         * Each Kanji or Hanja of a Japanese or Korean word on a row of its own: the character
-         * large on the left, its readings beside it (romanisation in the accent colour, the kana
-         * or Hangul after it), its meaning under them, and a speaker saying its first reading.
+         * A kind of reading ([label]: on, kun, Korean) and its readings as chips, [perLine] to a
+         * line; the label only on the first line, the others lined up under its chips.
+         */
+        fun chipLines(label: String?, chips: List<ReadingChip>, perLine: Int, labelWidth: Int = 64): List<View> =
+            chips.chunked(perLine).mapIndexed { i, part ->
+                LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(0, dp(3), 0, dp(3))
+                    if (label != null) addView(textView(if (i == 0) label else "", 11f, c.onSurfaceVariant).apply {
+                        typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
+                    }, LinearLayout.LayoutParams(dp(labelWidth), ViewGroup.LayoutParams.WRAP_CONTENT))
+                    part.forEachIndexed { n, chip ->
+                        addView(chipView(chip), LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                            .apply { if (n > 0) marginStart = dp(6) })
+                    }
+                }
+            }
+
+        /**
+         * Each Kanji or Hanja of a Japanese or Korean word as a tidy block: the character on a
+         * square tile on the left; beside it its meaning, then a line per kind of reading (on'yomi,
+         * kun'yomi; Korean), each reading a chip (romanisation over the kana or Hangul) that says
+         * itself; a thin line between the characters.
          */
         fun characterReadings(title: String, list: List<CharReading>) {
             section(title)
-            for (cr in list) {
+            list.forEachIndexed { index, cr ->
+                if (index > 0) body.addView(View(ctx).apply {
+                    setBackgroundColor(c.outlineVariant)
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(1)).apply {
+                    topMargin = dp(6); bottomMargin = dp(6)
+                })
                 val row = LinearLayout(ctx).apply {
                     orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
+                    gravity = Gravity.TOP
                     setPadding(0, dp(4), 0, dp(4))
                 }
-                row.addView(textView(cr.ch, 26f, c.onSurface).apply {
+                row.addView(textView(cr.ch, 30f, c.onSurface).apply {
                     typeface = app.lychee.fonts.LycheeFonts.forText(ctx, cr.ch, fontLang) ?: Typeface.DEFAULT
-                    minWidth = dp(40)
-                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                    .apply { marginEnd = dp(12) })
+                    gravity = Gravity.CENTER
+                    includeFontPadding = false
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(12).toFloat()
+                        setColor(c.surfaceContainer)
+                    }
+                }, LinearLayout.LayoutParams(dp(56), dp(56)).apply { marginEnd = dp(12) })
                 val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-                // a line per kind (on'yomi, kun'yomi; Korean): its label, then each reading as a
-                // small chip, the romanisation over the kana or Hangul
-                for ((label, readings) in cr.rows) {
-                    val line = LinearLayout(ctx).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        setPadding(0, dp(2), 0, dp(2))
-                    }
-                    label?.let {
-                        line.addView(textView(it, 11f, c.onSurfaceVariant).apply {
-                            typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
-                            minWidth = dp(30)
-                        })
-                    }
-                    for ((native, roman) in readings) {
-                        line.addView(LinearLayout(ctx).apply {
-                            orientation = LinearLayout.VERTICAL
-                            gravity = Gravity.CENTER_HORIZONTAL
-                            setPadding(dp(10), dp(3), dp(10), dp(4))
-                            background = GradientDrawable().apply {
-                                cornerRadius = dp(10).toFloat()
-                                setColor(c.surfaceContainerHigh)
-                            }
-                            addView(textView(roman, 13f, c.primary).apply {
-                                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
-                            })
-                            addView(textView(native, 11f, c.onSurfaceVariant))
-                        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                            marginStart = dp(6)
-                        })
-                    }
-                    col.addView(line)
-                }
                 cr.meaning?.takeIf { it.isNotBlank() }?.let { m ->
-                    col.addView(textView(m, 13f, c.onSurfaceVariant).apply {
-                        maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
-                        setPadding(0, dp(1), 0, 0)
+                    col.addView(textView(m, 15f, c.onSurface).apply {
+                        maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
+                        setPadding(0, 0, 0, dp(2))
                     })
                 }
+                for ((label, readings) in cr.rows) {
+                    val chips = readings.map { (native, roman) ->
+                        // まな(ぶ) is said まなぶ
+                        val said = native.replace("(", "").replace(")", "")
+                        ReadingChip(roman, native, onSpeak?.let { speak -> { speak(said, null) } })
+                    }
+                    // (one kind alone, as Korean's, needs no label)
+                    chipLines(label.takeIf { cr.rows.size > 1 }, chips, perLine = 2, labelWidth = 32).forEach { col.addView(it) }
+                }
                 row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                onSpeak?.let { say -> row.addView(smallSpeaker { say(cr.say, null) }) }
                 body.addView(row)
             }
         }
@@ -801,7 +857,9 @@ class DictionaryPopup(
          */
         private fun readingSpeaker(hw: Headword?, reading: String, lang: Lang, spoken: String?): View? {
             val say = onSpeak ?: return null
-            val word = spoken ?: return null
+            // every reading has a speaker: the word of this entry when no other is given
+            val word = spoken ?: spokenWord
+                ?: hw?.let { if (prefs.simplified) it.simplified else it.traditional } ?: return null
             val usual = hw?.readings?.get(lang)?.firstOrNull()?.let { norm(it) == norm(reading) } ?: true
             return smallSpeaker { say(if (usual) word else sayAs(reading, lang) ?: word, lang) }
         }
@@ -1164,6 +1222,8 @@ class DictionaryPopup(
                 setPadding(0, dp(1), 0, 0)
             })
             row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            // each part says itself, in the card's language
+            onSpeak?.let { say -> row.addView(smallSpeaker { say(form, speakLang ?: lang) }) }
             body.addView(row)
         }
 

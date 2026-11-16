@@ -36,9 +36,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
@@ -50,7 +48,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -191,28 +188,34 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
         }
     }
     BackHandler(enabled = page != Page.Home || submenu != null) { back() }
-    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val dark = androidx.compose.foundation.isSystemInDarkTheme()
 
     Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = pageColor(),
         topBar = {
-            // Material 3's large title, collapsing as the page scrolls, on the page's colour
-            androidx.compose.material3.LargeTopAppBar(
-                title = { Text(submenu?.title ?: stringResource(page.title)) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = pageColor(),
-                    scrolledContainerColor = pageColor(),
-                ),
-                navigationIcon = {
-                    if (page != Page.Home || submenu != null) {
-                        IconButton(onClick = back) {
-                            Icon(painterResource(R.drawable.ic_sym_arrow_back), stringResource(R.string.lychee_back))
+            // Material 2's app bar: one line, the page's title, raised over the list by a shadow
+            Surface(
+                color = if (dark) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surface,
+                shadowElevation = 4.dp,
+            ) {
+                androidx.compose.material3.TopAppBar(
+                    title = {
+                        Text(submenu?.title ?: stringResource(page.title), style = MaterialTheme.typography.titleLarge,
+                            maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        scrolledContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                    ),
+                    navigationIcon = {
+                        if (page != Page.Home || submenu != null) {
+                            IconButton(onClick = back) {
+                                Icon(painterResource(R.drawable.ic_sym_arrow_back), stringResource(R.string.lychee_back))
+                            }
                         }
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-            )
+                    },
+                )
+            }
         },
     ) { padding ->
         // pages (and submenus) slide in from the side they lead to (deeper to the right),
@@ -268,6 +271,7 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                         Page.Diagnostics -> DiagnosticsPage()
                     }
                 }
+                }
             }
         }
     }
@@ -296,15 +300,9 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
     }
 
     // a header: the icon, the name, and a field to try the keyboard in
-    Surface(
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    // (a Material 2 card: white, 4 dp corners, a soft shadow)
+    RaisedCard {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier
@@ -359,12 +357,11 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
                 onValueChange = { sample = it },
                 placeholder = { Text(stringResource(R.string.lychee_try_it)) },
                 singleLine = false,
-                shape = RoundedCornerShape(16.dp),
+                // Material 2's filled field: a grey box with a line under it
+                shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp),
                 colors = androidx.compose.material3.TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                    unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -447,11 +444,10 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
 private fun CrashCard(log: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
     RaisedCard(
-        shape = RoundedCornerShape(28.dp),
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer,
     ) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(stringResource(R.string.lychee_crash_title), style = MaterialTheme.typography.titleLarge)
             Text(stringResource(R.string.lychee_crash_body), style = MaterialTheme.typography.bodyMedium)
             Text(
@@ -481,11 +477,10 @@ private fun CrashCard(log: String, onDismiss: () -> Unit) {
 private fun Card(highlight: Boolean = false, content: @Composable () -> Unit) {
     // raised, never a flat grey block
     RaisedCard(
-        color = if (highlight) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+        color = if (highlight) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
         contentColor = if (highlight) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-        shape = RoundedCornerShape(28.dp),
     ) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
     }
 }
 
@@ -531,12 +526,7 @@ private fun LanguagesPage() {
     val imm = remember { context.getSystemService(InputMethodManager::class.java) }
     val imi = remember { UncachedInputMethodManagerUtils.getInputMethodInfoOf(context.packageName, imm) }
     if (imi == null) {
-        Text(
-            stringResource(R.string.lychee_languages_enable_first),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
-        )
+        PageNote(stringResource(R.string.lychee_languages_enable_first))
         return
     }
     val subtypes = remember { (0 until imi.subtypeCount).map { imi.getSubtypeAt(it) } }
@@ -545,12 +535,7 @@ private fun LanguagesPage() {
     }
     val canSet = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
-    Text(
-        stringResource(R.string.lychee_languages_hint),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
-    )
+    PageNote(stringResource(R.string.lychee_languages_hint))
     Group {
         subtypes.forEach { subtype ->
             row { shape ->
@@ -621,12 +606,7 @@ private fun ChinesePage() {
         zhuyin = false, pinyin = true,
     )
 
-    Text(
-        stringResource(R.string.lychee_readings_intro),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-    )
+    PageNote(stringResource(R.string.lychee_readings_intro))
     // the candidate bars as they will look, changing with every choice below
     CandidatePreview(liveSize, display, meaning.value)
     Group(stringResource(R.string.lychee_readings_group_writing)) {
@@ -809,6 +789,18 @@ private fun KeysPage() {
     val extra = when (commaKey.value) { "language", "language_comma" -> "language"; else -> "emoji" }
 
 
+    // the keys as they will be: the number row, the key by the comma, the spacebar's label
+    val themeIds = res.getIntArray(R.array.keyboard_theme_ids)
+    KeyboardPreview(
+        palette = prefs.getString(app.lychee.ui.LycheeColorStyle.PREF, null) ?: app.lychee.ui.LycheeColorStyle.NEUTRAL,
+        roundness = prefs.getInt(app.lychee.ui.KeyStyle.PREF_ROUNDNESS, app.lychee.ui.KeyStyle.DEFAULT_ROUNDNESS),
+        borders = prefs.getBoolean(app.lychee.ui.KeyStyle.PREF_BORDERS, true),
+        raised = KeyboardTheme.getKeyboardTheme(context).mThemeId == themeIds.firstOrNull(),
+        height = prefs.getFloat(LycheeLayout.PREF_HEIGHT_SCALE, 1f),
+        numberRow = numberRow.value,
+        spacebar = stringResource(if (spacebar.value == "method") R.string.lychee_pref_spacebar_method else R.string.lychee_pref_spacebar_language),
+        comma = commaKey.value,
+    )
     Group(stringResource(R.string.lychee_group_keys)) {
         row {
             SwitchRow(
@@ -906,12 +898,7 @@ private fun ThemePage() {
     val ids = context.resources.getIntArray(R.array.keyboard_theme_ids)
     var selected by remember { mutableStateOf(KeyboardTheme.getKeyboardTheme(context).mThemeId) }
 
-    Text(
-        stringResource(R.string.lychee_theme_note),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
-    )
+    PageNote(stringResource(R.string.lychee_theme_note))
     val colors = prefs.stringPref(app.lychee.ui.LycheeColorStyle.PREF) {
         prefs.getString(app.lychee.ui.LycheeColorStyle.PREF, null) ?: app.lychee.ui.LycheeColorStyle.NEUTRAL
     }
@@ -930,6 +917,11 @@ private fun ThemePage() {
     var liveHeight by remember(height.value) { mutableStateOf(height.value) }
     var liveColumns by remember(columns.value) { mutableStateOf(if (columns.value > 0) columns.value else 9) }
 
+    // the keyboard as it will look, changing with every choice below
+    KeyboardPreview(
+        palette = colors.value, roundness = liveRound, borders = borders.value,
+        raised = selected == ids.firstOrNull(), height = liveHeight, oneHanded = mode.value == "one_handed",
+    )
     Group(stringResource(R.string.lychee_pref_colors)) {
         row {
             PaletteGrid(
@@ -1363,12 +1355,7 @@ private fun PronunciationPage() {
     val speak = prefs.stringPref(app.lychee.chinese.DictionaryPopup.PREF_SPEAK_LANG) {
         prefs.getString(app.lychee.chinese.DictionaryPopup.PREF_SPEAK_LANG, null) ?: "auto"
     }
-    Text(
-        stringResource(R.string.lychee_pronunciation_note),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
-    )
+    PageNote(stringResource(R.string.lychee_pronunciation_note))
     // how the choices read, changing as they are made
     PronunciationPreview(mandarin.value == P.TAIWAN, english.value)
     Group(stringResource(R.string.lychee_language_mandarin)) {
@@ -1467,12 +1454,7 @@ private fun DiagnosticsPage() {
                 hwSamples.value, hwSamples::set)
         }
     }
-    Text(
-        stringResource(R.string.lychee_diagnostics_body),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-    )
+    PageNote(stringResource(R.string.lychee_diagnostics_body))
     Row(Modifier.padding(horizontal = 24.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = {
             context.startActivity(

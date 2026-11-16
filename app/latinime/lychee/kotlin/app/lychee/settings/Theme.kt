@@ -1,13 +1,14 @@
-@file:OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalTextApi::class)
+@file:OptIn(ExperimentalTextApi::class)
 
 package app.lychee.settings
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialExpressiveTheme
-import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -86,15 +87,50 @@ private val Dark = darkColorScheme(
     outlineVariant = Color(0xFF3F4946),
 )
 
+/**
+ * The settings' colours, Material 2 style: the phone's accent (Material You's primary on
+ * Android 12+, the icon's teal before) on plain neutral surfaces, white in light and #121212 in
+ * dark, with no tinted containers.
+ */
 @Composable
 fun lycheeColorScheme(dark: Boolean): ColorScheme {
     val context = LocalContext.current
-    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    val base = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else {
         if (dark) Dark else Light
     }
+    return if (dark) base.copy(
+        background = Color(0xFF121212), surface = Color(0xFF121212), surfaceDim = Color(0xFF121212),
+        surfaceBright = Color(0xFF2C2C2C),
+        onBackground = Color(0xFFE3E3E3), onSurface = Color(0xFFE3E3E3),
+        surfaceVariant = Color(0xFF2C2C2C), onSurfaceVariant = Color(0xFFABABAB),
+        surfaceContainerLowest = Color(0xFF0E0E0E), surfaceContainerLow = Color(0xFF1A1A1A),
+        surfaceContainer = Color(0xFF1F1F1F), surfaceContainerHigh = Color(0xFF2A2A2A),
+        surfaceContainerHighest = Color(0xFF333333),
+        outline = Color(0xFF8A8A8A), outlineVariant = Color(0xFF3A3A3A),
+        surfaceTint = Color.Transparent,
+    ) else base.copy(
+        background = Color.White, surface = Color.White, surfaceDim = Color(0xFFEEEEEE),
+        surfaceBright = Color.White,
+        onBackground = Color(0xFF202124), onSurface = Color(0xFF202124),
+        surfaceVariant = Color(0xFFF1F3F4), onSurfaceVariant = Color(0xFF5F6368),
+        surfaceContainerLowest = Color.White, surfaceContainerLow = Color.White,
+        surfaceContainer = Color(0xFFF5F5F5), surfaceContainerHigh = Color.White,
+        surfaceContainerHighest = Color(0xFFEEEEEE),
+        outline = Color(0xFF9AA0A6), outlineVariant = Color(0xFFE0E0E0),
+        surfaceTint = Color.Transparent,
+    )
 }
+
+/** Material 2's shapes: 4 dp corners on cards, dialogs, sheets, menus and fields. */
+val M2Shapes = Shapes(
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(4.dp),
+    medium = RoundedCornerShape(4.dp),
+    large = RoundedCornerShape(4.dp),
+    extraLarge = RoundedCornerShape(4.dp),
+)
 
 /** The app's font choice (Settings > Fonts), as state, so changing it restyles the settings at once. */
 object AppFont {
@@ -120,8 +156,8 @@ private fun googleSansFlex(): FontFamily? {
 }
 
 /**
- * Material 3's type scale in [family], a step smaller for the settings' lists (the stock body
- * text made every row oversized).
+ * The type scale in [family], sized like Material 2's (subtitle 1 for list titles, body 2 for
+ * their summaries, a 20 sp app bar title, buttons in medium with wide letter spacing).
  */
 private fun typography(family: FontFamily?): Typography {
     val stock = Typography()
@@ -129,7 +165,9 @@ private fun typography(family: FontFamily?): Typography {
         bodyLarge = stock.bodyLarge.copy(fontSize = 16.sp, lineHeight = 22.sp),
         bodyMedium = stock.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp),
         bodySmall = stock.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
-        labelLarge = stock.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.2.sp),
+        labelLarge = stock.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.25.sp),
+        titleLarge = stock.titleLarge.copy(fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.15.sp),
+        titleSmall = stock.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.1.sp),
         headlineMedium = stock.headlineMedium.copy(fontSize = 24.sp),
     )
     if (family == null) return base
@@ -146,9 +184,9 @@ private fun typography(family: FontFamily?): Typography {
 @Composable
 fun LycheeTheme(content: @Composable () -> Unit) {
     val family = googleSansFlex()
-    MaterialExpressiveTheme(
+    MaterialTheme(
         colorScheme = lycheeColorScheme(isSystemInDarkTheme()),
-        motionScheme = MotionScheme.expressive(),
+        shapes = M2Shapes,
         typography = remember(family) { typography(family) },
         content = content,
     )

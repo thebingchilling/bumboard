@@ -25,7 +25,8 @@ import com.android.inputmethod.latin.common.Constants
  * scrollbar showing), big digits in a phone-style grid, !?#, space and backspace on the right,
  * and ABC , 0 . Enter along the bottom, lined up with the columns above (0 is a digit like the
  * others). Four rows of the same height. It opens from the "12/34" key on the symbols page and
- * changes like the keyboard does; ABC goes back to the letters and !?# to the symbols.
+ * changes like the keyboard does; ABC goes back to the letters and !?# to the symbols. In number
+ * fields ([forced]) it is Gboard's number pad: four even columns, centred across the keyboard.
  */
 class NumpadPanelView @JvmOverloads constructor(
     context: Context,
@@ -38,6 +39,10 @@ class NumpadPanelView @JvmOverloads constructor(
     private var abc: TextView? = null
     private var symbolsKey: TextView? = null
     private var operatorsColumn: View? = null
+    private var digitsBlock: View? = null
+    private var rightColumn: View? = null
+    private var bottomDigits: List<View> = emptyList()
+    private var enter: View? = null
 
     init {
         orientation = VERTICAL
@@ -108,6 +113,7 @@ class NumpadPanelView @JvmOverloads constructor(
             }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         }
         top.addView(digits, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_DIGIT * 3))
+        digitsBlock = digits
         val right = LinearLayout(context).apply { orientation = VERTICAL }
         right.addView(key("!?#", letter = false, size = 15f) {
             // a number field has no symbols page: the key types a minus instead
@@ -119,14 +125,19 @@ class NumpadPanelView @JvmOverloads constructor(
         right.addView(icon(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete, repeats = true) { send(Constants.CODE_DELETE) },
             keyParams(1f, vertical = true))
         top.addView(right, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_SIDE))
+        rightColumn = right
         addView(top, LayoutParams(LayoutParams.MATCH_PARENT, 0, 3f))
         addView(LinearLayout(context).apply {
             orientation = HORIZONTAL
             addView(abcKey().also { abc = it }, keyParams(COLUMN_OPERATORS))
-            addView(text(","), keyParams(COLUMN_DIGIT))
-            addView(digit("0"), keyParams(COLUMN_DIGIT))
-            addView(text("."), keyParams(COLUMN_DIGIT))
-            addView(enterKey(), keyParams(COLUMN_SIDE))
+            val comma = text(",")
+            val zero = digit("0")
+            val period = text(".")
+            addView(comma, keyParams(COLUMN_DIGIT))
+            addView(zero, keyParams(COLUMN_DIGIT))
+            addView(period, keyParams(COLUMN_DIGIT))
+            bottomDigits = listOf(comma, zero, period)
+            addView(enterKey().also { enter = it }, keyParams(COLUMN_SIDE))
         }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         visibility = GONE
     }
@@ -159,22 +170,16 @@ class NumpadPanelView @JvmOverloads constructor(
             abc?.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (value) 22f else 15f)
             symbolsKey?.text = if (value) "−" else "!?#"
             symbolsKey?.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (value) 22f else 15f)
+            // like Gboard's number pad: four even columns across the whole width (the digits
+            // and the − / space / ⌫ / Enter column alike), so the pad sits centred
+            val digitWeight = if (value) 1f else COLUMN_DIGIT
+            val sideWeight = if (value) 1f else COLUMN_SIDE
+            (digitsBlock?.layoutParams as? LayoutParams)?.weight = digitWeight * 3
+            (rightColumn?.layoutParams as? LayoutParams)?.weight = sideWeight
+            bottomDigits.forEach { (it.layoutParams as? LayoutParams)?.weight = digitWeight }
+            (enter?.layoutParams as? LayoutParams)?.weight = sideWeight
             requestLayout()
         }
-
-    /**
-     * The forced pad's keys are the size of the full pad's: without the column of symbols the
-     * rest keeps its width, centred, with the space left over shared either side.
-     */
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val w = MeasureSpec.getSize(widthMeasureSpec)
-        val side = if (forced && w > 0) {
-            (w - dp(6)) * (COLUMN_OPERATORS / (COLUMN_OPERATORS + COLUMN_DIGIT * 3 + COLUMN_SIDE)) / 2f
-        } else 0f
-        val pad = dp(3) + side.toInt()
-        if (paddingLeft != pad || paddingRight != pad) setPadding(pad, paddingTop, pad, paddingBottom)
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-    }
 
     override fun setVisibility(visibility: Int) {
         if (visibility != VISIBLE) repeat.removeCallbacksAndMessages(null)

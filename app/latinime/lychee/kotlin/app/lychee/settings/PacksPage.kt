@@ -9,13 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -277,7 +275,7 @@ fun UpdatesCard() {
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    androidx.compose.material3.Button(onClick = { app.lychee.packs.Updates.check(context, all = true) }) {
+                    Button(onClick = { app.lychee.packs.Updates.check(context, all = true) }) {
                         Text(stringResource(R.string.lychee_updates_all))
                     }
                     TextButton(onClick = {
@@ -298,7 +296,7 @@ fun UpdatesCard() {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
-                androidx.compose.material3.Button(onClick = { app.lychee.packs.Updates.check(context) }) {
+                Button(onClick = { app.lychee.packs.Updates.check(context) }) {
                     Text(stringResource(R.string.lychee_updates_check))
                 }
             }

@@ -327,7 +327,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                 fun row(label: Int, list: List<String>) {
                     if (list.isEmpty()) return
                     val shown = list.joinToString("、") { r -> "$r ${app.lychee.core.SentenceRomanizer.kana(r.replace(".", "").replace("-", ""))}" }
-                    out += DictionaryPopup.LocalReading(ime.getString(label), shown, list.first().replace(".", "").replace("-", ""))
+                    // each reading on its own too, so each has its speaker
+                    val items = list.take(6).map { r ->
+                        val said = r.replace(".", "").replace("-", "")
+                        Triple(r, app.lychee.core.SentenceRomanizer.kana(said), said)
+                    }
+                    out += DictionaryPopup.LocalReading(ime.getString(label), shown, list.first().replace(".", "").replace("-", ""), items)
                 }
                 row(R.string.lychee_card_onyomi, on)
                 row(R.string.lychee_card_kunyomi, kun)
@@ -340,7 +345,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             } else listOf(text)
             if (hangul.isNotEmpty()) {
                 val shown = hangul.joinToString("、") { h -> "$h ${app.lychee.core.SentenceRomanizer.korean(h)}" }
-                out += DictionaryPopup.LocalReading(ime.getString(R.string.lychee_card_korean), shown, hangul.first())
+                val items = hangul.take(6).map { h -> Triple(h, app.lychee.core.SentenceRomanizer.korean(h), h) }
+                out += DictionaryPopup.LocalReading(ime.getString(R.string.lychee_card_korean), shown, hangul.first(), items)
             }
         }
         return out

@@ -1,11 +1,15 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package app.lychee.settings
 
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,20 +17,20 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -34,80 +38,114 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-/**
- * Rows inside a [Group]: each row a card of its own, a soft tinted rounded surface with a little
- * space between them, like the add-ons page.
+/*
+ * The settings' building blocks, in Material 2's style (like LatinIME's own preference screens):
+ * plain full-width lists on the page's colour, each group under a small heading in the accent
+ * colour with a thin divider between groups, icons in the list's grey on a 72 dp text keyline,
+ * Material 2 switches and sliders, and a setting with several choices opening a dialog of radio
+ * buttons.
  */
+
+/** Rows inside a [Group]. */
 class GroupScope internal constructor(private val rows: MutableList<@Composable (Shape) -> Unit>) {
     fun row(content: @Composable (Shape) -> Unit) {
         rows += content
     }
 }
 
-/** The page behind the cards. */
+/** The page behind the lists. */
 @Composable
-fun pageColor(): androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface
+fun pageColor(): Color = MaterialTheme.colorScheme.surface
 
-/** The shape of every settings card. */
-val CardShape = RoundedCornerShape(20.dp)
+/** The shape of a row (rectangular, as Material 2's lists are). */
+val CardShape: Shape = RectangleShape
+
+/** Material 2's card and dialog corners. */
+val M2Corner = RoundedCornerShape(4.dp)
+
+/**
+ * Counts the groups on a page, so the first has no divider above it (the settings screen gives
+ * every page a fresh one).
+ */
+class GroupCounter {
+    var count = 0
+}
+
+val LocalGroupCounter = androidx.compose.runtime.staticCompositionLocalOf { GroupCounter() }
+
+/** A thin full-width line between parts of a page. */
+@Composable
+fun SectionDivider() = HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant)
 
 @Composable
 fun Group(title: String? = null, build: GroupScope.() -> Unit) {
     val rows = mutableListOf<@Composable (Shape) -> Unit>()
     GroupScope(rows).build()
     if (rows.isEmpty()) return
-    Column(
-        Modifier
-            .padding(top = if (title != null) 12.dp else 4.dp, bottom = 4.dp)
-            .animateContentSize(),
-    ) {
-        if (title != null) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall,
-                // headings in the text's own quiet colour (the accent was hard to read)
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 4.dp),
-            )
-        }
-        rows.forEach { row ->
-            Surface(
-                shape = CardShape,
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-            ) { row(CardShape) }
-        }
+    val counter = LocalGroupCounter.current
+    val index = remember(counter) { counter.count++ }
+    Column(Modifier.fillMaxWidth().animateContentSize()) {
+        if (index > 0) SectionDivider()
+        if (title != null) GroupHeader(title)
+        else if (index > 0) Spacer(Modifier.height(8.dp))
+        rows.forEach { row -> row(CardShape) }
     }
 }
 
+/** A group's heading: small, in the accent colour, on the rows' text keyline. */
+@Composable
+fun GroupHeader(title: String) {
+    Text(
+        title,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 4.dp),
+    )
+}
+
+/** A short explanation at the top of a page or above a list, in the list's grey. */
+@Composable
+fun PageNote(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 8.dp),
+    )
+}
+
 /**
- * A raised card for what isn't a list (setup, notices, messages): the page's own colour (or
- * [color]) lifted by a soft shadow, never a flat grey block.
+ * A Material 2 card for what isn't a list (setup, notices, messages): 4 dp corners, lifted by a
+ * soft shadow. ([shape] is kept for callers; every card has Material 2's corners.)
  */
 @Composable
 fun RaisedCard(
     modifier: Modifier = Modifier,
-    color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface,
-    contentColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurface,
-    shape: Shape = RoundedCornerShape(24.dp),
+    color: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    @Suppress("UNUSED_PARAMETER") shape: Shape = M2Corner,
     content: @Composable () -> Unit,
 ) {
     Surface(
-        shape = shape,
+        shape = M2Corner,
         color = color,
         contentColor = contentColor,
-        shadowElevation = 0.dp,
+        shadowElevation = 2.dp,
         tonalElevation = 0.dp,
         modifier = modifier
             .fillMaxWidth()
@@ -120,14 +158,14 @@ private fun RowSurface(shape: Shape, onClick: (() -> Unit)?, content: @Composabl
     Box(
         Modifier
             .fillMaxWidth()
-            .clip(shape)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     ) { content() }
 }
 
 /**
- * Every row's layout: an icon in a tinted badge when it has one (rows without one start at the
- * edge, no empty space), the title and a short summary, and whatever goes at the end.
+ * Every row's layout, as in Material 2's lists: an icon (24 dp, in the list's grey) or a control
+ * at the start, the title and a short summary on the 72 dp keyline (16 dp without either), and
+ * whatever goes at the end.
  */
 @Composable
 fun CompactRow(
@@ -136,28 +174,29 @@ fun CompactRow(
     summary: String? = null,
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
-    summaryColor: androidx.compose.ui.graphics.Color? = null,
+    summaryColor: Color? = null,
 ) {
     Row(
         Modifier
             .fillMaxWidth()
-            .heightIn(min = 64.dp)
-            .padding(start = 20.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+            .heightIn(min = if (summary != null) 72.dp else 56.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (leading != null || icon != null) {
-            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                when {
-                    leading != null -> leading()
-                    icon != null -> IconBadge(icon)
-                }
+        when {
+            leading != null -> {
+                Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) { leading() }
+                Spacer(Modifier.size(16.dp))
             }
-            Spacer(Modifier.size(16.dp))
+            icon != null -> {
+                IconBadge(icon)
+                Spacer(Modifier.size(32.dp))
+            }
         }
         Column(
             Modifier
                 .weight(1f)
-                .padding(end = 12.dp),
+                .padding(end = if (trailing != null) 16.dp else 0.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
@@ -173,36 +212,65 @@ fun CompactRow(
     }
 }
 
+/** A list icon: 24 dp, in the list's grey (Material 2 has no badge behind it). */
 @Composable
 fun IconBadge(@DrawableRes icon: Int) {
-    // neutral: a soft grey badge with the icon in the text colour, easy to see in any palette
-    val scheme = MaterialTheme.colorScheme
-    val back = scheme.surfaceContainerHighest
-    val fore = scheme.onSurface
-    Box(
-        Modifier
-            .size(40.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(back),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            painterResource(icon), contentDescription = null,
-            tint = fore,
-            modifier = Modifier.size(22.dp),
-        )
-    }
+    Icon(
+        painterResource(icon), contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.size(24.dp),
+    )
 }
 
 @Composable
 fun NavRow(shape: Shape, title: String, summary: String? = null, @DrawableRes icon: Int? = null, onClick: () -> Unit) {
-    RowSurface(shape, onClick) {
-        CompactRow(icon, title, summary, trailing = {
-            Icon(
-                painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_chevron_right), contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp),
+    RowSurface(shape, onClick) { CompactRow(icon, title, summary) }
+}
+
+/**
+ * Material 2's switch: a thin rounded track with a round raised thumb, in the accent colour
+ * when on.
+ */
+@Composable
+fun M2Switch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, enabled: Boolean = true) {
+    val scheme = MaterialTheme.colorScheme
+    val dark = scheme.surface.luminance() < 0.5f
+    val on by animateFloatAsState(if (checked) 1f else 0f, tween(150), label = "switch")
+    val thumbOff = if (dark) Color(0xFFBDBDBD) else Color(0xFFFAFAFA)
+    val trackOff = scheme.onSurface.copy(alpha = 0.38f)
+    val trackOn = scheme.primary.copy(alpha = 0.54f)
+    val thumb = androidx.compose.ui.graphics.lerp(thumbOff, scheme.primary, on)
+    val track = androidx.compose.ui.graphics.lerp(trackOff, trackOn, on)
+    val interaction = remember { MutableInteractionSource() }
+    Box(
+        Modifier
+            .size(width = 52.dp, height = 40.dp)
+            .then(
+                if (onCheckedChange != null) Modifier.toggleable(
+                    value = checked, interactionSource = interaction,
+                    indication = ripple(bounded = false, radius = 20.dp),
+                    enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange,
+                ) else Modifier,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.size(width = 40.dp, height = 22.dp)) {
+            val alpha = if (enabled) 1f else 0.5f
+            val r = 10.dp.toPx()
+            val trackH = 14.dp.toPx()
+            val inset = 3.dp.toPx()
+            drawRoundRect(
+                track.copy(alpha = track.alpha * alpha),
+                topLeft = Offset(inset, (size.height - trackH) / 2),
+                size = Size(size.width - inset * 2, trackH),
+                cornerRadius = CornerRadius(trackH / 2, trackH / 2),
             )
-        })
+            val cx = r + (size.width - r * 2) * on
+            val cy = size.height / 2
+            // the thumb's shadow, then the thumb
+            drawCircle(Color.Black.copy(alpha = 0.22f * alpha), r + 0.6.dp.toPx(), Offset(cx, cy + 1.dp.toPx()))
+            drawCircle(thumb.copy(alpha = if (enabled) 1f else 0.85f), r, Offset(cx, cy))
+        }
     }
 }
 
@@ -210,14 +278,14 @@ fun NavRow(shape: Shape, title: String, summary: String? = null, @DrawableRes ic
 fun SwitchRow(shape: Shape, title: String, summary: String? = null, checked: Boolean, onChange: (Boolean) -> Unit) =
     IconSwitchRow(shape, title, summary, checked, null, onChange)
 
-/** A [SwitchRow] with an icon badge in front. */
+/** A [SwitchRow] with an icon in front. */
 @Composable
 fun IconSwitchRow(
     shape: Shape, title: String, summary: String?, checked: Boolean,
     @DrawableRes icon: Int?, onChange: (Boolean) -> Unit,
 ) {
     RowSurface(shape, { onChange(!checked) }) {
-        CompactRow(icon, title, summary, trailing = { Switch(checked = checked, onCheckedChange = onChange) })
+        CompactRow(icon, title, summary, trailing = { M2Switch(checked = checked, onCheckedChange = onChange) })
     }
 }
 
@@ -242,7 +310,7 @@ fun ReorderSwitchRow(
                         contentDescription = androidx.compose.ui.res.stringResource(com.android.inputmethod.latin.R.string.lychee_move_down),
                     )
                 }
-                Switch(checked = checked, onCheckedChange = onChange)
+                M2Switch(checked = checked, onCheckedChange = onChange)
             }
         })
     }
@@ -262,9 +330,8 @@ class Submenu(
 val LocalSubmenu = androidx.compose.runtime.staticCompositionLocalOf<(Submenu) -> Unit> { {} }
 
 /**
- * A setting with a few choices. Two or three short ones are Material 3 segmented buttons right
- * in the row; more (or longer) ones show the current choice under the title, and a tap opens a
- * dialog listing them, like the phone's own settings.
+ * A setting with a few choices, as LatinIME's list preferences are: the title with the current
+ * choice under it; a tap opens a Material 2 dialog of radio buttons, and picking one closes it.
  */
 @Composable
 fun <T> ChoiceRow(
@@ -275,58 +342,24 @@ fun <T> ChoiceRow(
     keepOpen: Boolean = false,
     onSelect: (T) -> Unit,
 ) {
-    // only when every label fits its button whole (no tick icon, which takes room): two short
-    // ones, or three very short ones; anything longer is a dialog
-    val longest = options.maxOfOrNull { it.second.length } ?: 0
-    val segmented = !keepOpen && icons == null && ((options.size == 2 && longest <= 11) || (options.size == 3 && longest <= 7))
-    if (segmented) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
-            if (summary != null) {
-                Text(summary, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(Modifier.height(10.dp))
-            androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                options.forEachIndexed { i, (value, label) ->
-                    SegmentedButton(
-                        selected = value == selected,
-                        onClick = { onSelect(value) },
-                        shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, options.size),
-                        icon = {},
-                        label = {
-                            Text(label, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.labelLarge)
-                        },
-                    )
-                }
-            }
-        }
-        return
-    }
     var open by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
     val current = options.indexOfFirst { it.first == selected }
     RowSurface(shape, { open = true }) {
-        CompactRow(
-            icons?.getOrNull(current), title, options.getOrNull(current)?.second ?: summary,
-            summaryColor = MaterialTheme.colorScheme.onSurface,
-        )
+        CompactRow(icons?.getOrNull(current), title, options.getOrNull(current)?.second ?: summary)
     }
     if (open) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { open = false },
-            title = { Text(title) },
+            shape = M2Corner,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            title = { Text(title, style = MaterialTheme.typography.titleLarge) },
             text = {
                 Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
                     if (summary != null) {
                         Text(
                             summary, style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 12.dp),
+                            modifier = Modifier.padding(bottom = 8.dp),
                         )
                     }
                     options.forEachIndexed { i, (value, label) ->
@@ -334,17 +367,15 @@ fun <T> ChoiceRow(
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
                                 .clickable {
                                     onSelect(value)
                                     if (!keepOpen) open = false
                                 }
-                                .heightIn(min = 52.dp)
-                                .padding(end = 8.dp),
+                                .heightIn(min = 48.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             androidx.compose.material3.RadioButton(selected = chosen, onClick = null,
-                                modifier = Modifier.padding(horizontal = 12.dp))
+                                modifier = Modifier.padding(end = 20.dp))
                             icons?.getOrNull(i)?.let { res ->
                                 Icon(painterResource(res), contentDescription = null, modifier = Modifier.padding(end = 12.dp).size(20.dp))
                             }
@@ -354,7 +385,7 @@ fun <T> ChoiceRow(
                 }
             },
             confirmButton = {
-                androidx.compose.material3.TextButton(onClick = { open = false }) {
+                TextButton(onClick = { open = false }) {
                     Text(androidx.compose.ui.res.stringResource(if (keepOpen) com.android.inputmethod.latin.R.string.lychee_addons_done else android.R.string.cancel))
                 }
             },
@@ -363,21 +394,14 @@ fun <T> ChoiceRow(
 }
 
 /**
- * A submenu's page: what the setting does, then its choices as a list of radio buttons with
- * dividers; picking one ticks it and goes back.
+ * A submenu's page: what the setting does, then its choices as a list of radio buttons; picking
+ * one ticks it and goes back.
  */
 @Composable
 fun SubmenuPage(menu: Submenu, onDone: () -> Unit) {
     var picked by remember(menu) { androidx.compose.runtime.mutableIntStateOf(menu.selected) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
-    if (menu.summary != null) {
-        Text(
-            menu.summary,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 8.dp),
-        )
-    }
+    if (menu.summary != null) PageNote(menu.summary)
     Group {
         menu.options.forEachIndexed { i, label ->
             row {
@@ -391,13 +415,47 @@ fun SubmenuPage(menu: Submenu, onDone: () -> Unit) {
                     }
                 }) {
                     CompactRow(
-                        menu.icons?.getOrNull(i), label,
-                        trailing = { androidx.compose.material3.RadioButton(selected = picked == i, onClick = null) },
+                        null, label,
+                        leading = { androidx.compose.material3.RadioButton(selected = picked == i, onClick = null) },
                     )
                 }
             }
         }
     }
+}
+
+/** Material 2's slider: a thin track, the part before the thumb in the accent colour, a round thumb. */
+@Composable
+fun M2Slider(
+    value: Float, onValueChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float>, steps: Int,
+    onValueChangeFinished: (() -> Unit)? = null, modifier: Modifier = Modifier,
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        onValueChangeFinished = onValueChangeFinished,
+        steps = steps,
+        valueRange = range,
+        thumb = {
+            Box(
+                Modifier
+                    .size(20.dp)
+                    .shadow(1.dp, CircleShape)
+                    .background(primary, CircleShape),
+            )
+        },
+        track = { state ->
+            val span = state.valueRange.endInclusive - state.valueRange.start
+            val fraction = if (span > 0f) ((state.value - state.valueRange.start) / span).coerceIn(0f, 1f) else 0f
+            Canvas(Modifier.fillMaxWidth().height(4.dp)) {
+                val y = size.height / 2
+                drawLine(primary.copy(alpha = 0.24f), Offset(0f, y), Offset(size.width, y), size.height, StrokeCap.Round)
+                drawLine(primary, Offset(0f, y), Offset(size.width * fraction, y), size.height, StrokeCap.Round)
+            }
+        },
+    )
 }
 
 @Composable
@@ -410,19 +468,20 @@ fun SliderRow(
 ) {
     var current by remember(value) { mutableFloatStateOf(value.toFloat()) }
     RowSurface(shape, null) {
-        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 6.dp)) {
+        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                Text(format(current.roundToInt()), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(format(current.roundToInt()), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Slider(
+            M2Slider(
                 value = current,
                 onValueChange = {
                     current = it
                     onSlide?.invoke(it.roundToInt())
                 },
                 onValueChangeFinished = { onChange(current.roundToInt()) },
-                valueRange = range.first.toFloat()..range.last.toFloat(),
+                range = range.first.toFloat()..range.last.toFloat(),
                 steps = ((range.last - range.first) / step - 1).coerceAtLeast(0),
             )
         }
@@ -432,10 +491,12 @@ fun SliderRow(
 @Composable
 fun TextRow(shape: Shape, title: String, body: String) {
     RowSurface(shape, null) {
-        Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
-            Spacer(Modifier.height(4.dp))
-            Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (body.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
