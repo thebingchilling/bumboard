@@ -94,7 +94,7 @@ packs page). Public facing, so be careful:
   fields, cards, switches, sliders) is stock Material 3, its containers keeping their tint.
   Visual settings (theme, keys, key shape, height, candidate size, emoji size, fonts,
   pronunciation) show a live preview where they are changed. The packs page (`packs/site`) is
-  Material 2.
+  the same mix: Material 2's app bar and flat lists, Material 3's buttons, tags and cards.
   Add-ons (`settings/AddonsPage.kt`) gets downloads through a sheet (download, then open or
   choose the file); Storage lists everything kept by language and kind, and removes one pack
   or a whole language. A removed bundled pack stays out (`packs/PackStorage`, honoured by
