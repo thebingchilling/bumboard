@@ -816,9 +816,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             return
         }
         b.animate().cancel()
-        b.animate().alpha(0f).scaleX(0.7f).scaleY(0.7f).setDuration(90).withEndAction {
+        b.animate().alpha(0f).scaleX(0.85f).scaleY(0.85f).setDuration(app.lychee.layout.LycheeMotion.OUT / 2).setInterpolator(app.lychee.layout.LycheeMotion.exitEasing).withEndAction {
             b.setImageResource(icon)
-            b.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(140).start()
+            b.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(app.lychee.layout.LycheeMotion.IN).setInterpolator(app.lychee.layout.LycheeMotion.enterEasing).start()
         }.start()
     }
 

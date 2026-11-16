@@ -726,6 +726,8 @@ private fun ChinesePage() {
             )
         }
         row {
+            Column {
+            OtherScriptPreview(other.value, script.value == "simplified")
             ChoiceRow(
                 it, stringResource(R.string.lychee_readings_other_script), stringResource(R.string.lychee_readings_other_script_summary),
                 options = listOf(
@@ -735,6 +737,7 @@ private fun ChinesePage() {
                 ),
                 selected = other.value, onSelect = other::set,
             )
+            }
         }
         row {
             SwitchRow(it, stringResource(R.string.lychee_readings_kanji), stringResource(R.string.lychee_readings_kanji_summary),
@@ -805,6 +808,18 @@ private fun KeysPage() {
     val extra = when (commaKey.value) { "combined", "emoji" -> "emoji"; "language", "language_comma" -> "language"; else -> "none" }
     val besides = commaKey.value == "emoji" || commaKey.value == "language"
 
+    // the keys as they will be: the number row, the comma's neighbour, the space bar's label
+    KeyboardPreview(
+        prefs.getString(app.lychee.ui.LycheeColorStyle.PREF, null) ?: app.lychee.ui.LycheeColorStyle.NEUTRAL,
+        prefs.getInt(app.lychee.ui.KeyStyle.PREF_ROUNDNESS, app.lychee.ui.KeyStyle.DEFAULT_ROUNDNESS),
+        prefs.getBoolean(app.lychee.ui.KeyStyle.PREF_BORDERS, true),
+        KeyboardTheme.getKeyboardTheme(context).mThemeId == KeyboardTheme.THEME_ID_LYCHEE_RAISED,
+        prefs.getFloat(LycheeLayout.PREF_HEIGHT_SCALE, 1f),
+        numberRow = numberRow.value,
+        spacebar = stringResource(if (spacebar.value == "method") R.string.lychee_pref_spacebar_method else R.string.lychee_pref_spacebar_language),
+        comma = commaKey.value,
+    )
+
     Group(stringResource(R.string.lychee_group_keys)) {
         row {
             SwitchRow(
@@ -860,7 +875,10 @@ private fun KeysPage() {
             row {
                 ChoiceRow(it, stringResource(R.string.lychee_pref_key_sound), null,
                     app.lychee.ui.KeySounds.STYLES.map { st -> st to stringResource(keySoundName(st)) },
-                    keySound.value, onSelect = keySound::set)
+                    keySound.value) { st ->
+                    keySound.set(st)
+                    previewKeySound(context, st)
+                }
             }
         }
         if (Settings.readFromBuildConfigIfToShowKeyPreviewPopupOption(res)) {
@@ -940,7 +958,9 @@ private fun ThemePage() {
     var liveColumns by remember(columns.value) { mutableStateOf(if (columns.value > 0) columns.value else 9) }
 
     // the keys as they will look, changing with every setting below
-    KeyboardPreview(colors.value, liveRound, borders.value, selected == KeyboardTheme.THEME_ID_LYCHEE_RAISED, liveHeight)
+    val numberRowNow = remember { prefs.getBoolean(LycheeLayout.PREF_NUMBER_ROW, true) }
+    KeyboardPreview(colors.value, liveRound, borders.value, selected == KeyboardTheme.THEME_ID_LYCHEE_RAISED, liveHeight,
+        numberRow = numberRowNow, oneHanded = mode.value == "one_handed")
     Group(stringResource(R.string.lychee_pref_colors)) {
         row {
             PaletteGrid(
@@ -1279,6 +1299,18 @@ private fun FeelGroups() {
     }
 }
 
+/** Plays [style]'s key sound, a letter then the space bar, once it has loaded. */
+private fun previewKeySound(context: Context, style: String) {
+    app.lychee.ui.KeySounds.init(context)
+    val main = android.os.Handler(android.os.Looper.getMainLooper())
+    if (style == app.lychee.ui.KeySounds.SYSTEM) {
+        context.getSystemService(android.media.AudioManager::class.java)?.playSoundEffect(android.media.AudioManager.FX_KEYPRESS_STANDARD)
+        return
+    }
+    main.postDelayed({ app.lychee.ui.KeySounds.play(0, -1f) }, 350)
+    main.postDelayed({ app.lychee.ui.KeySounds.play(1, -1f) }, 520)
+}
+
 /** The keyboard's other options: split keyboard on a tablet, emoji from a physical keyboard. */
 @Composable
 private fun OtherKeysGroup() {
@@ -1378,6 +1410,8 @@ private fun PronunciationPage() {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
     )
+    // how the choices read, changing as they are made
+    PronunciationPreview(mandarin.value == P.TAIWAN, english.value)
     Group(stringResource(R.string.lychee_language_mandarin)) {
         row {
             ChoiceRow(

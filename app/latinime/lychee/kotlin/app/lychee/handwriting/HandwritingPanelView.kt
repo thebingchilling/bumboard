@@ -116,11 +116,37 @@ class HandwritingPanelView @JvmOverloads constructor(
             lycheeHost()?.lycheeSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
         }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
         bottom.addView(key(null, R.string.lychee_hw_space, isSpace = true) { space() }, LayoutParams(0, LayoutParams.MATCH_PARENT, 3.4f))
-        bottom.addView(key(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete) { backspace() },
+        bottom.addView(key(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete) { backspace() }.also { repeatOnHold(it, ::backspace) },
             LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
         bottom.addView(key(R.drawable.ic_sym_keyboard_return, R.string.lychee_hw_enter, enter = true) {
             commitPending(); lycheeHost()?.lycheeSendCode(Constants.CODE_ENTER)
         }, LayoutParams(0, LayoutParams.MATCH_PARENT, 1.3f))
+    }
+
+    /** Held, [frame]'s key repeats [action] like the keyboard's ⌫ (after a pause, then quickly). */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun repeatOnHold(frame: View, action: () -> Unit) {
+        val target = (frame as? FrameLayout)?.getChildAt(0) ?: frame
+        val again = object : Runnable {
+            override fun run() {
+                action()
+                main.postDelayed(this, 50)
+            }
+        }
+        target.setOnTouchListener { v, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    v.isPressed = true
+                    action()
+                    main.postDelayed(again, 400)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    v.isPressed = false
+                    main.removeCallbacks(again)
+                }
+            }
+            true
+        }
     }
 
     /** Types the character still on the pad, before a key of the keyboard does anything. */

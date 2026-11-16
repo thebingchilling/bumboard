@@ -443,7 +443,7 @@ class EmojiPanelView @JvmOverloads constructor(
         floatingDelete.isEnabled = show
         floatingDelete.animate().cancel()
         floatingDelete.animate().alpha(target).translationY(if (show) 0f else dp(16).toFloat())
-            .setDuration(150).withEndAction { floatingDelete.visibility = if (show) VISIBLE else INVISIBLE }
+            .setDuration(app.lychee.layout.LycheeMotion.OUT).setInterpolator(if (show) app.lychee.layout.LycheeMotion.enterEasing else app.lychee.layout.LycheeMotion.exitEasing).withEndAction { floatingDelete.visibility = if (show) VISIBLE else INVISIBLE }
             .withStartAction { if (show) floatingDelete.visibility = VISIBLE }.start()
         if (!show) repeat.removeCallbacksAndMessages(null)
     }

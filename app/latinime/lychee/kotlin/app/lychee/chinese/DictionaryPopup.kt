@@ -64,9 +64,15 @@ class DictionaryPopup(
 
     fun dismiss() {
         val shown = host != null
-        host?.let {
-            it.removeAllViews()
-            if (standalone == null) it.visibility = View.GONE
+        host?.let { h ->
+            // it shrinks back into the keyboard as it fades, like every card
+            val card = h.getChildAt(0)
+            val finish = Runnable {
+                if (host === h) return@Runnable  // a new card has taken the panel meanwhile
+                h.removeAllViews()
+                if (standalone == null) h.visibility = View.GONE
+            }
+            if (card != null && standalone == null) app.lychee.layout.LycheeMotion.cardOut(card, finish) else finish.run()
         }
         host = null
         if (shown) onDismiss()
@@ -221,6 +227,9 @@ class DictionaryPopup(
         host?.removeAllViews()
         host = null
         val panel = standalone ?: keyboard.rootView.findViewById<FrameLayout>(R.id.lychee_dictionary_panel) ?: return
+        // a card still fading out from before goes at once
+        panel.animate().cancel()
+        panel.removeAllViews()
         val parent = panel.parent as? View ?: return
         // the keyboard's top edge in the input view (which spans the screen), and the room
         // between it and the status bar

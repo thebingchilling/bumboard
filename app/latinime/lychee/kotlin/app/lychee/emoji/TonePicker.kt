@@ -151,8 +151,8 @@ class TonePicker(private val ctx: Context) {
     private fun bounce(view: View) {
         view.scaleX = 0.82f
         view.scaleY = 0.82f
-        view.animate().scaleX(1f).scaleY(1f).setDuration(200)
-            .setInterpolator(android.view.animation.OvershootInterpolator(3f)).start()
+        view.animate().scaleX(1f).scaleY(1f).setDuration(app.lychee.layout.LycheeMotion.IN)
+            .setInterpolator(app.lychee.layout.LycheeMotion.enterEasing).start()
     }
 
     /** A round skin-tone swatch; the chosen one is ringed, with a gap, in the accent colour. */

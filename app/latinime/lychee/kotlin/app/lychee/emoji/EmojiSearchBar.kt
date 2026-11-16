@@ -244,7 +244,7 @@ class EmojiSearchBar @JvmOverloads constructor(
         scroller.scrollTo(0, 0)
         if (app.lychee.layout.LycheePanels.animate(context)) {
             results.alpha = 0.4f
-            results.animate().alpha(1f).setDuration(120).start()
+            results.animate().alpha(1f).setDuration(app.lychee.layout.LycheeMotion.OUT).setInterpolator(app.lychee.layout.LycheeMotion.enterEasing).start()
         }
     }
 
