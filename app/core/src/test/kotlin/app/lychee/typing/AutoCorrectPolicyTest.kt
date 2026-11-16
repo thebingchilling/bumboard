@@ -68,4 +68,20 @@ class AutoCorrectPolicyTest {
         assertEquals(1, AutoCorrectPolicy.distance("teh", "the"))
         assertEquals(2, AutoCorrectPolicy.distance("bruh", "bro"))
     }
+
+    @Test
+    fun commonMisspellingsAreCorrected() {
+        assertEquals(Decision.CORRECT, AutoCorrectPolicy.decide("recieve", "receive"))
+        assertEquals(Decision.CORRECT, AutoCorrectPolicy.decide("definately", "definitely"))
+        assertEquals(Decision.CORRECT, AutoCorrectPolicy.decide("seperate", "separate"))
+    }
+
+    @Test
+    fun namesWithTheirCapitalStay() {
+        // a name typed with its capital, more than a slip from the word offered
+        assertEquals(Decision.KEEP, AutoCorrectPolicy.decide("Siobhan", "Sobbing", capitalised = true))
+        assertEquals(Decision.KEEP, AutoCorrectPolicy.decide("Kerr", "Kerry", capitalised = true))
+        // still one slip from a word: corrected
+        assertEquals(Decision.CORRECT, AutoCorrectPolicy.decide("Hellp", "Hello", capitalised = true))
+    }
 }

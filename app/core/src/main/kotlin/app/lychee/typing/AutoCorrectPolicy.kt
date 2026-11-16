@@ -29,11 +29,34 @@ object AutoCorrectPolicy {
         "u", "ur", "r", "y", "w", "b4", "gr8", "luv", "cya", "ttyl", "sis", "bestie", "bae", "slay",
     )
 
-    /** What to do with [typed] when LatinIME would offer [suggestion] as its correction. */
-    fun decide(typed: String, suggestion: String): Decision {
+    /** Common misspellings, always put right (the dictionary's own suggestion must agree). */
+    val MISSPELLINGS: Map<String, String> = mapOf(
+        "recieve" to "receive", "recieved" to "received", "beleive" to "believe", "belive" to "believe",
+        "definately" to "definitely", "definitly" to "definitely", "seperate" to "separate",
+        "occured" to "occurred", "occuring" to "occurring", "untill" to "until", "wich" to "which",
+        "becuase" to "because", "beacuse" to "because", "accomodate" to "accommodate", "acheive" to "achieve",
+        "adress" to "address", "arguement" to "argument", "begining" to "beginning", "calender" to "calendar",
+        "comming" to "coming", "commited" to "committed", "concious" to "conscious", "embarass" to "embarrass",
+        "enviroment" to "environment", "existance" to "existence", "foriegn" to "foreign", "freind" to "friend",
+        "goverment" to "government", "happend" to "happened", "independant" to "independent",
+        "neccessary" to "necessary", "necesary" to "necessary", "noticable" to "noticeable", "persue" to "pursue",
+        "posession" to "possession", "prefered" to "preferred", "realy" to "really", "reccomend" to "recommend",
+        "recomend" to "recommend", "remeber" to "remember", "sucess" to "success", "succesful" to "successful",
+        "suprise" to "surprise", "tommorow" to "tomorrow", "tomorow" to "tomorrow", "truely" to "truly",
+        "wierd" to "weird", "whcih" to "which", "teh" to "the", "thier" to "their", "alot" to "a lot",
+        "probaly" to "probably", "basicly" to "basically", "finaly" to "finally", "usualy" to "usually",
+    )
+
+    /**
+     * What to do with [typed] when LatinIME would offer [suggestion] as its correction.
+     * [capitalised]: typed with a capital (not the sentence's own), most likely a name.
+     */
+    @JvmOverloads
+    fun decide(typed: String, suggestion: String, capitalised: Boolean = false): Decision {
         val word = typed.lowercase()
         val target = suggestion.lowercase()
         if (word.isEmpty() || word == target) return Decision.DEFAULT
+        if (MISSPELLINGS[word] == target) return Decision.CORRECT
         if (word in INFORMAL) return Decision.KEEP
         if (word.length < 3 || !word.all { it.isLetter() || it == '\'' }) return Decision.DEFAULT
         // only the apostrophe missing (dont, doesnt, theyre): corrected
@@ -47,6 +70,8 @@ object AutoCorrectPolicy {
         val far = keyDistance(word, target)
         // one slip onto a neighbouring key in a longer word: corrected
         if (word.length >= 4 && far <= 0.5f) return Decision.CORRECT
+        // a name typed with its capital (Kerr, Siobhan): kept unless it is one slip from a word
+        if (capitalised && far > 0.5f) return Decision.KEEP
         // a word-like word further from the suggestion than its length allows: kept as typed
         // (a longer word may have more slips: "autoecocrect" is still autocorrect)
         if (far >= allowance(word.length)) return Decision.KEEP

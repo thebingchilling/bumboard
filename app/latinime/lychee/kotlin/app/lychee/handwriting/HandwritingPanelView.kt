@@ -27,9 +27,10 @@ import com.android.inputmethod.latin.common.Constants
 import java.util.concurrent.Executors
 
 /**
- * Handwriting over the keys, like Gboard's: write a character anywhere on the pad; a moment
- * after the last stroke the best guess is typed and the pad clears for the next one, so
- * characters can be written one after another. The guesses show in the candidate bar, with
+ * Handwriting over the keys, like Gboard's: write a character anywhere on the pad; the guesses
+ * show in the bar, and the best one is typed as the next character is begun (or space, Enter or
+ * a key is pressed), so characters can be written one after another; tap another guess to type
+ * that instead. The guesses show in the candidate bar, with
  * their readings: tap one to replace what was typed. After each character the bar suggests
  * what usually follows it (校, 生, 習 after 學), from the readings dictionary's words.
  * The ink fades away by itself a couple of seconds after the last stroke (its guesses stay in
@@ -81,6 +82,12 @@ class HandwritingPanelView @JvmOverloads constructor(
     /** What the last automatic commit typed, so a tapped candidate can replace it. */
     private var lastTyped: String? = null
     private var guesses: List<String> = emptyList()
+    /**
+     * The best guess for the character last written, not yet typed: it is typed, as Gboard
+     * does, when the next character is begun, or space, Enter or another key is pressed, or
+     * the pad closes. Tapping another guess types that instead; ⌫ while guesses show drops it.
+     */
+    private var unpicked: String? = null
 
     init {
         orientation = VERTICAL
@@ -233,6 +240,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         val ink = pad.strokeList()
         if (ink.isEmpty()) return
         val version = ++inkVersion
+        unpicked = null
         val o = ocr
         val m = matcher
         val engine = lycheeHost()?.lycheeEngine()
@@ -253,6 +261,7 @@ class HandwritingPanelView @JvmOverloads constructor(
                 guessedVersion = version
                 lastInk = null
                 showGuesses(result)
+                unpicked = guesses.firstOrNull()
                 if (commitWhenGuessed) commitPending()
             }
         }
@@ -390,15 +399,22 @@ class HandwritingPanelView @JvmOverloads constructor(
         for (i in 0 until bottom.childCount) bottom.getChildAt(i).setPadding(half, half, half, half)
     }
 
-    /** Clears the ink on the pad without typing anything (only a tapped candidate types). */
+    /**
+     * Moving on (space, Enter, a key, the pad closing): the character written is typed as its
+     * best guess (unless a guess was tapped or ⌫ dropped them), and the pad clears.
+     */
     private fun commitPending(@Suppress("UNUSED_PARAMETER") now: Boolean = false) {
-        // nothing is typed unless a candidate is tapped: moving on (space, Enter, a key, the
-        // pad closing) just clears what was written
         main.removeCallbacks(autoCommit)
         commitWhenGuessed = false
         cancelAutoClear()
+        val typed = unpicked != null
+        autoType()
         lastInk = null
-        if (!pad.hasInk) return
+        if (!pad.hasInk) {
+            // what follows (a space, a key) comes after it: its guesses are done with
+            if (typed) showGuesses(emptyList())
+            return
+        }
         pad.fadeAway()
         inkVersion++
         showGuesses(emptyList())
@@ -407,8 +423,20 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     private val autoCommit = Runnable { commitPending() }
 
+    /** Types the best guess for the character last written, if it hasn't been typed or picked. */
+    private fun autoType() {
+        val text = unpicked ?: return
+        unpicked = null
+        lycheeHost()?.lycheeType(text)
+        lastTyped = text
+        // the pad's ink (or the ink it cleared by itself) is a sample for the guess typed
+        val ink = if (pad.hasInk) pad.strokeList() else lastInk
+        if (ink != null) HandwritingSamples.save(context, ink, text, guesses, lycheeHost()?.lycheeEngine())
+    }
+
     /** A tapped guess: replaces what was just typed, or types it when still writing. */
     private fun pick(text: String) {
+        unpicked = null
         if (pad.hasInk) {
             main.removeCallbacks(autoCommit)
             cancelAutoClear()
@@ -445,6 +473,7 @@ class HandwritingPanelView @JvmOverloads constructor(
     private fun backspace() {
         if (guesses.isNotEmpty()) {
             commitWhenGuessed = false
+            unpicked = null
             lastInk = null
             showGuesses(emptyList())
             // what is still on the pad is read again with its next stroke
@@ -630,7 +659,8 @@ class HandwritingPanelView @JvmOverloads constructor(
                     // writing again: the ink stays until a pause, and a new character is not a
                     // replacement for the one picked before
                     cancelAutoClear()
-                    if (!hasInk) lastTyped = null
+                    // a new character begun: the last one's best guess is typed first
+                    if (!hasInk) autoType()
                     // still writing: no typing yet
                     commitWhenGuessed = false
                     current = arrayListOf(event.x, event.y)

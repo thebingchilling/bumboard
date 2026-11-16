@@ -2122,6 +2122,7 @@ public final class InputLogic {
             commitChosenWord(settingsValues, typedWord,
                     LastComposedWord.COMMIT_TYPE_USER_TYPED_WORD, separatorString);
             StatsUtils.onWordCommitUserTyped(typedWord, isBatchMode);
+            lycheeTypedAsIs(typedWord); // LYCHEE
         }
     }
 
@@ -2194,8 +2195,21 @@ public final class InputLogic {
                 StatsUtils.onWordCommitAutoCorrect(stringToCommit, isBatchMode);
             } else {
                 StatsUtils.onWordCommitUserTyped(stringToCommit, isBatchMode);
+                // LYCHEE: a word the dictionaries lack, typed as it is again and again, is the
+                // user's own (a name, a word of theirs): learned, never corrected
+                lycheeTypedAsIs(typedWord);
             }
         }
+    }
+
+    // LYCHEE: see CorrectionMemory.typedAsIs
+    private void lycheeTypedAsIs(final String word) {
+        if (word == null || word.length() < 2) return;
+        if (mDictionaryFacilitator.isValidSpellingWord(word)
+                || mDictionaryFacilitator.isValidSpellingWord(word.toLowerCase(java.util.Locale.ROOT))) {
+            return;
+        }
+        app.lychee.typing.CorrectionMemory.typedAsIs(word);
     }
 
     /**

@@ -99,6 +99,27 @@ object CorrectionMemory {
         return false
     }
 
+    /** Words the dictionaries lack, typed as they are once so far (the second time keeps them). */
+    private val seen = LinkedHashSet<String>()
+
+    /**
+     * [word], which no dictionary has, was typed and left as it is: the second time it is the
+     * user's own word (a name, a word of theirs) and is never corrected again.
+     */
+    @JvmStatic
+    @Synchronized
+    fun typedAsIs(word: String) {
+        if (Incognito.active) return
+        val key = word.lowercase()
+        if (key in kept || !key.any { it.isLetter() }) return
+        if (!seen.add(key)) {
+            seen.remove(key)
+            keep(word)
+            return
+        }
+        if (seen.size > MAX_SEEN) seen.remove(seen.first())
+    }
+
     private fun keep(word: String) {
         // incognito: nothing kept for later
         if (Incognito.active) return
@@ -109,6 +130,7 @@ object CorrectionMemory {
         prefs?.edit()?.putStringSet(PREF_KEPT, HashSet(kept))?.apply()
     }
 
+    private const val MAX_SEEN = 200
     private const val RECENT = 20
     private const val MAX_KEPT = 500
     private const val PREF_KEPT = "lychee_kept_words"

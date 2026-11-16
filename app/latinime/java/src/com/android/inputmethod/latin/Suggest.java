@@ -256,7 +256,10 @@ public final class Suggest {
                 && !suggestionResults.first().isKindOf(SuggestedWordInfo.KIND_SHORTCUT)) {
             final app.lychee.typing.AutoCorrectPolicy.Decision decision =
                     app.lychee.typing.AutoCorrectPolicy.INSTANCE.decide(consideredWord,
-                            suggestionResults.first().mWord);
+                            suggestionResults.first().mWord,
+                            // a capital the user typed (not the sentence's): most likely a name
+                            wordComposer.isOrWillBeOnlyFirstCharCapitalized()
+                                    && !wordComposer.wasAutoCapitalized());
             // a word put back as typed, or typed again after its correction was deleted, stays
             if (decision == app.lychee.typing.AutoCorrectPolicy.Decision.KEEP
                     || app.lychee.typing.CorrectionMemory.shouldKeep(consideredWord,
