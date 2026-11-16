@@ -103,6 +103,12 @@ class DictionaryPopup(
         }
     }
 
+    /**
+     * One Kanji or Hanja of a Japanese or Korean word: its readings in that language (kana or
+     * Hangul with their romanisation), what its speaker says, and its meaning.
+     */
+    class CharReading(val ch: String, val readings: List<Pair<String, String>>, val say: String, val meaning: String?)
+
     /** One of a character's Japanese or Korean readings: its label, as shown, and what is said. */
     class LocalReading(val label: String, val shown: String, val say: String)
 
@@ -124,6 +130,10 @@ class DictionaryPopup(
         chinesePrefs: DisplayPrefs? = null,
         /** The characters [chinese] was read from (a Korean word's Hanja), compared with Chinese's. */
         chineseForm: String? = null,
+        /** Each Kanji or Hanja of the word with its Japanese or Korean readings. */
+        characters: List<CharReading> = emptyList(),
+        /** The heading over [characters]: Kanji or Hanja. */
+        charactersTitle: String? = null,
         onType: () -> Unit,
     ) {
         present(keyboard, peek, onType) { c, body, compact ->
@@ -161,6 +171,7 @@ class DictionaryPopup(
                 })
             }
             romanisation?.let { body.addView(content.labelled(ctx.getString(R.string.lychee_card_romanisation), it)) }
+            if (characters.isNotEmpty() && !compact) content.characterReadings(charactersTitle ?: "", characters)
             chinese?.let { content.chineseBox(chineseForm ?: text, it) }
             // a word written alike but said differently by meaning (lead, wind, tear): each
             // pronunciation says itself
@@ -612,6 +623,47 @@ class DictionaryPopup(
             if (speaker != null) {
                 (speaker.parent as? ViewGroup)?.removeView(speaker)
                 addView(speaker)
+            }
+        }
+
+        /**
+         * Each Kanji or Hanja of a Japanese or Korean word on a row of its own: the character
+         * large on the left, its readings beside it (romanisation in the accent colour, the kana
+         * or Hangul after it), its meaning under them, and a speaker saying its first reading.
+         */
+        fun characterReadings(title: String, list: List<CharReading>) {
+            section(title)
+            for (cr in list) {
+                val row = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(0, dp(4), 0, dp(4))
+                }
+                row.addView(textView(cr.ch, 26f, c.onSurface).apply {
+                    typeface = app.lychee.fonts.LycheeFonts.forText(ctx, cr.ch, fontLang) ?: Typeface.DEFAULT
+                    minWidth = dp(40)
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { marginEnd = dp(12) })
+                val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+                val sb = SpannableStringBuilder()
+                cr.readings.forEachIndexed { i, (native, roman) ->
+                    if (i > 0) sb.append("  ·  ", ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    sb.append(roman, ForegroundColorSpan(c.primary), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    sb.append(" ")
+                    sb.append(native, ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                col.addView(textView(sb, 15f, c.primary).apply {
+                    typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
+                })
+                cr.meaning?.takeIf { it.isNotBlank() }?.let { m ->
+                    col.addView(textView(m, 13f, c.onSurfaceVariant).apply {
+                        maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+                        setPadding(0, dp(1), 0, 0)
+                    })
+                }
+                row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                onSpeak?.let { say -> row.addView(smallSpeaker { say(cr.say, null) }) }
+                body.addView(row)
             }
         }
 

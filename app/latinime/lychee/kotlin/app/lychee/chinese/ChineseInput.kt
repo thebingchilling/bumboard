@@ -247,7 +247,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                 app.lychee.speech.Speech.speak(ime, text, voices)
             }, lang = lang,
             onSpeakAs = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) },
-            chinese = chinese, chinesePrefs = display, chineseForm = hanForm) {
+            chinese = chinese, chinesePrefs = display, chineseForm = hanForm,
+            characters = characterReadings(hanForm, single = candidate.text.codePointCount(0, candidate.text.length) == 1),
+            charactersTitle = ime.getString(if (engine == "ko") R.string.lychee_card_hanja else R.string.lychee_card_kanji)) {
             pick(index)
         }
     }
@@ -259,12 +261,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private fun wordAnnotation(candidate: Candidate, showMeaning: Boolean): Annotation? {
         val entry = app.lychee.dict.PackData.words(ime, engine, candidate.text, limit = 1).firstOrNull()
         val meaning = entry?.senses?.firstOrNull()?.takeIf { showMeaning }?.let { app.lychee.core.Annotator.shorten(it) }
-        val lines = readingLines(candidate, entry, prefs.getBoolean(Readings.PREF_NATIVE_READINGS, false))
-        // Korean: the word's Hanja lead the meaning line (學校 · school), so the reading stays short
-        val hanja = entry?.hanja?.takeIf { engine == "ko" && it.isNotBlank() }
-        val under = listOfNotNull(hanja?.takeIf { showMeaning }, meaning).joinToString(" · ").ifEmpty { null }
-        if (lines.isEmpty() && under == null) return null
-        return Annotation(lines, under, null, otherScript = hanja)
+        // the bar reads in Latin letters only: kana, Hangul and Hanja are on the word's card
+        val lines = readingLines(candidate, entry, native = false)
+        if (lines.isEmpty() && meaning == null) return null
+        return Annotation(lines, meaning, null)
     }
 
     /** The word card's reading: the kana (always, for words with kanji or katakana) and the romanisation. */
@@ -340,6 +340,37 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         return out
     }
 
+    /**
+     * Each Kanji or Hanja of [form] with its Japanese (on'yomi, kun'yomi) or Korean readings
+     * and a short meaning, for the word card. A single Japanese kanji has its own readings
+     * under the heading already ([single]), so it gets none here.
+     */
+    private fun characterReadings(form: String, single: Boolean): List<DictionaryPopup.CharReading> {
+        val db = Readings.db ?: return emptyList()
+        if (engine == "ja" && single) return emptyList()
+        val chars = form.codePoints().toArray().filter { app.lychee.core.Annotator.isHan(it) }
+            .map { String(Character.toChars(it)) }.distinct().take(6)
+        return chars.mapNotNull { ch ->
+            val readings: List<Pair<String, String>> = if (engine == "ja") {
+                val all = db.charReadings(ch, "ja")
+                val on = all.filter { r -> r.any { it in '\u30A1'..'\u30FA' } }.take(2)
+                val kun = (all - on.toSet()).filter { r -> r.none { it in '\u30A1'..'\u30FA' } }.take(2)
+                (on + kun).map { r ->
+                    val plain = r.replace("-", "")
+                    plain.replace(Regex("\\.(.+)$"), "($1)") to app.lychee.core.SentenceRomanizer.kana(plain.replace(".", ""))
+                }
+            } else {
+                db.charReadings(ch, "ko").take(2).map { h -> h to app.lychee.core.SentenceRomanizer.korean(h) }
+            }
+            if (readings.isEmpty()) return@mapNotNull null
+            val meaning = (if (engine == "ja") app.lychee.dict.PackData.kanji(ime, ch)?.meanings?.takeIf { it.isNotBlank() } else null)
+                ?: Readings.annotator?.resolve(ch, "", InputMode.Cantonese)?.meaning
+            // the first reading as written, without its okurigana brackets: まな(ぶ) says まなぶ
+            val say = readings.first().first.replace("(", "").replace(")", "")
+            DictionaryPopup.CharReading(ch, readings, say, meaning?.let { app.lychee.core.Annotator.shorten(it) })
+        }
+    }
+
     /** Readings for handwriting guesses: Cantonese readings, or Mandarin when typing Simplified. */
     private fun guessAnnotation(): ((Candidate) -> Annotation?)? {
         if (!Readings.showReadings(prefs)) return null
@@ -352,9 +383,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                 wordAnnotation(candidate, meaning)?.takeIf { it.lines.isNotEmpty() } ?: run {
                 val local = localReadings(candidate.text).orEmpty()
                 val line = local.joinToString("  ") { it.shown.substringBefore("、").let { first ->
-                    // under a candidate: the kana (or Hangul) alone, the first of each kind
-                    if (engine == "ja") first.substringBefore(' ') else first
-                } }
+                    // under a candidate: the romanisation alone (kana and Hangul are on the card)
+                    first.substringAfter(' ', "")
+                } }.trim()
                 if (line.isBlank()) null else Annotation(listOf(line), null, null)
                 }
             }
@@ -970,8 +1001,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private fun linesFor(engine: String?): CandidateBarView.Lines {
         if (!Readings.showReadings(prefs)) return CandidateBarView.Lines(0, false)
         val meaning = prefs.getBoolean(Readings.PREF_MEANING, true)
-        if (engine == "ja") return CandidateBarView.Lines(if (prefs.getBoolean(Readings.PREF_NATIVE_READINGS, false)) 2 else 1, meaning)
-        if (engine == "ko") return CandidateBarView.Lines(1, meaning)
+        if (engine == "ja" || engine == "ko") return CandidateBarView.Lines(1, meaning)
         val display = Readings.displayPrefs(prefs)
         val mandarinLines = (if (display.pinyin || !display.zhuyin) 1 else 0) + (if (display.zhuyin) 1 else 0)
         val cantoneseLines = if (display.cantonese == app.lychee.core.CantoneseRomanization.Both) 2 else 1
