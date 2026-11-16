@@ -32,7 +32,7 @@ class AutoCorrectPolicyTest {
     @Test
     fun oneSlipIsLeftToTheThreshold() {
         assertEquals(Decision.DEFAULT, AutoCorrectPolicy.decide("helo", "hello"))
-        assertEquals(Decision.DEFAULT, AutoCorrectPolicy.decide("definately", "definitely"))
+        assertEquals(Decision.DEFAULT, AutoCorrectPolicy.decide("beautifull", "beautiful"))
     }
 
     @Test

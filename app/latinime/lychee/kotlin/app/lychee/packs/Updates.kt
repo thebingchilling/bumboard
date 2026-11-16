@@ -25,9 +25,15 @@ object Updates {
     @Suppress("DEPRECATION")
     private fun prefs(context: Context) = PreferenceManager.getDefaultSharedPreferences(context)
 
-    /** Installed packs that came from the catalogue (your own fonts have no updates). */
+    /**
+     * Every installed pack from the catalogue, those that come with Lychee included (your own
+     * fonts have no updates): the packs page checks them all.
+     */
     fun installed(context: Context): List<Pack> =
-        Packs.catalog(context).filter { !it.custom && Packs.isInstalled(context, it.id) && !BundledPacks.isBundled(context, it.id) }
+        Packs.catalog(context).filter { !it.custom && Packs.isInstalled(context, it.id) }
+
+    /** Opens the packs page on its list of every pack, to get ones not installed. */
+    fun openAll(context: Context) = Packs.openPage(context, PAGE)
 
     /**
      * The page's address for the installed packs; with [all], the page starts downloading every

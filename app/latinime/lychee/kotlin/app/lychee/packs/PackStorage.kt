@@ -20,6 +20,17 @@ object PackStorage {
         CHINESE(0), JAPANESE(1), KOREAN(2), ENGLISH(3), SHARED(4), EMOJI(5), KEYBOARD(6), VOICE(7), OTHER(8)
     }
 
+    /** The sections of Settings > Add-ons and Storage: a language, everything else, or your own. */
+    enum class Section { CHINESE, JAPANESE, KOREAN, ENGLISH, MISC, OWN }
+
+    fun section(pack: Pack): Section = if (pack.custom) Section.OWN else when (area(pack)) {
+        Area.CHINESE -> Section.CHINESE
+        Area.JAPANESE -> Section.JAPANESE
+        Area.KOREAN -> Section.KOREAN
+        Area.ENGLISH -> Section.ENGLISH
+        else -> Section.MISC
+    }
+
     /** What a pack is, in a word (shown beside its size). */
     enum class Kind { FONT, EMOJI, DICTIONARY, STROKES, EXAMPLES, HANDWRITING, VOICE, DATA }
 

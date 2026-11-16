@@ -118,10 +118,12 @@ is outside it.
   `cleanup.yml` (Actions storage is limited: after a successful build or packs run it deletes
   every other run of that workflow with its artifacts and logs, and stale caches; run by hand
   it cuts every workflow down to its newest successful run).
-- Packs that come with the app: the Japanese, Korean and English dictionaries,
+- Packs that come with the app: the English dictionary,
   stroke order (Chinese, Japanese from KanjiVG, Korean made from letter strokes) and example
   sentences are bundled in the APK (`app/scripts/bundle-packs.py` fetches the newest
-  published ones; `packs/BundledPacks.kt` in the app unpacks them). Only fonts are downloads. Emoji are
+  published ones; `packs/BundledPacks.kt` in the app unpacks them). The Japanese and Korean
+  dictionaries, fonts and emoji are downloads (Settings > Add-ons, by language, Misc and Your own;
+  Check for updates covers every installed pack, bundled ones too). Emoji are
   the bundled Noto Color Emoji by default: Google Fonts' build (google/fonts
   `ofl/notocoloremoji`, COLRv1, pinned in `app/data/emoji_sources.json`; Google's own CBDT
   release has broken gradients), drawn from Android 13 (older phones use their own emoji);

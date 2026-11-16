@@ -122,6 +122,7 @@ class SettingsActivity : ComponentActivity() {
         AudioAndHapticFeedbackManager.init(this)
         SubtypeLocaleUtils.init(this)
         val start = pageOf(intent) ?: Page.Home
+        addonOf(intent)
         setContent {
             LycheeTheme { SettingsApp(start, status, requested) }
         }
@@ -130,6 +131,12 @@ class SettingsActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         requested.value = pageOf(intent)
+        addonOf(intent)
+    }
+
+    /** An add-on whose sheet opens with the page (the keyboard asking for its dictionary). */
+    private fun addonOf(intent: Intent?) {
+        intent?.getStringExtra(EXTRA_ADDON)?.let { id -> app.lychee.packs.Packs.byId(this, id)?.let { AddonSheet.open = it } }
     }
 
     private fun pageOf(intent: Intent?): Page? =
@@ -158,6 +165,7 @@ class SettingsActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_PAGE = "app.lychee.settings.PAGE"
+        const val EXTRA_ADDON = "app.lychee.settings.ADDON"
     }
 }
 

@@ -68,7 +68,9 @@ object BundledPacks {
                     }
                     continue
                 }
-                if (Packs.installedVersion(app, id) == version) continue
+                // the same or a newer one already (an update from the packs page): kept
+                val have = Packs.installedVersion(app, id)
+                if (have != null && have >= version) continue
                 runCatching { install(app, id, version) }
                     .onSuccess { DiagLog.log("unpacked $id $version") }
                     .onFailure {

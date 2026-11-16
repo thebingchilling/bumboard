@@ -23,7 +23,7 @@
     <string name="lychee_packs_import_any">Install a file you already have</string>
     <string name="lychee_packs_import_any_summary">Lychee works out which pack it is</string>
     <string name="lychee_packs_updates">Check for updates</string>
-    <string name="lychee_packs_updates_summary">Opens the packs page in your browser; only your installed packs are checked</string>
+    <string name="lychee_packs_updates_summary">Opens the packs page; every add-on on this phone is checked, those that came with Lychee too</string>
     <string name="lychee_updates_available">%1$d updates for your packs</string>
     <string name="lychee_updates_available_one">1 update for your packs</string>
     <string name="lychee_updates_available_body">The packs page downloads them; then tap Back to Lychee and pick the downloaded files.</string>

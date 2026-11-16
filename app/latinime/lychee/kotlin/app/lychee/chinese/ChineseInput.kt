@@ -520,6 +520,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             selectedEngine = null
             schemaMissing = !packComing(engine)
             app.lychee.DiagLog.log("lychee_$engine not there yet (pack ${if (schemaMissing) "missing" else "on its way"})")
+            if (schemaMissing && engine == "ja") offerDictionary("rime_ja")
             return false
         }
         // fuzzy spellings (zh/z, n/l, ng ...) have schemas of their own
@@ -582,6 +583,25 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     }
 
     private val main = android.os.Handler(android.os.Looper.getMainLooper())
+
+    /**
+     * A keyboard whose dictionary is a download not yet installed (Japanese): a note in the bar's
+     * top line, a tap opening its add-on in Settings to get it.
+     */
+    private fun offerDictionary(packId: String) {
+        val p = preedit ?: return
+        p.post {
+            p.text = ime.getString(R.string.lychee_dictionary_needed)
+            p.visibility = View.VISIBLE
+            p.setOnClickListener {
+                p.visibility = View.GONE
+                ime.startActivity(android.content.Intent(ime, app.lychee.settings.SettingsActivity::class.java)
+                    .putExtra(app.lychee.settings.SettingsActivity.EXTRA_PAGE, app.lychee.settings.Page.Packs.name)
+                    .putExtra(app.lychee.settings.SettingsActivity.EXTRA_ADDON, packId)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
+    }
 
     /** The keyboard's Rime schema couldn't be selected: keys go to LatinIME. */
     private var schemaMissing = false
@@ -891,6 +911,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             if (typed.isNotEmpty()) {
                 if (p.text.toString() != typed) p.text = typed
                 p.visibility = View.VISIBLE
+                if (p.hasOnClickListeners()) {
+                    p.setOnClickListener(null)
+                    p.isClickable = false
+                }
             } else {
                 p.visibility = View.GONE
             }

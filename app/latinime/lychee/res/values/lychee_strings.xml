@@ -332,4 +332,9 @@
     <string name="lychee_voices_none">No voice for this language on this phone (Settings › Text-to-speech can add one)</string>
     <string name="lychee_voices_summary">Which voice says words aloud; picking one plays a sample</string>
     <string name="lychee_voices_auto">Automatic</string>
+    <string name="lychee_addons_bundled">Comes with Lychee</string>
+    <string name="lychee_addons_page">All add-ons</string>
+    <string name="lychee_addons_page_summary">Open the packs page to get add-ons that aren\'t on this phone</string>
+    <string name="lychee_addons_misc">Misc</string>
+    <string name="lychee_dictionary_needed">Japanese dictionary needed · tap to get it</string>
 </resources>

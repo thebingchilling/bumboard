@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Puts the packs that come with Lychee into the APK's assets.
 
-Handwriting, the Japanese and Korean dictionaries, stroke order and example sentences are
-part of the app (only fonts and emoji are downloads): this fetches their newest published
+The English dictionary, stroke order and example sentences are part of the app (the Japanese and
+Korean dictionaries are downloads) (only fonts and emoji are downloads): this fetches their newest published
 zips (the packs workflow builds them from their sources and publishes them on the lychee
 repository's "packs" release), checks each against the manifest's digest, and writes
 bundled.json (pack id -> version) beside them for app.lychee.packs.BundledPacks.
@@ -18,7 +18,8 @@ import urllib.request
 import zipfile
 
 RELEASE = "https://github.com/lychee-keyboard/lychee/releases/download/packs"
-BUNDLED = ["rime_ja", "dict_ko", "dict_en", "strokes_zh", "examples"]
+# the Japanese and Korean dictionaries are downloads (Settings > Add-ons), not in the APK
+BUNDLED = ["dict_en", "strokes_zh", "examples"]
 
 
 def fetch(url: str) -> bytes:
