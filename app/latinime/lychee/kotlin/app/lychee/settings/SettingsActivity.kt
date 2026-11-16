@@ -244,6 +244,9 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                         )
                 },
             ) { (shown, menu) ->
+                // each page counts its own groups (the first has no divider above it)
+                val counter = remember(shown, menu) { GroupCounter() }
+                androidx.compose.runtime.CompositionLocalProvider(LocalGroupCounter provides counter) {
                 Column(
                     Modifier
                         .fillMaxSize()

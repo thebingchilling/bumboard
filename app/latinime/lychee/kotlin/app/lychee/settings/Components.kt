@@ -21,13 +21,15 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -424,38 +426,61 @@ fun SubmenuPage(menu: Submenu, onDone: () -> Unit) {
     }
 }
 
-/** Material 2's slider: a thin track, the part before the thumb in the accent colour, a round thumb. */
+/**
+ * Material 2's slider, drawn here: a thin track, the part before the thumb in the accent
+ * colour, a round raised thumb; tapped or dragged anywhere along it, snapping to [steps].
+ */
 @Composable
 fun M2Slider(
     value: Float, onValueChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float>, steps: Int,
     onValueChangeFinished: (() -> Unit)? = null, modifier: Modifier = Modifier,
 ) {
     val primary = MaterialTheme.colorScheme.primary
-    Slider(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier,
-        onValueChangeFinished = onValueChangeFinished,
-        steps = steps,
-        valueRange = range,
-        thumb = {
-            Box(
-                Modifier
-                    .size(20.dp)
-                    .shadow(1.dp, CircleShape)
-                    .background(primary, CircleShape),
-            )
-        },
-        track = { state ->
-            val span = state.valueRange.endInclusive - state.valueRange.start
-            val fraction = if (span > 0f) ((state.value - state.valueRange.start) / span).coerceIn(0f, 1f) else 0f
-            Canvas(Modifier.fillMaxWidth().height(4.dp)) {
-                val y = size.height / 2
-                drawLine(primary.copy(alpha = 0.24f), Offset(0f, y), Offset(size.width, y), size.height, StrokeCap.Round)
-                drawLine(primary, Offset(0f, y), Offset(size.width * fraction, y), size.height, StrokeCap.Round)
+    val span = (range.endInclusive - range.start).takeIf { it > 0f } ?: 1f
+    val fraction = ((value - range.start) / span).coerceIn(0f, 1f)
+    val latestChange by androidx.compose.runtime.rememberUpdatedState(onValueChange)
+    val latestFinished by androidx.compose.runtime.rememberUpdatedState(onValueChangeFinished)
+    // the value at x across a track of width w (the thumb's radius kept clear at each end)
+    fun valueAt(x: Float, w: Float, inset: Float): Float {
+        val f = ((x - inset) / (w - inset * 2).coerceAtLeast(1f)).coerceIn(0f, 1f)
+        val snapped = if (steps > 0) {
+            val n = steps + 1
+            kotlin.math.round(f * n) / n
+        } else f
+        return range.start + snapped * span
+    }
+    Canvas(
+        modifier
+            .fillMaxWidth()
+            .height(40.dp)
+            .pointerInput(range, steps) {
+                val inset = 10.dp.toPx()
+                detectTapGestures { pos ->
+                    latestChange(valueAt(pos.x, size.width.toFloat(), inset))
+                    latestFinished?.invoke()
+                }
             }
-        },
-    )
+            .pointerInput(range, steps) {
+                val inset = 10.dp.toPx()
+                detectHorizontalDragGestures(
+                    onDragStart = { pos -> latestChange(valueAt(pos.x, size.width.toFloat(), inset)) },
+                    onDragEnd = { latestFinished?.invoke() },
+                    onDragCancel = { latestFinished?.invoke() },
+                ) { change, _ ->
+                    change.consume()
+                    latestChange(valueAt(change.position.x, size.width.toFloat(), inset))
+                }
+            },
+    ) {
+        val r = 10.dp.toPx()
+        val y = size.height / 2
+        val track = 4.dp.toPx()
+        val x = r + (size.width - r * 2) * fraction
+        drawLine(primary.copy(alpha = 0.24f), Offset(r, y), Offset(size.width - r, y), track, StrokeCap.Round)
+        drawLine(primary, Offset(r, y), Offset(x, y), track, StrokeCap.Round)
+        drawCircle(Color.Black.copy(alpha = 0.2f), r + 0.6.dp.toPx(), Offset(x, y + 1.dp.toPx()))
+        drawCircle(primary, r, Offset(x, y))
+    }
 }
 
 @Composable
