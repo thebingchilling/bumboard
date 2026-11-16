@@ -166,11 +166,9 @@ class ShortcutGalleryView @JvmOverloads constructor(
         val bar = store.toolbar()
         val engine = lycheeHost()?.lycheeEngine()
         // Settings has its own corner button
-        // hidden shortcuts only show (faded) while editing, to bring back
-        val hidden = store.hidden()
+        // every shortcut not on the bar (none are hidden: editing only moves them)
         items = store.order().filter {
-            it !in bar && it != Shortcut.SETTINGS && Shortcuts.available(it, engine) &&
-                (editing || it !in hidden)
+            it !in bar && it != Shortcut.SETTINGS && Shortcuts.available(it, engine)
         }.toMutableList()
         adapter.notifyDataSetChanged()
         empty.visibility = if (items.isEmpty()) VISIBLE else GONE
@@ -222,17 +220,14 @@ class ShortcutGalleryView @JvmOverloads constructor(
 
     /**
      * One shortcut: a rounded square tile drawn like the keys (raised with a shadow, or flat,
-     * as the key style), its icon over its name. While editing, a corner button hides it from
-     * the menu or brings it back.
+     * as the key style), its icon over its name. While editing, a tile is dragged to move it.
      */
     private fun tile(index: Int): View {
         val sc = items[index]
-        val isHidden = sc in store.hidden()
         val face = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             background = app.lychee.layout.LycheePanels.letterKey(context)
-            alpha = if (isHidden) 0.4f else 1f
             addView(ImageView(context).apply {
                 setImageResource(sc.icon)
                 imageTintList = ColorStateList.valueOf(palette.onSurface)
@@ -254,23 +249,7 @@ class ShortcutGalleryView @JvmOverloads constructor(
             clipChildren = false
             // the face inset a little, so the corner button sits on its corner and inside the tile
             addView(face, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT)
-                .apply { setMargins(dp(4), dp(6), dp(4), dp(2)) })
-            if (editing) {
-                addView(ImageView(context).apply {
-                    setImageResource(if (isHidden) R.drawable.ic_sym_visibility_off else R.drawable.ic_sym_visibility)
-                    imageTintList = ColorStateList.valueOf(palette.onPrimaryContainer)
-                    scaleType = ImageView.ScaleType.CENTER
-                    background = GradientDrawable().apply {
-                        shape = GradientDrawable.OVAL
-                        setColor(palette.primaryContainer)
-                    }
-                    contentDescription = context.getString(if (isHidden) R.string.lychee_gallery_show else R.string.lychee_gallery_hide)
-                    setOnClickListener {
-                        store.setHidden(sc, !isHidden)
-                        load()
-                    }
-                }, LayoutParams(dp(24), dp(24), Gravity.TOP or Gravity.END))
-            }
+                .apply { setMargins(dp(4), dp(4), dp(4), dp(4)) })
             contentDescription = context.getString(sc.label)
             face.setOnClickListener {
                 if (editing) return@setOnClickListener
@@ -292,8 +271,13 @@ class ShortcutGalleryView @JvmOverloads constructor(
         override fun getItemCount() = items.size
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
-            object : RecyclerView.ViewHolder(FrameLayout(context).apply {
-                layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(TILE_HEIGHT))
+            object : RecyclerView.ViewHolder(object : FrameLayout(context) {
+                // square tiles: as tall as the column is wide
+                override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                    super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY))
+                }
+            }.apply {
+                layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 setPadding(dp(2), 0, dp(2), dp(4))
                 clipToPadding = false
                 clipChildren = false
@@ -311,7 +295,5 @@ class ShortcutGalleryView @JvmOverloads constructor(
     private companion object {
         /** columns before the first layout; then as many as fit */
         const val COLUMNS = 4
-        /** a tile's height (dp), with its gap */
-        const val TILE_HEIGHT = 76
     }
 }

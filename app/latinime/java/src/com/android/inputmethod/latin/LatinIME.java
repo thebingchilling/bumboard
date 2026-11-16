@@ -1558,6 +1558,10 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
 
     @Override
     public boolean onEvaluateFullscreenMode() {
+        // LYCHEE: never the framework's full-screen text box (a grey panel with a Done button
+        // over the app, in landscape and in some apps); the keyboard always stays as it is,
+        // like Gboard.
+        if (true) return false;
         final SettingsValues settingsValues = mSettings.getCurrent();
         if (isImeSuppressedByHardwareKeyboard()) {
             // If there is a hardware keyboard, disable full screen mode.

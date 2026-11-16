@@ -159,7 +159,22 @@ class NumpadPanelView @JvmOverloads constructor(
             abc?.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (value) 22f else 15f)
             symbolsKey?.text = if (value) "−" else "!?#"
             symbolsKey?.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (value) 22f else 15f)
+            requestLayout()
         }
+
+    /**
+     * The forced pad's keys are the size of the full pad's: without the column of symbols the
+     * rest keeps its width, centred, with the space left over shared either side.
+     */
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val w = MeasureSpec.getSize(widthMeasureSpec)
+        val side = if (forced && w > 0) {
+            (w - dp(6)) * (COLUMN_OPERATORS / (COLUMN_OPERATORS + COLUMN_DIGIT * 3 + COLUMN_SIDE)) / 2f
+        } else 0f
+        val pad = dp(3) + side.toInt()
+        if (paddingLeft != pad || paddingRight != pad) setPadding(pad, paddingTop, pad, paddingBottom)
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
 
     override fun setVisibility(visibility: Int) {
         if (visibility != VISIBLE) repeat.removeCallbacksAndMessages(null)
