@@ -2,9 +2,6 @@
 
 package app.lychee.settings
 
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.TextButton
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -306,6 +303,7 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
     }
 
     // a header: the icon, the name, and a field to try the keyboard in
+    // (a Material 2 card: white, 4 dp corners, a soft shadow)
     RaisedCard {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -362,6 +360,8 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
                 onValueChange = { sample = it },
                 placeholder = { Text(stringResource(R.string.lychee_try_it)) },
                 singleLine = false,
+                // Material 2's filled field: a grey box with a line under it
+                shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp),
                 colors = androidx.compose.material3.TextFieldDefaults.colors(
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,

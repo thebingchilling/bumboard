@@ -88,27 +88,27 @@ private val Dark = darkColorScheme(
 )
 
 /**
- * The settings' colours: Material 2's plain page (white in light, #121212 in dark) with the
- * phone's accent (Material You's primary on Android 12+, the icon's teal before) on Material 3's
- * components; dialogs, sheets and menus keep a faint tint of the accent so they stand apart.
+ * The settings' colours: Material 3's theming (Material You's tonal palette on Android 12+, the
+ * icon's teal palette before), tinted surfaces and all, on Material 2's components.
  */
 @Composable
 fun lycheeColorScheme(dark: Boolean): ColorScheme {
     val context = LocalContext.current
-    val base = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     } else {
         if (dark) Dark else Light
     }
-    // only the page and its dividers are neutral; the containers keep Material 3's tint
-    return if (dark) base.copy(
-        background = Color(0xFF121212), surface = Color(0xFF121212),
-        outlineVariant = Color(0xFF3A3A3A),
-    ) else base.copy(
-        background = Color.White, surface = Color.White,
-        outlineVariant = Color(0xFFE0E0E0),
-    )
 }
+
+/** Material 2's shapes: 4 dp corners on cards, dialogs, sheets, menus and fields. */
+val M2Shapes = Shapes(
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(4.dp),
+    medium = RoundedCornerShape(4.dp),
+    large = RoundedCornerShape(4.dp),
+    extraLarge = RoundedCornerShape(4.dp),
+)
 
 /** The app's font choice (Settings > Fonts), as state, so changing it restyles the settings at once. */
 object AppFont {
@@ -135,7 +135,7 @@ private fun googleSansFlex(): FontFamily? {
 
 /**
  * The type scale in [family], sized like Material 2's (subtitle 1 for list titles, body 2 for
- * their summaries, a 20 sp app bar title); Material 3's components keep their own label style.
+ * their summaries, a 20 sp app bar title, buttons in medium with wide letter spacing).
  */
 private fun typography(family: FontFamily?): Typography {
     val stock = Typography()
@@ -143,7 +143,7 @@ private fun typography(family: FontFamily?): Typography {
         bodyLarge = stock.bodyLarge.copy(fontSize = 16.sp, lineHeight = 22.sp),
         bodyMedium = stock.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp),
         bodySmall = stock.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
-        labelLarge = stock.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.1.sp),
+        labelLarge = stock.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.25.sp),
         titleLarge = stock.titleLarge.copy(fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.15.sp),
         titleSmall = stock.titleSmall.copy(fontSize = 14.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.1.sp),
         headlineMedium = stock.headlineMedium.copy(fontSize = 24.sp),
@@ -164,6 +164,7 @@ fun LycheeTheme(content: @Composable () -> Unit) {
     val family = googleSansFlex()
     MaterialTheme(
         colorScheme = lycheeColorScheme(isSystemInDarkTheme()),
+        shapes = M2Shapes,
         typography = remember(family) { typography(family) },
         content = content,
     )

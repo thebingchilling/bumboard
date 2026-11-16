@@ -2,10 +2,6 @@
 
 package app.lychee.settings
 
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.TextButton
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -240,7 +236,7 @@ private fun Badge(text: String, strong: Boolean, check: Boolean = false) {
     val colors = MaterialTheme.colorScheme
     Row(
         Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(4.dp))
             .background(if (strong) colors.secondaryContainer else colors.surfaceContainerHighest)
             .padding(horizontal = 8.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically,

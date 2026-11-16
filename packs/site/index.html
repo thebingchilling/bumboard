@@ -14,105 +14,110 @@
   through a lychee://updates link. No tracking, no cookies, nothing loaded from anywhere else.
 -->
 <style>
-  /* Like Lychee's settings: Material 2's page (a one-line app bar with a shadow, flat lists on a
-     white page with thin dividers, headings in the accent colour) with Material 3's components
-     (pill buttons, tonal buttons, a tinted rounded summary card, tonal tags). */
+  /* Material 2's components (a raised app bar, cards with 4 px corners and soft shadows, lists
+     with thin dividers, upper-case buttons) in Material 3's colours. */
   @font-face {
     font-family: "Google Sans Flex";
     src: url("GoogleSansFlex.ttf") format("truetype");
     font-weight: 100 1000;
     font-display: swap;
   }
+  /* Material 3's theming: a tonal palette from the accent (Lychee's, or the phone's when opened
+     from Lychee), tinted surfaces and containers; the components stay Material 2's. */
   :root {
     --accent: #006a5d;
     --primary: var(--accent);
     --on-primary: #ffffff;
-    --page: #ffffff;
-    --bar: #ffffff;
-    --on-surface: #1b1c1c;
-    --on-surface-variant: #5f6368;
-    --divider: #e0e0e0;
-    --container: color-mix(in srgb, var(--accent) 8%, #ffffff);
-    --primary-container: color-mix(in srgb, var(--accent) 18%, #ffffff);
-    --on-primary-container: color-mix(in srgb, var(--accent) 75%, #000000);
-    --bar-shadow: 0 2px 4px -1px rgba(0,0,0,.2), 0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12);
+    --background: color-mix(in srgb, var(--accent) 5%, #fbfdfb);
+    --card: color-mix(in srgb, var(--accent) 3%, #ffffff);
+    --on-surface: #191c1b;
+    --on-surface-variant: #3f4946;
+    --divider: color-mix(in srgb, var(--accent) 14%, #d5dbd9);
+    --bar: color-mix(in srgb, var(--accent) 12%, #f4f8f6);
+    --on-bar: #191c1b;
+    --shadow-1: 0 2px 1px -1px rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 1px 3px 0 rgba(0,0,0,.12);
+    --shadow-2: 0 3px 1px -2px rgba(0,0,0,.2), 0 2px 2px 0 rgba(0,0,0,.14), 0 1px 5px 0 rgba(0,0,0,.12);
+    --shadow-4: 0 2px 4px -1px rgba(0,0,0,.2), 0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12);
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --primary: color-mix(in srgb, var(--accent) 45%, #ffffff);
       --on-primary: color-mix(in srgb, var(--accent) 70%, #000000);
-      --page: #121212;
-      --bar: color-mix(in srgb, var(--accent) 6%, #1f1f1f);
-      --on-surface: #e3e3e3;
-      --on-surface-variant: #ababab;
-      --divider: #3a3a3a;
-      --container: color-mix(in srgb, var(--accent) 12%, #1d1d1d);
-      --primary-container: color-mix(in srgb, var(--accent) 40%, #1d1d1d);
-      --on-primary-container: color-mix(in srgb, var(--accent) 20%, #ffffff);
+      --background: color-mix(in srgb, var(--accent) 6%, #111413);
+      --card: color-mix(in srgb, var(--accent) 10%, #1a1d1c);
+      --on-surface: #e1e3e2;
+      --on-surface-variant: #bec9c5;
+      --divider: color-mix(in srgb, var(--accent) 12%, #3f4946);
+      --bar: color-mix(in srgb, var(--accent) 14%, #1d201f);
+      --on-bar: #e1e3e2;
     }
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
-    background: var(--page);
+    background: var(--background);
     color: var(--on-surface);
     font-family: "Google Sans Flex", Roboto, "Google Sans", system-ui, sans-serif;
     font-size: 16px;
     line-height: 1.5;
+    letter-spacing: .15px;
   }
   header {
     position: sticky; top: 0; z-index: 1;
     display: flex; align-items: center; gap: 16px;
     min-height: 56px; padding: env(safe-area-inset-top) 16px 0;
-    background: var(--bar); color: var(--on-surface);
-    box-shadow: var(--bar-shadow);
+    background: var(--bar); color: var(--on-bar);
+    box-shadow: var(--shadow-4);
   }
   /* Lychee's own icon (app/latinime/lychee/icon/lychee_icon.svg), round like a launcher icon */
   .logo { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; flex: none; }
   .logo svg { display: block; }
-  h1 { font-size: 20px; font-weight: 500; margin: 0; }
+  h1 { font-size: 20px; font-weight: 500; letter-spacing: .15px; margin: 0; }
   main {
     max-width: 600px;
     margin: 0 auto;
-    padding: 16px 0 calc(32px + env(safe-area-inset-bottom));
+    padding: 16px 16px calc(32px + env(safe-area-inset-bottom));
   }
   h2 {
     font-size: 14px; font-weight: 500; letter-spacing: .1px;
-    color: var(--primary); margin: 0; padding: 20px 16px 4px;
-    border-top: 1px solid var(--divider);
+    color: var(--primary); margin: 24px 16px 8px;
   }
   .summary {
-    background: var(--container); color: var(--on-surface);
-    border-radius: 12px; padding: 16px 20px; margin: 0 16px 16px;
+    background: var(--card); color: var(--on-surface);
+    border-radius: 4px; padding: 16px; box-shadow: var(--shadow-1);
   }
-  .summary .big { font-size: 22px; font-weight: 500; margin: 0 0 4px; }
-  .summary p { margin: 0; color: var(--on-surface-variant); font-size: 14px; }
-  .summary p.big { color: var(--on-surface); font-size: 22px; }
+  .summary .big { font-size: 20px; font-weight: 500; letter-spacing: .15px; margin: 0 0 4px; }
+  .summary p { margin: 0; color: var(--on-surface-variant); font-size: 14px; letter-spacing: .25px; }
+  .summary p.big { color: var(--on-surface); font-size: 20px; }
+  .list { background: var(--card); border-radius: 4px; overflow: hidden; box-shadow: var(--shadow-1); }
   .item {
     padding: 12px 16px; min-height: 72px; display: flex; align-items: center; gap: 16px;
+    border-top: 1px solid var(--divider);
   }
+  .item:first-child { border-top: 0; }
   .item .text { flex: 1; min-width: 0; }
   .item .name { font-size: 16px; }
-  .item .detail { color: var(--on-surface-variant); font-size: 14px; }
+  .item .detail { color: var(--on-surface-variant); font-size: 14px; letter-spacing: .25px; }
   .item .versions { color: var(--primary); font-size: 14px; font-variant-numeric: tabular-nums; }
   .item.done .versions { color: var(--on-surface-variant); }
-  .actions { display: flex; flex-direction: column; gap: 8px; margin: 8px 16px 16px; }
+  .actions { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
   .button {
     appearance: none; border: 0; cursor: pointer; text-decoration: none; text-align: center;
-    font: inherit; font-weight: 500; font-size: 14px; letter-spacing: .1px;
-    min-height: 40px; padding: 10px 24px; border-radius: 999px;
+    font: inherit; font-weight: 500; font-size: 14px; letter-spacing: 1.25px; text-transform: uppercase;
+    min-height: 36px; padding: 8px 16px; border-radius: 4px;
     display: inline-flex; align-items: center; justify-content: center;
-    transition: background-color .2s;
+    transition: box-shadow .2s, background-color .2s;
   }
-  .actions .button { min-height: 48px; }
-  .filled { background: var(--primary); color: var(--on-primary); }
-  .tonal { background: var(--primary-container); color: var(--on-primary-container); }
+  .actions .button { min-height: 44px; }
+  .filled { background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-2); }
+  .filled:active { box-shadow: var(--shadow-4); }
+  .tonal { background: transparent; color: var(--primary); border: 1px solid var(--divider); }
   .text-button { background: transparent; color: var(--primary); }
   .button:hover { background-image: linear-gradient(rgba(127,127,127,.08), rgba(127,127,127,.08)); }
-  .small { padding: 8px 16px; }
-  .button[disabled] { opacity: .38; cursor: default; }
-  .muted { color: var(--on-surface-variant); font-size: 14px; margin: 8px 16px 0; }
+  .small { min-height: 36px; padding: 6px 12px; }
+  .button[disabled] { opacity: .38; cursor: default; box-shadow: none; }
+  .muted { color: var(--on-surface-variant); font-size: 14px; margin: 16px 16px 0; }
   .hidden { display: none !important; }
   .spinner {
     width: 20px; height: 20px; border-radius: 50%;
@@ -120,8 +125,8 @@
     animation: spin 0.9s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .badge { font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 8px;
-    background: var(--primary-container); color: var(--on-primary-container); white-space: nowrap; }
+  .badge { font-size: 12px; font-weight: 500; letter-spacing: .4px; padding: 4px 8px; border-radius: 4px;
+    border: 1px solid var(--divider); color: var(--on-surface-variant); white-space: nowrap; }
 </style>
 </head>
 <body>

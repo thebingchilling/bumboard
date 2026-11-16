@@ -1,7 +1,5 @@
 package app.lychee.settings
 
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.TextButton
 import android.graphics.BitmapFactory
 import android.graphics.Typeface
 import androidx.compose.foundation.BorderStroke
@@ -212,7 +210,7 @@ private fun FontPreview(option: FontOption?, sample: String, version: Int) {
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(4.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(horizontal = 20.dp, vertical = 16.dp),
     ) {
