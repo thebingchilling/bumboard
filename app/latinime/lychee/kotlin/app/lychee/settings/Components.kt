@@ -44,8 +44,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * Rows inside a [Group]: a plain Material 3 list on the page itself, no boxes, the rows set
- * apart by subtle inset dividers.
+ * Rows inside a [Group]: each row a card of its own, a soft tinted rounded surface with a little
+ * space between them, like the add-ons page.
  */
 class GroupScope internal constructor(private val rows: MutableList<@Composable (Shape) -> Unit>) {
     fun row(content: @Composable (Shape) -> Unit) {
@@ -53,9 +53,12 @@ class GroupScope internal constructor(private val rows: MutableList<@Composable 
     }
 }
 
-/** The page behind the lists. */
+/** The page behind the cards. */
 @Composable
 fun pageColor(): androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.surface
+
+/** The shape of every settings card. */
+val CardShape = RoundedCornerShape(20.dp)
 
 @Composable
 fun Group(title: String? = null, build: GroupScope.() -> Unit) {
@@ -64,7 +67,7 @@ fun Group(title: String? = null, build: GroupScope.() -> Unit) {
     if (rows.isEmpty()) return
     Column(
         Modifier
-            .padding(top = if (title != null) 16.dp else 4.dp, bottom = 4.dp)
+            .padding(top = if (title != null) 12.dp else 4.dp, bottom = 4.dp)
             .animateContentSize(),
     ) {
         if (title != null) {
@@ -76,15 +79,14 @@ fun Group(title: String? = null, build: GroupScope.() -> Unit) {
                 modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 4.dp),
             )
         }
-        rows.forEachIndexed { i, row ->
-            if (i > 0) {
-                HorizontalDivider(
-                    Modifier.padding(horizontal = 24.dp),
-                    thickness = 0.5.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                )
-            }
-            row(RectangleShape)
+        rows.forEach { row ->
+            Surface(
+                shape = CardShape,
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+            ) { row(CardShape) }
         }
     }
 }
@@ -140,7 +142,7 @@ fun CompactRow(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 64.dp)
-            .padding(start = 24.dp, end = 20.dp, top = 12.dp, bottom = 12.dp),
+            .padding(start = 20.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (leading != null || icon != null) {
@@ -281,7 +283,7 @@ fun <T> ChoiceRow(
         Column(
             Modifier
                 .fillMaxWidth()
-                .padding(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 14.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 14.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
@@ -373,7 +375,7 @@ fun SubmenuPage(menu: Submenu, onDone: () -> Unit) {
             menu.summary,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 8.dp),
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 8.dp),
         )
     }
     Group {
@@ -408,7 +410,7 @@ fun SliderRow(
 ) {
     var current by remember(value) { mutableFloatStateOf(value.toFloat()) }
     RowSurface(shape, null) {
-        Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 6.dp)) {
+        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                 Text(format(current.roundToInt()), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
@@ -430,7 +432,7 @@ fun SliderRow(
 @Composable
 fun TextRow(shape: Shape, title: String, body: String) {
     RowSurface(shape, null) {
-        Column(Modifier.padding(horizontal = 24.dp, vertical = 14.dp)) {
+        Column(Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(4.dp))
             Text(body, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

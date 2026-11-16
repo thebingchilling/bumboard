@@ -805,9 +805,8 @@ private fun KeysPage() {
     val spacebar = prefs.stringPref(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR) {
         prefs.getString(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR, null) ?: "language"
     }
-    // the key next to the comma: which one, then whether it is folded into the comma or beside it
-    val extra = when (commaKey.value) { "combined", "emoji" -> "emoji"; "language", "language_comma" -> "language"; else -> "none" }
-    val besides = commaKey.value == "emoji" || commaKey.value == "language"
+    // the key next to the comma: emoji or the next language (one choice, nothing more)
+    val extra = when (commaKey.value) { "language", "language_comma" -> "language"; else -> "emoji" }
 
 
     Group(stringResource(R.string.lychee_group_keys)) {
@@ -824,25 +823,10 @@ private fun KeysPage() {
                 listOf(
                     "emoji" to stringResource(R.string.lychee_pref_comma_key_emoji),
                     "language" to stringResource(R.string.lychee_pref_comma_key_language),
-                    "none" to stringResource(R.string.lychee_pref_comma_key_none),
                 ),
                 extra,
-                icons = listOf(R.drawable.ic_sym_mood, R.drawable.ic_sym_language, R.drawable.ic_sym_close),
-                onSelect = { id -> commaKey.set(commaKeyValue(id, besides)) },
+                onSelect = { id -> commaKey.set(if (id == "language") "language" else "combined") },
             )
-        }
-        if (extra != "none") {
-            row {
-                ChoiceRow(
-                    it, stringResource(R.string.lychee_pref_comma_place), null,
-                    listOf(
-                        "in" to stringResource(R.string.lychee_pref_comma_place_in),
-                        "beside" to stringResource(R.string.lychee_pref_comma_place_beside),
-                    ),
-                    if (besides) "beside" else "in",
-                    onSelect = { place -> commaKey.set(commaKeyValue(extra, place == "beside")) },
-                )
-            }
         }
         row {
             ChoiceRow(
@@ -855,7 +839,6 @@ private fun KeysPage() {
             )
         }
     }
-    CommaMenuGroup(commaKey.value)
     Group(stringResource(R.string.lychee_group_feedback)) {
         if (hasVibrator) {
             row { SwitchRow(it, stringResource(R.string.vibrate_on_keypress), null, vibrate.value, vibrate::set) }
