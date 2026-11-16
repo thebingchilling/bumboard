@@ -91,13 +91,19 @@ object Readings {
         },
     )
 
+    /**
+     * What candidate bars show: [displayPrefs] with Mandarin in pinyin only. Bars read in Latin
+     * letters only; Zhuyin (when chosen) is on the word cards.
+     */
+    fun barPrefs(prefs: SharedPreferences) = displayPrefs(prefs).copy(zhuyin = false, pinyin = true)
+
     /** Chinese readings too on the Japanese and Korean keyboards' Kanji and Hanja cards. */
     const val PREF_CHINESE_ON_KANJI = "lychee_chinese_on_kanji"
 
     /** Zhuyin (bopomofo) with pinyin (the old switch; [PREF_MANDARIN_SCRIPT] replaced it). */
     const val PREF_ZHUYIN = "lychee_zhuyin"
 
-    /** How Mandarin is written under candidates: "pinyin", "zhuyin" or "both". */
+    /** How Mandarin is written on word cards: "pinyin", "zhuyin" or "both" (bars: pinyin). */
     const val PREF_MANDARIN_SCRIPT = "lychee_mandarin_script"
 
     fun mandarinScript(prefs: SharedPreferences): String = prefs.getString(PREF_MANDARIN_SCRIPT, null)

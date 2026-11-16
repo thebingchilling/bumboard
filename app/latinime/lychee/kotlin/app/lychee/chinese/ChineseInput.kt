@@ -392,7 +392,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         }
         val annotator = Readings.annotator ?: return null
         val mode = guessMode()
-        val display = Readings.displayPrefs(prefs)
+        val display = Readings.barPrefs(prefs)
         return { candidate -> annotator.annotate(candidate.text, "", mode, display) }
     }
 
@@ -406,7 +406,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         }
         val annotator = Readings.annotator ?: return null
         val mode = inputMode()
-        val display = Readings.displayPrefs(prefs)
+        val display = Readings.barPrefs(prefs)
         return { candidate -> annotator.annotate(candidate.text, candidate.comment, mode, display) }
     }
 
@@ -1002,7 +1002,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         if (!Readings.showReadings(prefs)) return CandidateBarView.Lines(0, false)
         val meaning = prefs.getBoolean(Readings.PREF_MEANING, true)
         if (engine == "ja" || engine == "ko") return CandidateBarView.Lines(1, meaning)
-        val display = Readings.displayPrefs(prefs)
+        val display = Readings.barPrefs(prefs)
         val mandarinLines = (if (display.pinyin || !display.zhuyin) 1 else 0) + (if (display.zhuyin) 1 else 0)
         val cantoneseLines = if (display.cantonese == app.lychee.core.CantoneseRomanization.Both) 2 else 1
         val lines = when (engine) {

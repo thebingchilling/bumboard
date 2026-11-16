@@ -623,7 +623,8 @@ private fun ChinesePage() {
         cantonese = if (cantonese.value == "yale") app.lychee.core.CantoneseRomanization.Yale else app.lychee.core.CantoneseRomanization.Jyutping,
         jyutpingTones = tone(jyutpingTones.value), yaleTones = tone(yaleTones.value), pinyinTones = tone(pinyinTones.value),
         showOtherLanguage = otherLanguage.value, showMeaning = meaning.value, simplified = script.value == "simplified",
-        zhuyin = mandarin.value != "pinyin", pinyin = mandarin.value != "zhuyin",
+        // the bars read in pinyin whatever the cards use
+        zhuyin = false, pinyin = true,
     )
 
     Text(
@@ -674,12 +675,10 @@ private fun ChinesePage() {
                 ), jyutpingTones.value, onSelect = jyutpingTones::set)
             }
         }
-        if (mandarin.value != "zhuyin") {
-            row {
-                ChoiceRow(it, stringResource(R.string.lychee_tones_pinyin), null, listOf(
-                    "Marks" to "nǐ", "Numbers" to "ni3", "Superscript" to "ni³",
-                ), pinyinTones.value, onSelect = pinyinTones::set)
-            }
+        row {
+            ChoiceRow(it, stringResource(R.string.lychee_tones_pinyin), null, listOf(
+                "Marks" to "nǐ", "Numbers" to "ni3", "Superscript" to "ni³",
+            ), pinyinTones.value, onSelect = pinyinTones::set)
         }
         row {
             SwitchRow(it, stringResource(R.string.lychee_tone_colours), stringResource(R.string.lychee_tone_colours_summary),
