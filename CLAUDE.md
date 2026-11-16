@@ -90,8 +90,8 @@ packs page). Public facing, so be careful:
 - Settings: Material 2, like LatinIME's own preference screens (`settings/Components.kt`,
   `settings/Buttons.kt`): a one-line app bar with a shadow, plain full-width lists on white
   (#121212 in dark), group headings in the accent colour with a thin divider between groups,
-  24 dp grey icons on a 72 dp keyline, Material 2 switches, sliders and 4 dp buttons, choices in
-  radio-button dialogs. Visual settings (theme, keys, key shape, height, candidate size, emoji
+  24 dp grey icons on a 72 dp keyline, 4 dp buttons, choices in radio-button dialogs. The
+  controls themselves (switches, sliders, radio buttons) stay Material 3's, as the owner chose. Visual settings (theme, keys, key shape, height, candidate size, emoji
   size, fonts, pronunciation) show a live preview where they are changed. The packs page
   (`packs/site`) is Material 2 too.
   Add-ons (`settings/AddonsPage.kt`) gets downloads through a sheet (download, then open or

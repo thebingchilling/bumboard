@@ -59,8 +59,8 @@ import kotlin.math.roundToInt
  * The settings' building blocks, in Material 2's style (like LatinIME's own preference screens):
  * plain full-width lists on the page's colour, each group under a small heading in the accent
  * colour with a thin divider between groups, icons in the list's grey on a 72 dp text keyline,
- * Material 2 switches and sliders, and a setting with several choices opening a dialog of radio
- * buttons.
+ * and a setting with several choices opening a dialog of radio buttons. The controls themselves
+ * (switches, sliders, radio buttons) are Material 3's.
  */
 
 /** Rows inside a [Group]. */
@@ -229,52 +229,10 @@ fun NavRow(shape: Shape, title: String, summary: String? = null, @DrawableRes ic
     RowSurface(shape, onClick) { CompactRow(icon, title, summary) }
 }
 
-/**
- * Material 2's switch: a thin rounded track with a round raised thumb, in the accent colour
- * when on.
- */
+/** The switch at the end of a row: Material 3's own (the controls stay Material 3). */
 @Composable
-fun M2Switch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, enabled: Boolean = true) {
-    val scheme = MaterialTheme.colorScheme
-    val dark = scheme.surface.luminance() < 0.5f
-    val on by animateFloatAsState(if (checked) 1f else 0f, tween(150), label = "switch")
-    val thumbOff = if (dark) Color(0xFFBDBDBD) else Color(0xFFFAFAFA)
-    val trackOff = scheme.onSurface.copy(alpha = 0.38f)
-    val trackOn = scheme.primary.copy(alpha = 0.54f)
-    val thumb = androidx.compose.ui.graphics.lerp(thumbOff, scheme.primary, on)
-    val track = androidx.compose.ui.graphics.lerp(trackOff, trackOn, on)
-    val interaction = remember { MutableInteractionSource() }
-    Box(
-        Modifier
-            .size(width = 52.dp, height = 40.dp)
-            .then(
-                if (onCheckedChange != null) Modifier.toggleable(
-                    value = checked, interactionSource = interaction,
-                    indication = ripple(bounded = false, radius = 20.dp),
-                    enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange,
-                ) else Modifier,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Canvas(Modifier.size(width = 40.dp, height = 22.dp)) {
-            val alpha = if (enabled) 1f else 0.5f
-            val r = 10.dp.toPx()
-            val trackH = 14.dp.toPx()
-            val inset = 3.dp.toPx()
-            drawRoundRect(
-                track.copy(alpha = track.alpha * alpha),
-                topLeft = Offset(inset, (size.height - trackH) / 2),
-                size = Size(size.width - inset * 2, trackH),
-                cornerRadius = CornerRadius(trackH / 2, trackH / 2),
-            )
-            val cx = r + (size.width - r * 2) * on
-            val cy = size.height / 2
-            // the thumb's shadow, then the thumb
-            drawCircle(Color.Black.copy(alpha = 0.22f * alpha), r + 0.6.dp.toPx(), Offset(cx, cy + 1.dp.toPx()))
-            drawCircle(thumb.copy(alpha = if (enabled) 1f else 0.85f), r, Offset(cx, cy))
-        }
-    }
-}
+fun RowSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, enabled: Boolean = true) =
+    androidx.compose.material3.Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
 
 @Composable
 fun SwitchRow(shape: Shape, title: String, summary: String? = null, checked: Boolean, onChange: (Boolean) -> Unit) =
@@ -287,7 +245,7 @@ fun IconSwitchRow(
     @DrawableRes icon: Int?, onChange: (Boolean) -> Unit,
 ) {
     RowSurface(shape, { onChange(!checked) }) {
-        CompactRow(icon, title, summary, trailing = { M2Switch(checked = checked, onCheckedChange = onChange) })
+        CompactRow(icon, title, summary, trailing = { RowSwitch(checked = checked, onCheckedChange = onChange) })
     }
 }
 
@@ -312,7 +270,7 @@ fun ReorderSwitchRow(
                         contentDescription = androidx.compose.ui.res.stringResource(com.android.inputmethod.latin.R.string.lychee_move_down),
                     )
                 }
-                M2Switch(checked = checked, onCheckedChange = onChange)
+                RowSwitch(checked = checked, onCheckedChange = onChange)
             }
         })
     }
@@ -426,62 +384,15 @@ fun SubmenuPage(menu: Submenu, onDone: () -> Unit) {
     }
 }
 
-/**
- * Material 2's slider, drawn here: a thin track, the part before the thumb in the accent
- * colour, a round raised thumb; tapped or dragged anywhere along it, snapping to [steps].
- */
+/** A row's slider: Material 3's own (the controls stay Material 3). */
 @Composable
-fun M2Slider(
+fun RowSlider(
     value: Float, onValueChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float>, steps: Int,
     onValueChangeFinished: (() -> Unit)? = null, modifier: Modifier = Modifier,
-) {
-    val primary = MaterialTheme.colorScheme.primary
-    val span = (range.endInclusive - range.start).takeIf { it > 0f } ?: 1f
-    val fraction = ((value - range.start) / span).coerceIn(0f, 1f)
-    val latestChange by androidx.compose.runtime.rememberUpdatedState(onValueChange)
-    val latestFinished by androidx.compose.runtime.rememberUpdatedState(onValueChangeFinished)
-    // the value at x across a track of width w (the thumb's radius kept clear at each end)
-    fun valueAt(x: Float, w: Float, inset: Float): Float {
-        val f = ((x - inset) / (w - inset * 2).coerceAtLeast(1f)).coerceIn(0f, 1f)
-        val snapped = if (steps > 0) {
-            val n = steps + 1
-            kotlin.math.round(f * n) / n
-        } else f
-        return range.start + snapped * span
-    }
-    Canvas(
-        modifier
-            .fillMaxWidth()
-            .height(40.dp)
-            .pointerInput(range, steps) {
-                val inset = 10.dp.toPx()
-                detectTapGestures { pos ->
-                    latestChange(valueAt(pos.x, size.width.toFloat(), inset))
-                    latestFinished?.invoke()
-                }
-            }
-            .pointerInput(range, steps) {
-                val inset = 10.dp.toPx()
-                detectHorizontalDragGestures(
-                    onDragStart = { pos -> latestChange(valueAt(pos.x, size.width.toFloat(), inset)) },
-                    onDragEnd = { latestFinished?.invoke() },
-                    onDragCancel = { latestFinished?.invoke() },
-                ) { change, _ ->
-                    change.consume()
-                    latestChange(valueAt(change.position.x, size.width.toFloat(), inset))
-                }
-            },
-    ) {
-        val r = 10.dp.toPx()
-        val y = size.height / 2
-        val track = 4.dp.toPx()
-        val x = r + (size.width - r * 2) * fraction
-        drawLine(primary.copy(alpha = 0.24f), Offset(r, y), Offset(size.width - r, y), track, StrokeCap.Round)
-        drawLine(primary, Offset(r, y), Offset(x, y), track, StrokeCap.Round)
-        drawCircle(Color.Black.copy(alpha = 0.2f), r + 0.6.dp.toPx(), Offset(x, y + 1.dp.toPx()))
-        drawCircle(primary, r, Offset(x, y))
-    }
-}
+) = androidx.compose.material3.Slider(
+    value = value, onValueChange = onValueChange, modifier = modifier,
+    onValueChangeFinished = onValueChangeFinished, steps = steps, valueRange = range,
+)
 
 @Composable
 fun SliderRow(
@@ -499,7 +410,7 @@ fun SliderRow(
                 Text(format(current.roundToInt()), style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            M2Slider(
+            RowSlider(
                 value = current,
                 onValueChange = {
                     current = it
