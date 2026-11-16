@@ -140,6 +140,13 @@ class ClipboardPanelView @JvmOverloads constructor(
         actionsFor = null
         ClipboardStore.capture(context)
         load()
+        // the bottom bar a key row of the keyboard's height, where its bottom row is
+        val row = app.lychee.layout.LycheePanels.keyRow(this)
+        (bottomBar.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
+            lp.height = row.height
+            lp.bottomMargin = row.bottomPadding
+            bottomBar.layoutParams = lp
+        }
         visibility = VISIBLE
         toolbar()?.showTitle(R.string.lychee_sc_clipboard) { visibility = GONE }
     }

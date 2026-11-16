@@ -34,6 +34,34 @@ object LycheePanels {
         LycheeMotion.enter(panel)
     }
 
+    /** The main keyboard's key rows, so every panel's keys and bars line up with them. */
+    class KeyRow(
+        /** A row's height, its gap included (the row pitch). */
+        val height: Int,
+        /** The gap between rows: each panel key is inset by half of it, like the keys. */
+        val gap: Int,
+        /** The keyboard's padding below its bottom row. */
+        val bottomPadding: Int,
+    )
+
+    /** The key rows of the keyboard showing now (or a phone-sized guess before it has one). */
+    @JvmStatic
+    fun keyRow(view: View): KeyRow {
+        val keys = view.rootView.findViewById<View>(R.id.keyboard_view) as? com.android.inputmethod.keyboard.KeyboardView
+        val kb = keys?.keyboard
+        val d = view.resources.displayMetrics.density
+        if (kb == null || kb.mMostCommonKeyHeight <= 0) return KeyRow((56 * d).toInt(), (8 * d).toInt(), (4 * d).toInt())
+        val rows = ((kb.mOccupiedHeight - kb.mTopPadding) / kb.mMostCommonKeyHeight).coerceAtLeast(1)
+        val bottom = (kb.mOccupiedHeight - kb.mTopPadding - rows * kb.mMostCommonKeyHeight).coerceAtLeast(0)
+        return KeyRow(kb.mMostCommonKeyHeight, kb.mVerticalGap, bottom)
+    }
+
+    /** The suggestion strip's height now (taller on the Chinese, Japanese and Korean keyboards). */
+    @JvmStatic
+    fun stripHeight(view: View): Int =
+        view.rootView.findViewById<View>(R.id.suggestion_strip_view)?.height?.takeIf { it > 0 }
+            ?: view.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+
     /** Whether the phone wants animations (Settings > Accessibility > Remove animations). */
     @JvmStatic
     fun animate(context: Context): Boolean = android.provider.Settings.Global.getFloat(

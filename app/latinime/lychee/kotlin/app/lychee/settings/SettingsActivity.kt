@@ -1304,6 +1304,64 @@ private fun OtherKeysGroup() {
 
 // ---------------------------------------------------------------- pronunciation
 
+/**
+ * The voice each language is spoken in (the phone's text-to-speech voices that work offline):
+ * the engine's own choice, or one picked here, female or male where the voice's name says so.
+ * Picking one says a sample in it.
+ */
+@Composable
+private fun VoicesGroup(mandarinTaiwan: Boolean, english: String) {
+    val context = LocalContext.current
+    val prefs = prefs()
+    var tts by remember { mutableStateOf<android.speech.tts.TextToSpeech?>(null) }
+    var ready by remember { mutableStateOf(false) }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        val engine = android.speech.tts.TextToSpeech(context) { status ->
+            ready = status == android.speech.tts.TextToSpeech.SUCCESS
+        }
+        tts = engine
+        onDispose { engine.shutdown() }
+    }
+    val languages = listOf(
+        "yue-HK" to R.string.lychee_language_cantonese,
+        (if (mandarinTaiwan) "zh-TW" else "zh-CN") to R.string.lychee_language_mandarin,
+        "ja-JP" to R.string.lychee_language_japanese,
+        "ko-KR" to R.string.lychee_language_korean,
+        (if (english == app.lychee.speech.Pronunciation.UK) "en-GB" else "en-US") to R.string.lychee_storage_english,
+    )
+    val samples = mapOf("yue-HK" to "你好，歡迎", "zh-CN" to "你好，欢迎", "zh-TW" to "你好，歡迎",
+        "ja-JP" to "こんにちは", "ko-KR" to "안녕하세요", "en-US" to "Hello, welcome", "en-GB" to "Hello, welcome")
+    Group(stringResource(R.string.lychee_voices_title)) {
+        val engine = tts
+        if (!ready || engine == null) {
+            row { TextRow(it, stringResource(R.string.lychee_voices_title), stringResource(R.string.lychee_voices_loading)) }
+            return@Group
+        }
+        for ((tag, name) in languages) {
+            row {
+                val voices = remember(tag) { app.lychee.speech.Speech.voicesFor(engine, tag) }
+                val key = app.lychee.speech.Speech.PREF_VOICE + tag
+                val pref = prefs.stringPref(key) { prefs.getString(key, null) ?: "" }
+                ChoiceRow(
+                    it, stringResource(name),
+                    if (voices.isEmpty()) stringResource(R.string.lychee_voices_none) else stringResource(R.string.lychee_voices_summary),
+                    listOf("" to stringResource(R.string.lychee_voices_auto)) +
+                        voices.mapIndexed { i, v -> v.name to app.lychee.speech.Speech.voiceLabel(v, i) },
+                    pref.value,
+                ) { picked ->
+                    pref.set(picked)
+                    // a sample in the voice just picked
+                    val voice = voices.firstOrNull { v -> v.name == picked }
+                    runCatching {
+                        if (voice != null) engine.voice = voice else engine.language = java.util.Locale.forLanguageTag(tag)
+                        engine.speak(samples[tag] ?: "", android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "lychee-sample")
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** How each language is said: Mandarin's region, English's, and the word card's voice. */
 @Composable
 private fun PronunciationPage() {
@@ -1349,6 +1407,7 @@ private fun PronunciationPage() {
             )
         }
     }
+    VoicesGroup(mandarin.value == P.TAIWAN, english.value)
     Group(stringResource(R.string.lychee_pron_cards)) {
         row {
             ChoiceRow(

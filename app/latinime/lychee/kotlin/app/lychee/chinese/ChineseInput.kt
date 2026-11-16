@@ -777,6 +777,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             val list = guesses.map { Candidate(it, "") }
             app.lychee.layout.LycheePanels.cover(panel, view)
             panel.bringToFront()
+            panel.lines = annotationLines()
             panel.show(list, candidateScale(), guessAnnotation(), bar?.style ?: Readings.barStyle(prefs, guessMode().lang),
                 after = bar?.lastVisible ?: -1,
                 onPicked = { i -> panel.visibility = View.GONE; onGuess(i); updateMoreButton() },
@@ -792,6 +793,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             app.lychee.layout.LycheePanels.hideOthers(view, panel)
             app.lychee.layout.LycheePanels.cover(panel, view)
             panel.bringToFront()
+            panel.lines = annotationLines()
             panel.show(candidates, candidateScale(), annotation(), Readings.barStyle(prefs, inputMode().lang),
                 after = bar?.lastVisible ?: -1)
             app.lychee.layout.LycheePanels.reveal(panel)
@@ -915,6 +917,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         moreButton?.visibility = View.VISIBLE
         // the open dropdown follows the typing
         if (panel?.visibility == View.VISIBLE) {
+            panel?.lines = annotationLines()
             bar.post { panel?.show(candidates, candidateScale(), annotation(), bar.style, after = bar.lastVisible) }
         }
         updateMoreButton()

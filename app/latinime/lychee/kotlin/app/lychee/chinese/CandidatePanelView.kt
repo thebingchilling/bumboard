@@ -40,7 +40,7 @@ class CandidatePanelView @JvmOverloads constructor(
     private val adapter = Adapter()
     private val layoutManager = GridLayoutManager(context, COLUMNS)
     private val divider = Paint().apply {
-        color = palette.outlineVariant
+        color = androidx.core.graphics.ColorUtils.setAlphaComponent(palette.outlineVariant, 0xB0)
         strokeWidth = resources.displayMetrics.density
     }
 
@@ -54,10 +54,13 @@ class CandidatePanelView @JvmOverloads constructor(
         grid.adapter = adapter
         grid.addItemDecoration(object : RecyclerView.ItemDecoration() {
             override fun onDrawOver(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+                // a plain grid: a full line under every cell and between cells in a row
                 for (i in 0 until parent.childCount) {
                     val v = parent.getChildAt(i)
                     c.drawLine(v.left.toFloat(), v.bottom.toFloat(), v.right.toFloat(), v.bottom.toFloat(), divider)
-                    c.drawLine(v.right.toFloat(), v.top + v.height * 0.25f, v.right.toFloat(), v.bottom - v.height * 0.25f, divider)
+                    if (v.right < parent.width - parent.paddingRight - 1) {
+                        c.drawLine(v.right.toFloat(), v.top.toFloat(), v.right.toFloat(), v.bottom.toFloat(), divider)
+                    }
                 }
             }
         })
@@ -114,12 +117,13 @@ class CandidatePanelView @JvmOverloads constructor(
 
     private fun spanFor(text: String): Int {
         // English: three words a row, each the same width, like the suggestion bar's
+        // an even grid of four: a long word takes two cells, a very long one the row
         if (adapter.style.fontLang == "en") return 2
         val chars = text.codePointCount(0, text.length)
         return when {
-            chars <= 1 -> 1
-            chars <= 3 -> 2
-            else -> 3
+            chars <= 2 -> 1
+            chars <= 5 -> 2
+            else -> COLUMNS
         }
     }
 
@@ -139,13 +143,14 @@ class CandidatePanelView @JvmOverloads constructor(
                 setPadding(dp(4), 0, dp(4), 0)
                 layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(54))
                 background = app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_suggestion)
+                // as on the bar: the readings above, the word, the meaning under it
                 repeat(3) { i ->
                     addView(TextView(context).apply {
                         gravity = Gravity.CENTER
                         isSingleLine = true
                         ellipsize = android.text.TextUtils.TruncateAt.END
                         includeFontPadding = false
-                        if (i > 0) visibility = GONE
+                        if (i != 1) visibility = GONE
                     }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                 }
             }
@@ -156,15 +161,16 @@ class CandidatePanelView @JvmOverloads constructor(
             val (index, candidate) = items[position]
             val cell = holder.itemView as LinearLayout
             val english = style.fontLang == "en"
-            cell.layoutParams.height = dp(if (annotated) 84 else if (english) 48 else 54)
-            val word = cell.getChildAt(0) as TextView
-            val reading = cell.getChildAt(1) as TextView
+            // every cell the same height (the bar's lines), so the rows line up whatever arrives
+            cell.layoutParams.height = cellHeight(english)
+            val reading = cell.getChildAt(0) as TextView
+            val word = cell.getChildAt(1) as TextView
             val meaning = cell.getChildAt(2) as TextView
             val color = if (index == 0 && style.fontLang != "en") palette.primary else palette.onSurface
             word.text = candidate.text
             word.typeface = app.lychee.fonts.LycheeFonts.forText(cell.context, candidate.text, style.fontLang)
                 ?: android.graphics.Typeface.DEFAULT
-            word.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (english) 17f else 22f * scale)
+            word.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (english) 17f else CandidateBarView.CHAR_SP * scale)
             word.setTextColor(color)
             val a = annotations[position]
             // every reading the bar shows (Jyutping or Yale, and the other language's when on), in full
@@ -180,13 +186,13 @@ class CandidatePanelView @JvmOverloads constructor(
                 reading.isSingleLine = false
                 reading.maxLines = lines.size
                 reading.text = text
-                reading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f * scale)
-                reading.setTextColor(palette.onSurfaceVariant)
+                reading.setTextSize(TypedValue.COMPLEX_UNIT_SP, CandidateBarView.READING_SP * scale)
+                reading.setTextColor(palette.primary)
             }
             meaning.visibility = if (a?.meaning != null) VISIBLE else if (annotated) INVISIBLE else GONE
             a?.meaning?.let {
                 meaning.text = it
-                meaning.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f * scale)
+                meaning.setTextSize(TypedValue.COMPLEX_UNIT_SP, CandidateBarView.MEANING_SP * scale)
                 meaning.setTextColor(palette.onSurfaceVariant)
             }
             cell.setOnClickListener {
@@ -197,10 +203,25 @@ class CandidatePanelView @JvmOverloads constructor(
         }
     }
 
+    /** Lines of readings each cell keeps room for (the bar's), and whether a meaning follows. */
+    var lines: CandidateBarView.Lines? = null
+
+    private fun cellHeight(english: Boolean): Int {
+        if (english) return dp(48)
+        val sp = resources.displayMetrics.scaledDensity
+        val l = lines
+        val readings = if (adapter.annotated) (l?.readings ?: 1) else 0
+        val meaning = adapter.annotated && (l?.meaning ?: true)
+        val h = CandidateBarView.CHAR_SP * adapter.scale * sp * 1.25f +
+            readings * CandidateBarView.READING_SP * adapter.scale * sp * 1.3f +
+            (if (meaning) CandidateBarView.MEANING_SP * adapter.scale * sp * 1.3f else 0f)
+        return (h + dp(16)).toInt()
+    }
+
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 
     private companion object {
-        const val COLUMNS = 6
+        const val COLUMNS = 4
         val worker: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor()
     }
 }

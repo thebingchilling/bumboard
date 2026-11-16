@@ -561,14 +561,46 @@ class DictionaryPopup(
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
-            for ((lang, label, reading) in rows) {
+            for ((i, row) in rows.withIndex()) {
+                val (lang, label, reading) = row
                 mainReading[lang] = norm(reading)
                 // the main reading only; a reading with meanings of its own comes with them
-                pair.addView(readingRow(labelled(ctx.getString(label), Annotator.format(reading, lang, prefs)),
+                pair.addView(readingTile(ctx.getString(label), Annotator.format(reading, lang, prefs),
                     readingSpeaker(hw, reading, lang, spoken)),
-                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = dp(8) })
+                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                        if (i > 0) marginStart = dp(8)
+                    })
             }
-            if (pair.childCount > 0) body.addView(pair)
+            if (pair.childCount > 0) body.addView(pair, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6); bottomMargin = dp(4) })
+        }
+
+        /**
+         * One language's reading as a small tile: the language in small letters over the reading,
+         * the speaker beside it, on a tinted rounded background.
+         */
+        private fun readingTile(language: String, reading: String, speaker: View?): View = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(8), dp(6), dp(8))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(14).toFloat()
+                setColor(c.surfaceContainer)
+            }
+            addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(textView(language, 12f, c.onSurfaceVariant).apply {
+                    typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
+                })
+                addView(textView(reading, 18f, c.primary).apply {
+                    typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
+                    setPadding(0, dp(1), 0, 0)
+                })
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            if (speaker != null) {
+                (speaker.parent as? ViewGroup)?.removeView(speaker)
+                addView(speaker)
+            }
         }
 
         /** A Japanese or Korean word's Chinese readings (Cantonese and Mandarin), under a heading. */

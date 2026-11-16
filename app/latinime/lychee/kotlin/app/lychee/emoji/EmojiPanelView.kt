@@ -91,10 +91,14 @@ class EmojiPanelView @JvmOverloads constructor(
         }
     }
 
+    // before init, which fills them in
+    private var search: View? = null
+    private var bar: LinearLayout? = null
+
     init {
         orientation = VERTICAL
         setBackgroundColor(palette.surface)
-        addView(searchBox(), LayoutParams(LayoutParams.MATCH_PARENT, dp(48)))
+        addView(searchBox().also { search = it }, LayoutParams(LayoutParams.MATCH_PARENT, dp(48)))
         grid.layoutManager = layoutManager
         grid.adapter = adapter
         grid.itemAnimator = null
@@ -127,7 +131,7 @@ class EmojiPanelView @JvmOverloads constructor(
         })
         pinchToResize()
         swipeBetweenCategories()
-        addView(bottomBar(), LayoutParams(LayoutParams.MATCH_PARENT, dp(50)).apply {
+        addView(bottomBar().also { bar = it }, LayoutParams(LayoutParams.MATCH_PARENT, dp(50)).apply {
             setMargins(dp(6), 0, dp(6), dp(6))
         })
         // loaded ahead, so the panel opens full at once
@@ -146,7 +150,41 @@ class EmojiPanelView @JvmOverloads constructor(
     }
 
     @Suppress("UNUSED_PARAMETER")
+    /**
+     * Lines up with the keyboard it replaces: the search bar as tall as the suggestion bar (taller
+     * on the Chinese, Japanese and Korean keyboards), the bottom bar a key row of the keyboard's
+     * own height, gaps and bottom padding.
+     */
+    private fun alignWithKeyboard() {
+        val strip = app.lychee.layout.LycheePanels.stripHeight(this)
+        search?.let { s ->
+            val lp = s.layoutParams as LayoutParams
+            val inset = dp(6)
+            lp.height = strip - 2 * inset
+            lp.setMargins(dp(8), inset, dp(8), inset)
+            s.layoutParams = lp
+        }
+        val row = app.lychee.layout.LycheePanels.keyRow(this)
+        bar?.let { b ->
+            val lp = b.layoutParams as LayoutParams
+            lp.height = row.height
+            lp.setMargins(0, 0, 0, row.bottomPadding)
+            b.layoutParams = lp
+            b.setPadding(0, 0, 0, 0)
+            val half = row.gap / 2
+            for (i in 0 until b.childCount) {
+                val c = b.getChildAt(i)
+                (c.layoutParams as? LayoutParams)?.let { clp ->
+                    clp.height = LayoutParams.MATCH_PARENT
+                    clp.setMargins(half, half, half, half)
+                    c.layoutParams = clp
+                }
+            }
+        }
+    }
+
     fun startEmojiPalettes(switchToAlphaLabel: String?, keyVisualAttr: KeyVisualAttributes?, iconSet: KeyboardIconsSet?) {
+        alignWithKeyboard()
         floatingDelete.animate().cancel()
         floatingDelete.apply { alpha = 1f; translationY = 0f; visibility = VISIBLE; isEnabled = true }
         applyColumns()
@@ -166,8 +204,11 @@ class EmojiPanelView @JvmOverloads constructor(
         val full = ResourceUtils.getDefaultKeyboardWidth(context)
         // one-handed: as wide as the keys, plus the free side's padding (LayoutApplier)
         val width = layout.keyboardWidth(full) + paddingLeft + paddingRight
-        val height = layout.keyboardHeight(ResourceUtils.getDefaultKeyboardHeight(res)) +
-            res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height) + paddingTop + paddingBottom
+        // the bar's own height now (taller on the Chinese, Japanese and Korean keyboards), so the
+        // panel covers exactly the keyboard and its bar
+        val strip = rootView.findViewById<View>(R.id.suggestion_strip_view)?.layoutParams?.height?.takeIf { it > 0 }
+            ?: res.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+        val height = layout.keyboardHeight(ResourceUtils.getDefaultKeyboardHeight(res)) + strip + paddingTop + paddingBottom
         super.onMeasure(
             MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
             MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY),

@@ -327,4 +327,9 @@
     <string name="lychee_readings_other_script_off">Don\'t show it</string>
     <string name="lychee_readings_kanji">Chinese readings on Japanese and Korean cards</string>
     <string name="lychee_readings_kanji_summary">For words with Kanji or Hanja, their Cantonese and Mandarin readings in a small line</string>
+    <string name="lychee_voices_title">Voices</string>
+    <string name="lychee_voices_loading">Loading the phone\'s voices…</string>
+    <string name="lychee_voices_none">No voice for this language on this phone (Settings › Text-to-speech can add one)</string>
+    <string name="lychee_voices_summary">Which voice says words aloud; picking one plays a sample</string>
+    <string name="lychee_voices_auto">Automatic</string>
 </resources>

@@ -65,6 +65,8 @@ speller:
 
 translator:
   dictionary: lychee_ko
+  # whole words from the first letters typed ("annyeongh" offers 안녕하세요)
+  enable_completion: true
   enable_sentence: true
   enable_user_dict: true
   # the romanisation under every candidate, as a learning aid

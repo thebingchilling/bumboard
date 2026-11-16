@@ -1083,6 +1083,26 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         mLycheeChinese.onSubtypeChanged(app.lychee.typing.FieldKind.getRestricted()
                 ? null : mRichImm.getCurrentSubtype().getRawSubtype());
         mLycheeChinese.onSettingsChanged();
+        // LYCHEE: number, phone and date fields get Lychee's own number pad (the symbols page's,
+        // in the keyboard's style) instead of LatinIME's; other fields put it away again
+        if (mInputView != null) {
+            final View pad = mInputView.findViewById(R.id.lychee_numpad_panel);
+            if (pad instanceof app.lychee.toolbar.NumpadPanelView) {
+                final app.lychee.toolbar.NumpadPanelView numpad = (app.lychee.toolbar.NumpadPanelView) pad;
+                if (app.lychee.typing.FieldKind.getLanguageLocked()) {
+                    numpad.setForced(true);
+                    // once the keys are laid out, so the pad covers them exactly
+                    mInputView.post(() -> mInputView.post(() -> {
+                        if (app.lychee.typing.FieldKind.getLanguageLocked()) {
+                            showLycheePanel(R.id.lychee_numpad_panel);
+                        }
+                    }));
+                } else if (numpad.getForced()) {
+                    numpad.setForced(false);
+                    numpad.setVisibility(View.GONE);
+                }
+            }
+        }
         if (mInputView != null) {
             final View lycheeToolbar = mInputView.findViewById(R.id.lychee_toolbar);
             if (lycheeToolbar instanceof app.lychee.toolbar.ToolbarView) {

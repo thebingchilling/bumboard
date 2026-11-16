@@ -160,6 +160,11 @@ class EmojiSearchBar @JvmOverloads constructor(
             cell.text = emoji
             cell.visibility = VISIBLE
             cell.setOnClickListener { type(emoji) }
+            // held: the emoji's card (large, its name and code points), like the panel's
+            cell.setOnLongClickListener {
+                info.show(cell, emoji, EmojiData.byForm[emoji]?.name)
+                true
+            }
         }
         for (i in found.size until results.childCount) results.getChildAt(i).visibility = GONE
         if (found.isEmpty() && query.isNotBlank()) {

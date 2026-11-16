@@ -135,6 +135,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         // the bar above shows "Handwriting" (Back is the key bottom left)
         toolbar()?.showTitle(R.string.lychee_sc_handwriting, withBack = false) { visibility = GONE }
         takeLetterLine()
+        matchKeyRow()
         pad.clear()
         updateHint()
         lastTyped = null
@@ -347,6 +348,20 @@ class HandwritingPanelView @JvmOverloads constructor(
         if (lp.height <= 0) return
         lp.height += line
         layoutParams = lp
+    }
+
+    /**
+     * The bottom row exactly like the keyboard's: the same row height, the same gaps between
+     * keys, the same space under it.
+     */
+    private fun matchKeyRow() {
+        val row = LycheePanels.keyRow(this)
+        val lp = bottom.layoutParams as LayoutParams
+        lp.height = row.height
+        lp.setMargins(0, 0, 0, row.bottomPadding)
+        bottom.layoutParams = lp
+        val half = row.gap / 2
+        for (i in 0 until bottom.childCount) bottom.getChildAt(i).setPadding(half, half, half, half)
     }
 
     /** Clears the ink on the pad without typing anything (only a tapped candidate types). */

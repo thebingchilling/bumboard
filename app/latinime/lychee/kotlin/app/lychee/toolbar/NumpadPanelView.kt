@@ -34,6 +34,9 @@ class NumpadPanelView @JvmOverloads constructor(
 
     private val palette = M3Colors.of(context)
     private val repeat = Handler(Looper.getMainLooper())
+    // before init, which fills them in
+    private var abc: TextView? = null
+    private var symbolsKey: TextView? = null
 
     init {
         orientation = VERTICAL
@@ -89,9 +92,10 @@ class NumpadPanelView @JvmOverloads constructor(
             }
         }
         OPERATORS.forEachIndexed { i, op ->
+            // a clear line between the symbols, so each reads as its own key
             if (i > 0) operators.addView(View(context).apply {
-                setBackgroundColor(androidx.core.graphics.ColorUtils.setAlphaComponent(palette.outlineVariant, 0x80))
-            }, LayoutParams(LayoutParams.MATCH_PARENT, 1).apply { setMargins(dp(10), 0, dp(10), 0) })
+                setBackgroundColor(palette.outlineVariant)
+            }, LayoutParams(LayoutParams.MATCH_PARENT, dp(1)).apply { setMargins(dp(6), 0, dp(6), 0) })
             operators.addView(operatorItem(op), LayoutParams(LayoutParams.MATCH_PARENT, dp(48)))
         }
         val digits = LinearLayout(context).apply { orientation = VERTICAL }
@@ -104,9 +108,11 @@ class NumpadPanelView @JvmOverloads constructor(
         top.addView(digits, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_DIGIT * 3))
         val right = LinearLayout(context).apply { orientation = VERTICAL }
         right.addView(key("!?#", letter = false, size = 15f) {
+            // a number field has no symbols page: the key types a minus instead
+            if (forced) send('-'.code)
             // the symbols page is underneath (this, not the column the key sits in)
-            this@NumpadPanelView.visibility = GONE
-        }, keyParams(1f, vertical = true))
+            else this@NumpadPanelView.visibility = GONE
+        }.also { symbolsKey = it }, keyParams(1f, vertical = true))
         right.addView(spaceKey(), keyParams(1f, vertical = true))
         right.addView(icon(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete, repeats = true) { send(Constants.CODE_DELETE) },
             keyParams(1f, vertical = true))
@@ -114,7 +120,7 @@ class NumpadPanelView @JvmOverloads constructor(
         addView(top, LayoutParams(LayoutParams.MATCH_PARENT, 0, 3f))
         addView(LinearLayout(context).apply {
             orientation = HORIZONTAL
-            addView(abcKey(), keyParams(COLUMN_OPERATORS))
+            addView(abcKey().also { abc = it }, keyParams(COLUMN_OPERATORS))
             addView(text(","), keyParams(COLUMN_DIGIT))
             addView(digit("0"), keyParams(COLUMN_DIGIT))
             addView(text("."), keyParams(COLUMN_DIGIT))
@@ -127,11 +133,29 @@ class NumpadPanelView @JvmOverloads constructor(
         (if (vertical) LayoutParams(LayoutParams.MATCH_PARENT, 0, weight) else LayoutParams(0, LayoutParams.MATCH_PARENT, weight))
             .apply { setMargins(dp(3), dp(3), dp(3), dp(3)) }
 
-    /** ABC back to the letters, like the keyboard's ?123 key. */
+    /** ABC back to the letters, like the keyboard's ?123 key (a plus in a number field). */
     private fun abcKey() = key(context.getString(R.string.lychee_emoji_abc), letter = false, size = 15f) {
+        if (forced) {
+            send('+'.code)
+            return@key
+        }
         visibility = GONE
         lycheeHost()?.lycheeSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
     }
+
+    /**
+     * Number, phone and date fields: this pad is their keyboard (the same pad as the symbols
+     * page's, rather than LatinIME's own). With no letters or symbols page to go to, ABC types +
+     * and !?# types −.
+     */
+    var forced = false
+        set(value) {
+            field = value
+            abc?.text = if (value) "+" else context.getString(R.string.lychee_emoji_abc)
+            abc?.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (value) 22f else 15f)
+            symbolsKey?.text = if (value) "−" else "!?#"
+            symbolsKey?.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (value) 22f else 15f)
+        }
 
     override fun setVisibility(visibility: Int) {
         if (visibility != VISIBLE) repeat.removeCallbacksAndMessages(null)
