@@ -122,6 +122,8 @@ class DictionaryPopup(
         /** A word with Kanji or Hanja: its Chinese readings, shown under its own. */
         chinese: Resolved? = null,
         chinesePrefs: DisplayPrefs? = null,
+        /** The characters [chinese] was read from (a Korean word's Hanja), compared with Chinese's. */
+        chineseForm: String? = null,
         onType: () -> Unit,
     ) {
         present(keyboard, peek, onType) { c, body, compact ->
@@ -159,7 +161,7 @@ class DictionaryPopup(
                 })
             }
             romanisation?.let { body.addView(content.labelled(ctx.getString(R.string.lychee_card_romanisation), it)) }
-            chinese?.let { content.chineseReadings(text, it) }
+            chinese?.let { content.chineseBox(chineseForm ?: text, it) }
             // a word written alike but said differently by meaning (lead, wind, tear): each
             // pronunciation says itself
             val pronunciations = entries.mapNotNull { e -> e.reading?.takeIf { it.isNotBlank() } }.distinct()
@@ -613,39 +615,81 @@ class DictionaryPopup(
             }
         }
 
-        /** A Japanese or Korean word's Chinese readings (Cantonese and Mandarin), under a heading. */
-        fun chineseReadings(text: String, r: Resolved) {
-            // a small, quiet group: one tinted line, 粵 and 普 with their readings, each a tap to hear
+        /**
+         * The Chinese box on a Japanese or Korean word's card: the word as Chinese writes it,
+         * Traditional and Simplified, with each character that differs from the Japanese Kanji or
+         * Korean Hanja ([form]) in colour, then its Cantonese and Mandarin readings, each with a
+         * speaker.
+         */
+        fun chineseBox(form: String, r: Resolved) {
             val hw = r.headwords.firstOrNull()
             val yue = (if (r.lang == Lang.Cantonese) r.reading else r.otherReading) ?: hw?.readings?.get(Lang.Cantonese)?.firstOrNull()
             val cmn = (if (r.lang == Lang.Mandarin) r.reading else r.otherReading) ?: hw?.readings?.get(Lang.Mandarin)?.firstOrNull()
             if (yue == null && cmn == null) return
-            val wordToSay = text
-            val group = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(10), dp(4), dp(6), dp(4))
+            val trad = hw?.traditional?.takeIf { it.codePointCount(0, it.length) == form.codePointCount(0, form.length) } ?: form
+            val simp = hw?.simplified?.takeIf { it.codePointCount(0, it.length) == trad.codePointCount(0, trad.length) } ?: trad
+            val wordToSay = trad
+            val own = form.codePoints().toArray()
+            /** [word] with the characters unlike [form]'s in colour; whether any were. */
+            fun marked(word: String): Pair<CharSequence, Boolean> {
+                val sb = SpannableStringBuilder()
+                var differs = false
+                word.codePoints().toArray().forEachIndexed { i, cp ->
+                    val ch = String(Character.toChars(cp))
+                    val unlike = own.getOrNull(i)?.let { it != cp } ?: false
+                    differs = differs || unlike
+                    sb.append(ch, ForegroundColorSpan(if (unlike) c.primary else c.onSurface), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                return sb to differs
+            }
+            val box = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(12), dp(8), dp(6), dp(6))
                 background = GradientDrawable().apply {
-                    cornerRadius = dp(10).toFloat()
+                    cornerRadius = dp(12).toFloat()
                     setColor(c.surfaceContainer)
                 }
             }
-            for ((lang, mark, reading) in listOfNotNull(yue?.let { Triple(Lang.Cantonese, "粵", it) }, cmn?.let { Triple(Lang.Mandarin, "普", it) })) {
-                group.addView(TextView(ctx).apply {
+            val (tradText, tradDiffers) = marked(trad)
+            val (simpText, simpDiffers) = marked(simp)
+            val same = !tradDiffers && !simpDiffers
+            // the heading: "Chinese", and that it is written alike when no character differs
+            box.addView(textView(
+                if (same) ctx.getString(R.string.lychee_card_chinese_same) else ctx.getString(R.string.lychee_card_chinese_readings),
+                11f, c.onSurfaceVariant,
+            ).apply { typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500) })
+            // the forms: 繁 學校  简 学校 (one form when both are written alike)
+            box.addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                val forms = if (simp == trad) listOf(null to tradText) else listOf("繁" to tradText, "简" to simpText)
+                for ((mark, word) in forms) {
+                    if (mark != null) addView(textView(mark, 11f, c.onSurfaceVariant).apply { setPadding(0, 0, dp(4), 0) })
+                    addView(textView(word, 20f, c.onSurface).apply {
+                        textLocale = java.util.Locale.TRADITIONAL_CHINESE.takeIf { mark != "简" } ?: java.util.Locale.SIMPLIFIED_CHINESE
+                        setPadding(0, 0, dp(14), 0)
+                    })
+                }
+                setPadding(0, dp(2), 0, dp(2))
+            })
+            // the readings: 粵 hok6 haau6 🔈   普 xuéxiào 🔈, wrapping onto two lines when narrow
+            val readings = listOfNotNull(yue?.let { Triple(Lang.Cantonese, "粵", it) }, cmn?.let { Triple(Lang.Mandarin, "普", it) })
+            for ((lang, mark, reading) in readings) {
+                val line = TextView(ctx).apply {
                     val sb = SpannableStringBuilder()
                     sb.append(mark, ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    sb.append(" ")
+                    sb.append("  ")
                     sb.append(Annotator.format(reading, lang, prefs), ForegroundColorSpan(c.primary), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                     this.text = sb
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-                    setPadding(0, dp(4), dp(12), dp(4))
-                    onSpeak?.let { say -> setOnClickListener { say(wordToSay, lang) } }
-                })
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                }
+                val speaker = onSpeak?.let { say -> smallSpeaker { say(wordToSay, lang) } }
+                box.addView(readingRow(line, speaker))
             }
-            body.addView(group, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = dp(6); bottomMargin = dp(2)
+            body.addView(box, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(6); bottomMargin = dp(4)
             })
-            spokenWord = text
+            spokenWord = spokenWord ?: form
         }
 
         /** Each language's main reading on this card, for the meanings read another way. */

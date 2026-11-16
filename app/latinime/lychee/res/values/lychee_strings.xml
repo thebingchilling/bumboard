@@ -268,6 +268,9 @@
     <!-- candidates, add-ons and storage -->
     <string name="lychee_candidate_size">Candidate size</string>
     <string name="lychee_card_chinese_readings">Chinese</string>
+    <string name="lychee_card_chinese_same">Chinese · written the same</string>
+    <string name="lychee_readings_native">Kana on Japanese candidates</string>
+    <string name="lychee_readings_native_summary">Hiragana above the romaji under Japanese words. Off: romaji only</string>
     <string name="lychee_addons_title">Add-ons</string>
     <string name="lychee_addons_summary">Emoji styles, your own fonts, more dictionaries and voices</string>
     <string name="lychee_addons_how">Tap an add-on to get it. Your browser downloads it (Lychee itself never goes online); then open the file from the browser\'s notice, or choose it here.</string>
@@ -326,7 +329,7 @@
     <string name="lychee_readings_other_script_full">The whole word</string>
     <string name="lychee_readings_other_script_off">Don\'t show it</string>
     <string name="lychee_readings_kanji">Chinese readings on Japanese and Korean cards</string>
-    <string name="lychee_readings_kanji_summary">For words with Kanji or Hanja, their Cantonese and Mandarin readings in a small line</string>
+    <string name="lychee_readings_kanji_summary">For words with Kanji or Hanja, a Chinese box: how Chinese writes the word (characters that differ in colour) and its Cantonese and Mandarin readings</string>
     <string name="lychee_voices_title">Voices</string>
     <string name="lychee_voices_loading">Loading the phone\'s voices…</string>
     <string name="lychee_voices_none">No voice for this language on this phone (Settings › Text-to-speech can add one)</string>

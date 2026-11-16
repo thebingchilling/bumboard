@@ -94,6 +94,9 @@ object Readings {
     /** Chinese readings too on the Japanese and Korean keyboards' Kanji and Hanja cards. */
     const val PREF_CHINESE_ON_KANJI = "lychee_chinese_on_kanji"
 
+    /** Kana above the romaji under Japanese candidates (off: romaji only). */
+    const val PREF_NATIVE_READINGS = "lychee_native_readings"
+
     /** Zhuyin (bopomofo) with pinyin (the old switch; [PREF_MANDARIN_SCRIPT] replaced it). */
     const val PREF_ZHUYIN = "lychee_zhuyin"
 

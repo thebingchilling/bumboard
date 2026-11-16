@@ -719,6 +719,7 @@ private fun ChinesePage() {
         prefs.getString(ChineseInput.PREF_DICTIONARY_HOLD, null) ?: "pin"
     }
     val chineseOnKanji = prefs.boolPref(Readings.PREF_CHINESE_ON_KANJI) { prefs.getBoolean(Readings.PREF_CHINESE_ON_KANJI, true) }
+    val nativeReadings = prefs.boolPref(Readings.PREF_NATIVE_READINGS) { prefs.getBoolean(Readings.PREF_NATIVE_READINGS, false) }
     val other = prefs.stringPref(app.lychee.chinese.DictionaryPopup.PREF_OTHER_SCRIPT) {
         prefs.getString(app.lychee.chinese.DictionaryPopup.PREF_OTHER_SCRIPT, null) ?: "hyphens"
     }
@@ -750,6 +751,10 @@ private fun ChinesePage() {
         row {
             SwitchRow(it, stringResource(R.string.lychee_readings_kanji), stringResource(R.string.lychee_readings_kanji_summary),
                 chineseOnKanji.value, chineseOnKanji::set)
+        }
+        row {
+            SwitchRow(it, stringResource(R.string.lychee_readings_native), stringResource(R.string.lychee_readings_native_summary),
+                nativeReadings.value, nativeReadings::set)
         }
     }
 }
