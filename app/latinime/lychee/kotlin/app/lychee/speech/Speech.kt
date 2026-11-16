@@ -74,12 +74,16 @@ object Speech {
         val voice = chosen ?: locales.firstNotNullOfOrNull { l ->
             voices.filter { it.locale.language == l.language && (l.country.isEmpty() || it.locale.country == l.country) }
                 .maxByOrNull { it.quality }
-        } ?: locales.firstNotNullOfOrNull { l -> voices.filter { it.locale.language == l.language }.maxByOrNull { it.quality } }
+        } ?: locales.firstNotNullOfOrNull { l ->
+            // any voice of the language, but never a Mandarin voice for Cantonese (it reads the
+            // characters in Mandarin): Cantonese is yue, or Chinese of Hong Kong or Macau only
+            if (cantonese(l)) null else voices.filter { it.locale.language == l.language }.maxByOrNull { it.quality }
+        }
         val ok = if (voice != null) {
             runCatching { engine.setVoice(voice) == TextToSpeech.SUCCESS }.getOrDefault(false)
         } else {
             val locale = locales.firstOrNull { engine.isLanguageAvailable(it) >= TextToSpeech.LANG_AVAILABLE }
-                ?: locales.map { Locale(it.language) }.firstOrNull { engine.isLanguageAvailable(it) >= TextToSpeech.LANG_AVAILABLE }
+                ?: locales.filterNot(::cantonese).map { Locale(it.language) }.firstOrNull { engine.isLanguageAvailable(it) >= TextToSpeech.LANG_AVAILABLE }
             locale != null && engine.setLanguage(locale) >= TextToSpeech.LANG_AVAILABLE
         }
         if (!ok) {
@@ -88,6 +92,8 @@ object Speech {
         }
         engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lychee")
     }
+
+    private fun cantonese(l: Locale) = l.language == "yue" || (l.language == "zh" && (l.country == "HK" || l.country == "MO"))
 
     /** Whether Mandarin is said Taiwan's way (Settings > Pronunciation); set by [Pronunciation]'s users. */
     @Volatile

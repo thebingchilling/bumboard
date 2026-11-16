@@ -261,10 +261,13 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private fun wordAnnotation(candidate: Candidate, showMeaning: Boolean): Annotation? {
         val entry = app.lychee.dict.PackData.words(ime, engine, candidate.text, limit = 1).firstOrNull()
         val meaning = entry?.senses?.firstOrNull()?.takeIf { showMeaning }?.let { app.lychee.core.Annotator.shorten(it) }
-        // the bar reads in Latin letters only: kana, Hangul and Hanja are on the word's card
+        // the readings in Latin letters only (kana and Hangul readings are on the word's card);
+        // a Korean word's Hanja beside it, leading its meaning line (學校 · school)
         val lines = readingLines(candidate, entry, native = false)
-        if (lines.isEmpty() && meaning == null) return null
-        return Annotation(lines, meaning, null)
+        val hanja = entry?.hanja?.takeIf { engine == "ko" && showMeaning && it.isNotBlank() && it != candidate.text }
+        val under = listOfNotNull(hanja, meaning).joinToString(" · ").ifEmpty { null }
+        if (lines.isEmpty() && under == null) return null
+        return Annotation(lines, under, null, otherScript = hanja)
     }
 
     /** The word card's reading: the kana (always, for words with kanji or katakana) and the romanisation. */
@@ -351,23 +354,29 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val chars = form.codePoints().toArray().filter { app.lychee.core.Annotator.isHan(it) }
             .map { String(Character.toChars(it)) }.distinct().take(6)
         return chars.mapNotNull { ch ->
-            val readings: List<Pair<String, String>> = if (engine == "ja") {
-                val all = db.charReadings(ch, "ja")
-                val on = all.filter { r -> r.any { it in '\u30A1'..'\u30FA' } }.take(2)
-                val kun = (all - on.toSet()).filter { r -> r.none { it in '\u30A1'..'\u30FA' } }.take(2)
-                (on + kun).map { r ->
-                    val plain = r.replace("-", "")
-                    plain.replace(Regex("\\.(.+)$"), "($1)") to app.lychee.core.SentenceRomanizer.kana(plain.replace(".", ""))
-                }
-            } else {
-                db.charReadings(ch, "ko").take(2).map { h -> h to app.lychee.core.SentenceRomanizer.korean(h) }
+            fun kana(r: String): Pair<String, String> {
+                val plain = r.replace("-", "")
+                return plain.replace(Regex("\\.(.+)$"), "($1)") to app.lychee.core.SentenceRomanizer.kana(plain.replace(".", ""))
             }
-            if (readings.isEmpty()) return@mapNotNull null
+            // a line each for on'yomi and kun'yomi, two readings at most: the common ones
+            val rows: List<Pair<String?, List<Pair<String, String>>>> = if (engine == "ja") {
+                val all = db.charReadings(ch, "ja")
+                val on = all.filter { r -> r.any { it in '\u30A1'..'\u30FA' } }.take(2).map(::kana)
+                val kun = all.filter { r -> r.none { it in '\u30A1'..'\u30FA' } }.take(2).map(::kana)
+                listOfNotNull(
+                    on.takeIf { it.isNotEmpty() }?.let { ime.getString(R.string.lychee_card_on) to it },
+                    kun.takeIf { it.isNotEmpty() }?.let { ime.getString(R.string.lychee_card_kun) to it },
+                )
+            } else {
+                db.charReadings(ch, "ko").take(1).map { h -> h to app.lychee.core.SentenceRomanizer.korean(h) }
+                    .takeIf { it.isNotEmpty() }?.let { listOf(null to it) }.orEmpty()
+            }
+            if (rows.isEmpty()) return@mapNotNull null
             val meaning = (if (engine == "ja") app.lychee.dict.PackData.kanji(ime, ch)?.meanings?.takeIf { it.isNotBlank() } else null)
                 ?: Readings.annotator?.resolve(ch, "", InputMode.Cantonese)?.meaning
             // the first reading as written, without its okurigana brackets: まな(ぶ) says まなぶ
-            val say = readings.first().first.replace("(", "").replace(")", "")
-            DictionaryPopup.CharReading(ch, readings, say, meaning?.let { app.lychee.core.Annotator.shorten(it) })
+            val say = rows.first().second.first().first.replace("(", "").replace(")", "")
+            DictionaryPopup.CharReading(ch, rows, say, meaning?.let { app.lychee.core.Annotator.shorten(it) })
         }
     }
 

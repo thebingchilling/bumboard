@@ -107,7 +107,7 @@ class DictionaryPopup(
      * One Kanji or Hanja of a Japanese or Korean word: its readings in that language (kana or
      * Hangul with their romanisation), what its speaker says, and its meaning.
      */
-    class CharReading(val ch: String, val readings: List<Pair<String, String>>, val say: String, val meaning: String?)
+    class CharReading(val ch: String, val rows: List<Pair<String?, List<Pair<String, String>>>>, val say: String, val meaning: String?)
 
     /** One of a character's Japanese or Korean readings: its label, as shown, and what is said. */
     class LocalReading(val label: String, val shown: String, val say: String)
@@ -154,9 +154,11 @@ class DictionaryPopup(
             if (translations.isNotEmpty()) content.translations(translations, onTranslation)
             kanji?.let { k ->
                 // kun readings with their okurigana in brackets: まな.ぶ → まな(ぶ)
-                val kun = k.kunyomi.split('、').filter { it.isNotBlank() }
+                // the first three of each: the common ones, not the whole list
+                val kun = k.kunyomi.split('、').filter { it.isNotBlank() }.take(3)
                     .joinToString("、") { r -> r.replace(Regex("\\.(.+)$"), "($1)") }
-                if (k.onyomi.isNotBlank()) body.addView(content.labelled(ctx.getString(R.string.lychee_card_onyomi), k.onyomi))
+                val on = k.onyomi.split('、').filter { it.isNotBlank() }.take(3).joinToString("、")
+                if (on.isNotBlank()) body.addView(content.labelled(ctx.getString(R.string.lychee_card_onyomi), on))
                 if (kun.isNotBlank()) body.addView(content.labelled(ctx.getString(R.string.lychee_card_kunyomi), kun))
                 if (k.meanings.isNotBlank()) body.addView(content.textView(k.meanings, 15f, c.onSurface).apply {
                     if (compact) { maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END }
@@ -170,9 +172,14 @@ class DictionaryPopup(
                     setPadding(0, dp(2), 0, dp(4))
                 })
             }
-            romanisation?.let { body.addView(content.labelled(ctx.getString(R.string.lychee_card_romanisation), it)) }
-            if (characters.isNotEmpty() && !compact) content.characterReadings(charactersTitle ?: "", characters)
-            chinese?.let { content.chineseBox(chineseForm ?: text, it) }
+            // the reading under the word, as one quiet line (no label): the kana and romaji, or
+            // the romanisation and the Hanja
+            val hanja = entries.firstOrNull()?.hanja?.takeIf { lang == "ko" && it.isNotBlank() }
+            val subtitle = listOfNotNull(romanisation, hanja).joinToString("  ·  ")
+            if (subtitle.isNotEmpty()) body.addView(content.textView(subtitle, 16f, c.primary).apply {
+                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
+                setPadding(0, 0, 0, dp(4))
+            })
             // a word written alike but said differently by meaning (lead, wind, tear): each
             // pronunciation says itself
             val pronunciations = entries.mapNotNull { e -> e.reading?.takeIf { it.isNotBlank() } }.distinct()
@@ -185,7 +192,8 @@ class DictionaryPopup(
                         app.lychee.fonts.LycheeFonts.forText(ctx, e.lemma, lang)?.let { typeface = it }
                     })
                 }
-                e.reading?.takeIf { it != e.lemma && it != romanisation }?.let { reading ->
+                // a reading already in the line under the word is not shown again
+                e.reading?.takeIf { it != e.lemma && romanisation?.contains(it) != true }?.let { reading ->
                     val label = ctx.getString(if (lang == "en") R.string.lychee_card_pronunciation else R.string.lychee_card_reading)
                     // English UK and US apart, each in its own voice; Japanese says the kana
                     // reading itself; Korean the word
@@ -214,8 +222,14 @@ class DictionaryPopup(
                         body.addView(content.readingRow(content.labelled(label, part), button))
                     }
                 }
-                e.hanja?.let { body.addView(content.labelled("Hanja", it)) }
-                e.partOfSpeech?.let { body.addView(content.labelled(ctx.getString(R.string.lychee_card_pos), it)) }
+                e.hanja?.takeIf { it != hanja }?.let { body.addView(content.textView(it, 15f, c.onSurfaceVariant)) }
+                // the part of speech small, over the meanings, rather than a labelled row
+                e.partOfSpeech?.takeIf { it.isNotBlank() }?.let { pos ->
+                    body.addView(content.textView(pos, 12f, c.onSurfaceVariant).apply {
+                        setTypeface(typeface, Typeface.ITALIC)
+                        setPadding(0, dp(4), 0, dp(2))
+                    })
+                }
                 e.senses.take(if (compact) Content.SUMMARY_SENSES else Content.MAX_SENSES)
                     .forEachIndexed { n, s -> content.plainSense(n + 1, s) }
             }
@@ -224,6 +238,9 @@ class DictionaryPopup(
                 setPadding(0, dp(8), 0, dp(4))
             })
             if (compact) return@present
+            // after the meanings: each Kanji or Hanja with its readings, then the word in Chinese
+            if (characters.isNotEmpty()) content.characterReadings(charactersTitle ?: "", characters)
+            chinese?.let { content.chineseBox(chineseForm ?: text, it) }
             content.examples(examples) { sentence ->
                 when (lang) {
                     "ja" -> app.lychee.core.SentenceRomanizer.japanese(sentence) { form ->
@@ -491,7 +508,7 @@ class DictionaryPopup(
             val lang = if (r.lang == Lang.Cantonese) "yue" else "cmn"
             val forms2 = listOfNotNull(text, main?.traditional, main?.simplified)
             val romanLang = if (r.lang == Lang.Mandarin) Lang.Mandarin else Lang.Cantonese
-            if (showChinese) examples(app.lychee.dict.PackData.examples(ctx, lang, forms2)) { sentence ->
+            if (showChinese) examples(app.lychee.dict.PackData.examples(ctx, lang, forms2), sayIn = romanLang) { sentence ->
                 Readings.annotator?.romanise(sentence, romanLang, prefs)
             }
             strokes(text)
@@ -513,7 +530,12 @@ class DictionaryPopup(
             }
             val hw = r.headwords.firstOrNull() ?: return
             val wanted = if (r.lang == Lang.Mandarin) Lang.Mandarin else Lang.Cantonese
+            // the meanings of its most common reading only (rarer readings are in the full card)
             val all = hw.senses.filter { it.partOfSpeech != "cl" && !it.gloss.startsWith("variant of") && !it.gloss.startsWith("see ") }
+                .let { list ->
+                    list.filter { s -> s.reading.isNullOrBlank() || s.lang == Lang.Any || mainReading[s.lang]?.let { m -> norm(s.reading!!) == m } != false }
+                        .ifEmpty { list }
+                }
             val list = (all.filter { it.lang == wanted } + all.filter { it.lang != wanted }).distinctBy { it.gloss.lowercase() }
             list.take(SUMMARY_SENSES).forEachIndexed { i, s -> plainSense(i + 1, s.gloss, lines = 2) }
             if (!showChinese) return
@@ -571,10 +593,12 @@ class DictionaryPopup(
          * beside haang4 "walk"), each with the first of those meanings.
          */
         private fun readingRows(r: Resolved, hw: Headword?, spoken: String?) {
-            val yue = (if (r.lang == Lang.Cantonese) r.reading else r.otherReading)
-                ?: hw?.readings?.get(Lang.Cantonese)?.firstOrNull()
-            val cmn = (if (r.lang == Lang.Mandarin) r.reading else r.otherReading)
-                ?: hw?.readings?.get(Lang.Mandarin)?.firstOrNull()
+            // the word's most common reading (the dictionary lists it first), whichever was typed:
+            // its rarer readings come further down, with their own meanings
+            val yue = hw?.readings?.get(Lang.Cantonese)?.firstOrNull()
+                ?: (if (r.lang == Lang.Cantonese) r.reading else r.otherReading)
+            val cmn = hw?.readings?.get(Lang.Mandarin)?.firstOrNull()
+                ?: (if (r.lang == Lang.Mandarin) r.reading else r.otherReading)
             val rows = listOfNotNull(
                 yue?.let { Triple(Lang.Cantonese, R.string.lychee_card_cantonese, it) },
                 cmn?.let { Triple(Lang.Mandarin, R.string.lychee_card_mandarin, it) },
@@ -645,16 +669,20 @@ class DictionaryPopup(
                 }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                     .apply { marginEnd = dp(12) })
                 val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-                val sb = SpannableStringBuilder()
-                cr.readings.forEachIndexed { i, (native, roman) ->
-                    if (i > 0) sb.append("  ·  ", ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    sb.append(roman, ForegroundColorSpan(c.primary), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                    sb.append(" ")
-                    sb.append(native, ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                // a line per kind (on'yomi, kun'yomi), at most two readings each
+                for ((label, readings) in cr.rows) {
+                    val sb = SpannableStringBuilder()
+                    label?.let { sb.append(it, ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE); sb.append("  ") }
+                    readings.forEachIndexed { i, (native, roman) ->
+                        if (i > 0) sb.append(",  ", ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        sb.append(roman, ForegroundColorSpan(c.primary), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                        sb.append(" ")
+                        sb.append(native, ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    }
+                    col.addView(textView(sb, 14f, c.primary).apply {
+                        maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
+                    })
                 }
-                col.addView(textView(sb, 15f, c.primary).apply {
-                    typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
-                })
                 cr.meaning?.takeIf { it.isNotBlank() }?.let { m ->
                     col.addView(textView(m, 13f, c.onSurfaceVariant).apply {
                         maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END
@@ -675,8 +703,9 @@ class DictionaryPopup(
          */
         fun chineseBox(form: String, r: Resolved) {
             val hw = r.headwords.firstOrNull()
-            val yue = (if (r.lang == Lang.Cantonese) r.reading else r.otherReading) ?: hw?.readings?.get(Lang.Cantonese)?.firstOrNull()
-            val cmn = (if (r.lang == Lang.Mandarin) r.reading else r.otherReading) ?: hw?.readings?.get(Lang.Mandarin)?.firstOrNull()
+            // the most common readings
+            val yue = hw?.readings?.get(Lang.Cantonese)?.firstOrNull() ?: (if (r.lang == Lang.Cantonese) r.reading else r.otherReading)
+            val cmn = hw?.readings?.get(Lang.Mandarin)?.firstOrNull() ?: (if (r.lang == Lang.Mandarin) r.reading else r.otherReading)
             if (yue == null && cmn == null) return
             val trad = hw?.traditional?.takeIf { it.codePointCount(0, it.length) == form.codePointCount(0, form.length) } ?: form
             val simp = hw?.simplified?.takeIf { it.codePointCount(0, it.length) == trad.codePointCount(0, trad.length) } ?: trad
@@ -951,7 +980,7 @@ class DictionaryPopup(
         }
 
         /** Example sentences, each with its romanisation ([romanise]) and English under it. */
-        fun examples(list: List<Pair<String, String>>, romanise: ((String) -> String?)? = null) {
+        fun examples(list: List<Pair<String, String>>, sayIn: Lang? = null, romanise: ((String) -> String?)? = null) {
             if (list.isEmpty()) return
             section(ctx.getString(R.string.lychee_card_examples))
             list.forEach { (sentence, english) ->
@@ -970,7 +999,8 @@ class DictionaryPopup(
                 col.addView(textView(english, 13f, c.onSurfaceVariant))
                 row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                 onSpeak?.let { speak ->
-                    row.addView(speaker { speak(sentence, speakLang) }.apply {
+                    // in the sentence's own language (a Cantonese sentence is never read in Mandarin)
+                    row.addView(speaker { speak(sentence, sayIn ?: speakLang) }.apply {
                         layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
                         setPadding(dp(8), dp(8), dp(8), dp(8))
                     })
@@ -1048,30 +1078,35 @@ class DictionaryPopup(
                 list.forEachIndexed { i, s -> sense(i + 1, s) }
                 return
             }
-            val groups = listOf(
-                Lang.Cantonese to R.string.lychee_card_cantonese,
-                Lang.Mandarin to R.string.lychee_card_mandarin,
-                Lang.Any to R.string.lychee_card_character,
-            ).let { if (r.lang == Lang.Mandarin) listOf(it[1], it[0], it[2]) else it }
-            for ((lang, title) in groups) {
-                val list = hw.senses.filter { it.lang == lang && it.partOfSpeech != "cl" }.take(MAX_SENSES)
-                if (list.isEmpty()) continue
-                section(ctx.getString(title))
-                // meanings read the main way first; those read another way under their reading
-                val main = mainReading[lang]
-                val groupsByReading = list.groupBy { s -> s.reading?.takeIf { it.isNotBlank() }?.let { norm(it) } ?: main }
-                var n = 0
-                val order = groupsByReading.keys.sortedBy { if (it == main || it == null) 0 else 1 }
-                for (key in order) {
-                    val senses = groupsByReading.getValue(key)
-                    if (key != null && key != main && lang != Lang.Any) {
-                        val reading = senses.first().reading!!
-                        body.addView(readingRow(textView(Annotator.format(reading, lang, prefs), 15f, c.primary).apply {
-                            setPadding(0, dp(10), 0, 0)
-                        }, readingSpeaker(hw, reading, lang, spokenWord)))
-                    }
-                    senses.forEach { s -> sense(++n, s) }
-                }
+            // the meanings of the word as it is most commonly said, both languages' together
+            // (the same meaning once); then each rarer reading, under its own heading, with the
+            // meanings it carries
+            val langs = if (r.lang == Lang.Mandarin) listOf(Lang.Mandarin, Lang.Cantonese, Lang.Any)
+                else listOf(Lang.Cantonese, Lang.Mandarin, Lang.Any)
+            val usable = hw.senses.filter { it.partOfSpeech != "cl" }
+            fun readingOf(s: Sense): String? = s.reading?.takeIf { it.isNotBlank() }?.let { norm(it) }
+                ?.takeIf { s.lang != Lang.Any && it != mainReading[s.lang] }
+            val seen = HashSet<String>()
+            val main = langs.flatMap { l -> usable.filter { it.lang == l && readingOf(it) == null } }
+                .filter { seen.add(it.gloss.trim().lowercase()) }.take(MAX_SENSES)
+            if (main.isNotEmpty()) {
+                section(ctx.getString(R.string.lychee_card_meanings))
+                main.forEachIndexed { i, s -> sense(i + 1, s) }
+            }
+            val rarer = langs.flatMap { l -> usable.filter { it.lang == l && readingOf(it) != null } }
+                .groupBy { it.lang to readingOf(it)!! }
+            if (rarer.isEmpty()) return
+            section(ctx.getString(R.string.lychee_card_other_readings))
+            for ((key, senses) in rarer) {
+                val (lang, _) = key
+                val reading = senses.first().reading!!
+                val mark = if (lang == Lang.Cantonese) "粵" else "普"
+                body.addView(readingRow(textView(SpannableStringBuilder().apply {
+                    append(mark, ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    append("  ")
+                    append(Annotator.format(reading, lang, prefs))
+                }, 15f, c.primary).apply { setPadding(0, dp(8), 0, 0) }, readingSpeaker(hw, reading, lang, spokenWord)))
+                senses.distinctBy { it.gloss.trim().lowercase() }.take(3).forEachIndexed { i, s -> sense(i + 1, s) }
             }
         }
 
