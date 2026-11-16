@@ -261,7 +261,7 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                         Page.Theme -> ThemePage()
 
                         Page.Fonts -> FontsPage()
-                        Page.Packs -> AddonsPage { page = Page.Storage }
+                        Page.Packs -> AddonsPage()
                         Page.Storage -> StoragePage()
                         Page.About -> AboutPage({ page = Page.Licences }) { page = Page.Diagnostics }
                         Page.Licences -> LicencesPage()
@@ -432,12 +432,6 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
                 it, stringResource(R.string.lychee_addons_title),
                 stringResource(R.string.lychee_addons_summary), R.drawable.ic_sym_download,
             ) { open(Page.Packs) }
-        }
-        row {
-            NavRow(
-                it, stringResource(R.string.lychee_storage_title),
-                stringResource(R.string.lychee_storage_summary), R.drawable.ic_sym_grid_view,
-            ) { open(Page.Storage) }
         }
         row {
             NavRow(
@@ -815,17 +809,6 @@ private fun KeysPage() {
     val extra = when (commaKey.value) { "combined", "emoji" -> "emoji"; "language", "language_comma" -> "language"; else -> "none" }
     val besides = commaKey.value == "emoji" || commaKey.value == "language"
 
-    // the keys as they will be: the number row, the comma's neighbour, the space bar's label
-    KeyboardPreview(
-        prefs.getString(app.lychee.ui.LycheeColorStyle.PREF, null) ?: app.lychee.ui.LycheeColorStyle.NEUTRAL,
-        prefs.getInt(app.lychee.ui.KeyStyle.PREF_ROUNDNESS, app.lychee.ui.KeyStyle.DEFAULT_ROUNDNESS),
-        prefs.getBoolean(app.lychee.ui.KeyStyle.PREF_BORDERS, true),
-        KeyboardTheme.getKeyboardTheme(context).mThemeId == KeyboardTheme.THEME_ID_LYCHEE_RAISED,
-        prefs.getFloat(LycheeLayout.PREF_HEIGHT_SCALE, 1f),
-        numberRow = numberRow.value,
-        spacebar = stringResource(if (spacebar.value == "method") R.string.lychee_pref_spacebar_method else R.string.lychee_pref_spacebar_language),
-        comma = commaKey.value,
-    )
 
     Group(stringResource(R.string.lychee_group_keys)) {
         row {
@@ -964,10 +947,6 @@ private fun ThemePage() {
     var liveHeight by remember(height.value) { mutableStateOf(height.value) }
     var liveColumns by remember(columns.value) { mutableStateOf(if (columns.value > 0) columns.value else 9) }
 
-    // the keys as they will look, changing with every setting below
-    val numberRowNow = remember { prefs.getBoolean(LycheeLayout.PREF_NUMBER_ROW, true) }
-    KeyboardPreview(colors.value, liveRound, borders.value, selected == KeyboardTheme.THEME_ID_LYCHEE_RAISED, liveHeight,
-        numberRow = numberRowNow, oneHanded = mode.value == "one_handed")
     Group(stringResource(R.string.lychee_pref_colors)) {
         row {
             PaletteGrid(
@@ -1153,20 +1132,8 @@ private fun CorrectionGroups() {
     val nextWord = prefs.boolPref(Settings.PREF_BIGRAM_PREDICTIONS) {
         prefs.getBoolean(Settings.PREF_BIGRAM_PREDICTIONS, true)
     }
-    val dictionaryIntent = remember {
-        Intent(SystemSettings.ACTION_USER_DICTIONARY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            .takeIf { context.packageManager.resolveActivity(it, PackageManager.MATCH_DEFAULT_ONLY) != null }
-    }
 
-    if (dictionaryIntent != null) {
-        Group(stringResource(R.string.lychee_group_dictionary)) {
-            row {
-                NavRow(it, stringResource(R.string.edit_personal_dictionary)) {
-                    context.startActivity(dictionaryIntent)
-                }
-            }
-        }
-    }
+    // (your own words are in Settings > Personal dictionary; the phone's old word list is not repeated here)
     Group(stringResource(R.string.lychee_group_suggestions)) {
         row {
             SwitchRow(
@@ -1387,6 +1354,8 @@ private fun VoicesGroup(mandarinTaiwan: Boolean, english: String) {
                     listOf("" to stringResource(R.string.lychee_voices_auto)) +
                         voices.mapIndexed { i, v -> v.name to app.lychee.speech.Speech.voiceLabel(v, i) },
                     pref.value,
+                    // open while voices are tried: each tap says the sample in that voice
+                    keepOpen = true,
                 ) { picked ->
                     pref.set(picked)
                     // a sample in the voice just picked

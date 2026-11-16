@@ -60,57 +60,107 @@ object AddonSheet {
 }
 
 /**
- * Settings > Add-ons: everything Lychee can add, by kind. Tapping one opens its sheet, which
- * walks through getting it: download it (the browser does that; Lychee has no internet access),
- * then open the downloaded file, or choose it here; the sheet notices once it is installed.
+ * Settings > Add-ons: everything Lychee has or can add, the add-ons that come with it included,
+ * as cards by language (then Misc), each saying plainly whether it is installed and how big it
+ * is; your own fonts in a fold at the bottom. Tapping one opens its sheet, which walks through
+ * getting it: download it (the browser does that; Lychee has no internet access), then open the
+ * downloaded file, or choose it here. This is also where add-ons are removed.
  */
 @Composable
-fun AddonsPage(openStorage: () -> Unit) {
+fun AddonsPage() {
     val context = LocalContext.current
     val actions = rememberPackActions()
-    @Suppress("UNUSED_VARIABLE") val refresh = actions.version + PackRefresh.tick
+    var version by remember { mutableIntStateOf(0) }
+    val tick = version + actions.version + PackRefresh.tick
     remember { Packs.removeUnlisted(context) }
-    Text(
-        stringResource(R.string.lychee_addons_how),
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
-    )
-    PackMessage(actions)
-    UpdatesCard()
-    // every add-on, installed or not, those that come with Lychee too: by language, then
-    // everything else, then your own files
-    val catalog = remember { Packs.catalog(context) }
-    for (section in PackStorage.Section.entries) {
-        val packs = catalog.filter { PackStorage.section(it) == section }
-        Group(stringResource(sectionName(section))) {
-            packs.forEach { pack -> row { AddonRow(pack, actions) { AddonSheet.open = pack } } }
+    val total = remember(tick) { Packs.totalSize(context) }
+    // a removal waiting for "Remove" in its dialog
+    var confirm by remember { mutableStateOf<Pack?>(null) }
+    val colors = MaterialTheme.colorScheme
+
+    // how much is on the phone, and the ways to get more
+    Column(Modifier.padding(horizontal = 24.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(R.string.lychee_addons_used, Packs.formatSize(total)), style = MaterialTheme.typography.titleLarge,
+            color = colors.onSurface)
+        Text(stringResource(R.string.lychee_addons_how), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+        Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (app.lychee.packs.Updates.installed(context).isNotEmpty()) {
+                FilledTonalButton(onClick = { app.lychee.packs.Updates.check(context) }) {
+                    Text(stringResource(R.string.lychee_packs_updates))
+                }
+            }
+            OutlinedButton(onClick = { actions.import(null) }) { Text(stringResource(R.string.lychee_addons_from_file)) }
         }
     }
-    Group(stringResource(R.string.lychee_section_more)) {
-        // the packs page checks every installed add-on, those that come with Lychee included
-        if (app.lychee.packs.Updates.installed(context).isNotEmpty()) {
-            row {
-                NavRow(it, stringResource(R.string.lychee_packs_updates), stringResource(R.string.lychee_packs_updates_summary),
-                    R.drawable.ic_sym_download) { app.lychee.packs.Updates.check(context) }
-            }
+    PackMessage(actions)
+    UpdatesCard()
+    val catalog = remember { Packs.catalog(context) }
+    for (section in PackStorage.Section.entries) {
+        if (section == PackStorage.Section.OWN) continue
+        val packs = catalog.filter { PackStorage.section(it) == section }
+        if (packs.isEmpty()) continue
+        SectionTitle(stringResource(sectionName(section)))
+        packs.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { confirm = pack }) { version++ } }
+    }
+    // your own fonts: folded away at the bottom
+    val own = catalog.filter { PackStorage.section(it) == PackStorage.Section.OWN }
+    if (own.isNotEmpty()) {
+        var open by remember { mutableStateOf(own.any { Packs.isInstalled(context, it.id) }) }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 16.dp)
+                .clickable { open = !open }
+                .padding(horizontal = 24.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.lychee_addons_fonts), style = MaterialTheme.typography.titleSmall,
+                color = colors.onSurfaceVariant, modifier = Modifier.weight(1f))
+            Icon(painterResource(if (open) R.drawable.ic_sym_keyboard_arrow_up else R.drawable.ic_sym_keyboard_arrow_down),
+                null, tint = colors.onSurfaceVariant)
         }
-        row {
-            NavRow(it, stringResource(R.string.lychee_addons_page), stringResource(R.string.lychee_addons_page_summary),
-                R.drawable.ic_sym_open_in_new) { app.lychee.packs.Updates.openAll(context) }
+        androidx.compose.animation.AnimatedVisibility(open) {
+            Column { own.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { confirm = pack }) { version++ } } }
         }
-        row {
-            NavRow(it, stringResource(R.string.lychee_packs_import_any), stringResource(R.string.lychee_packs_import_any_summary),
-                R.drawable.lychee_ic_input) { actions.import(null) }
+    }
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp), horizontalArrangement = Arrangement.Center) {
+        TextButton(onClick = { app.lychee.packs.Updates.openAll(context) }) {
+            Icon(painterResource(R.drawable.ic_sym_open_in_new), null, modifier = Modifier.size(18.dp))
+            Text(stringResource(R.string.lychee_addons_page), modifier = Modifier.padding(start = 8.dp))
         }
-        row {
-            NavRow(it, stringResource(R.string.lychee_storage_title),
-                stringResource(R.string.lychee_packs_storage_used, Packs.formatSize(Packs.totalSize(context))),
-                R.drawable.ic_sym_grid_view, openStorage)
-        }
+    }
+    confirm?.let { pack ->
+        val needed = pack.id == "rime_ja" || pack.id == "dict_ko" || pack.id == "dict_en"
+        AlertDialog(
+            onDismissRequest = { confirm = null },
+            title = { Text(stringResource(R.string.lychee_storage_confirm_title, addonNameOf(context, pack))) },
+            text = {
+                Text(stringResource(if (needed) R.string.lychee_storage_confirm_needed else R.string.lychee_storage_confirm_body,
+                    Packs.formatSize(Packs.sizeOnDisk(context, pack.id))))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    PackStorage.remove(context, pack)
+                    confirm = null
+                    version++
+                }) { Text(stringResource(R.string.lychee_packs_remove), color = colors.error) }
+            },
+            dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(android.R.string.cancel)) } },
+        )
     }
     AddonSheetHost(actions)
 }
+
+/** A section's heading on the add-ons page. */
+@Composable
+private fun SectionTitle(title: String) {
+    Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 20.dp, bottom = 4.dp))
+}
+
+/** [Settings > Add-ons] for screens that still link to the old Storage page. */
+@Composable
+fun StoragePage() = AddonsPage()
 
 /** A display name for a pack: "your own" fonts say which language they are for. */
 @Composable
@@ -124,49 +174,79 @@ fun addonName(pack: Pack): String = if (!pack.custom) pack.name else when (pack.
 }
 
 /**
- * One add-on: its name, what it is, and where it stands: its size to download, or installed
- * (with its size on the phone; "comes with Lychee" for those in the app) and a delete button,
- * or removed with Restore (one that comes with Lychee).
+ * One add-on as a card: its name and what it is; under them a badge saying where it stands
+ * (installed, comes with Lychee, removed, or not installed) and its size (on the phone, or to
+ * download); at the end, remove it, bring it back, or get it.
  */
 @Composable
-private fun AddonRow(pack: Pack, actions: PackActions, onClick: () -> Unit) {
+private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () -> Unit, onChanged: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val tick = actions.version + PackRefresh.tick
+    val colors = MaterialTheme.colorScheme
     val installed = remember(pack.id, tick) { Packs.isInstalled(context, pack.id) }
     val bundled = remember(pack.id) { app.lychee.packs.BundledPacks.isBundled(context, pack.id) }
-    val size = remember(pack.id, tick, installed) { if (installed) Packs.formatSize(Packs.sizeOnDisk(context, pack.id)) else "" }
+    val size = remember(pack.id, tick, installed) { if (installed) Packs.formatSize(Packs.sizeOnDisk(context, pack.id)) else pack.size }
     var busy by remember { mutableStateOf(false) }
-    val detail = listOf(
-        pack.summary,
-        when {
-            installed && bundled -> stringResource(R.string.lychee_addons_bundled) + " · " + size
-            installed -> stringResource(R.string.lychee_packs_installed_short) + " · " + size
-            bundled -> stringResource(R.string.lychee_storage_removed)
-            else -> pack.size
-        },
-    ).filter { it.isNotEmpty() }.joinToString(" · ")
-    Box(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
-        CompactRow(null, addonName(pack), detail, summaryColor = if (installed) MaterialTheme.colorScheme.primary else null, trailing = {
+    androidx.compose.material3.Surface(
+        onClick = { AddonSheet.open = pack },
+        shape = RoundedCornerShape(20.dp),
+        color = colors.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+    ) {
+        Row(Modifier.padding(start = 20.dp, end = 12.dp, top = 14.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(addonName(pack), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
+                if (pack.summary.isNotEmpty()) {
+                    Text(pack.summary, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val status = when {
+                        installed && bundled -> stringResource(R.string.lychee_addons_bundled)
+                        installed -> stringResource(R.string.lychee_addons_installed)
+                        bundled -> stringResource(R.string.lychee_storage_removed)
+                        else -> stringResource(R.string.lychee_addons_not_installed)
+                    }
+                    Badge(status, strong = installed, check = installed)
+                    if (size.isNotEmpty()) Badge(size, strong = false)
+                }
+            }
             when {
                 busy -> androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                installed -> IconButton(onClick = {
-                    PackStorage.remove(context, pack)
-                    actions.refresh()
-                }) { Icon(painterResource(R.drawable.lychee_ic_delete), stringResource(R.string.lychee_packs_remove)) }
+                installed -> IconButton(onClick = onRemove) {
+                    Icon(painterResource(R.drawable.lychee_ic_delete), stringResource(R.string.lychee_packs_remove), tint = colors.onSurfaceVariant)
+                }
                 bundled -> TextButton(onClick = {
                     busy = true
                     scope.launch {
                         withContext(Dispatchers.IO) { PackStorage.restore(context, pack) }
                         busy = false
+                        onChanged()
                         actions.refresh()
                     }
                 }) { Text(stringResource(R.string.lychee_storage_restore)) }
-                else -> FilledTonalButton(onClick = onClick) {
+                else -> FilledTonalButton(onClick = { AddonSheet.open = pack }) {
                     Text(stringResource(if (pack.custom) R.string.lychee_fonts_choose else R.string.lychee_packs_get))
                 }
             }
-        })
+        }
+    }
+}
+
+/** A small rounded label: [strong] for installed (filled, with a tick), else a quiet outline. */
+@Composable
+private fun Badge(text: String, strong: Boolean, check: Boolean = false) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (strong) colors.secondaryContainer else colors.surfaceContainerHighest)
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (check) Icon(painterResource(R.drawable.ic_sym_check), null, tint = colors.onSecondaryContainer,
+            modifier = Modifier.size(14.dp).padding(end = 2.dp))
+        Text(text, style = MaterialTheme.typography.labelMedium,
+            color = if (strong) colors.onSecondaryContainer else colors.onSurfaceVariant)
     }
 }
 
@@ -278,94 +358,6 @@ private fun Step(number: Int, text: String, active: Boolean, done: Boolean = fal
             action()
         }
     }
-}
-
-// ---------------------------------------------------------------- storage
-
-/**
- * Settings > Storage: everything Lychee keeps, by language (Chinese, Japanese, Korean, English,
- * what they share) and kind (emoji, keyboard fonts, voices), with sizes. Remove one thing, or a
- * whole language at once; a removed pack can be brought back (restored from the app, or
- * downloaded again from its add-on sheet).
- */
-@Composable
-fun StoragePage() {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val actions = rememberPackActions()
-    var version by remember { mutableIntStateOf(0) }
-    val tick = version + actions.version + PackRefresh.tick
-    val entries = remember(tick) { PackStorage.entries(context) }
-    val total = remember(tick) { Packs.totalSize(context) }
-    // a removal waiting for "Remove" in its dialog
-    var confirm by remember { mutableStateOf<Pair<String, List<Pack>>?>(null) }
-    var busy by remember { mutableStateOf(false) }
-
-    Column(Modifier.padding(horizontal = 24.dp, vertical = 8.dp)) {
-        Text(Packs.formatSize(total), style = MaterialTheme.typography.displaySmall, color = MaterialTheme.colorScheme.primary)
-        Text(stringResource(R.string.lychee_storage_body), style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
-    }
-    if (entries.isEmpty()) {
-        Text(stringResource(R.string.lychee_storage_empty), style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(24.dp))
-    }
-    // by language, then everything else, then your own files; each removed on its own
-    val bySection = entries.values.flatten().groupBy { PackStorage.section(it.pack) }.toSortedMap(compareBy { it.ordinal })
-    for ((section, list) in bySection) {
-        val title = stringResource(sectionName(section))
-        val installed = list.filter { it.installed }
-        Group(title + " · " + Packs.formatSize(installed.sumOf { it.bytes })) {
-            list.forEach { entry ->
-                row {
-                    CompactRow(
-                        null, addonName(entry.pack),
-                        if (entry.installed) stringResource(kindName(PackStorage.kind(entry.pack))) + " · " + Packs.formatSize(entry.bytes)
-                        else stringResource(R.string.lychee_storage_removed),
-                        trailing = {
-                            when {
-                                entry.installed -> IconButton(onClick = { confirm = addonNameOf(context, entry.pack) to listOf(entry.pack) }) {
-                                    Icon(painterResource(R.drawable.lychee_ic_delete), stringResource(R.string.lychee_packs_remove))
-                                }
-                                entry.bundled -> TextButton(onClick = {
-                                    busy = true
-                                    scope.launch {
-                                        withContext(Dispatchers.IO) { PackStorage.restore(context, entry.pack) }
-                                        busy = false
-                                        version++
-                                    }
-                                }) { Text(stringResource(R.string.lychee_storage_restore)) }
-                                else -> TextButton(onClick = { AddonSheet.open = entry.pack }) {
-                                    Text(stringResource(R.string.lychee_storage_download_again))
-                                }
-                            }
-                        },
-                    )
-                }
-            }
-        }
-    }
-    confirm?.let { (name, packs) ->
-        val needed = packs.any { it.id == "rime_ja" || it.id == "dict_ko" || it.id == "dict_en" }
-        AlertDialog(
-            onDismissRequest = { confirm = null },
-            title = { Text(stringResource(R.string.lychee_storage_confirm_title, name)) },
-            text = {
-                Text(stringResource(if (needed) R.string.lychee_storage_confirm_needed else R.string.lychee_storage_confirm_body,
-                    Packs.formatSize(packs.sumOf { Packs.sizeOnDisk(context, it.id) })))
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    packs.forEach { PackStorage.remove(context, it) }
-                    confirm = null
-                    version++
-                }) { Text(stringResource(R.string.lychee_packs_remove), color = MaterialTheme.colorScheme.error) }
-            },
-            dismissButton = { TextButton(onClick = { confirm = null }) { Text(stringResource(android.R.string.cancel)) } },
-        )
-    }
-    AddonSheetHost(actions)
 }
 
 /** [pack]'s display name outside composition (the dialog's title). */

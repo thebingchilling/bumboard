@@ -71,7 +71,8 @@ fun Group(title: String? = null, build: GroupScope.() -> Unit) {
             Text(
                 title,
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
+                // headings in the text's own quiet colour (the accent was hard to read)
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 4.dp),
             )
         }
@@ -172,13 +173,10 @@ fun CompactRow(
 
 @Composable
 fun IconBadge(@DrawableRes icon: Int) {
-    // a rounded, tinted badge; the three accent families take turns so the list has some colour
+    // neutral: a soft grey badge with the icon in the text colour, easy to see in any palette
     val scheme = MaterialTheme.colorScheme
-    val (back, fore) = when (Math.floorMod(icon, 3)) {
-        0 -> scheme.primaryContainer to scheme.onPrimaryContainer
-        1 -> scheme.secondaryContainer to scheme.onSecondaryContainer
-        else -> scheme.tertiaryContainer to scheme.onTertiaryContainer
-    }
+    val back = scheme.surfaceContainerHighest
+    val fore = scheme.onSurface
     Box(
         Modifier
             .size(40.dp)
@@ -271,12 +269,14 @@ fun <T> ChoiceRow(
     shape: Shape, title: String, summary: String? = null, options: List<Pair<T, String>>, selected: T,
     /** An icon for each option (shown before its label), or null for text only. */
     @DrawableRes icons: List<Int>? = null,
+    /** The dialog stays open after a choice (to try each one, as with voices), closed by Done. */
+    keepOpen: Boolean = false,
     onSelect: (T) -> Unit,
 ) {
     // only when every label fits its button whole (no tick icon, which takes room): two short
     // ones, or three very short ones; anything longer is a dialog
     val longest = options.maxOfOrNull { it.second.length } ?: 0
-    val segmented = icons == null && ((options.size == 2 && longest <= 11) || (options.size == 3 && longest <= 7))
+    val segmented = !keepOpen && icons == null && ((options.size == 2 && longest <= 11) || (options.size == 3 && longest <= 7))
     if (segmented) {
         Column(
             Modifier
@@ -311,7 +311,7 @@ fun <T> ChoiceRow(
     RowSurface(shape, { open = true }) {
         CompactRow(
             icons?.getOrNull(current), title, options.getOrNull(current)?.second ?: summary,
-            summaryColor = MaterialTheme.colorScheme.primary,
+            summaryColor = MaterialTheme.colorScheme.onSurface,
         )
     }
     if (open) {
@@ -335,7 +335,7 @@ fun <T> ChoiceRow(
                                 .clip(RoundedCornerShape(12.dp))
                                 .clickable {
                                     onSelect(value)
-                                    open = false
+                                    if (!keepOpen) open = false
                                 }
                                 .heightIn(min = 52.dp)
                                 .padding(end = 8.dp),
@@ -353,7 +353,7 @@ fun <T> ChoiceRow(
             },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = { open = false }) {
-                    Text(androidx.compose.ui.res.stringResource(android.R.string.cancel))
+                    Text(androidx.compose.ui.res.stringResource(if (keepOpen) com.android.inputmethod.latin.R.string.lychee_addons_done else android.R.string.cancel))
                 }
             },
         )
@@ -411,7 +411,7 @@ fun SliderRow(
         Column(Modifier.padding(start = 24.dp, end = 24.dp, top = 14.dp, bottom = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                Text(format(current.roundToInt()), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text(format(current.roundToInt()), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface)
             }
             Slider(
                 value = current,

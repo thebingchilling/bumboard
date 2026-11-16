@@ -275,7 +275,10 @@
     <string name="lychee_card_kun">Kun</string>
     <string name="lychee_card_hanja">Hanja</string>
     <string name="lychee_addons_title">Add-ons</string>
-    <string name="lychee_addons_summary">Emoji styles, your own fonts, more dictionaries and voices</string>
+    <string name="lychee_addons_summary">Dictionaries, fonts and emoji: what is installed, what you can get, and the space they take</string>
+    <string name="lychee_addons_used">%1$s on this phone</string>
+    <string name="lychee_addons_from_file">Install from a file</string>
+    <string name="lychee_addons_not_installed">Not installed</string>
     <string name="lychee_addons_how">Tap an add-on to get it. Your browser downloads it (Lychee itself never goes online); then open the file from the browser\'s notice, or choose it here.</string>
     <string name="lychee_addons_emoji">Emoji</string>
     <string name="lychee_addons_fonts">Your own fonts</string>
@@ -336,7 +339,7 @@
     <string name="lychee_voices_title">Voices</string>
     <string name="lychee_voices_loading">Loading the phone\'s voices…</string>
     <string name="lychee_voices_none">No voice for this language on this phone (Settings › Text-to-speech can add one)</string>
-    <string name="lychee_voices_summary">Which voice says words aloud; picking one plays a sample</string>
+    <string name="lychee_voices_summary">Which voice says words aloud. Tap voices to hear each, then Done</string>
     <string name="lychee_voices_auto">Automatic</string>
     <string name="lychee_addons_bundled">Comes with Lychee</string>
     <string name="lychee_addons_page">All add-ons</string>
