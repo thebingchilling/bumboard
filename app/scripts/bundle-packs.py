@@ -19,7 +19,7 @@ import zipfile
 
 RELEASE = "https://github.com/lychee-keyboard/lychee/releases/download/packs"
 # the Japanese and Korean dictionaries are downloads (Settings > Add-ons), not in the APK
-BUNDLED = ["dict_en", "strokes_zh", "examples"]
+BUNDLED = ["dict_en", "strokes_zh", "examples", "handwriting"]
 
 
 def fetch(url: str) -> bytes:

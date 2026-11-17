@@ -75,8 +75,15 @@ packs page). Public facing, so be careful:
   file installs it (`PackImportActivity`), or the user picks it.
 - Downloaded models may be any size, but must not slow the phone: memory-mapped data
   (Rime dictionaries) is fine; models that hold hundreds of MB in memory are not. AI features
-  must be tiny. Handwriting is PaddleOCR's PP-OCRv5 mobile recogniser (Apache-2.0, 13-16 MB,
-  ONNX Runtime), in the APK (`app/scripts/fetch-ocr.sh`), opened only while the pad is open.
+  must be tiny. Handwriting (Chinese, Japanese, Korean only) is Lychee's own recogniser
+  (`handwriting/InkRecognizer`, the bundled `handwriting` pack, about 7 MB, ONNX Runtime): it
+  reads the pen's path (`app/core` `InkFeatures`, identical to `packs/handwriting/ink.py`), not a
+  picture, and is trained by `packs/handwriting` on handwriting made up from the stroke-order
+  data (KanjiVG, Make Me a Hanzi, the Korean letters), mostly messy and joined-up, since that is
+  how most people write. Never trained on, or copied from, ML Kit or any other proprietary
+  recogniser (their terms forbid it); only data whose licence allows commercial use.
+  PaddleOCR's PP-OCRv5 (`app/scripts/fetch-ocr.sh`) stays as the fallback while the pack is
+  missing. Either is opened only while the pad is open.
 - A learning app: Japanese and Korean are typed in romanisation on QWERTY (no native kana or
   Hangul layouts). Candidates show readings and meanings. Korean candidates offer a word's Hanja
   right after it in Hangul, as Japanese offers Kanji; the bar's reading lines never show Kanji
@@ -126,11 +133,15 @@ is outside it.
     bundled in the APK.
 - `packs/` — the pack builders and the packs page (Japanese, Korean, English dictionaries,
   stroke order, examples, font mirrors; `packs/site`), run by `packs.yml`.
+  `packs/handwriting/` trains the handwriting recogniser: `packs.yml`'s `handwriting_minutes`
+  input trains that much longer (on a CPU runner, at most 340 minutes a run), carrying on from
+  the checkpoint on this private repository's `handwriting-training` pre-release; the pack is
+  exported only once it reads 80% of the fixed messy test samples right (`export.py`).
 - `.github/workflows/` — `build.yml` (the app), `packs.yml` (the packs, by hand) and
   `cleanup.yml` (Actions storage is limited: after a successful build or packs run it deletes
   every other run of that workflow with its artifacts and logs, and stale caches; run by hand
   it cuts every workflow down to its newest successful run).
-- Packs that come with the app: the English dictionary,
+- Packs that come with the app: the English dictionary, handwriting,
   stroke order (Chinese, Japanese from KanjiVG, Korean made from letter strokes) and example
   sentences are bundled in the APK (`app/scripts/bundle-packs.py` fetches the newest
   published ones; `packs/BundledPacks.kt` in the app unpacks them). The Japanese and Korean

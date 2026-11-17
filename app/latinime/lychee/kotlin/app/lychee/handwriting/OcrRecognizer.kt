@@ -23,12 +23,8 @@ import java.nio.FloatBuffer
 class OcrRecognizer private constructor(
     private val session: OrtSession,
     private val chars: List<String>,
-) {
-    /**
-     * The best characters for [strokes] (each x, y pairs in screen coordinates), best first,
-     * with their scores (0..1); only those [allowed] lets through.
-     */
-    fun recognise(strokes: List<FloatArray>, limit: Int = 12, allowed: (String) -> Boolean = { true }): List<Pair<String, Float>> {
+) : Recognizer {
+    override fun recognise(strokes: List<FloatArray>, limit: Int, allowed: (String) -> Boolean): List<Pair<String, Float>> {
         // the ink smoothed (a shaky hand's wobble taken out), then read as a few pictures,
         // with a thinner and a thicker pen and another margin, and the scores averaged: a
         // character written only roughly right still comes out on top
@@ -77,7 +73,9 @@ class OcrRecognizer private constructor(
         }
     }
 
-    fun close() = runCatching { session.close() }
+    override fun close() {
+        runCatching { session.close() }
+    }
 
     companion object {
         /** The model reads pictures 48 pixels tall; a character is drawn in a square that size. */

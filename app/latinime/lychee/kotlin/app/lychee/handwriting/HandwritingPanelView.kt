@@ -46,10 +46,12 @@ import java.util.concurrent.Executors
  * Everything moves: the ink fades away moments after the last stroke (and at once, softly, when
  * a guess is picked), while the next character can already be written over it.
  *
- * Recognition is PaddleOCR's PP-OCRv5 text recogniser ([OcrRecognizer], opened only while the
- * pad is open): the ink is drawn as a picture and read, so stroke order and joined-up strokes
- * don't matter. Chinese and Japanese use its Chinese model, Korean its Korean model; on Japanese
- * the stroke matcher adds the kana, which the model mistakes for look-alike kanji.
+ * Recognition is Lychee's own recogniser ([InkRecognizer], the handwriting pack), which reads
+ * the pen's path stroke by stroke, trained on messy and joined-up writing made from the
+ * stroke-order data. Without the pack, PaddleOCR's PP-OCRv5 text recogniser ([OcrRecognizer])
+ * reads the ink as a picture: Chinese and Japanese with its Chinese model, Korean its Korean
+ * model, the stroke matcher adding the kana it mistakes for look-alike kanji. Either is opened
+ * only while the pad is open.
  */
 class HandwritingPanelView @JvmOverloads constructor(
     context: Context,
@@ -74,7 +76,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         gravity = Gravity.CENTER
         setPadding(dp(24), 0, dp(24), 0)
     }
-    private var ocr: OcrRecognizer? = null
+    private var ocr: Recognizer? = null
     /** What the last automatic commit typed, so a tapped candidate can replace it. */
     private var lastTyped: String? = null
     private var guesses: List<String> = emptyList()
@@ -241,7 +243,8 @@ class HandwritingPanelView @JvmOverloads constructor(
         // the model opens off the main thread (it is read from the APK); what is written
         // meanwhile is read as soon as it is open
         worker.execute {
-            val opened = OcrRecognizer.open(context, lang)
+            // Lychee's own recogniser (the handwriting pack) when it is there, else PP-OCR
+            val opened: Recognizer? = InkRecognizer.open(context) ?: OcrRecognizer.open(context, lang)
             main.post {
                 if (visibility == VISIBLE && ocr == null) {
                     ocr = opened
@@ -333,12 +336,12 @@ class HandwritingPanelView @JvmOverloads constructor(
     }
 
     /**
-     * PP-OCR's guesses (its confidence, 0..1), only characters of the keyboard's language
+     * The recogniser's guesses (its confidence, 0..1), only characters of the keyboard's language
      * (Chinese characters; Japanese adds the kana; Korean, Hangul), with common characters a
      * little ahead (the readings dictionary's frequency). On Japanese the stroke matcher's
      * kana come in too.
      */
-    private fun rank(o: OcrRecognizer?, m: StrokeMatcher?, ink: List<FloatArray>, engine: String?, before: String? = null): List<String> {
+    private fun rank(o: Recognizer?, m: StrokeMatcher?, ink: List<FloatArray>, engine: String?, before: String? = null): List<String> {
         // each keyboard only its own language's characters: Korean, Hangul; Japanese, kana and
         // kanji; Chinese, the characters its dictionary has (no kana, Hangul, or characters
         // only Japanese or Korean use)
@@ -350,16 +353,19 @@ class HandwritingPanelView @JvmOverloads constructor(
         }
         val score = LinkedHashMap<String, Float>()
         o?.recognise(ink, 20, allowed)?.forEach { (ch, p) -> score[ch] = p }
+        // Lychee's own recogniser learnt from the same stroke shapes the matcher knows, so the
+        // matcher only breaks near-ties for it; PP-OCR, which reads pictures, gets its full say
+        val own = o is InkRecognizer
         if (engine != "ko" && m != null) {
             // a second opinion from the strokes' shapes and directions (the stroke-order data),
             // which a roughly drawn character fools differently from the picture: agreement
             // lifts a character, and one the picture missed can still come up
             m.match(ink, 30).filter { (ch, _) -> isHan(ch) && allowed(ch) }.forEach { (ch, distance) ->
-                val s = (1f - distance / HAN_DISTANCE).coerceAtLeast(0f) * HAN_WEIGHT
+                val s = (1f - distance / HAN_DISTANCE).coerceAtLeast(0f) * (if (own) OWN_HAN_WEIGHT else HAN_WEIGHT)
                 if (s > 0f) score[ch] = (score[ch] ?: 0f) + s
             }
         }
-        if (engine == "ja" && m != null) {
+        if (engine == "ja" && m != null && !own) {
             // PP-OCR takes kana for look-alike kanji (く for 人, け for 十): the stroke matcher
             // knows their shapes
             m.match(ink, 40).filter { (ch, _) -> isKana(ch) }.take(5).forEach { (ch, distance) ->
@@ -760,6 +766,8 @@ class HandwritingPanelView @JvmOverloads constructor(
         /** The stroke matcher's say on Chinese characters: past this distance none; its weight. */
         const val HAN_DISTANCE = 0.45f
         const val HAN_WEIGHT = 0.35f
+        /** The stroke matcher's weight beside Lychee's own recogniser. */
+        const val OWN_HAN_WEIGHT = 0.08f
         /** A stroke matcher distance past this gives a kana no score at all. */
         const val KANA_DISTANCE = 0.4f
         /** A perfect kana match's score (PP-OCR's confident guesses score near 1). */
