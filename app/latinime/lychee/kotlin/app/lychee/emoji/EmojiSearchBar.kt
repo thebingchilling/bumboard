@@ -61,29 +61,9 @@ class EmojiSearchBar @JvmOverloads constructor(
         addView(scroller, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply {
             setMargins(dp(4), dp(2), dp(4), 0)
         })
-        // Back, then the same pill as in the emoji panel
-        val pillRow = LinearLayout(context).apply {
-            orientation = HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(4), dp(2), dp(8), dp(4))
-        }
-        pillRow.addView(app.lychee.layout.LycheePanels.backButton(context) { close() }, LayoutParams(dp(48), LayoutParams.MATCH_PARENT))
-        queryView = TextView(context).apply {
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            isSingleLine = true
-            ellipsize = TextUtils.TruncateAt.START
-            gravity = Gravity.CENTER_VERTICAL
-            compoundDrawablePadding = dp(12)
-            setCompoundDrawablesRelativeWithIntrinsicBounds(context.getDrawable(R.drawable.ic_sym_search)?.mutate()?.apply {
-                setTint(palette.onSurfaceVariant)
-            }, null, null, null)
-            setPadding(dp(16), 0, dp(16), 0)
-            background = GradientDrawable().apply {
-                setColor(palette.surfaceContainerHigh)
-                cornerRadius = dp(24).toFloat()
-            }
-        }
-        pillRow.addView(queryView, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(4) })
+        // Back, then the search pill: the emoji panel's top row is this very row
+        val pillRow = searchRow(context) { close() }
+        queryView = pillRow.getChildAt(1) as TextView
         addView(pillRow, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
     }
 
@@ -345,3 +325,42 @@ class EmojiSearchBar @JvmOverloads constructor(
         const val SEARCH_DELAY = 90L
     }
 }
+
+/**
+ * The search row: Back, then the search pill (magnifier and query). The emoji search and the
+ * emoji panel's top row are both this one row, so they look exactly alike; its height is
+ * [searchRowHeight]. The pill is the row's second child.
+ */
+internal fun searchRow(context: Context, onBack: () -> Unit): LinearLayout {
+    val palette = M3Colors.of(context)
+    val d = context.resources.displayMetrics.density
+    fun dp(v: Int) = (d * v).toInt()
+    return LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(dp(4), dp(2), dp(8), dp(4))
+        addView(app.lychee.layout.LycheePanels.backButton(context, onBack),
+            LinearLayout.LayoutParams(dp(48), LinearLayout.LayoutParams.MATCH_PARENT))
+        addView(TextView(context).apply {
+            text = context.getString(R.string.lychee_emoji_search)
+            setTextColor(palette.onSurfaceVariant)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            isSingleLine = true
+            ellipsize = TextUtils.TruncateAt.START
+            gravity = Gravity.CENTER_VERTICAL
+            compoundDrawablePadding = dp(12)
+            setCompoundDrawablesRelativeWithIntrinsicBounds(context.getDrawable(R.drawable.ic_sym_search)?.mutate()?.apply {
+                setTint(palette.onSurfaceVariant)
+            }, null, null, null)
+            setPadding(dp(16), 0, dp(16), 0)
+            background = GradientDrawable().apply {
+                setColor(palette.surfaceContainerHigh)
+                cornerRadius = dp(24).toFloat()
+            }
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(4) })
+    }
+}
+
+/** The search row's height: half the emoji search (its results row is the other half). */
+internal fun searchRowHeight(context: Context): Int =
+    context.resources.getDimensionPixelSize(R.dimen.lychee_emoji_search_height) / 2

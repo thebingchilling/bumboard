@@ -107,7 +107,11 @@ class VoicePanelView @JvmOverloads constructor(
         micBox.addView(micHalo, LayoutParams(dp(42), dp(42), Gravity.CENTER))
         micBox.addView(mic, LayoutParams(dp(40), dp(40), Gravity.CENTER))
         row.addView(micBox, LinearLayout.LayoutParams(dp(56), LayoutParams.MATCH_PARENT))
-        addView(row, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        // the panel covers the whole bar (taller on the Chinese, Japanese and Korean keyboards),
+        // but its row keeps the usual strip height at the bottom, right above the keys: it is in
+        // exactly the same place on every keyboard and never moves up
+        addView(row, LayoutParams(LayoutParams.MATCH_PARENT,
+            resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height), Gravity.BOTTOM))
         visibility = GONE
     }
 

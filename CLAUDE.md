@@ -77,7 +77,7 @@ packs page). Public facing, so be careful:
 - A learning app: Japanese and Korean are typed in romanisation on QWERTY (no native kana or
   Hangul layouts). Candidates show readings and meanings. Korean candidates offer a word's Hanja
   right after it in Hangul, as Japanese offers Kanji; the bar's reading lines never show Kanji
-  or Hanja. Lychee's own labels are English (Trad/Simp, Cantonese/Mandarin), and 英 shows only
+  or Hanja. Lychee's own labels are English (Cantonese/Mandarin), except the 繁/简 key, and 英 shows only
   on the main (letters) keyboard.
 - Freemium later; no billing or unlocking yet (`Features.isEnabled` is always true). Data in
   packs must allow commercial use (no NC or ND licences; CC BY / BY-SA / BSD are fine).
