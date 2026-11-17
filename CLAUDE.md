@@ -7,6 +7,9 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
 ## Working rules
 
 - Push straight to `main`. No feature branches, no pull requests unless asked.
+- Always commit to `main`. If a session starts on another branch (a session's own
+  `claude/...` branch included), switch to `main` straight away, whenever practical, and commit
+  and push there; don't leave work on the side branch.
 - GitHub Actions minutes are not the limit; Actions **storage** is (artifacts and caches of
   private repositories count towards it):
   - Push and run workflows as often as is useful. A push to `main` starts `build.yml` (about
