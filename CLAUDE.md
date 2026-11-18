@@ -32,7 +32,9 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
 - Don't compile locally: GitHub Actions builds and tests (`build.yml`, `packs.yml`). Check
   the runs on `main` after pushing and fix any red build.
 - Every build on `main` is published by `build.yml` as a debug release (a full release, not a
-  pre-release) of this private repository (`lychee-0.1.0-dev.N`, the APK attached, notes from the commit), like Quartz's releases;
+  pre-release) of this private repository (`lychee-0.1.0-dev.N`, notes from the commit), like Quartz's releases,
+  with three APKs (ABI splits: the universal `lychee-…apk`, `…-arm64.apk` and `…-32bit.apk`)
+  and the Google handwriting companion;
   a manual run with "Publish a release" ticked does the same.
   Never publish the Lychee app anywhere else (public repositories, stores) until the owner says so.
 - Packs may be published to the public `lychee-keyboard/lychee` repository (see below).
@@ -79,8 +81,8 @@ packs page). Public facing, so be careful:
   must be tiny. Handwriting (Chinese, Japanese, Korean only): PaddleOCR's PP-OCRv5 mobile
   recogniser (Apache-2.0, 13-16 MB, ONNX Runtime) comes in the APK (`app/scripts/fetch-ocr.sh`)
   as the basic engine; the higher-quality one is Google's ML Kit digital ink recognition in
-  Lychee's companion app (`app/hwcompanion`, package `app.lychee.hwgoogle`; only the 64-bit ARM
-  engine, compressed and shrunk by R8, to keep it small): ML Kit downloads its
+  Lychee's companion app (`app/hwcompanion`, package `app.lychee.hwgoogle`; one APK with the
+  64-bit and 32-bit ARM engines, compressed and shrunk by R8, to keep it small): ML Kit downloads its
   models, so it needs the internet and its licence has it in an app of its own; Lychee stays
   offline and binds its service (a signature permission: only apps signed like Lychee), handing
   it the pad's strokes (`handwriting/GoogleHandwriting`). The companion has no launcher icon and

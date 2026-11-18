@@ -14,13 +14,12 @@ android {
         applicationId = "app.lychee.hwgoogle"
         minSdk = 24
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.2"
-        // 64-bit ARM only, every phone of recent years: ML Kit's engine is a native library for
-        // each kind of processor, so each one more makes the download bigger (32-bit-only phones
-        // keep Lychee's built-in engine)
+        versionCode = 4
+        versionName = "1.3"
+        // one APK for every phone: 64-bit and 32-bit ARM (ML Kit's engine is a native library
+        // for each kind of processor; the emulators' x86 ones are left out)
         ndk {
-            abiFilters += listOf("arm64-v8a")
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }
     }
 

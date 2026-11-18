@@ -102,7 +102,7 @@ jobs:
             fi
             gh release upload handwriting-google lychee-handwriting-google.apk --repo "$GITHUB_REPOSITORY" --clobber
             gh release edit handwriting-google --repo "$GITHUB_REPOSITORY" \
-              --notes "Google handwriting (ML Kit) companion for Lychee: install it, open it once to download the models. source $hash"
+              --notes "Google handwriting (ML Kit) companion for Lychee: install it; it gets Google's models by itself (nothing to open). source $hash"
           else
             echo "companion unchanged ($hash)"
           fi
@@ -115,7 +115,7 @@ jobs:
 
       - name: APK size
         run: |
-          apk=$(ls latinime/build/outputs/apk/debug/*.apk | head -1)
+          apk=$(ls latinime/build/outputs/apk/debug/*universal*.apk | head -1)
           {
             echo "### APK: $(du -h "$apk" | cut -f1)"
             echo '```'
@@ -125,7 +125,7 @@ jobs:
 
       - name: No network permissions
         run: |
-          apk=$(ls latinime/build/outputs/apk/debug/*.apk | head -1)
+          apk=$(ls latinime/build/outputs/apk/debug/*universal*.apk | head -1)
           perms=$("$ANDROID_HOME"/build-tools/36.1.0/aapt2 dump permissions "$apk")
           echo "$perms"
           if echo "$perms" | grep -E 'android.permission.(INTERNET|ACCESS_NETWORK_STATE|ACCESS_WIFI_STATE|CHANGE_NETWORK_STATE)'; then
@@ -142,18 +142,23 @@ jobs:
         run: |
           tag="lychee-$BUILD_VERSION_NAME"
           mkdir -p dist
-          cp "$(ls latinime/build/outputs/apk/debug/*.apk | head -1)" "dist/$tag.apk"
+          # three APKs: universal (both), 64-bit and 32-bit
+          apks=latinime/build/outputs/apk/debug
+          cp "$(ls $apks/*universal*.apk | head -1)" "dist/$tag.apk"
+          cp "$(ls $apks/*arm64-v8a*.apk | head -1)" "dist/$tag-arm64.apk"
+          cp "$(ls $apks/*armeabi-v7a*.apk | head -1)" "dist/$tag-32bit.apk"
           # the Google handwriting companion beside it (the same build every time, from its own
           # release; it is only rebuilt when it changes)
-          files=("dist/$tag.apk")
+          files=("dist/$tag.apk" "dist/$tag-arm64.apk" "dist/$tag-32bit.apk")
           if gh release download handwriting-google --repo "$GITHUB_REPOSITORY" \
               --pattern lychee-handwriting-google.apk --dir dist --clobber; then
             files+=("dist/lychee-handwriting-google.apk")
           fi
           git log -1 --format=%B "$GITHUB_SHA" | grep -vE '^(Co-Authored-By|Claude-Session):' > notes.md
           printf '\nDebug-signed test build (the fixed debug key, so it installs over the last one).\n' >> notes.md
-          if [ ${#files[@]} -gt 1 ]; then
-            printf 'lychee-handwriting-google.apk: the optional Google handwriting companion (install it, open it once to download the models).\n' >> notes.md
+          printf '%s.apk works on every phone; %s-arm64.apk is for 64-bit phones (nearly all), %s-32bit.apk for 32-bit ones; both smaller.\n' "$tag" "$tag" "$tag" >> notes.md
+          if [ ${#files[@]} -gt 3 ]; then
+            printf 'lychee-handwriting-google.apk: the optional Google handwriting companion (install it; it gets its models by itself).\n' >> notes.md
           fi
           gh release create "$tag" "${files[@]}" \
             --repo "$GITHUB_REPOSITORY" \

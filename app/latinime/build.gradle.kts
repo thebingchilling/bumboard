@@ -19,11 +19,6 @@ android {
         // the Google handwriting companion's size (build.yml reads it off its release)
         resValue("string", "lychee_companion_size", System.getenv("COMPANION_SIZE") ?: "about 20 MB")
         vectorDrawables.useSupportLibrary = false
-        // phones only: 64-bit and 32-bit ARM (no x86, which only emulators and a few old
-        // tablets use)
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
         externalNativeBuild {
             cmake {
                 arguments += "-DLYCHEE_PREBUILT_DIR=${rootDir.path}/prebuilt"
@@ -70,6 +65,18 @@ android {
         // are for loading straight from it: a much smaller download
         jniLibs {
             useLegacyPackaging = true
+        }
+    }
+
+    // phones only: 64-bit and 32-bit ARM (no x86, which only emulators and a few old tablets
+    // use). Three APKs from each build: one for each (each with only its own native libraries,
+    // much smaller) and a universal one with both
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = true
         }
     }
 
