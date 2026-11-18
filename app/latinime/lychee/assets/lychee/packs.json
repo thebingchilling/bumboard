@@ -140,8 +140,8 @@
       "url": "https://github.com/lychee-keyboard/lychee/releases/tag/packs",
       "file": "lychee-handwriting.zip",
       "size": "7 MB",
-      "license": "CC BY-SA 4.0 (trained on KanjiVG and Make Me a Hanzi)",
-      "credit": "Trained by Lychee on stroke-order data from KanjiVG (Ulrich Apel) and Make Me a Hanzi (Shaunak Kishore)",
+      "license": "CC BY-SA 4.0 (trained on KanjiVG, Make Me a Hanzi and AnimCJK)",
+      "credit": "Trained by Lychee on stroke-order data from KanjiVG (Ulrich Apel), Make Me a Hanzi (Shaunak Kishore) and AnimCJK",
       "download": "https://github.com/lychee-keyboard/lychee/releases/download/packs/lychee-handwriting.zip"
     },
     {

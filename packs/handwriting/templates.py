@@ -1,12 +1,16 @@
 """The characters Lychee's handwriting recogniser knows, each with one or more model writings
 (every stroke's centre line, in writing order), from the stroke-order data Lychee already uses:
 
-  Chinese   Make Me a Hanzi (graphics: Arphic Public License), simplified and traditional
-  Japanese  KanjiVG (Ulrich Apel, CC BY-SA 3.0): kana, and kanji in their Japanese shapes
+  Chinese   Make Me a Hanzi (graphics: Arphic Public License), simplified and traditional;
+            AnimCJK (Arphic Public License / LGPL): mainland shapes and stroke orders, and
+            Taiwan's (traditional characters as written in Taiwan, its own stroke orders)
+  Japanese  KanjiVG (Ulrich Apel, CC BY-SA 3.0): kana, and kanji in their Japanese shapes;
+            AnimCJK's Japanese kanji and kana
   Korean    the 2,350 common Hangul syllables (KS X 1001) and the letters, made from each
-            letter's standard strokes (packs/dict/strokes_local.py)
+            letter's standard strokes (packs/dict/strokes_local.py); AnimCJK's Hanja
 
-A character in both Chinese and Japanese is one class with both writings. Coordinates: a unit
+A character written in several places is one class with every place's writing, so the
+recogniser knows each region's shapes and stroke orders. Coordinates: a unit
 box, x right, y down.
 """
 
@@ -23,6 +27,16 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "dict"))
 import strokes_local  # noqa: E402
 from build_dicts import HANZI, KANJIVG, fetch  # noqa: E402
+
+# AnimCJK, pinned (graphics*.txt: the same format as Make Me a Hanzi's graphics.txt)
+ANIMCJK = "https://raw.githubusercontent.com/parsimonhi/animCJK/c63765b150cbd567c71d05cf4a4f8d00b57045c9/{}"
+ANIMCJK_SETS = {
+    "graphicsZhHans.txt": "zh",
+    "graphicsZhHant.txt": "zh-tw",
+    "graphicsJa.txt": "ja",
+    "graphicsJaKana.txt": "ja",
+    "graphicsKo.txt": "ko-hanja",
+}
 
 
 def _unit(medians) -> list[np.ndarray]:
@@ -60,6 +74,18 @@ def load(cache: Path) -> dict[str, dict[str, list[list[np.ndarray]]]]:
         if line.strip():
             g = json.loads(line)
             add(g["character"], "zh", g["medians"])
+
+    for name, lang in ANIMCJK_SETS.items():
+        f = fetch(ANIMCJK.format(name), cache, "animcjk-" + name)
+        for line in f.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                g = json.loads(line)
+                ch = g["character"]
+                # characters only (not the components and strokes AnimCJK also draws)
+                # (compatibility characters left out: they look the same as ordinary ones)
+                if len(ch) == 1 and (0x3040 <= ord(ch) <= 0x30FF or 0x3400 <= ord(ch) <= 0x9FFF
+                                     or 0x20000 <= ord(ch) <= 0x2FFFF):
+                    add(ch, lang, g["medians"])
 
     kvg_zip = fetch(KANJIVG, cache, "kanjivg-main.zip")
     kvg = cache / "kanjivg"

@@ -32,12 +32,15 @@ PACK_VERSION = 1
 
 LICENCE = """Lychee handwriting recogniser.
 
-A neural network trained by Lychee on handwriting it made up from stroke-order data; no
-handwriting by any person, and no other recogniser, went into it.
+A neural network trained by Lychee, mostly on handwriting it made up from stroke-order data,
+and on any handwriting its testers wrote and agreed to share for this. No other recogniser went
+into it.
 
 The stroke-order data it learnt from:
 - Chinese: Make Me a Hanzi by Shaunak Kishore (https://github.com/skishore/makemeahanzi),
   graphics derived from fonts by Arphic Technology, Arphic Public License (APL.txt).
+- Chinese (mainland and Taiwan), Japanese and Korean Hanja: AnimCJK by FM&SH
+  (https://github.com/parsimonhi/animCJK), Arphic Public License (APL.txt) and GNU LGPL 3.
 - Japanese: KanjiVG by Ulrich Apel (https://kanjivg.tagaini.net), CC BY-SA 3.0
   (https://creativecommons.org/licenses/by-sa/3.0/).
 - Korean: made by Lychee from each letter's standard stroke order.

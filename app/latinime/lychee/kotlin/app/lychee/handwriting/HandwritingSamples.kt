@@ -9,13 +9,16 @@ import java.io.File
 /**
  * When turned on (Settings > Advanced > Save handwriting samples), each character written is
  * kept on the phone with what was typed for it and the recogniser's guesses, so misreadings can
- * be checked on real writing: Settings > About > Diagnostics shares them. Nothing leaves the
- * phone unless shared. The newest [KEEP] are kept.
+ * be checked on real writing, and the recogniser trained on real handwriting
+ * (packs/handwriting/real): Settings > About > Diagnostics shares them or saves them to a file.
+ * Nothing leaves the phone unless shared. The newest [KEEP] are kept.
  */
 object HandwritingSamples {
     const val PREF = "lychee_hw_samples"
     private const val FILE = "handwriting-samples.jsonl"
-    private const val KEEP = 500
+    private const val KEEP = 20000
+    /** Past this size the file is cut back to the newest [KEEP]. */
+    private const val MAX_BYTES = 40L shl 20
 
     @Suppress("DEPRECATION")
     fun enabled(context: Context) =
@@ -34,8 +37,10 @@ object HandwritingSamples {
                 .put("ink", ink)
                 .toString()
             val f = file(context)
-            val lines = if (f.exists()) f.readLines().takeLast(KEEP - 1) else emptyList()
-            f.writeText((lines + line).joinToString("\n", postfix = "\n"))
+            // added to the end (rewriting thousands of lines for each character was slow), and
+            // only now and then cut back
+            f.appendText(line + "\n")
+            if (f.length() > MAX_BYTES) f.writeText(f.readLines().takeLast(KEEP).joinToString("\n", postfix = "\n"))
         }
     }
 
@@ -44,6 +49,12 @@ object HandwritingSamples {
     /** The saved samples, newest last, at most [limit] of them (sharing has a size limit). */
     fun read(context: Context, limit: Int = 150): String =
         runCatching { file(context).readLines().takeLast(limit).joinToString("\n") }.getOrDefault("")
+
+    /** Every saved sample, one JSON object per line, to [out] (Diagnostics > Save to a file). */
+    fun writeAll(context: Context, out: java.io.OutputStream) {
+        val f = file(context)
+        if (f.exists()) f.inputStream().use { it.copyTo(out) }
+    }
 
     fun clear(context: Context) {
         file(context).delete()

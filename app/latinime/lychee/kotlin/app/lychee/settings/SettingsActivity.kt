@@ -1447,6 +1447,14 @@ private fun DiagnosticsPage() {
     val report = "Lychee $version\nAndroid ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}), ${Build.MANUFACTURER} ${Build.MODEL}\n\n" +
         "Installed packs:\n$packs\n\n$text"
     var samples by remember { mutableStateOf(app.lychee.handwriting.HandwritingSamples.count(context)) }
+    // all the samples as a file (sharing as text holds only the newest 150)
+    val saveSamples = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain"),
+    ) { uri ->
+        if (uri != null) runCatching {
+            context.contentResolver.openOutputStream(uri)?.use { app.lychee.handwriting.HandwritingSamples.writeAll(context, it) }
+        }.onFailure { app.lychee.DiagLog.log("saving handwriting samples failed", it) }
+    }
     val prefs = prefs()
     val hwSamples = prefs.boolPref(app.lychee.handwriting.HandwritingSamples.PREF) {
         prefs.getBoolean(app.lychee.handwriting.HandwritingSamples.PREF, false)
@@ -1486,6 +1494,9 @@ private fun DiagnosticsPage() {
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
             }) { Text(stringResource(R.string.lychee_hw_samples_share)) }
+            FilledTonalButton(onClick = { saveSamples.launch("lychee-handwriting-samples.jsonl") }) {
+                Text(stringResource(R.string.lychee_hw_samples_save))
+            }
             TextButton(onClick = { app.lychee.handwriting.HandwritingSamples.clear(context); samples = 0 }) {
                 Text(stringResource(R.string.lychee_diagnostics_clear))
             }
