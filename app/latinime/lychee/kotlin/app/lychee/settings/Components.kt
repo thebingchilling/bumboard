@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -291,9 +292,72 @@ class Submenu(
 val LocalSubmenu = androidx.compose.runtime.staticCompositionLocalOf<(Submenu) -> Unit> { {} }
 
 /**
+ * A Material 3 menu dropped from what was tapped: rounded corners, the tonal surface colour, a
+ * soft shadow, its items inset so a chosen one sits in a rounded tonal pill ([MenuItem]).
+ */
+@Composable
+fun M3Menu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    offset: androidx.compose.ui.unit.DpOffset = androidx.compose.ui.unit.DpOffset(0.dp, 0.dp),
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    androidx.compose.material3.DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+        offset = offset,
+        shape = RoundedCornerShape(16.dp),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 0.dp,
+        shadowElevation = 3.dp,
+        modifier = modifier.widthIn(min = 200.dp, max = 320.dp),
+        content = content,
+    )
+}
+
+/** One item of an [M3Menu]: [chosen] sits in a rounded secondary-container pill with a tick. */
+@Composable
+fun MenuItem(
+    label: String,
+    chosen: Boolean = false,
+    @DrawableRes icon: Int? = null,
+    color: Color = Color.Unspecified,
+    onClick: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    androidx.compose.material3.DropdownMenuItem(
+        text = {
+            Text(label, style = MaterialTheme.typography.bodyLarge,
+                color = when {
+                    chosen -> colors.onSecondaryContainer
+                    color != Color.Unspecified -> color
+                    else -> colors.onSurface
+                })
+        },
+        onClick = onClick,
+        leadingIcon = icon?.let { res ->
+            { Icon(painterResource(res), contentDescription = null, modifier = Modifier.size(20.dp),
+                tint = if (chosen) colors.onSecondaryContainer else colors.onSurfaceVariant) }
+        },
+        trailingIcon = if (chosen) {
+            {
+                Icon(painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_check), contentDescription = null,
+                    tint = colors.onSecondaryContainer, modifier = Modifier.size(20.dp))
+            }
+        } else null,
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
+        modifier = Modifier
+            .padding(horizontal = 4.dp, vertical = 1.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (chosen) colors.secondaryContainer else Color.Transparent),
+    )
+}
+
+/**
  * A setting with a few choices: the title with the current choice under it; a tap drops a
- * Material 2 menu down from the row (growing from it), the current choice ticked, and picking one
- * closes it.
+ * Material 3 menu down from the row (growing from it), the current choice in a tonal pill, and
+ * picking one closes it.
  */
 @Composable
 fun <T> ChoiceRow(
@@ -311,15 +375,11 @@ fun <T> ChoiceRow(
         RowSurface(shape, { open = true }) {
             CompactRow(icons?.getOrNull(current), title, options.getOrNull(current)?.second ?: summary)
         }
-        androidx.compose.material3.DropdownMenu(
+        M3Menu(
             expanded = open,
             onDismissRequest = { open = false },
             // under the row's text, as a menu dropped from it
             offset = androidx.compose.ui.unit.DpOffset(16.dp, 0.dp),
-            shape = M2Corner,
-            containerColor = colors.surfaceContainer,
-            shadowElevation = 8.dp,
-            modifier = Modifier.widthIn(min = 224.dp, max = 320.dp),
         ) {
             if (summary != null) {
                 Text(
@@ -328,27 +388,10 @@ fun <T> ChoiceRow(
                 )
             }
             options.forEachIndexed { i, (value, label) ->
-                val chosen = value == selected
-                androidx.compose.material3.DropdownMenuItem(
-                    text = {
-                        Text(label, style = MaterialTheme.typography.bodyLarge,
-                            color = if (chosen) colors.primary else colors.onSurface)
-                    },
-                    onClick = {
-                        onSelect(value)
-                        if (!keepOpen) open = false
-                    },
-                    leadingIcon = icons?.getOrNull(i)?.let { res ->
-                        { Icon(painterResource(res), contentDescription = null, modifier = Modifier.size(20.dp)) }
-                    },
-                    trailingIcon = if (chosen) {
-                        {
-                            Icon(painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_check), contentDescription = null,
-                                tint = colors.primary, modifier = Modifier.size(20.dp))
-                        }
-                    } else null,
-                    modifier = Modifier.background(if (chosen) colors.primary.copy(alpha = 0.08f) else Color.Transparent),
-                )
+                MenuItem(label, chosen = value == selected, icon = icons?.getOrNull(i)) {
+                    onSelect(value)
+                    if (!keepOpen) open = false
+                }
             }
             if (keepOpen) {
                 Row(Modifier.fillMaxWidth().padding(end = 8.dp), horizontalArrangement = Arrangement.End) {

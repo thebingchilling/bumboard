@@ -123,6 +123,23 @@ jobs:
             gh release upload packs "${zips[@]}" --repo "$REPO" --clobber
           fi
           gh release upload packs out/site/manifest.json --repo "$REPO" --clobber
+          # versioned copies (lychee-<name>-<version>.zip): the newest three of each pack stay
+          # (someone who checked a while ago still gets theirs), older ones go
+          gh release view packs --repo "$REPO" --json assets -q '.assets[].name' > out/assets.txt
+          python3 - out/assets.txt > out/prune.txt <<'PY'
+          import re, sys
+          groups = {}
+          for name in open(sys.argv[1]).read().split():
+              m = re.fullmatch(r"(lychee-.+)-(\d{4}\.\d\d\.\d\d(?:\.\d+)?)\.zip", name)
+              if m:
+                  groups.setdefault(m[1], []).append((tuple(int(x) for x in m[2].split(".")), name))
+          for items in groups.values():
+              for _, name in sorted(items, reverse=True)[3:]:
+                  print(name)
+          PY
+          while read -r old; do
+            [ -n "$old" ] && gh release delete-asset packs "$old" --repo "$REPO" --yes || true
+          done < out/prune.txt
 
       # The packs page (index.html, manifest.json, its font) at https://lychee-keyboard.github.io/:
       # the main branch of lychee-keyboard/lychee-keyboard.github.io, which GitHub Pages serves.

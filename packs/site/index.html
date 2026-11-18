@@ -23,9 +23,10 @@
     --on-primary: #ffffff;
     --background: color-mix(in srgb, var(--accent) 5%, #fbfdfb);
     --container: color-mix(in srgb, var(--accent) 9%, #f3f6f4);
+    --tonal: color-mix(in srgb, var(--accent) 18%, #e8eeeb);
     --on-surface: #191c1b;
     --on-surface-variant: #3f4946;
-    --track: color-mix(in srgb, var(--accent) 20%, #e0e5e3);
+    --outline: color-mix(in srgb, var(--accent) 12%, #c3cbc8);
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -33,9 +34,10 @@
       --on-primary: color-mix(in srgb, var(--accent) 70%, #000000);
       --background: color-mix(in srgb, var(--accent) 6%, #111413);
       --container: color-mix(in srgb, var(--accent) 12%, #1d2120);
+      --tonal: color-mix(in srgb, var(--accent) 28%, #252a28);
       --on-surface: #e1e3e2;
       --on-surface-variant: #bec9c5;
-      --track: color-mix(in srgb, var(--accent) 30%, #2b302e);
+      --outline: color-mix(in srgb, var(--accent) 20%, #3a403e);
     }
   }
   * { box-sizing: border-box; }
@@ -46,31 +48,35 @@
     display: grid; place-items: center; min-height: 100vh; padding: 24px 16px;
   }
   .card {
-    width: 100%; max-width: 420px; padding: 28px 24px 20px;
+    width: 100%; max-width: 480px; padding: 28px 24px 20px;
     background: var(--container); border-radius: 28px;
   }
   h1 { margin: 0 0 6px; font-size: 24px; font-weight: 500; }
+  h2 { margin: 20px 0 4px; font-size: 14px; font-weight: 600; color: var(--primary); }
   p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--on-surface-variant); }
-  .progress { height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; margin: 20px 0 4px; }
-  .progress > div { height: 100%; width: 0; background: var(--primary); border-radius: 2px; transition: width .3s; }
-  ul { list-style: none; padding: 0; margin: 14px 0 0; font-size: 14px; color: var(--on-surface-variant); }
-  li { padding: 4px 0; }
-  li.done { color: var(--on-surface); }
-  .actions { display: flex; justify-content: flex-end; margin-top: 20px; }
+  ul { list-style: none; padding: 0; margin: 8px 0 0; }
+  li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--outline); }
+  li:first-child { border-top: 0; }
+  .what { flex: 1; min-width: 0; }
+  .name { font-size: 16px; }
+  .meta { font-size: 13px; color: var(--on-surface-variant); margin-top: 2px; }
+  .meta.new { color: var(--primary); font-weight: 500; }
   .button {
-    font: inherit; font-size: 14px; font-weight: 500; letter-spacing: .1px;
+    font: inherit; font-size: 14px; font-weight: 500; letter-spacing: .1px; white-space: nowrap;
     background: var(--primary); color: var(--on-primary); border: 0; border-radius: 20px;
-    padding: 10px 24px; text-decoration: none; cursor: pointer;
+    padding: 10px 24px; text-decoration: none; cursor: pointer; display: inline-block; text-align: center;
   }
-  .hidden { display: none; }
+  .button.tonal { background: var(--tonal); color: var(--on-surface); padding: 8px 16px; }
+  .button.big { display: block; width: 100%; margin-top: 20px; padding: 14px 24px; font-size: 16px; }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
 <main class="card">
   <h1 id="title">Checking for updates…</h1>
   <p id="text">Comparing your Lychee add-ons with the newest versions.</p>
-  <ul id="list"></ul>
-  <div class="actions"><a class="button hidden" id="back">Back to Lychee</a></div>
+  <div id="lists"></div>
+  <a class="button big hidden" id="back">Back to Lychee</a>
 </main>
 <script>
 (() => {
@@ -84,46 +90,80 @@
     const i = item.indexOf(':');
     if (i > 0) have.set(item.slice(0, i), item.slice(i + 1));
   });
+  // "All add-ons": every add-on, installed or not, stays on screen; a check goes straight back
+  const all = params.get('all') === '1';
   const $ = (id) => document.getElementById(id);
   const say = (title, text) => { $('title').textContent = title; $('text').textContent = text; };
 
   // opened by itself, not from Lychee: what this page is for
-  if (!params.has('have')) {
+  if (!params.has('have') && !all) {
     say('Lychee add-ons', 'In Lychee, open Settings › Add-ons and tap Updates: this page checks your add-ons and takes you back.');
     return;
   }
 
-  // lychee://updates through Chrome's intent: links, which open Lychee itself
-  const back = (latest, install) => 'intent://updates?latest=' + encodeURIComponent(latest) +
-    (install ? '&install=1' : '') + '#Intent;scheme=lychee;package=' + app + ';end';
-  const goBack = (url, delay) => {
-    const a = $('back');
-    a.href = url;
-    a.classList.remove('hidden');
-    setTimeout(() => { location.href = url; }, delay);
+  // lychee://updates through Chrome's intent: links, which open Lychee itself: the newest
+  // versions, and the file each is downloaded as
+  const back = (latest, files) => 'intent://updates?latest=' + encodeURIComponent(latest) +
+    '&files=' + encodeURIComponent(files) + '#Intent;scheme=lychee;package=' + app + ';end';
+  const showBack = (url) => { const a = $('back'); a.href = url; a.classList.remove('hidden'); };
+  const size = (b) => b >= 1 << 20 ? (b / (1 << 20)).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+
+  const list = (title, ids, packs, row) => {
+    if (ids.length === 0) return;
+    const h = document.createElement('h2');
+    h.textContent = title;
+    const ul = document.createElement('ul');
+    ids.forEach((id) => ul.append(row(id, packs[id])));
+    $('lists').append(h, ul);
+  };
+  const item = (p, meta, isNew, link) => {
+    const li = document.createElement('li');
+    const what = document.createElement('div');
+    what.className = 'what';
+    const n = document.createElement('div');
+    n.className = 'name';
+    n.textContent = p.name;
+    const m = document.createElement('div');
+    m.className = 'meta' + (isNew ? ' new' : '');
+    m.textContent = meta;
+    what.append(n, m);
+    li.append(what);
+    if (link) {
+      const a = document.createElement('a');
+      a.className = 'button tonal';
+      a.href = p.download || p.url;
+      a.textContent = link;
+      li.append(a);
+    }
+    return li;
   };
 
   fetch('manifest.json', { cache: 'no-store' })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then((manifest) => {
       const packs = manifest.packs || {};
-      // only add-ons Lychee has installed are ever checked; nothing is downloaded here: Lychee
-      // shows Update on each one that has a newer version, one download at a time
-      const installed = Object.keys(packs).filter((id) => have.has(id));
+      const ids = Object.keys(packs).sort((a, b) => packs[a].name.localeCompare(packs[b].name));
+      const installed = ids.filter((id) => have.has(id));
       const updates = installed.filter((id) => packs[id].version !== have.get(id));
       const latest = installed.map((id) => id + ':' + packs[id].version).join(',');
+      const files = ids.filter((id) => packs[id].download_file).map((id) => id + ':' + packs[id].download_file).join(',');
+      const url = back(latest, files);
+      if (all) {
+        say('Lychee add-ons', 'Every add-on, with what is on your phone. Downloaded files install when you choose them in Lychee.');
+        list('Updates', updates, packs, (id, p) => item(p, 'Update: ' + have.get(id) + ' → ' + p.version, true, 'Download'));
+        list('Installed', installed.filter((id) => !updates.includes(id)), packs, (id, p) => item(p, 'Installed · ' + p.version, false, null));
+        list('Not installed', ids.filter((id) => !have.has(id)), packs, (id, p) => item(p, size(p.size) + ' · ' + p.version, false, 'Download'));
+        showBack(url);
+        return;
+      }
       if (updates.length === 0) {
         say('All up to date', 'Your add-ons are the newest versions. Taking you back to Lychee…');
       } else {
-        say(updates.length === 1 ? '1 update' : updates.length + ' updates',
-          'Taking you back to Lychee: tap Update on each.');
-        updates.forEach((id) => {
-          const li = document.createElement('li');
-          li.textContent = packs[id].name;
-          $('list').append(li);
-        });
+        say('Update found', 'Taking you back to Lychee to download it.');
+        list('Updates', updates, packs, (id, p) => item(p, p.version, true, null));
       }
-      goBack(back(latest, false), 1200);
+      showBack(url);
+      setTimeout(() => { location.href = url; }, 1200);
     })
     .catch(() => say("Couldn't check", "The add-ons list didn't load. Check your connection and try again."));
 })();

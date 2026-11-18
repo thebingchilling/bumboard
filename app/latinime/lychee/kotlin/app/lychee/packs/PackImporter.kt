@@ -58,6 +58,14 @@ object PackImporter {
             if (pack.built && info == null) {
                 return Result.Error("This isn't a Lychee pack. Download ${pack.file} from the packs page.")
             }
+            // an update was found, and this is an earlier download of the pack (an older file in
+            // Downloads): say which file is the update, rather than installing the old one again
+            val fileVersion = info?.optString("version")?.takeIf { it.isNotEmpty() }
+            val wanted = Updates.latestOf(context, pack)
+            if (fileVersion != null && wanted != null && Packs.isInstalled(context, pack.id) &&
+                Updates.compare(fileVersion, wanted) < 0) {
+                return Result.Error("That's ${pack.name} $fileVersion, an earlier version. Choose ${Updates.downloadFile(context, pack)} (version $wanted).")
+            }
             val out = File(staging, "pack").apply { mkdirs() }
             val main: String? = when {
                 pack.kind.isFont -> installFont(pack, download, name, zip, out) ?: return Result.Error(fontProblem)

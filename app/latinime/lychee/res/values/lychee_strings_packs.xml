@@ -31,6 +31,7 @@
     <string name="lychee_updates_remind">Check for pack updates</string>
     <string name="lychee_updates_remind_body">It\'s been a while. Lychee can\'t go online itself, so it opens the packs page to see what\'s new.</string>
     <string name="lychee_updates_check">Check</string>
+    <string name="lychee_updates_found">Update found for</string>
     <string name="lychee_updates_new">Update available: %1$s</string>
     <string name="lychee_updates_installing">Installing %1$d of %2$d…</string>
     <string name="lychee_updates_install_downloaded">Install downloaded updates</string>

@@ -74,8 +74,9 @@ packs page). Public facing, so be careful:
 
 - No network permissions, ever (`INTERNET`, `ACCESS_NETWORK_STATE`, ...), in Lychee itself.
   CI fails the build if one appears. (The optional Google handwriting companion has them, for
-  ML Kit's models only.) Downloads open in the browser (Custom Tab); opening the downloaded
-  file installs it (`PackImportActivity`), or the user picks it.
+  ML Kit's models only.) Downloads open in the browser (Custom Tab); an add-on installs in one
+  place only, its sheet in Settings > Add-ons, by choosing the downloaded file (opening the file
+  from the browser no longer offers Lychee).
 - Downloaded models may be any size, but must not slow the phone: memory-mapped data
   (Rime dictionaries) is fine; models that hold hundreds of MB in memory are not. AI features
   must be tiny. Handwriting (Chinese, Japanese, Korean only): PaddleOCR's PP-OCRv5 mobile
@@ -167,4 +168,11 @@ is outside it.
   installed versions after the `#`; it downloads nothing, it hands the newest back via
   `lychee://updates` at once (`packs/Updates.kt`, `PackImportActivity`), and Lychee shows Update
   on each add-on that has a newer version: one download at a time (browsers stop several), the
-  sheet naming the file. Only installed packs are checked.
+  sheet naming the file. Only installed packs are checked. Each published version is also on the
+  release as `lychee-<name>-<version>.zip` (`packs/publish.py`, the manifest's `download_file`;
+  the newest three per pack are kept): the page hands those names back and Lychee downloads that
+  file, so it is easy to tell from an older download; choosing an older version than the update
+  is refused, naming the right file. The Updates banner just lists "Update found for" with each
+  add-on and its new version. "All add-ons" (the page with `all=1`) lists every add-on: updates,
+  installed and not installed. The mini (summary) dictionary card has no stroke order; only the
+  full card does.

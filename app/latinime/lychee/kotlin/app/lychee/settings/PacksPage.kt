@@ -60,7 +60,7 @@ fun rememberPackActions(): PackActions {
     var busy by remember { mutableStateOf(false) }
     var target by remember { mutableStateOf<Pack?>(null) }
     val okText = stringResource(R.string.lychee_packs_imported)
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val launcher = rememberLauncherForActivityResult(OpenInDownloads()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         val expected = target
         busy = true
@@ -93,6 +93,19 @@ fun rememberPackActions(): PackActions {
         dismiss = { message = null },
         refresh = { version++ },
     )
+}
+
+/** The system file picker, opening in Downloads (where the browser saved the add-on). */
+private class OpenInDownloads : ActivityResultContracts.OpenDocument() {
+    override fun createIntent(context: android.content.Context, input: Array<String>): android.content.Intent =
+        super.createIntent(context, input).apply {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                putExtra(
+                    android.provider.DocumentsContract.EXTRA_INITIAL_URI,
+                    android.provider.DocumentsContract.buildDocumentUri("com.android.externalstorage.documents", "primary:Download"),
+                )
+            }
+        }
 }
 
 /** The outcome of the last import, until dismissed. */
@@ -240,62 +253,40 @@ fun PackGroup(title: String, kinds: Set<PackKind>, actions: PackActions) {
 }
 
 /**
- * At the top of Downloads: the updates the packs page found for installed packs, with Update all
- * (the page downloads them) and a way to install the downloaded files; or, when nothing was
- * checked for a couple of weeks, a quiet reminder to check.
+ * A simple banner when updates were found: "Update found for", then each add-on with its new
+ * version; a tap opens its sheet, which downloads that version's file and installs it.
  */
 @Composable
 fun UpdatesCard() {
     val context = LocalContext.current
     @Suppress("UNUSED_VARIABLE") val refresh = PackRefresh.tick
     val updates = app.lychee.packs.Updates.available(context)
-    val remind = updates.isEmpty() && app.lychee.packs.Updates.shouldRemind(context)
-    if (updates.isEmpty() && !remind) return
+    if (updates.isEmpty()) return
+    val colors = MaterialTheme.colorScheme
     RaisedCard(
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.contentColorFor(MaterialTheme.colorScheme.primaryContainer),
+        color = colors.primaryContainer,
+        contentColor = colors.contentColorFor(colors.primaryContainer),
     ) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (updates.isNotEmpty()) {
-                Text(
-                    if (updates.size == 1) stringResource(R.string.lychee_updates_available_one)
-                    else stringResource(R.string.lychee_updates_available, updates.size),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                Text(
-                    stringResource(R.string.lychee_updates_available_body),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                // one at a time: each update its own download (browsers stop several at once)
-                updates.forEach { pack ->
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(pack.name, style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer)
-                            Text(pack.file, style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                        }
-                        Button(onClick = { AddonSheet.open = pack }) {
-                            Text(stringResource(R.string.lychee_addons_update_short), maxLines = 1, softWrap = false)
-                        }
-                    }
-                }
-            } else {
-                Text(
-                    stringResource(R.string.lychee_updates_remind),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                Text(
-                    stringResource(R.string.lychee_updates_remind_body),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                Button(onClick = { app.lychee.packs.Updates.check(context) }) {
-                    Text(stringResource(R.string.lychee_updates_check))
+        Column(Modifier.padding(vertical = 12.dp)) {
+            Text(
+                stringResource(R.string.lychee_updates_found),
+                style = MaterialTheme.typography.titleMedium,
+                color = colors.onPrimaryContainer,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
+            )
+            updates.forEach { pack ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { AddonSheet.open = pack }
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(pack.name, style = MaterialTheme.typography.bodyLarge, color = colors.onPrimaryContainer,
+                        modifier = Modifier.weight(1f))
+                    Text(app.lychee.packs.Updates.newer(context, pack).orEmpty(), style = MaterialTheme.typography.labelLarge,
+                        color = colors.onPrimaryContainer)
                 }
             }
         }

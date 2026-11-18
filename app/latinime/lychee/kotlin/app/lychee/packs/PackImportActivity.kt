@@ -32,11 +32,11 @@ import app.lychee.settings.SettingsActivity
 import com.android.inputmethod.latin.R
 
 /**
- * Installs packs the moment their files are opened: tap Open on the browser's "download
- * complete" notice (or share the file to Lychee) and a small dialog shows it installing, then
- * installed. Lychee still never touches the network itself.
+ * Takes the packs page's links back to Lychee. (Add-ons install in one place only: their sheet
+ * in Settings, by choosing the downloaded file; the file-opening path below is no longer offered
+ * to other apps.)
  *
- * It also takes the packs page's lychee://updates links: they carry the newest versions (see
+ * It takes the packs page's lychee://updates links: they carry the newest versions (see
  * [Updates]); with install=1 ("Back to Lychee" after downloading updates) the file picker opens
  * in Downloads, so every downloaded update installs in one go.
  */

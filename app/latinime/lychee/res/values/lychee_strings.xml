@@ -321,6 +321,9 @@
     <string name="lychee_addons_done">Done</string>
     <string name="lychee_addons_step_choose">Choose a .ttf or .otf file on your phone</string>
     <string name="lychee_addons_step_download">Download it in your browser%1$s</string>
+    <string name="lychee_addons_step_download_file">Download %1$s in your browser%2$s</string>
+    <string name="lychee_addons_step_choose_file">When it has downloaded, choose %1$s here to install it</string>
+    <string name="lychee_addons_update_to">Update · %1$s</string>
     <string name="lychee_addons_step_install">When it has downloaded, open it from the browser\'s notice, or choose the file: %1$s</string>
     <string name="lychee_storage_title">Storage</string>
     <string name="lychee_storage_summary">What each language takes up; remove what you don\'t use</string>

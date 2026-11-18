@@ -1041,7 +1041,8 @@ class DictionaryPopup(
             }
             head.addView(words, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             // a short word's stroke order on the right, written out beside it (not again below)
-            strokesOf?.let { t -> headingStrokes(t)?.let { tiles ->
+            // (the summary leaves the stroke order to the full card: it holds what typing needs)
+            strokesOf?.takeIf { !compact }?.let { t -> headingStrokes(t)?.let { tiles ->
                 head.addView(tiles)
                 strokesInHeading = t
             } }
@@ -1107,8 +1108,8 @@ class DictionaryPopup(
 
         /** Stroke order and breakdown of each character (up to four), when the pack is installed. */
         fun strokes(text: String) {
-            // shown by the heading already
-            if (strokesInHeading == text) return
+            // shown by the heading already; the summary has none (only the full card)
+            if (compact || strokesInHeading == text) return
             // Chinese characters, kana and Hangul (Japanese and Korean have their own order)
             val chars = text.codePoints().toArray().filter {
                 Annotator.isHan(it) || it in 0x3040..0x30FF || it in 0xAC00..0xD7A3

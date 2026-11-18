@@ -125,7 +125,8 @@ object Packs {
         @Suppress("DEPRECATION")
         android.preference.PreferenceManager.getDefaultSharedPreferences(context).edit()
             .putString(PREF_PENDING, pack.id).apply()
-        openPage(context, pack.download.ifEmpty { pack.url })
+        // its newest version's own file when the packs page named it (Updates.downloadFile)
+        openPage(context, Updates.downloadUrl(context, pack))
     }
 
     /** The pack last downloaded and not yet installed, if any. */
@@ -133,7 +134,8 @@ object Packs {
         @Suppress("DEPRECATION")
         val id = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
             .getString(PREF_PENDING, null) ?: return null
-        return byId(context, id)?.takeIf { !isInstalled(context, it.id) }
+        // (an installed one still waits while its update is downloading)
+        return byId(context, id)?.takeIf { !isInstalled(context, it.id) || Updates.hasUpdate(context, it) }
     }
 
     fun clearPending(context: Context) {

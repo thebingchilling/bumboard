@@ -245,8 +245,6 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                 val counter = remember(shown, menu) { GroupCounter() }
                 androidx.compose.runtime.CompositionLocalProvider(LocalGroupCounter provides counter) {
                 Column(Modifier.fillMaxSize()) {
-                // the Theme page's keyboard preview stays at the top while its settings scroll
-                if (menu == null && shown == Page.Theme) PinnedThemePreview()
                 Column(
                     Modifier
                         .fillMaxWidth()
@@ -925,12 +923,9 @@ private fun ThemePage() {
     var liveHeight by remember(height.value) { mutableStateOf(height.value) }
     var liveColumns by remember(columns.value) { mutableStateOf(if (columns.value > 0) columns.value else 9) }
 
-    // the keyboard as it will look, changing with every choice below
-    // shown pinned at the top of the page (PinnedThemePreview), so every change is seen at once
-    androidx.compose.runtime.SideEffect {
-        ThemePreviewState.params = ThemePreviewParams(colors.value, liveRound, borders.value,
-            selected == ids.firstOrNull(), liveHeight, mode.value == "one_handed", themeMode.value)
-    }
+    // the keyboard as it will look, changing with every choice below (scrolls with the page)
+    KeyboardPreview(colors.value, liveRound, borders.value, selected == ids.firstOrNull(), liveHeight,
+        oneHanded = mode.value == "one_handed", themeMode = themeMode.value)
     Group(stringResource(R.string.lychee_pref_colors)) {
         row {
             PaletteGrid(

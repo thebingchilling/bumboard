@@ -221,21 +221,3 @@ fun EmojiPreview(columns: Int) {
         }
     }
 }
-
-
-/** What the Theme page's preview shows: set by the page as its settings change (sliders live). */
-data class ThemePreviewParams(
-    val palette: String, val roundness: Int, val borders: Boolean, val raised: Boolean,
-    val height: Float, val oneHanded: Boolean, val themeMode: String,
-)
-
-/** The Theme page's preview, pinned above the page (the settings scroll under it). */
-object ThemePreviewState {
-    var params by androidx.compose.runtime.mutableStateOf<ThemePreviewParams?>(null)
-}
-
-@Composable
-fun PinnedThemePreview() {
-    val p = ThemePreviewState.params ?: return
-    KeyboardPreview(p.palette, p.roundness, p.borders, p.raised, p.height, oneHanded = p.oneHanded, themeMode = p.themeMode)
-}

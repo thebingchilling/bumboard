@@ -132,8 +132,7 @@
                 <data android:mimeType="text/plain"/>
             </intent-filter>
         </activity>
-        <!-- LYCHEE: opening a downloaded pack (the browser's "Open", or sharing it) installs it;
-             lychee://updates links from the packs page record and install pack updates. -->
+        <!-- LYCHEE: lychee://updates links from the packs page record the newest pack versions. -->
         <activity android:name="app.lychee.packs.PackImportActivity"
              android:theme="@style/Theme.Lychee.Translucent"
              android:label="@string/lychee_import_open_with"
@@ -141,29 +140,6 @@
              android:excludeFromRecents="true"
              android:taskAffinity=""
              android:exported="true">
-            <intent-filter android:label="@string/lychee_import_open_with">
-                <action android:name="android.intent.action.VIEW"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <data android:scheme="content"/>
-                <data android:scheme="file"/>
-                <data android:mimeType="application/zip"/>
-                <data android:mimeType="application/x-zip-compressed"/>
-                <data android:mimeType="application/octet-stream"/>
-                <data android:mimeType="font/ttf"/>
-                <data android:mimeType="font/otf"/>
-                <data android:mimeType="font/sfnt"/>
-                <data android:mimeType="application/x-font-ttf"/>
-                <data android:mimeType="application/x-font-otf"/>
-            </intent-filter>
-            <intent-filter android:label="@string/lychee_import_open_with">
-                <action android:name="android.intent.action.SEND"/>
-                <category android:name="android.intent.category.DEFAULT"/>
-                <data android:mimeType="application/zip"/>
-                <data android:mimeType="application/x-zip-compressed"/>
-                <data android:mimeType="application/octet-stream"/>
-                <data android:mimeType="font/*"/>
-                <data android:mimeType="application/x-font-ttf"/>
-            </intent-filter>
             <!-- the packs page's links back: the newest pack versions, and installing updates -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>

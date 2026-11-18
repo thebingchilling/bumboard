@@ -7,6 +7,10 @@ is left alone; a changed one gets a new version, the date ("2026.10.28", with ".
 for a second change that day), written into its pack.json, and goes into --upload. A pack the
 manifest doesn't list yet keeps the version its build gave it.
 
+Each published version is also uploaded under a name that says what it is and which version
+("lychee-korean-dictionary-2026.11.18.2.zip", the manifest's "download_file"): Lychee downloads
+that one, so the file in Downloads is easy to tell apart from an earlier one when it is chosen.
+
 manifest.json lists every published pack: its version, what it is, its size and a digest of
 its contents (how the next run tells what changed), and for emoji fonts the Emoji version.
 The packs page (packs/site) reads it to tell Lychee users which of their packs have
@@ -22,6 +26,8 @@ import datetime as dt
 import hashlib
 import io
 import json
+import re
+import shutil
 import sys
 import tempfile
 import zipfile
@@ -67,6 +73,12 @@ def rewrite(src: Path, dest: Path, info: dict) -> None:
                 zout.writestr(item, zin.read(item.filename))
 
 
+def versioned_name(name: str, version: str) -> str:
+    """The file a version is downloaded as: "lychee-korean-dictionary-2026.11.18.2.zip"."""
+    slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-") or "pack"
+    return f"lychee-{slug}-{version}.zip"
+
+
 def next_version(previous: str | None, today: str) -> str:
     if not previous or not previous.startswith(today):
         return today
@@ -99,6 +111,13 @@ def main():
         d = digest(zip_path)
         old = previous.get(pid)
         if old and old.get("digest") == d:
+            # published before versioned names: its version uploaded once under one
+            if not old.get("download_file"):
+                name = versioned_name(cat.get("name", old.get("name", pid)), old["version"])
+                rewrite(zip_path, args.upload / name, {"id": pid, "name": info.get("name", cat.get("name", pid)),
+                                                       "version": old["version"], "source": str(info.get("version", ""))})
+                packs[pid] = dict(old, download_file=name, download=RELEASE + name)
+                changed.append(f"{pid} {old['version']} (as {name})")
             continue
         # what the build called it (a font's release tag, a builder's version), for the notes
         source = str(info.get("version", ""))
@@ -126,6 +145,10 @@ def main():
         dest = args.upload / zip_path.name
         rewrite(zip_path, dest, info)
         entry["size"] = dest.stat().st_size
+        # the same file under a name saying what it is and which version
+        entry["download_file"] = versioned_name(entry["name"], version)
+        entry["download"] = RELEASE + entry["download_file"]
+        shutil.copyfile(dest, args.upload / entry["download_file"])
         packs[pid] = entry
         changed.append(f"{pid} {version}" + (f" (was {old['version']})" if old else " (new)"))
 

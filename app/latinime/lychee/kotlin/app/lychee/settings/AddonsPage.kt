@@ -78,7 +78,7 @@ fun AddonsPage() {
     val colors = MaterialTheme.colorScheme
     val catalog = remember { Packs.catalog(context) }
 
-    // the store's header: a tinted banner with what is on the phone, updates and "from a file"
+    // the store's header: a tinted banner with what is on the phone, updates and all add-ons
     Column(
         Modifier
             .fillMaxWidth()
@@ -101,9 +101,10 @@ fun AddonsPage() {
                         modifier = Modifier.padding(start = 8.dp))
                 }
             }
-            OutlinedButton(onClick = { actions.import(null) }) {
-                Icon(painterResource(R.drawable.ic_sym_folder_open), null, modifier = Modifier.size(18.dp))
-                Text(stringResource(R.string.lychee_addons_from_file_short), maxLines = 1, softWrap = false,
+            // every add-on there is, installed or not, on the packs page
+            FilledTonalButton(onClick = { app.lychee.packs.Updates.openAll(context) }) {
+                Icon(painterResource(R.drawable.ic_sym_open_in_new), null, modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.lychee_addons_page), maxLines = 1, softWrap = false,
                     modifier = Modifier.padding(start = 8.dp))
             }
         }
@@ -148,12 +149,7 @@ fun AddonsPage() {
             Column { own.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { PackStorage.remove(context, pack); version++ }) { version++ } } }
         }
     }
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp), horizontalArrangement = Arrangement.Center) {
-        TextButton(onClick = { app.lychee.packs.Updates.openAll(context) }) {
-            Icon(painterResource(R.drawable.ic_sym_open_in_new), null, modifier = Modifier.size(18.dp))
-            Text(stringResource(R.string.lychee_addons_page), modifier = Modifier.padding(start = 8.dp))
-        }
-    }
+    Spacer(Modifier.height(16.dp))
     AddonSheetHost(actions)
 }
 
@@ -345,7 +341,9 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
                         color = colors.onSurfaceVariant.copy(alpha = if (installed) 0.7f else 1f), maxLines = 2)
                 }
                 // the size and version on a line of their own; where it stands before them
+                val update = if (installed) app.lychee.packs.Updates.newer(context, pack) else null
                 val status = when {
+                    update != null -> stringResource(R.string.lychee_addons_update_to, update)
                     installed && bundled -> stringResource(R.string.lychee_addons_bundled)
                     installed -> stringResource(R.string.lychee_addons_installed)
                     bundled -> stringResource(R.string.lychee_storage_removed)
@@ -356,7 +354,7 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
                     listOfNotNull(status, size.takeIf { it.isNotEmpty() }, shownVersion?.takeIf { it.isNotEmpty() }?.let { "v$it" })
                         .joinToString("  ·  "),
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (installed) colors.onSurfaceVariant else colors.primary,
+                    color = if (installed && update == null) colors.onSurfaceVariant else colors.primary,
                     maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 2.dp),
                 )
@@ -378,11 +376,7 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
                     IconButton(onClick = { asking = true }) {
                         Icon(painterResource(R.drawable.lychee_ic_delete), stringResource(R.string.lychee_packs_remove), tint = colors.onSurfaceVariant)
                     }
-                    androidx.compose.material3.DropdownMenu(
-                        expanded = asking, onDismissRequest = { asking = false },
-                        containerColor = colors.surfaceContainer,
-                        modifier = Modifier.widthIn(max = 300.dp),
-                    ) {
+                    M3Menu(expanded = asking, onDismissRequest = { asking = false }) {
                         val needed = pack.id == "rime_ja" || pack.id == "dict_ko" || pack.id == "dict_en"
                         Text(
                             stringResource(if (needed) R.string.lychee_storage_confirm_needed else R.string.lychee_storage_confirm_body,
@@ -390,17 +384,11 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
                             style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         )
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = { Text(stringResource(R.string.lychee_packs_remove), color = colors.error) },
-                            onClick = {
-                                asking = false
-                                onRemove()
-                            },
-                        )
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = { Text(stringResource(android.R.string.cancel)) },
-                            onClick = { asking = false },
-                        )
+                        MenuItem(stringResource(R.string.lychee_packs_remove), color = colors.error) {
+                            asking = false
+                            onRemove()
+                        }
+                        MenuItem(stringResource(android.R.string.cancel)) { asking = false }
                     }
                 }
                 bundled -> TextButton(onClick = {
@@ -509,14 +497,21 @@ fun AddonSheetHost(actions: PackActions) {
                     }
                 }
             } else {
-                Step(1, stringResource(R.string.lychee_addons_step_download, pack.size.ifEmpty { "" }.let { if (it.isEmpty()) "" else " ($it)" }),
+                // the file named as what it is and its version, so it is easy to find and choose
+                val file = app.lychee.packs.Updates.downloadFile(context, pack)
+                app.lychee.packs.Updates.newer(context, pack)?.takeIf { installed }?.let { v ->
+                    Text(stringResource(R.string.lychee_addons_update_to, v), style = MaterialTheme.typography.titleMedium,
+                        color = colors.primary)
+                }
+                Step(1, stringResource(R.string.lychee_addons_step_download_file, file, pack.size.let { if (it.isEmpty()) "" else " ($it)" }),
                     active = !downloaded, done = downloaded) {
                     Button(onClick = {
                         actions.get(pack)
                         downloaded = true
                     }) { Text(stringResource(R.string.lychee_packs_get)) }
                 }
-                Step(2, stringResource(R.string.lychee_addons_step_install, pack.file), active = downloaded) {
+                // installed from here only: choose the downloaded file
+                Step(2, stringResource(R.string.lychee_addons_step_choose_file, file), active = downloaded) {
                     FilledTonalButton(onClick = { actions.import(pack) }, enabled = downloaded && !actions.busy) {
                         Text(stringResource(R.string.lychee_packs_choose_file))
                     }
