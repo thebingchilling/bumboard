@@ -36,7 +36,17 @@ object ClipboardStore {
     @Suppress("DEPRECATION")
     fun setEnabled(context: Context, on: Boolean) {
         PreferenceManager.getDefaultSharedPreferences(context).edit().putBoolean(PREF_ENABLED, on).apply()
-        if (!on) clear(context, keepPinned = false)
+        if (on) watch(context) else {
+            unwatch(context)
+            clear(context, keepPinned = false)
+        }
+    }
+
+    /** Stops noticing copies (the clipboard panel turned off). */
+    fun unwatch(context: Context) {
+        val l = listener ?: return
+        listener = null
+        runCatching { context.applicationContext.getSystemService(ClipboardManager::class.java)?.removePrimaryClipChangedListener(l) }
     }
 
     private fun prefs(context: Context): SharedPreferences =
@@ -45,7 +55,8 @@ object ClipboardStore {
     /** Starts noticing copies (Android tells the keyboard while it is in use). */
     @JvmStatic
     fun watch(context: Context) {
-        if (listener != null) return
+        // only while the clipboard panel is on: nothing listens for copies otherwise
+        if (listener != null || !enabled(context)) return
         val app = context.applicationContext
         val cm = app.getSystemService(ClipboardManager::class.java) ?: return
         val l = ClipboardManager.OnPrimaryClipChangedListener { capture(app) }

@@ -24,6 +24,10 @@ class OcrRecognizer private constructor(
     private val session: OrtSession,
     private val chars: List<String>,
 ) : Recognizer {
+    /** One picture only (while writing: much less work); else all [VARIANTS] (after a pause). */
+    @Volatile
+    var quick = false
+
     override fun recognise(strokes: List<FloatArray>, limit: Int, allowed: (String) -> Boolean): List<Pair<String, Float>> {
         // the ink smoothed (a shaky hand's wobble taken out), then read as a few pictures,
         // with a thinner and a thicker pen and another margin, and the scores averaged: a
@@ -31,7 +35,7 @@ class OcrRecognizer private constructor(
         val ink = smooth(strokes)
         var total: FloatArray? = null
         var reads = 0
-        for ((pen, margin) in VARIANTS) {
+        for ((pen, margin) in if (quick) VARIANTS.take(1) else VARIANTS) {
             val scores = scores(picture(ink, pen, margin) ?: continue, WIDTH) ?: continue
             val t = total ?: FloatArray(scores.size).also { total = it }
             if (t.size != scores.size) continue

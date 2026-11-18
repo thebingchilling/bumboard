@@ -78,6 +78,9 @@ object LycheePanels {
         }
     }
 
+    /** The panels over the keys in [inputView] (to keep, rather than find each time). */
+    fun panels(inputView: View): List<View> = PANELS.mapNotNull { inputView.findViewById(it) }
+
     @JvmStatic
     fun anyShown(inputView: View): Boolean =
         PANELS.any { inputView.findViewById<View>(it)?.visibility == View.VISIBLE }

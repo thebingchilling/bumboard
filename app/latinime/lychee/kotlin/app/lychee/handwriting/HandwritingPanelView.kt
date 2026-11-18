@@ -356,7 +356,22 @@ class HandwritingPanelView @JvmOverloads constructor(
     /** Type the guess as soon as the guesses for the whole ink arrive (see [commitPending]). */
     private var commitWhenGuessed = false
 
-    private fun recognise() {
+    /**
+     * After the pen lifts: a quick read a moment later (one picture), then, if no new stroke has
+     * begun, the full read (PP-OCR's three pictures); a new stroke cancels both, so fast writing
+     * never starts a recognition for every stroke. Google's recognition reads once.
+     */
+    private val quickRead = Runnable { recognise(full = ocr !is OcrRecognizer) }
+    private val fullRead = Runnable { if (ocr is OcrRecognizer) recognise(full = true) }
+
+    private fun readSoon() {
+        main.removeCallbacks(quickRead)
+        main.removeCallbacks(fullRead)
+        main.postDelayed(quickRead, QUICK_READ_MS)
+        main.postDelayed(fullRead, FULL_READ_MS)
+    }
+
+    private fun recognise(full: Boolean = true) {
         val ink = pad.strokeList()
         if (ink.isEmpty()) return
         val version = ++inkVersion
@@ -370,6 +385,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { t -> String(Character.toChars(t.codePointBefore(t.length))) }
         worker.execute {
             val started = System.currentTimeMillis()
+            (o as? OcrRecognizer)?.quick = !full
             val result = runCatching { rank(o, m, ink, engine, before).take(10) }
                 .onFailure { app.lychee.DiagLog.log("handwriting failed", it) }
                 .getOrDefault(emptyList())
@@ -754,6 +770,8 @@ class HandwritingPanelView @JvmOverloads constructor(
                     hint.animate().cancel()
                     hint.visibility = GONE
                     main.removeCallbacks(autoCommit)
+                    main.removeCallbacks(quickRead)
+                    main.removeCallbacks(fullRead)
                     // writing again: the ink stays until a pause, and a new character is not a
                     // replacement for the one picked before
                     cancelAutoClear()
@@ -774,8 +792,8 @@ class HandwritingPanelView @JvmOverloads constructor(
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                     current?.let { points += it.toFloatArray() }
                     current = null
-                    // the guesses show; one is typed only when it is tapped
-                    recognise()
+                    // the guesses show (read a moment later); one is typed only when it is tapped
+                    readSoon()
                     scheduleAutoClear()
                 }
             }
@@ -813,6 +831,9 @@ class HandwritingPanelView @JvmOverloads constructor(
         const val PREF_UPGRADE_DISMISSED = "lychee_hw_upgrade_dismissed"
         /** Settings > Add-ons' Google handwriting card (SettingsActivity.EXTRA_ADDON). */
         const val GOOGLE_ADDON = "google_handwriting"
+        /** After the pen lifts: the quick read, and the full one if no new stroke has begun (ms). */
+        const val QUICK_READ_MS = 150L
+        const val FULL_READ_MS = 450L
         /** The pause after the last stroke before the ink fades away, and the fade. */
         const val AUTO_CLEAR_MS = 900L
         const val INK_FADE_MS = 220L
