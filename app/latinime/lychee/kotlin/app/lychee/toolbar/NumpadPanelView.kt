@@ -21,12 +21,16 @@ import com.android.inputmethod.latin.R
 import com.android.inputmethod.latin.common.Constants
 
 /**
- * A number pad over the keys: a narrow scrolling column of operators on the left (its
- * scrollbar showing), big digits in a phone-style grid, !?#, space and backspace on the right,
- * and ABC , 0 . Enter along the bottom, lined up with the columns above (0 is a digit like the
- * others). Four rows of the same height. It opens from the "12/34" key on the symbols page and
- * changes like the keyboard does; ABC goes back to the letters and !?# to the symbols. In number
- * fields ([forced]) it is Gboard's number pad: four even columns, centred across the keyboard.
+ * A number pad over the keys. On the symbols page ("12/34"): a narrow scrolling column of small
+ * symbols on the left, big digits in a phone-style grid, % / space / backspace on the right, and
+ * a bottom bar exactly as tall as the keyboard's own bottom row (its height, gaps and bottom
+ * padding), lined up with the columns above: ABC under the symbols, comma and !?# under the 7,
+ * 0 under the 8, = and period under the 9, Enter under the right-hand keys. ABC goes back to the
+ * letters and !?# to the symbols.
+ *
+ * In number, phone and date fields ([forced]) it is a plain pad centred with room at its sides:
+ * the digits, with backspace, 0 and Enter along the bottom bar (a long press on 0 types +, for
+ * phone numbers), nothing else.
  */
 class NumpadPanelView @JvmOverloads constructor(
     context: Context,
@@ -36,26 +40,89 @@ class NumpadPanelView @JvmOverloads constructor(
     private val palette = M3Colors.of(context)
     private val repeat = Handler(Looper.getMainLooper())
     // before init, which fills them in
-    private var abc: TextView? = null
-    private var symbolsKey: TextView? = null
-    private var operatorsColumn: View? = null
-    private var digitsBlock: View? = null
-    private var rightColumn: View? = null
-    private var bottomDigits: List<View> = emptyList()
-    private var enter: View? = null
+    private var full: LinearLayout? = null
+    private var plain: LinearLayout? = null
+    private var bottomBars: List<LinearLayout> = emptyList()
 
     init {
         orientation = VERTICAL
         isClickable = true
         setBackgroundColor(palette.surface)
         setPadding(dp(3), dp(4), dp(3), dp(4))
-        // four rows of equal height, like the keyboard's own rows; the bottom row lines up with
-        // the columns above it, so 0 is a digit like the others
+        full = fullPad()
+        plain = plainPad()
+        addView(full, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(plain, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        plain?.visibility = GONE
+        visibility = GONE
+    }
+
+    /** The symbols page's pad: symbols, digits and the right-hand keys over the bottom bar. */
+    private fun fullPad() = LinearLayout(context).apply {
+        orientation = VERTICAL
         val top = LinearLayout(context).apply { orientation = HORIZONTAL }
-        // operators: a narrow column that scrolls, its scrollbar always showing
-        val operators = LinearLayout(context).apply { orientation = VERTICAL }
-        // one rounded panel holding the operators as a list (not a stack of keys), its
-        // scrollbar inside the panel's edge
+        top.addView(symbolsList(), LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_SYMBOLS).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
+        top.addView(digitRows(), LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_DIGIT * 3))
+        val right = LinearLayout(context).apply { orientation = VERTICAL }
+        right.addView(text("%"), keyParams(1f, vertical = true))
+        right.addView(spaceKey(), keyParams(1f, vertical = true))
+        right.addView(backspaceKey(), keyParams(1f, vertical = true))
+        top.addView(right, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_SIDE))
+        addView(top, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        // the bottom bar, each key under the column above it
+        val bar = LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            addView(abcKey(), keyParams(COLUMN_SYMBOLS))
+            addView(text(","), keyParams(COLUMN_DIGIT / 2))
+            addView(key("!?#", letter = false, size = 15f) {
+                // the symbols page is underneath
+                this@NumpadPanelView.visibility = GONE
+            }, keyParams(COLUMN_DIGIT / 2))
+            addView(digit("0"), keyParams(COLUMN_DIGIT))
+            addView(text("="), keyParams(COLUMN_DIGIT / 2))
+            addView(text("."), keyParams(COLUMN_DIGIT / 2))
+            addView(enterKey(), keyParams(COLUMN_SIDE))
+        }
+        addView(bar, LayoutParams(LayoutParams.MATCH_PARENT, dp(56)))
+        bottomBars = bottomBars + bar
+    }
+
+    /** The number field's pad: digits only, centred, with ⌫ 0 Enter along the bottom bar. */
+    private fun plainPad() = LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        val block = LinearLayout(context).apply { orientation = VERTICAL }
+        block.addView(digitRows(), LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        val bar = LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            addView(backspaceKey(), keyParams(1f))
+            addView(digit("0").apply {
+                // phone numbers: a long press types +
+                setOnLongClickListener { send('+'.code); true }
+            }, keyParams(1f))
+            addView(enterKey(), keyParams(1f))
+        }
+        block.addView(bar, LayoutParams(LayoutParams.MATCH_PARENT, dp(56)))
+        bottomBars = bottomBars + bar
+        // room at both sides, the pad in the middle
+        addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, PLAIN_SIDE))
+        addView(block, LayoutParams(0, LayoutParams.MATCH_PARENT, PLAIN_PAD))
+        addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, PLAIN_SIDE))
+    }
+
+    /** 1 2 3 / 4 5 6 / 7 8 9, three rows sharing the height above the bottom bar. */
+    private fun digitRows() = LinearLayout(context).apply {
+        orientation = VERTICAL
+        for (row in listOf("123", "456", "789")) {
+            addView(LinearLayout(context).apply {
+                orientation = HORIZONTAL
+                row.forEach { d -> addView(digit(d.toString()), keyParams(1f)) }
+            }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        }
+    }
+
+    /** The small symbols: one rounded panel that scrolls, its scrollbar always showing. */
+    private fun symbolsList(): View {
+        val list = LinearLayout(context).apply { orientation = VERTICAL }
         val scroll = android.widget.ScrollView(context).apply {
             isVerticalScrollBarEnabled = true
             isScrollbarFadingEnabled = false
@@ -79,16 +146,14 @@ class NumpadPanelView @JvmOverloads constructor(
                     setSize(dp(3), dp(24))
                 }
             }
-            addView(operators)
+            addView(list)
         }
-        top.addView(scroll, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_OPERATORS).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
-        operatorsColumn = scroll
         scroll.addOnLayoutChangeListener { _, _, t, _, b, _, ot, _, ob ->
             if (b - t != ob - ot) {
-                // three and a bit showing, so it's plain there's more below
-                val itemHeight = ((b - t) / 3.4f).toInt()
-                for (i in 0 until operators.childCount) {
-                    val child = operators.getChildAt(i)
+                // four and a bit showing, so it's plain there's more below
+                val itemHeight = ((b - t) / 4.4f).toInt()
+                for (i in 0 until list.childCount) {
+                    val child = list.getChildAt(i)
                     val lp = child.layoutParams as LayoutParams
                     val h = if (child is TextView) itemHeight else lp.height
                     if (lp.height != h) {
@@ -98,103 +163,79 @@ class NumpadPanelView @JvmOverloads constructor(
                 }
             }
         }
-        OPERATORS.forEachIndexed { i, op ->
+        SYMBOLS.forEachIndexed { i, op ->
             // a clear line between the symbols, so each reads as its own key
-            if (i > 0) operators.addView(View(context).apply {
+            if (i > 0) list.addView(View(context).apply {
                 setBackgroundColor(palette.outlineVariant)
             }, LayoutParams(LayoutParams.MATCH_PARENT, dp(1)).apply { setMargins(dp(6), 0, dp(6), 0) })
-            operators.addView(operatorItem(op), LayoutParams(LayoutParams.MATCH_PARENT, dp(48)))
+            list.addView(symbolItem(op), LayoutParams(LayoutParams.MATCH_PARENT, dp(40)))
         }
-        val digits = LinearLayout(context).apply { orientation = VERTICAL }
-        for (row in listOf("123", "456", "789")) {
-            digits.addView(LinearLayout(context).apply {
-                orientation = HORIZONTAL
-                row.forEach { d -> addView(digit(d.toString()), keyParams(1f)) }
-            }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-        }
-        top.addView(digits, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_DIGIT * 3))
-        digitsBlock = digits
-        val right = LinearLayout(context).apply { orientation = VERTICAL }
-        right.addView(key("!?#", letter = false, size = 15f) {
-            // a number field has no symbols page: the key types a minus instead
-            if (forced) send('-'.code)
-            // the symbols page is underneath (this, not the column the key sits in)
-            else this@NumpadPanelView.visibility = GONE
-        }.also { symbolsKey = it }, keyParams(1f, vertical = true))
-        right.addView(spaceKey(), keyParams(1f, vertical = true))
-        right.addView(icon(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete, repeats = true) { send(Constants.CODE_DELETE) },
-            keyParams(1f, vertical = true))
-        top.addView(right, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_SIDE))
-        rightColumn = right
-        addView(top, LayoutParams(LayoutParams.MATCH_PARENT, 0, 3f))
-        addView(LinearLayout(context).apply {
-            orientation = HORIZONTAL
-            addView(abcKey().also { abc = it }, keyParams(COLUMN_OPERATORS))
-            val comma = text(",")
-            val zero = digit("0")
-            val period = text(".")
-            addView(comma, keyParams(COLUMN_DIGIT))
-            addView(zero, keyParams(COLUMN_DIGIT))
-            addView(period, keyParams(COLUMN_DIGIT))
-            bottomDigits = listOf(comma, zero, period)
-            addView(enterKey().also { enter = it }, keyParams(COLUMN_SIDE))
-        }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-        visibility = GONE
-    }
-
-    private fun keyParams(weight: Float, vertical: Boolean = false) =
-        (if (vertical) LayoutParams(LayoutParams.MATCH_PARENT, 0, weight) else LayoutParams(0, LayoutParams.MATCH_PARENT, weight))
-            .apply { setMargins(dp(3), dp(3), dp(3), dp(3)) }
-
-    /** ABC back to the letters, like the keyboard's ?123 key (a plus in a number field). */
-    private fun abcKey() = key(context.getString(R.string.lychee_emoji_abc), letter = false, size = 15f) {
-        if (forced) {
-            send('+'.code)
-            return@key
-        }
-        visibility = GONE
-        lycheeHost()?.lycheeSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
+        return scroll
     }
 
     /**
-     * Number, phone and date fields: this pad is their keyboard (the same pad as the symbols
-     * page's, rather than LatinIME's own), with only what they need: no column of symbols and no
-     * ABC (there are no letters to go to); !?# types − instead.
+     * The bottom bar exactly as tall as the keyboard's bottom row, with its gaps and the
+     * keyboard's padding below it; the rows above share the rest.
      */
+    private fun alignWithKeyboard() {
+        val row = LycheePanels.keyRow(this)
+        if (paddingBottom != row.bottomPadding) setPadding(paddingLeft, paddingTop, paddingRight, row.bottomPadding)
+        val half = row.gap / 2
+        for (bar in bottomBars) {
+            val lp = bar.layoutParams as LayoutParams
+            // the bar's keys keep the 3 dp margin the pad's other keys have; the row's gap is
+            // made up around them
+            val height = row.height + dp(3) * 2 - 2 * half
+            if (lp.height != height) {
+                lp.height = height
+                bar.layoutParams = lp
+            }
+        }
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        if (h != oldh) post { alignWithKeyboard() }
+    }
+
+    /** Number, phone and date fields: the plain pad (digits, backspace, Enter), centred. */
     var forced = false
         set(value) {
             field = value
-            operatorsColumn?.visibility = if (value) GONE else VISIBLE
-            abc?.visibility = if (value) GONE else VISIBLE
-            abc?.text = if (value) "+" else context.getString(R.string.lychee_emoji_abc)
-            abc?.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (value) 22f else 15f)
-            symbolsKey?.text = if (value) "−" else "!?#"
-            symbolsKey?.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (value) 22f else 15f)
-            // like Gboard's number pad: four even columns across the whole width (the digits
-            // and the − / space / ⌫ / Enter column alike), so the pad sits centred
-            val digitWeight = if (value) 1f else COLUMN_DIGIT
-            val sideWeight = if (value) 1f else COLUMN_SIDE
-            (digitsBlock?.layoutParams as? LayoutParams)?.weight = digitWeight * 3
-            (rightColumn?.layoutParams as? LayoutParams)?.weight = sideWeight
-            bottomDigits.forEach { (it.layoutParams as? LayoutParams)?.weight = digitWeight }
-            (enter?.layoutParams as? LayoutParams)?.weight = sideWeight
+            full?.visibility = if (value) GONE else VISIBLE
+            plain?.visibility = if (value) VISIBLE else GONE
             requestLayout()
         }
 
     override fun setVisibility(visibility: Int) {
         if (visibility != VISIBLE) repeat.removeCallbacksAndMessages(null)
         super.setVisibility(visibility)
+        if (visibility == VISIBLE) alignWithKeyboard()
+    }
+
+    private fun keyParams(weight: Float, vertical: Boolean = false) =
+        (if (vertical) LayoutParams(LayoutParams.MATCH_PARENT, 0, weight) else LayoutParams(0, LayoutParams.MATCH_PARENT, weight))
+            .apply { setMargins(dp(3), dp(3), dp(3), dp(3)) }
+
+    /** ABC back to the letters, like the keyboard's ?123 key. */
+    private fun abcKey() = key(context.getString(R.string.lychee_emoji_abc), letter = false, size = 15f) {
+        visibility = GONE
+        lycheeHost()?.lycheeSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
+    }
+
+    private fun backspaceKey() = icon(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete, repeats = true) {
+        send(Constants.CODE_DELETE)
     }
 
     private fun digit(d: String) = key(d, letter = true, size = 26f) { lycheeHost()?.lycheeSendCode(d[0].code) }
 
     private fun text(t: String) = key(t, letter = false) { lycheeHost()?.lycheeSendCode(t[0].code) }
 
-    /** An operator in the scrolling list: plain, rippling when tapped. */
-    private fun operatorItem(t: String) = TextView(context).apply {
+    /** A symbol in the scrolling list: small and plain, rippling when tapped. */
+    private fun symbolItem(t: String) = TextView(context).apply {
         text = t
         setTextColor(palette.onSurface)
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
         typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
         gravity = Gravity.CENTER
         background = TypedValue().let { v ->
@@ -262,10 +303,14 @@ class NumpadPanelView @JvmOverloads constructor(
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 
     private companion object {
-        val OPERATORS = listOf("+", "-", "*", "/", "=", "%", "(", ")", ":", ";", "#", "@", "~", "^")
-        /** the columns' widths: the (narrow) operators, each digit, the right-hand keys */
-        const val COLUMN_OPERATORS = 0.8f
+        /** The small symbols (%, =, comma and period have keys of their own). */
+        val SYMBOLS = listOf("+", "-", "*", "/", "(", ")", ":", ";", "#", "@", "&", "$", "!", "?", "~", "^")
+        /** the columns' widths: the (narrow) symbols, each digit, the right-hand keys */
+        const val COLUMN_SYMBOLS = 0.8f
         const val COLUMN_DIGIT = 1.25f
         const val COLUMN_SIDE = 1.1f
+        /** the number field's pad: its width, and the room at each side */
+        const val PLAIN_PAD = 3f
+        const val PLAIN_SIDE = 1f
     }
 }
