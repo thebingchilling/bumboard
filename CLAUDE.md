@@ -86,7 +86,7 @@ packs page). Public facing, so be careful:
   once its models are in; Settings > Add-ons offers it (saying ML Kit's licence needs the
   companion, and its size), and so does a chip on the pad. It is built once, and rebuilt only
   when its code or ML Kit version changes (`build.yml`, the private `handwriting-google`
-  release). Never ML Kit's models copied into Lychee (its licence forbids it). Lychee's own
+  release), and attached to every build's debug release beside Lychee's APK. Never ML Kit's models copied into Lychee (its licence forbids it). Lychee's own
   trained recogniser was dropped. Either engine is opened only while the pad is open.
 - A learning app: Japanese and Korean are typed in romanisation on QWERTY (no native kana or
   Hangul layouts). Candidates show readings and meanings. Korean candidates offer a word's Hanja

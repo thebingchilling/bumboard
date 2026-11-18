@@ -143,9 +143,19 @@ jobs:
           tag="lychee-$BUILD_VERSION_NAME"
           mkdir -p dist
           cp "$(ls latinime/build/outputs/apk/debug/*.apk | head -1)" "dist/$tag.apk"
+          # the Google handwriting companion beside it (the same build every time, from its own
+          # release; it is only rebuilt when it changes)
+          files=("dist/$tag.apk")
+          if gh release download handwriting-google --repo "$GITHUB_REPOSITORY" \
+              --pattern lychee-handwriting-google.apk --dir dist --clobber; then
+            files+=("dist/lychee-handwriting-google.apk")
+          fi
           git log -1 --format=%B "$GITHUB_SHA" | grep -vE '^(Co-Authored-By|Claude-Session):' > notes.md
           printf '\nDebug-signed test build (the fixed debug key, so it installs over the last one).\n' >> notes.md
-          gh release create "$tag" "dist/$tag.apk" \
+          if [ ${#files[@]} -gt 1 ]; then
+            printf 'lychee-handwriting-google.apk: the optional Google handwriting companion (install it, open it once to download the models).\n' >> notes.md
+          fi
+          gh release create "$tag" "${files[@]}" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "Lychee ${BUILD_VERSION_NAME#0.1.0-} (debug)" \
