@@ -139,10 +139,13 @@ is outside it.
     bundled in the APK.
 - `packs/` — the pack builders and the packs page (Japanese, Korean, English dictionaries,
   stroke order, examples, font mirrors; `packs/site`), run by `packs.yml`.
-  `packs/handwriting/` trains the handwriting recogniser: `packs.yml`'s `handwriting_minutes`
-  input trains that much longer (on a CPU runner, at most 340 minutes a run), carrying on from
-  the checkpoint on this private repository's `handwriting-training` pre-release; the pack is
-  exported only once it reads 80% of the fixed messy test samples right (`export.py`).
+  `packs/handwriting/` trains the handwriting recogniser. Training runs on a free Kaggle GPU
+  (`packs/handwriting/kaggle.py`, started by the owner in a Kaggle notebook), not on GitHub
+  Actions: the owner's Actions minutes are needed for everything else. It carries on from the
+  checkpoint on this private repository's `handwriting-training` pre-release and sends each new
+  checkpoint back there; `packs.yml` (with `handwriting_minutes` left at 0) then exports the
+  pack, only once it reads 80% of the fixed messy test samples right (`export.py`). Don't start
+  training runs on Actions (`handwriting_minutes` above 0) unless the owner asks.
 - `.github/workflows/` — `build.yml` (the app), `packs.yml` (the packs, by hand) and
   `cleanup.yml` (Actions storage is limited: after a successful build or packs run it deletes
   every other run of that workflow with its artifacts and logs, and stale caches; run by hand

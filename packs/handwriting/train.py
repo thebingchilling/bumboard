@@ -101,6 +101,10 @@ def batches_of(samples: list) -> list[tuple[torch.Tensor, torch.Tensor]]:
     return [(torch.from_numpy(np.stack(xs)), torch.tensor(ys)) for xs, ys in groups.values()]
 
 
+def device_of(model) -> torch.device:
+    return next(model.parameters()).device
+
+
 @torch.no_grad()
 def agreed(model, samples: list, top: int = 5) -> list:
     """The samples whose label is among the recogniser's [top] guesses."""
@@ -114,8 +118,8 @@ def agreed(model, samples: list, top: int = 5) -> list:
             if f is not None:
                 by_len.setdefault(len(f), []).append(i)
         for idx in by_len.values():
-            x = torch.from_numpy(np.stack([feats[i] for i in idx]))
-            best = model(x).topk(top, dim=1).indices
+            x = torch.from_numpy(np.stack([feats[i] for i in idx])).to(device_of(model))
+            best = model(x).topk(top, dim=1).indices.cpu()
             for row, i in enumerate(idx):
                 if chunk[i][1] in best[row].tolist():
                     keep.append(chunk[i])
@@ -191,10 +195,11 @@ def fixed_set(models: list[list], n: int, neat: bool) -> list[tuple[torch.Tensor
 def accuracy(model, batches) -> tuple[float, float]:
     model.eval()
     top1 = top5 = total = 0
+    dev = device_of(model)
     for x, y in batches:
         for i in range(0, len(x), 256):
-            logits = model(x[i:i + 256])
-            best = logits.topk(5, dim=1).indices
+            logits = model(x[i:i + 256].to(dev))
+            best = logits.topk(5, dim=1).indices.cpu()
             top1 += (best[:, 0] == y[i:i + 256]).sum().item()
             top5 += (best == y[i:i + 256, None]).any(dim=1).sum().item()
             total += len(best)
@@ -209,7 +214,9 @@ def lr_at(step: int, peak: float) -> float:
     return peak * math.sqrt(warm / (step + 1))
 
 
-def main():
+def main(argv: list[str] | None = None, on_save=None):
+    """Trains; [on_save] is called with the checkpoint's path after each save (Kaggle sends
+    it back to GitHub then, so a session that ends early loses little)."""
     ap = argparse.ArgumentParser()
     ap.add_argument("--minutes", type=float, default=60)
     ap.add_argument("--checkpoint", type=Path, default=HERE / "out" / "checkpoint.pt")
@@ -218,20 +225,23 @@ def main():
     ap.add_argument("--threads", type=int, default=os.cpu_count() or 2)
     ap.add_argument("--peak-lr", type=float, default=2e-3)
     ap.add_argument("--eval-every", type=float, default=20, help="minutes")
-    args = ap.parse_args()
+    ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    args = ap.parse_args(argv)
+    device = torch.device(args.device)
+    print(f"training on {device}" + (f" ({torch.cuda.get_device_name(device)})" if device.type == "cuda" else ""), flush=True)
     torch.set_num_threads(args.threads)
     deadline = time.time() + args.minutes * 60
 
     chars = templates.load(HERE / ".cache")
     classes = class_list(chars, args.classes or None)
     models = writings(chars, classes)
-    model = Recogniser(len(classes))
+    model = Recogniser(len(classes)).to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=args.peak_lr, weight_decay=0.01)
     step = 0
     seen = 0
     scores: dict[str, float] = {}
     if args.checkpoint.exists():
-        ck = torch.load(args.checkpoint, map_location="cpu", weights_only=False)
+        ck = torch.load(args.checkpoint, map_location=device, weights_only=False)
         if ck.get("arch") == ARCH and ck.get("classes") == classes:
             model.load_state_dict(ck["model"])
             opt.load_state_dict(ck["opt"])
@@ -280,9 +290,20 @@ def main():
 
     def save():
         tmp = args.checkpoint.with_suffix(".tmp")
-        torch.save({"arch": ARCH, "classes": classes, "model": model.state_dict(), "opt": opt.state_dict(),
+        # saved for the CPU, wherever it was trained
+        state = {k: v.cpu() for k, v in model.state_dict().items()}
+        opt_state = opt.state_dict()
+        # (copies: the state dict shares the optimiser's own per-parameter dicts)
+        opt_state = {**opt_state, "state": {i: {k: (v.cpu() if torch.is_tensor(v) else v) for k, v in st.items()}
+                                            for i, st in opt_state["state"].items()}}
+        torch.save({"arch": ARCH, "classes": classes, "model": state, "opt": opt_state,
                     "step": step, "seen": seen, "scores": scores}, tmp)
         tmp.replace(args.checkpoint)
+        if on_save:
+            try:
+                on_save(args.checkpoint)
+            except Exception as e:  # never lose the training to a failed upload
+                print(f"after saving: {e}", flush=True)
 
     def report():
         m1, m5 = accuracy(model, messy)
@@ -305,6 +326,7 @@ def main():
     for x, y in loader:
         for group in opt.param_groups:
             group["lr"] = lr_at(step, args.peak_lr)
+        x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
         loss = F.cross_entropy(model(x), y, label_smoothing=0.1)
         opt.zero_grad(set_to_none=True)
         loss.backward()

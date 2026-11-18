@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       handwriting_minutes:
-        description: "Train the handwriting recogniser this many more minutes first (0: publish it as it is; at most 340)"
+        description: "Train the handwriting recogniser this many more minutes first (0: publish it as it is; at most 340). Training normally runs on Kaggle (packs/handwriting/kaggle.py), not here: it uses Actions minutes"
         type: number
         default: 0
 
