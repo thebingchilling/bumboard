@@ -31,6 +31,8 @@ class KeyboardPreviewView(context: Context) : View(context) {
     var oneHanded = false
     var spacebar: String? = null
     var comma = "combined"
+    /** Whether the bar shows the voice key (Settings > Keys and feedback > Voice input). */
+    var voice = true
 
     /** Settings changed: rebuilds the drawables and redraws. */
     fun refresh() {
@@ -209,7 +211,7 @@ class KeyboardPreviewView(context: Context) : View(context) {
                 ic.draw(canvas)
             }
         }
-        context.getDrawable(R.drawable.ic_sym_mic)?.mutate()?.let { ic ->
+        if (voice) context.getDrawable(R.drawable.ic_sym_mic)?.mutate()?.let { ic ->
             ic.setTint(look.onKeyVariant)
             val cx = (width - slot / 2).toInt()
             ic.setBounds(cx - s / 2, cy - s / 2, cx + s / 2, cy + s / 2)

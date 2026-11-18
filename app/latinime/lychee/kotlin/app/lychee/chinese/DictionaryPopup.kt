@@ -1092,12 +1092,13 @@ class DictionaryPopup(
             val found = chars.mapNotNull { app.lychee.dict.PackData.strokes(ctx, it, fontLang) }
             if (found.isEmpty()) return
             section(ctx.getString(R.string.lychee_card_strokes))
-            // every character of a long word, four to a row
+            // every character of a long word, each on a tile of one fixed size (its grid never
+            // squeezed): as many to a line as fit, the rest flowing onto the next line
             // not another copy of the word: each character on a tinted copybook tile, written in
             // the accent colour over a faint copy, with its stroke count under it
-            found.chunked(4).forEach { chunk ->
-                val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-                chunk.forEach { ch ->
+            val flow = FlowRow(ctx, dp(10))
+            run {
+                found.forEach { ch ->
                     val cell = LinearLayout(ctx).apply {
                         orientation = LinearLayout.VERTICAL
                         gravity = Gravity.CENTER_HORIZONTAL
@@ -1120,11 +1121,11 @@ class DictionaryPopup(
                         gravity = Gravity.CENTER
                         setPadding(0, dp(3), 0, 0)
                     })
-                    row.addView(cell, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                        .apply { marginEnd = dp(10); bottomMargin = dp(10) })
+                    flow.addView(cell)
                 }
-                body.addView(row)
             }
+            body.addView(flow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                .apply { bottomMargin = dp(10) })
         }
 
         /** Example sentences, each with its romanisation ([romanise]) and English under it. */

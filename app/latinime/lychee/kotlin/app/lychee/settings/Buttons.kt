@@ -1,42 +1,26 @@
 package app.lychee.settings
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 
 /*
- * Material 2's buttons for the settings (these names stand in for Material 3's in this package):
- * 4 dp corners, labels in medium with wide letter spacing; contained buttons raised by a shadow,
- * outlined ones with a thin grey border, text buttons flat in the accent colour. Material 2 has
- * no tonal button: FilledTonalButton is the outlined one.
+ * The settings' buttons: Material 3's own (pill shapes, tonal colours, no shadows). These names
+ * stand in for Material 3's in this package so every page uses the same ones.
  */
 
-private val Padding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-
-private fun Label(content: @Composable RowScope.() -> Unit): @Composable RowScope.() -> Unit = {
-    ProvideTextStyle(MaterialTheme.typography.labelLarge) { content() }
-}
-
-/** A contained button (the main action): the accent colour, raised. */
+/** A filled button (the main action). */
 @Composable
 fun Button(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    contentPadding: PaddingValues = Padding,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
     content: @Composable RowScope.() -> Unit,
-) = androidx.compose.material3.Button(
-    onClick = onClick, modifier = modifier, enabled = enabled, shape = M2Corner,
-    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 8.dp, disabledElevation = 0.dp),
-    contentPadding = contentPadding,
-    content = Label(content),
-)
+) = androidx.compose.material3.Button(onClick = onClick, modifier = modifier, enabled = enabled,
+    contentPadding = contentPadding, content = content)
 
 /** An outlined button (a secondary action). */
 @Composable
@@ -44,36 +28,29 @@ fun OutlinedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    contentPadding: PaddingValues = Padding,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
     content: @Composable RowScope.() -> Unit,
-) = androidx.compose.material3.OutlinedButton(
-    onClick = onClick, modifier = modifier, enabled = enabled, shape = M2Corner,
-    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-    contentPadding = contentPadding,
-    content = Label(content),
-)
+) = androidx.compose.material3.OutlinedButton(onClick = onClick, modifier = modifier, enabled = enabled,
+    contentPadding = contentPadding, content = content)
 
-/** Material 2 has no tonal button: the outlined one. */
+/** A tonal button (the secondary container colour). */
 @Composable
 fun FilledTonalButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    contentPadding: PaddingValues = Padding,
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
     content: @Composable RowScope.() -> Unit,
-) = OutlinedButton(onClick, modifier, enabled, contentPadding, content)
+) = androidx.compose.material3.FilledTonalButton(onClick = onClick, modifier = modifier, enabled = enabled,
+    contentPadding = contentPadding, content = content)
 
-/** A text button: flat, in the accent colour (dialogs' actions, small row actions). */
+/** A text button (dialogs' actions, small row actions). */
 @Composable
 fun TextButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    contentPadding: PaddingValues = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+    contentPadding: PaddingValues = ButtonDefaults.TextButtonContentPadding,
     content: @Composable RowScope.() -> Unit,
-) = androidx.compose.material3.TextButton(
-    onClick = onClick, modifier = modifier, enabled = enabled, shape = M2Corner,
-    contentPadding = contentPadding,
-    content = Label(content),
-)
+) = androidx.compose.material3.TextButton(onClick = onClick, modifier = modifier, enabled = enabled,
+    contentPadding = contentPadding, content = content)

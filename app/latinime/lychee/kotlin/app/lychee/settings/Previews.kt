@@ -60,7 +60,7 @@ private fun PreviewFrame(content: @Composable () -> Unit) {
 fun KeyboardPreview(
     palette: String, roundness: Int, borders: Boolean, raised: Boolean, height: Float,
     numberRow: Boolean = false, oneHanded: Boolean = false, spacebar: String? = null, comma: String = "combined",
-    themeMode: String? = null,
+    voice: Boolean = true, themeMode: String? = null,
 ) {
     androidx.compose.ui.viewinterop.AndroidView(
         factory = { KeyboardPreviewView(it) },
@@ -74,6 +74,7 @@ fun KeyboardPreview(
             v.oneHanded = oneHanded
             v.spacebar = spacebar
             v.comma = comma
+            v.voice = voice
             v.tag = themeMode
             v.refresh()
         },

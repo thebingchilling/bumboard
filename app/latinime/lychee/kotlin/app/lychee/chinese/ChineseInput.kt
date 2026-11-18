@@ -1099,15 +1099,11 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             val tallest = bar.heightFor(linesFor(engine))
             maxOf(standard, tallest + if (rime) line else 0)
         }
-        // the line for the letters typed is above the candidates; while handwriting nothing is
-        // typed there, so the candidates move up to the bar's top and the pad takes that line
-        // (laid over the bar's bottom, under a clean divider)
+        // the line for the letters typed is above the candidates, the same while handwriting
+        // (the bar is exactly the keyboard's own then too)
         lastBarCandidates = candidates
-        val writing = stripView?.rootView?.findViewById<View>(R.id.lychee_handwriting_panel)?.visibility == View.VISIBLE
-        lastWriting = writing
-        val top = if (rime && !writing) line else 0
-        val bottom = if (rime && writing) line else 0
-        bar?.let { if (it.paddingTop != top || it.paddingBottom != bottom) it.setPadding(0, top, 0, bottom) }
+        val top = if (rime) line else 0
+        bar?.let { if (it.paddingTop != top || it.paddingBottom != 0) it.setPadding(0, top, 0, 0) }
         // voice typing takes the bar's place, so it is as tall as the bar
         val voice = stripView?.rootView?.findViewById<View>(R.id.lychee_voice_panel)
         for (view in listOfNotNull(stripView, bar, voice)) {
@@ -1131,9 +1127,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /** What updateScriptKey was last asked (whether candidates fill the bar). */
     private var lastHidden = false
-    /** What updateBarHeight last laid out for: candidates showing, the handwriting pad open. */
+    /** What updateBarHeight last laid out for: whether candidates showed. */
     private var lastBarCandidates = false
-    private var lastWriting = false
     /** Whether 英 shows now, and the input view watched for pages and panels changing. */
     private var englishKeyShown = false
     private var watchedRoot: View? = null
@@ -1150,9 +1145,6 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             val bar = strip as? SuggestionStripView ?: return@addOnGlobalLayoutListener
             val want = isActive && !lastHidden && !schemaMissing && englishAvailable && onMainKeys(bar.rootView)
             if (want != englishKeyShown) updateScriptKey(bar, lastHidden)
-            // the handwriting pad opening or closing moves the candidates in the bar
-            val writing = bar.rootView.findViewById<View>(R.id.lychee_handwriting_panel)?.visibility == View.VISIBLE
-            if (writing != lastWriting) updateBarHeight(bar, lastBarCandidates)
         }
     }
 

@@ -88,8 +88,9 @@ class HandwritingPanelView @JvmOverloads constructor(
     private var unpicked: String? = null
 
     // before init, which places them
+    /** ABC over the keyboard's ?123 key, as the keyboard's own switch key reads: back to the letters. */
     private val backKey: View by lazy {
-        key(R.drawable.ic_sym_arrow_back, R.string.lychee_back) { this@HandwritingPanelView.visibility = GONE }
+        key(null, R.string.lychee_emoji_abc) { this@HandwritingPanelView.visibility = GONE }
     }
     /** ⌫ exactly where the keyboard's own ⌫ is, and just as big: a functional key, lifted. */
     private val deleteKey: View by lazy {
@@ -103,10 +104,6 @@ class HandwritingPanelView @JvmOverloads constructor(
         orientation = VERTICAL
         isClickable = true
         setBackgroundColor(palette.surface)
-        // a clean line between the candidates above and the pad
-        addView(View(context).apply {
-            setBackgroundColor(palette.outlineVariant)
-        }, LayoutParams(LayoutParams.MATCH_PARENT, dp(1)))
         // the guesses show in the candidate bar above (lycheeShowGuesses), so the pad gets the room
         // the pad has no background of its own: write straight on the keyboard
         // the pad over the keyboard's upper rows; its bottom row (?123, the comma, space, the
@@ -131,12 +128,8 @@ class HandwritingPanelView @JvmOverloads constructor(
         val bottomRow = row.height + row.bottomPadding
         lp.height -= bottomRow
         lp.bottomMargin += bottomRow
-        // the bar has no letters typed to show while writing (its reading line is empty), so its
-        // candidates move up to its top and the pad takes that line too
-        val strip = rootView.findViewById<View>(R.id.suggestion_strip_view)
-        val line = resources.getDimensionPixelSize(R.dimen.lychee_preedit_height)
-        val standard = resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
-        if (strip != null && strip.height >= standard + line) lp.height += line
+        // the candidate bar above stays exactly the keyboard's own (its lines, the candidates,
+        // ⌄ and the dropdown), so the pad covers only the keys
         layoutParams = lp
         placeBack()
         placeOverKey(deleteKey, Constants.CODE_DELETE)

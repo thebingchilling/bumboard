@@ -193,19 +193,16 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
     Scaffold(
         containerColor = pageColor(),
         topBar = {
-            // Material 2's app bar: one line, the page's title, raised over the list by a shadow
-            Surface(
-                color = if (dark) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surface,
-                shadowElevation = 4.dp,
-            ) {
+            // Material 3's app bar: one line, the page's title, on the page's own colour
+            run {
                 androidx.compose.material3.TopAppBar(
                     title = {
                         Text(submenu?.title ?: stringResource(page.title), style = MaterialTheme.typography.titleLarge,
                             maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                        scrolledContainerColor = androidx.compose.ui.graphics.Color.Transparent,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
                     ),
                     navigationIcon = {
                         if (page != Page.Home || submenu != null) {
@@ -360,12 +357,7 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
                 onValueChange = { sample = it },
                 placeholder = { Text(stringResource(R.string.lychee_try_it)) },
                 singleLine = false,
-                // Material 2's filled field: a grey box with a line under it
-                shape = RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp),
-                colors = androidx.compose.material3.TextFieldDefaults.colors(
-                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                ),
+                // Material 3's filled field
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -788,8 +780,8 @@ private fun KeysPage() {
     val spacebar = prefs.stringPref(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR) {
         prefs.getString(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR, null) ?: "language"
     }
-    // the key next to the comma: emoji or the next language (one choice, nothing more)
-    val extra = when (commaKey.value) { "language", "language_comma" -> "language"; else -> "emoji" }
+    // the key next to the comma: nothing, emoji or the next language
+    val extra = when (commaKey.value) { "emoji" -> "emoji"; "language", "language_comma" -> "language"; else -> "none" }
 
 
     // the keys as they will be: the number row, the key by the comma, the spacebar's label
@@ -802,7 +794,8 @@ private fun KeysPage() {
         height = prefs.getFloat(LycheeLayout.PREF_HEIGHT_SCALE, 1f),
         numberRow = numberRow.value,
         spacebar = stringResource(if (spacebar.value == "method") R.string.lychee_pref_spacebar_method else R.string.lychee_pref_spacebar_language),
-        comma = commaKey.value,
+        comma = extra,
+        voice = voice.value,
     )
     Group(stringResource(R.string.lychee_group_keys)) {
         row {
@@ -816,11 +809,12 @@ private fun KeysPage() {
             ChoiceRow(
                 it, stringResource(R.string.lychee_pref_comma_key), null,
                 listOf(
+                    "none" to stringResource(R.string.lychee_pref_comma_key_none),
                     "emoji" to stringResource(R.string.lychee_pref_comma_key_emoji),
                     "language" to stringResource(R.string.lychee_pref_comma_key_language),
                 ),
                 extra,
-                onSelect = { id -> commaKey.set(if (id == "language") "language" else "combined") },
+                onSelect = { id -> commaKey.set(id) },
             )
         }
         row {

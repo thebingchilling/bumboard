@@ -106,14 +106,15 @@ packs page). Public facing, so be careful:
   English, but the language key still switches (`typing/FieldKind`); number fields don't.
 - Motion: one way of moving everywhere (`layout/LycheeMotion`): things cross-fade in place,
   never slide in like a window; cards grow out of what was touched.
-- Settings: Material 2's UI with Material 3's theming (`settings/Components.kt`,
-  `settings/Buttons.kt`, `settings/Theme.kt`): a one-line app bar with a shadow, plain
-  full-width lists, group headings in the accent colour with a thin divider between groups, 24 dp
-  grey icons on a 72 dp keyline, Material 2 switches, sliders, 4 dp buttons, cards and dialogs,
-  choices in dropdown menus dropped from their row; coloured by Material 3's scheme (Material You's tonal palette,
-  tinted surfaces). Visual settings (theme, keys, key shape, height, candidate size, emoji size,
-  fonts, pronunciation) show a live preview where they are changed. The packs page
-  (`packs/site`) is the same: Material 2's components in Material 3's tonal colours.
+- Settings: full Material 3 (`settings/Components.kt`, `settings/Buttons.kt`, `settings/Theme.kt`):
+  Material 3's components (switches, sliders, buttons, cards, menus, app bar), shapes, type scale
+  and colour scheme (Material You's tonal palette, the same on every page), laid out with
+  Material 2's spacing and format: a one-line app bar, plain full-width lists, group headings in
+  the accent colour with a thin divider between groups, 24 dp grey icons on a 72 dp keyline,
+  choices in dropdown menus dropped from their row. Visual settings (theme, keys, key shape, height, candidate size, emoji size,
+  fonts, pronunciation, the key by the comma, the voice key) show a live preview where they are
+  changed. The packs page (`packs/site`) is the same: Material 2's components in Material 3's
+  tonal colours.
   Add-ons (`settings/AddonsPage.kt`) gets downloads through a sheet (download, then open or
   choose the file); Storage lists everything kept by language and kind, and removes one pack
   or a whole language. A removed bundled pack stays out (`packs/PackStorage`, honoured by

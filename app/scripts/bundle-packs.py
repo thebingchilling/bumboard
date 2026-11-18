@@ -19,7 +19,8 @@ import zipfile
 
 RELEASE = "https://github.com/lychee-keyboard/lychee/releases/download/packs"
 # the Japanese and Korean dictionaries are downloads (Settings > Add-ons), not in the APK
-BUNDLED = ["dict_en", "strokes_zh", "examples", "handwriting"]
+# Noto 3D emoji too (about 62 MB): installed for everyone, chosen in Settings > Fonts
+BUNDLED = ["dict_en", "strokes_zh", "examples", "handwriting", "emoji_noto3d"]
 
 
 def fetch(url: str) -> bytes:

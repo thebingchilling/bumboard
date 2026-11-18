@@ -103,7 +103,11 @@ object BundledPacks {
             dest.deleteRecursively()
             dest.parentFile?.mkdirs()
             if (!staging.renameTo(dest)) staging.copyRecursively(dest, overwrite = true)
-            Packs.writeInfo(context, id, version, null)
+            // a font pack's font is its main file (the emoji font's .ttf), as an imported one has
+            val main = dest.walkTopDown().firstOrNull { f ->
+                f.isFile && f.extension.lowercase() in setOf("ttf", "otf", "ttc")
+            }?.relativeTo(dest)?.path
+            Packs.writeInfo(context, id, version, main)
             Log.i(TAG, "unpacked $id $version")
         } finally {
             staging.deleteRecursively()
