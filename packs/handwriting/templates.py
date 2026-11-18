@@ -6,6 +6,8 @@
             Taiwan's (traditional characters as written in Taiwan, its own stroke orders)
   Japanese  KanjiVG (Ulrich Apel, CC BY-SA 3.0): kana, and kanji in their Japanese shapes;
             AnimCJK's Japanese kanji and kana
+  Both      Tomoe's handwriting dictionaries (Kouhei Sutou, Red Hat; LGPL 2.1): characters
+            written by hand with a stroke editor, simplified Chinese and Japanese
   Korean    the 2,350 common Hangul syllables (KS X 1001) and the letters, made from each
             letter's standard strokes (packs/dict/strokes_local.py); AnimCJK's Hanja
 
@@ -37,6 +39,36 @@ ANIMCJK_SETS = {
     "graphicsJaKana.txt": "ja",
     "graphicsKo.txt": "ko-hanja",
 }
+
+
+TOMOE = "https://downloads.sourceforge.net/project/tomoe/tomoe/tomoe-0.6.0/tomoe-0.6.0.tar.gz"
+TOMOE_SHA256 = "ee600f97fa434c13f6c41a1db9e03eccd551151ed48ece9c56cd9e828228ea1e"
+TOMOE_SETS = {"handwriting-zh_CN.xml": "zh-tomoe", "handwriting-ja.xml": "ja-tomoe"}
+
+
+def tomoe(cache: Path):
+    """(char, strokes in the unit box) from Tomoe's two handwriting dictionaries."""
+    import hashlib
+    import re
+    import tarfile
+
+    tgz = fetch(TOMOE, cache, "tomoe-0.6.0.tar.gz")
+    if hashlib.sha256(tgz.read_bytes()).hexdigest() != TOMOE_SHA256:
+        raise SystemExit("tomoe-0.6.0.tar.gz: checksum mismatch")
+    char_re = re.compile(r"<character>\s*<utf8>(.*?)</utf8>(.*?)</character>", re.S)
+    stroke_re = re.compile(r"<stroke>(.*?)</stroke>", re.S)
+    point_re = re.compile(r'<point x="(-?\d+)" y="(-?\d+)"')
+    with tarfile.open(tgz) as t:
+        for name, lang in TOMOE_SETS.items():
+            xml = t.extractfile(f"tomoe-0.6.0/data/{name}").read().decode("utf-8")
+            for m in char_re.finditer(xml):
+                import html
+                ch = html.unescape(m.group(1)).strip()
+                strokes = [np.array([[int(x) / 1000.0, int(y) / 1000.0] for x, y in point_re.findall(st)], dtype=np.float32)
+                           for st in stroke_re.findall(m.group(2))]
+                strokes = [st for st in strokes if len(st)]
+                if len(ch) == 1 and strokes:
+                    yield ch, lang, strokes
 
 
 def _unit(medians) -> list[np.ndarray]:
@@ -86,6 +118,9 @@ def load(cache: Path) -> dict[str, dict[str, list[list[np.ndarray]]]]:
                 if len(ch) == 1 and (0x3040 <= ord(ch) <= 0x30FF or 0x3400 <= ord(ch) <= 0x9FFF
                                      or 0x20000 <= ord(ch) <= 0x2FFFF):
                     add(ch, lang, g["medians"])
+
+    for ch, lang, strokes in tomoe(cache):
+        chars.setdefault(ch, {}).setdefault(lang, []).append(strokes)
 
     kvg_zip = fetch(KANJIVG, cache, "kanjivg-main.zip")
     kvg = cache / "kanjivg"

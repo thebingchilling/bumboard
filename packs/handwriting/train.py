@@ -45,13 +45,18 @@ BATCH = 192
 REAL_SHARE = 0.15
 
 
-def real_samples(classes: list[str]) -> tuple[list, list]:
-    """The real handwriting in real/*.jsonl, as (strokes, label): for training, and to test on."""
+def _split_key(strokes: list, label: int) -> int:
+    """0..255 from the ink itself, the same every run: below 52 (a fifth) is kept to test on."""
     import hashlib
+    first = np.round(np.concatenate(strokes)[:4], 1).tobytes()
+    return hashlib.sha256(first + str(label).encode()).digest()[0]
+
+
+def own_samples(index: dict) -> list:
+    """Testers' own handwriting in real/*.jsonl, as (strokes, label)."""
     import json
 
-    index = {c: i for i, c in enumerate(classes)}
-    train, test = [], []
+    out = []
     for f in sorted((HERE / "real").glob("*.jsonl")):
         for line in f.read_text(encoding="utf-8").splitlines():
             try:
@@ -59,12 +64,63 @@ def real_samples(classes: list[str]) -> tuple[list, list]:
             except ValueError:
                 continue
             label = index.get(d.get("typed", ""))
-            ink = [np.array(s, dtype=np.float64).reshape(-1, 2) for s in d.get("ink", []) if len(s) >= 2]
-            if label is None or not ink:
-                continue
-            key = hashlib.sha256(line.encode()).digest()[0]
-            (test if key < 52 else train).append((ink, label))
-    return train, test
+            strokes = [np.array(s, dtype=np.float64).reshape(-1, 2) for s in d.get("ink", []) if len(s) >= 2]
+            if label is not None and strokes:
+                out.append((strokes, label))
+    return out
+
+
+def real_sets(classes: list[str]) -> dict[str, tuple[list, list, bool]]:
+    """Every source of real handwriting: name -> (to train on, to test on, needs checking).
+    A source that needs checking (hangul.ink: lines cut into syllables by geometry, some cut
+    wrongly) is only used where the recogniser itself agrees with the label (see main)."""
+    import real_sources
+
+    index = {c: i for i, c in enumerate(classes)}
+    sets = {"own": own_samples(index)}
+    for name, items in real_sources.load(HERE / ".cache").items():
+        sets[name] = [(strokes, index[ch]) for strokes, ch in items if ch in index]
+    out = {}
+    for name, items in sets.items():
+        train = [x for x in items if _split_key(*x) >= 52]
+        test = [x for x in items if _split_key(*x) < 52]
+        out[name] = (train, test, name == "hangul.ink")
+    return out
+
+
+def batches_of(samples: list) -> list[tuple[torch.Tensor, torch.Tensor]]:
+    """(strokes, label) samples as tensors, grouped by length."""
+    groups: dict[int, tuple[list, list]] = {}
+    for strokes, label in samples:
+        f = ink.features(strokes)
+        if f is None:
+            continue
+        xs, ys = groups.setdefault(len(f), ([], []))
+        xs.append(f)
+        ys.append(label)
+    return [(torch.from_numpy(np.stack(xs)), torch.tensor(ys)) for xs, ys in groups.values()]
+
+
+@torch.no_grad()
+def agreed(model, samples: list, top: int = 5) -> list:
+    """The samples whose label is among the recogniser's [top] guesses."""
+    model.eval()
+    keep = []
+    for k in range(0, len(samples), 2048):
+        chunk = samples[k:k + 2048]
+        feats = [ink.features(s) for s, _ in chunk]
+        by_len: dict[int, list[int]] = {}
+        for i, f in enumerate(feats):
+            if f is not None:
+                by_len.setdefault(len(f), []).append(i)
+        for idx in by_len.values():
+            x = torch.from_numpy(np.stack([feats[i] for i in idx]))
+            best = model(x).topk(top, dim=1).indices
+            for row, i in enumerate(idx):
+                if chunk[i][1] in best[row].tolist():
+                    keep.append(chunk[i])
+    model.train()
+    return keep
 
 
 def class_list(chars: dict, limit: int | None) -> list[str]:
@@ -83,10 +139,12 @@ def writings(chars: dict, classes: list[str]) -> list[list]:
 class Samples(IterableDataset):
     """Endless batches of made-up handwriting, each batch of one length (no padding)."""
 
-    def __init__(self, models: list[list], seed: int, real: list | None = None):
+    def __init__(self, models: list[list], seed: int, real: list[list] | None = None):
         self.models = models
         self.seed = seed
-        self.real = real or []
+        # one list per source, each source as likely as the others (one writer's thousands
+        # of lines don't drown out the rest)
+        self.real = [r for r in (real or []) if r]
 
     def __iter__(self):
         info = torch.utils.data.get_worker_info()
@@ -95,7 +153,8 @@ class Samples(IterableDataset):
         buckets: dict[int, tuple[list, list]] = {}
         while True:
             if self.real and rng.random() < REAL_SHARE:
-                strokes, label = self.real[int(rng.integers(len(self.real)))]
+                source = self.real[int(rng.integers(len(self.real)))]
+                strokes, label = source[int(rng.integers(len(source)))]
                 # the real ink in its own units: to the unit box, then a little changed
                 allp = np.concatenate(strokes)
                 side = float((allp.max(0) - allp.min(0)).max()) or 1.0
@@ -206,15 +265,18 @@ def main():
 
     messy = fixed_set(models, 3000, neat=False)
     neat = fixed_set(models, 1500, neat=True)
-    real_train, real_test = real_samples(classes)
-    real_groups: dict[int, tuple[list, list]] = {}
-    for strokes, label in real_test:
-        f = ink.features(strokes)
-        xs, ys = real_groups.setdefault(len(f), ([], []))
-        xs.append(f)
-        ys.append(label)
-    real = [(torch.from_numpy(np.stack(xs)), torch.tensor(ys)) for xs, ys in real_groups.values()]
-    print(f"real handwriting: {len(real_train)} to train on, {len(real_test)} to test on", flush=True)
+    real_train: list[list] = []
+    real_tests: dict[str, tuple[list, int]] = {}
+    for name, (train, test, check) in real_sets(classes).items():
+        if check:
+            # only what the recogniser already agrees with (none before it has learnt anything)
+            n = len(train) + len(test)
+            train, test = (agreed(model, train), agreed(model, test)) if step > 0 else ([], [])
+            print(f"real handwriting, {name}: {len(train) + len(test)} of {n} agree with the recogniser", flush=True)
+        real_train.append(train)
+        if test:
+            real_tests[name] = (batches_of(test), len(test))
+        print(f"real handwriting, {name}: {len(train)} to train on, {len(test)} to test on", flush=True)
 
     def save():
         tmp = args.checkpoint.with_suffix(".tmp")
@@ -227,10 +289,10 @@ def main():
         n1, n5 = accuracy(model, neat)
         scores.update(messy_top1=m1, messy_top5=m5, neat_top1=n1, neat_top5=n5)
         line = f"step {step} seen {seen:,}: messy top1 {m1:.3f} top5 {m5:.3f} | neat top1 {n1:.3f} top5 {n5:.3f}"
-        if real:
-            r1, r5 = accuracy(model, real)
-            scores.update(real_top1=r1, real_top5=r5, real_count=len(real_test))
-            line += f" | real top1 {r1:.3f} top5 {r5:.3f} ({len(real_test)})"
+        for name, (batches, count) in real_tests.items():
+            r1, r5 = accuracy(model, batches)
+            scores.update({f"real_{name}_top1": r1, f"real_{name}_top5": r5, f"real_{name}_count": count})
+            line += f" | {name} top1 {r1:.3f} top5 {r5:.3f} ({count})"
         print(line, flush=True)
 
     loader = DataLoader(Samples(models, seed=step, real=real_train), batch_size=None, num_workers=args.workers,

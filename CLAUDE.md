@@ -79,10 +79,14 @@ packs page). Public facing, so be careful:
   (`handwriting/InkRecognizer`, the bundled `handwriting` pack, about 7 MB, ONNX Runtime): it
   reads the pen's path (`app/core` `InkFeatures`, identical to `packs/handwriting/ink.py`), not a
   picture, and is trained by `packs/handwriting` on handwriting made up from the stroke-order
-  data (KanjiVG, Make Me a Hanzi, AnimCJK with Taiwan's forms and orders, the Korean letters),
-  mostly messy and joined-up, since that is how most people write, plus real handwriting in
+  data (KanjiVG, Make Me a Hanzi, AnimCJK with Taiwan's forms and orders, Tomoe's hand-drawn
+  dictionaries, the Korean letters), mostly messy and joined-up, since that is how most people
+  write, plus real handwriting: open datasets (`packs/handwriting/real_sources.py`: rmpp-hwr-db,
+  hangul.ink's lines cut into syllables and kept only where the recogniser agrees) and
   `packs/handwriting/real/` (testers' own samples, saved from Diagnostics, used only with their
-  agreement; also the real-writing test set). Never trained on, or copied from, ML Kit or any other proprietary
+  agreement). Each also gives a real-writing test score per run. Research-only datasets
+  (CASIA, SCUT-COUCH, HIT-OR3C, TUAT, PE92, IAM-OnDB ...) are never used: their terms forbid
+  commercial use, and a model trained on them is that use. CASIA sells a commercial licence. Never trained on, or copied from, ML Kit or any other proprietary
   recogniser (their terms forbid it); only data whose licence allows commercial use.
   PaddleOCR's PP-OCRv5 (`app/scripts/fetch-ocr.sh`) stays as the fallback while the pack is
   missing. Either is opened only while the pad is open.

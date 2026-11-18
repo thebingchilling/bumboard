@@ -42,7 +42,7 @@ jobs:
       - name: Install the training tools
         run: |
           pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
-          pip install --quiet numpy onnx onnxruntime
+          pip install --quiet numpy onnx onnxruntime pyarrow
           echo "$(nproc) CPUs"
 
       - name: The last checkpoint
