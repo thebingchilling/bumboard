@@ -15,6 +15,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import app.lychee.lycheeHost
+import app.lychee.layout.LycheeMotion
 import app.lychee.layout.LycheePanels
 import app.lychee.ui.M3Colors
 import com.android.inputmethod.latin.R
@@ -29,10 +30,11 @@ import com.android.inputmethod.latin.common.Constants
  * letters and !?# to the symbols.
  *
  * In number, phone and date fields ([forced]) it is a plain pad centred with room at its sides:
- * the digits, with backspace, 0 and Enter along the bottom bar (a long press on 0 types +, for
- * phone numbers). Only a field that takes more gets more ([setInputType]): − for signed
- * numbers, a decimal point for decimals, / and : for dates and times. Those keys stand in a
- * column of their own beside the digits, backspace below them, with a wide 0 along the bottom.
+ * the digits, with backspace, 0 and Enter along the bottom bar (
+ * phone numbers). What else the field takes ([setInputType]: − for signed numbers, a decimal
+ * point for decimals, / and : for dates and times, + * # for phone numbers) is held on 0, like
+ * a key's alternatives on the keyboard: hold, slide onto one and let go; a small mark in 0's
+ * corner shows what is there.
  */
 class NumpadPanelView @JvmOverloads constructor(
     context: Context,
@@ -49,6 +51,8 @@ class NumpadPanelView @JvmOverloads constructor(
     private val bottomBars get() = listOfNotNull(fullBar, plainBar)
     /** The number field's extra keys: what is shown, and what it types. */
     private var extras: List<Pair<String, Char>> = emptyList()
+    /** The mark in the number field's 0 showing what is held on it. */
+    private var zeroHint: TextView? = null
 
     init {
         orientation = VERTICAL
@@ -56,7 +60,7 @@ class NumpadPanelView @JvmOverloads constructor(
         setBackgroundColor(palette.surface)
         setPadding(dp(3), dp(4), dp(3), dp(4))
         full = fullPad()
-        plain = plainPad(extras)
+        plain = plainPad()
         addView(full, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(plain, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         plain?.visibility = GONE
@@ -93,53 +97,32 @@ class NumpadPanelView @JvmOverloads constructor(
         fullBar = bar
     }
 
-    /**
-     * The number field's pad, centred. Without [extras]: the digits over ⌫ 0 Enter. With them:
-     * a column of the extra keys beside the digits (each a row tall, like the digits), ⌫ taking
-     * the rest of that column, and a wide 0 beside Enter along the bottom bar.
-     */
-    private fun plainPad(extras: List<Pair<String, Char>>) = LinearLayout(context).apply {
+    /** The number field's pad, centred: the digits over ⌫ 0 Enter (its extras held on 0). */
+    private fun plainPad() = LinearLayout(context).apply {
         orientation = HORIZONTAL
         val block = LinearLayout(context).apply { orientation = VERTICAL }
-        val zero = digit("0").apply {
-            // phone numbers: a long press types +
-            setOnLongClickListener { send('+'.code); true }
-        }
+        block.addView(digitRows(), LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         val bar = LinearLayout(context).apply { orientation = HORIZONTAL }
-        if (extras.isEmpty()) {
-            block.addView(digitRows(), LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-            bar.addView(backspaceKey(), keyParams(1f))
-            bar.addView(zero, keyParams(1f))
-            bar.addView(enterKey(), keyParams(1f))
-        } else {
-            val top = LinearLayout(context).apply { orientation = HORIZONTAL }
-            top.addView(digitRows(), LayoutParams(0, LayoutParams.MATCH_PARENT, 3f))
-            val side = LinearLayout(context).apply { orientation = VERTICAL }
-            for ((label, char) in extras) side.addView(text(label, char), keyParams(1f, vertical = true))
-            side.addView(backspaceKey(), keyParams((3 - extras.size).coerceAtLeast(1).toFloat(), vertical = true))
-            top.addView(side, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
-            block.addView(top, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-            bar.addView(zero, keyParams(3f))
-            bar.addView(enterKey(), keyParams(1f))
-        }
+        bar.addView(backspaceKey(), keyParams(1f))
+        bar.addView(zeroKey(), keyParams(1f))
+        bar.addView(enterKey(), keyParams(1f))
         block.addView(bar, LayoutParams(LayoutParams.MATCH_PARENT, dp(56)))
         plainBar = bar
-        // room at both sides, the pad in the middle (a little wider with its extra column)
-        val width = if (extras.isEmpty()) PLAIN_PAD else PLAIN_PAD + 1f
+        // room at both sides, the pad in the middle
         addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, PLAIN_SIDE))
-        addView(block, LayoutParams(0, LayoutParams.MATCH_PARENT, width))
+        addView(block, LayoutParams(0, LayoutParams.MATCH_PARENT, PLAIN_PAD))
         addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, PLAIN_SIDE))
     }
 
     /**
-     * The number field's kind ([android.text.InputType]): which extra keys its pad shows. A
-     * plain number or a phone number gets none; signed numbers −, decimals a point, dates /,
-     * times :, dates with times both.
+     * The number field's kind ([android.text.InputType]): what is held on its 0. A plain number
+     * has nothing; signed numbers −, decimals a point, dates /, times :, dates with times both,
+     * phone numbers + * #.
      */
     fun setInputType(inputType: Int) {
         val cls = inputType and android.text.InputType.TYPE_MASK_CLASS
         val variation = inputType and android.text.InputType.TYPE_MASK_VARIATION
-        val next = when (cls) {
+        extras = when (cls) {
             android.text.InputType.TYPE_CLASS_NUMBER -> buildList {
                 if (inputType and android.text.InputType.TYPE_NUMBER_FLAG_SIGNED != 0) add("\u2212" to '-')
                 if (inputType and android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL != 0) add("." to '.')
@@ -149,16 +132,125 @@ class NumpadPanelView @JvmOverloads constructor(
                 android.text.InputType.TYPE_DATETIME_VARIATION_TIME -> listOf(":" to ':')
                 else -> listOf("/" to '/', ":" to ':')
             }
+            android.text.InputType.TYPE_CLASS_PHONE -> listOf("+" to '+', "*" to '*', "#" to '#')
             else -> emptyList()
         }
-        if (next == extras) return
-        extras = next
-        val old = plain
-        val shown = old?.visibility ?: GONE
-        plain = plainPad(next).also { it.visibility = shown }
-        if (old != null) removeView(old)
-        addView(plain, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-        if (visibility == VISIBLE) alignWithKeyboard()
+        zeroHint?.text = extras.joinToString("") { it.first }
+        zeroHint?.visibility = if (extras.isEmpty()) GONE else VISIBLE
+    }
+
+    private var choices: android.widget.PopupWindow? = null
+    private var choiceViews: List<TextView> = emptyList()
+    private var chosen = 0
+
+    /**
+     * The number field's 0: a tap types 0; held, it shows the field's extras in a row above it
+     * (grown out of the key), the first picked; sliding picks another, letting go types it.
+     */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun zeroKey(): View {
+        val face = digit("0")
+        val hint = TextView(context).apply {
+            setTextColor(palette.onSurfaceVariant)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+            typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
+            visibility = GONE
+        }
+        zeroHint = hint
+        val hold = Runnable { if (extras.isNotEmpty()) showChoices(face) }
+        face.setOnClickListener(null)
+        face.setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    v.isPressed = true
+                    repeat.postDelayed(hold, android.view.ViewConfiguration.getLongPressTimeout().toLong())
+                }
+                MotionEvent.ACTION_MOVE -> if (choices != null) pickAt(e.rawX)
+                MotionEvent.ACTION_UP -> {
+                    v.isPressed = false
+                    repeat.removeCallbacks(hold)
+                    if (choices != null) {
+                        extras.getOrNull(chosen)?.let { send(it.second.code) }
+                        hideChoices()
+                    } else send('0'.code)
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    v.isPressed = false
+                    repeat.removeCallbacks(hold)
+                    hideChoices()
+                }
+            }
+            true
+        }
+        return android.widget.FrameLayout(context).apply {
+            addView(face, android.widget.FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            addView(hint, android.widget.FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT,
+                Gravity.TOP or Gravity.END).apply { setMargins(0, dp(4), dp(8), 0) })
+        }
+    }
+
+    private fun showChoices(key: View) {
+        hideChoices()
+        val row = LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = dp(12).toFloat()
+                setColor(palette.surfaceContainerHigh)
+            }
+            elevation = dp(6).toFloat()
+        }
+        val w = key.width.coerceAtMost(dp(64))
+        choiceViews = extras.map { (label, _) ->
+            TextView(context).apply {
+                text = label
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 24f)
+                typeface = app.lychee.fonts.LycheeFonts.ui(context, 400)
+                gravity = Gravity.CENTER
+            }.also { row.addView(it, LayoutParams(w, key.height - dp(8))) }
+        }
+        chosen = 0
+        paintChoices()
+        val popup = android.widget.PopupWindow(row, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, false).apply {
+            isClippingEnabled = false
+            elevation = dp(6).toFloat()
+        }
+        val at = IntArray(2).also { key.getLocationInWindow(it) }
+        val width = w * extras.size + dp(8)
+        val x = at[0] + key.width / 2 - width / 2
+        val y = at[1] - key.height - dp(4)
+        popup.showAtLocation(key, Gravity.NO_GRAVITY, x, y)
+        choices = popup
+        // grown out of the key that was held
+        LycheeMotion.cardIn(row, width / 2f, key.height.toFloat())
+    }
+
+    /** Picks the choice under the finger (by its x on the screen). */
+    private fun pickAt(rawX: Float) {
+        val i = choiceViews.indexOfFirst { v ->
+            val at = IntArray(2).also { v.getLocationOnScreen(it) }
+            rawX >= at[0] && rawX < at[0] + v.width
+        }
+        if (i >= 0 && i != chosen) {
+            chosen = i
+            paintChoices()
+        }
+    }
+
+    private fun paintChoices() {
+        choiceViews.forEachIndexed { i, v ->
+            v.setTextColor(if (i == chosen) palette.onPrimary else palette.onSurface)
+            v.background = if (i == chosen) android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = dp(8).toFloat()
+                setColor(palette.primary)
+            } else null
+        }
+    }
+
+    private fun hideChoices() {
+        choices?.dismiss()
+        choices = null
+        choiceViews = emptyList()
     }
 
     /** 1 2 3 / 4 5 6 / 7 8 9, three rows sharing the height above the bottom bar. */
@@ -260,7 +352,10 @@ class NumpadPanelView @JvmOverloads constructor(
         }
 
     override fun setVisibility(visibility: Int) {
-        if (visibility != VISIBLE) repeat.removeCallbacksAndMessages(null)
+        if (visibility != VISIBLE) {
+            repeat.removeCallbacksAndMessages(null)
+            hideChoices()
+        }
         super.setVisibility(visibility)
         if (visibility == VISIBLE) alignWithKeyboard()
     }
