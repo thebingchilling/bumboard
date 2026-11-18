@@ -19,15 +19,28 @@ object Models {
 
     val manager: RemoteModelManager get() = RemoteModelManager.getInstance()
 
+    /** The tags being downloaded now (each is fetched once at a time). */
+    private val fetching = java.util.Collections.synchronizedSet(HashSet<String>())
+
     /**
      * Downloads [tag]'s model, or checks for a newer one when it is there already (ML Kit fetches
      * Google's newest model for this version of it); [done] gets whether it is ready.
      */
-    fun fetch(tag: String, done: (Boolean) -> Unit) {
+    fun fetch(tag: String, done: (Boolean) -> Unit = {}) {
         val m = model(tag) ?: return done(false)
+        fetching += tag
         manager.download(m, DownloadConditions.Builder().build())
-            .addOnSuccessListener { done(true) }
-            .addOnFailureListener { done(false) }
+            .addOnSuccessListener { fetching -= tag; done(true) }
+            .addOnFailureListener { fetching -= tag; done(false) }
+    }
+
+    /** Fetches every model not downloaded yet (in the background; nothing to open or tap). */
+    fun fetchMissing() {
+        TAGS.forEach { tag ->
+            val m = model(tag) ?: return@forEach
+            if (tag in fetching) return@forEach
+            manager.isModelDownloaded(m).addOnSuccessListener { have -> if (!have && tag !in fetching) fetch(tag) }
+        }
     }
 
     /** [done] gets the tags whose models are downloaded. */

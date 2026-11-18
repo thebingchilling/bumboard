@@ -285,9 +285,11 @@ class HandwritingPanelView @JvmOverloads constructor(
             @Suppress("DEPRECATION")
             val simplified = app.lychee.chinese.ChineseScript.candidatesSimplified(
                 android.preference.PreferenceManager.getDefaultSharedPreferences(context))
-            val opened: Recognizer? = GoogleHandwriting.open(context, engine, simplified) {
-                runCatching { lycheeHost()?.lycheeInputConnection()?.getTextBeforeCursor(20, 0)?.toString() }.getOrNull().orEmpty()
-            }?.also { g -> g.padWidth = pad.width.toFloat().coerceAtLeast(1f); g.padHeight = pad.height.toFloat().coerceAtLeast(1f) }
+            val opened: Recognizer? = GoogleHandwriting.open(context, engine, simplified,
+                before = { runCatching { lycheeHost()?.lycheeInputConnection()?.getTextBeforeCursor(20, 0)?.toString() }.getOrNull().orEmpty() },
+                // while its model is still downloading
+                fallback = { OcrRecognizer.open(context, lang) },
+            )?.also { g -> g.padWidth = pad.width.toFloat().coerceAtLeast(1f); g.padHeight = pad.height.toFloat().coerceAtLeast(1f) }
                 ?: OcrRecognizer.open(context, lang)
             main.post {
                 if (visibility == VISIBLE && ocr == null) {

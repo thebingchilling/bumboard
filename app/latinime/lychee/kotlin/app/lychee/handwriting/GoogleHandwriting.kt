@@ -27,7 +27,11 @@ class GoogleHandwriting private constructor(
     private val context: Context,
     private val lang: String,
     private val before: () -> String,
+    /** Reads the pad while the companion is still downloading this language's model. */
+    private val fallback: () -> Recognizer?,
 ) : Recognizer {
+
+    private var backup: Recognizer? = null
 
     private val thread = HandlerThread("lychee-google-hw").apply { start() }
     private val replies = ArrayBlockingQueue<Pair<Int, Bundle>>(4)
@@ -82,6 +86,11 @@ class GoogleHandwriting private constructor(
         while (true) {
             val (rid, result) = replies.poll(2, TimeUnit.SECONDS) ?: return emptyList()
             if (rid != id) continue
+            if (result.getBoolean("notReady")) {
+                // the model is still downloading (it comes by itself): Lychee's own engine meanwhile
+                val b = backup ?: fallback()?.also { backup = it }
+                return b?.recognise(strokes, limit, allowed).orEmpty()
+            }
             val texts = result.getStringArrayList("texts").orEmpty()
             // ML Kit gives an order, not scores: confident at the top, less so further down
             return texts.filter(allowed).take(limit).mapIndexed { i, t -> t to (1f - i * 0.08f).coerceAtLeast(0.1f) }
@@ -89,6 +98,7 @@ class GoogleHandwriting private constructor(
     }
 
     override fun close() {
+        backup?.close()
         runCatching { context.unbindService(connection) }
         thread.quitSafely()
     }
@@ -117,8 +127,9 @@ class GoogleHandwriting private constructor(
         }
 
         /** Opens the companion when it is installed; null when it isn't. */
-        fun open(context: Context, engine: String?, simplified: Boolean, before: () -> String): GoogleHandwriting? =
-            if (installed(context)) GoogleHandwriting(context.applicationContext, languageFor(engine, simplified), before) else null
+        fun open(context: Context, engine: String?, simplified: Boolean, before: () -> String,
+                 fallback: () -> Recognizer? = { null }): GoogleHandwriting? =
+            if (installed(context)) GoogleHandwriting(context.applicationContext, languageFor(engine, simplified), before, fallback) else null
 
         /** The companion's setup screen (downloads the models; also checks for newer ones). */
         fun openSetup(context: Context) {

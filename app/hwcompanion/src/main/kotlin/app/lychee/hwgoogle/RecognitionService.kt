@@ -21,7 +21,8 @@ import com.google.mlkit.vision.digitalink.recognition.WritingArea
  *
  *   RECOGNISE  data: "lang" (a Models.TAGS tag), "count", "s0".."sN" (each stroke's x, y pairs),
  *              "width", "height" (the pad), "before" (the text before the cursor)
- *              reply RESULT  data: "texts" (best first)
+ *              reply RESULT  data: "texts" (best first), or "notReady" while the model is
+ *              still downloading (Lychee's own engine reads the pad meanwhile)
  *   STATUS     reply STATUS_RESULT  data: "ready" (the tags whose models are downloaded)
  *
  * Recognition runs on the phone, with ML Kit's downloaded models; nothing written leaves it.
@@ -42,8 +43,26 @@ class RecognitionService : Service() {
         }
     })
 
+    override fun onCreate() {
+        super.onCreate()
+        // the models come by themselves: nothing to open after installing
+        Models.fetchMissing()
+    }
+
     private fun recognise(data: Bundle, reply: Messenger, id: Int) {
         val lang = data.getString("lang") ?: return send(reply, RESULT, id, Bundle())
+        val model = Models.model(lang) ?: return send(reply, RESULT, id, Bundle())
+        Models.manager.isModelDownloaded(model).addOnCompleteListener { task ->
+            if (task.isSuccessful && task.result == true) {
+                read(lang, data, reply, id)
+            } else {
+                send(reply, RESULT, id, Bundle().apply { putBoolean("notReady", true) })
+                Models.fetchMissing()
+            }
+        }
+    }
+
+    private fun read(lang: String, data: Bundle, reply: Messenger, id: Int) {
         val recognizer = recognizers.getOrPut(lang) {
             val model = Models.model(lang) ?: return send(reply, RESULT, id, Bundle())
             DigitalInkRecognition.getClient(DigitalInkRecognizerOptions.builder(model).build())
