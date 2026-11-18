@@ -1090,6 +1090,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             if (pad instanceof app.lychee.toolbar.NumpadPanelView) {
                 final app.lychee.toolbar.NumpadPanelView numpad = (app.lychee.toolbar.NumpadPanelView) pad;
                 if (app.lychee.typing.FieldKind.getLanguageLocked()) {
+                    // the extra keys this field takes (−, a decimal point, / or :)
+                    numpad.setInputType(editorInfo.inputType);
                     numpad.setForced(true);
                     // once the keys are laid out, so the pad covers them exactly
                     mInputView.post(() -> mInputView.post(() -> {

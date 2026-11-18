@@ -30,7 +30,9 @@ import com.android.inputmethod.latin.common.Constants
  *
  * In number, phone and date fields ([forced]) it is a plain pad centred with room at its sides:
  * the digits, with backspace, 0 and Enter along the bottom bar (a long press on 0 types +, for
- * phone numbers), nothing else.
+ * phone numbers). Only a field that takes more gets more ([setInputType]): − for signed
+ * numbers, a decimal point for decimals, / and : for dates and times. Those keys stand in a
+ * column of their own beside the digits, backspace below them, with a wide 0 along the bottom.
  */
 class NumpadPanelView @JvmOverloads constructor(
     context: Context,
@@ -42,7 +44,11 @@ class NumpadPanelView @JvmOverloads constructor(
     // before init, which fills them in
     private var full: LinearLayout? = null
     private var plain: LinearLayout? = null
-    private var bottomBars: List<LinearLayout> = emptyList()
+    private var fullBar: LinearLayout? = null
+    private var plainBar: LinearLayout? = null
+    private val bottomBars get() = listOfNotNull(fullBar, plainBar)
+    /** The number field's extra keys: what is shown, and what it types. */
+    private var extras: List<Pair<String, Char>> = emptyList()
 
     init {
         orientation = VERTICAL
@@ -50,7 +56,7 @@ class NumpadPanelView @JvmOverloads constructor(
         setBackgroundColor(palette.surface)
         setPadding(dp(3), dp(4), dp(3), dp(4))
         full = fullPad()
-        plain = plainPad()
+        plain = plainPad(extras)
         addView(full, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(plain, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         plain?.visibility = GONE
@@ -84,29 +90,75 @@ class NumpadPanelView @JvmOverloads constructor(
             addView(enterKey(), keyParams(COLUMN_SIDE))
         }
         addView(bar, LayoutParams(LayoutParams.MATCH_PARENT, dp(56)))
-        bottomBars = bottomBars + bar
+        fullBar = bar
     }
 
-    /** The number field's pad: digits only, centred, with ⌫ 0 Enter along the bottom bar. */
-    private fun plainPad() = LinearLayout(context).apply {
+    /**
+     * The number field's pad, centred. Without [extras]: the digits over ⌫ 0 Enter. With them:
+     * a column of the extra keys beside the digits (each a row tall, like the digits), ⌫ taking
+     * the rest of that column, and a wide 0 beside Enter along the bottom bar.
+     */
+    private fun plainPad(extras: List<Pair<String, Char>>) = LinearLayout(context).apply {
         orientation = HORIZONTAL
         val block = LinearLayout(context).apply { orientation = VERTICAL }
-        block.addView(digitRows(), LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-        val bar = LinearLayout(context).apply {
-            orientation = HORIZONTAL
-            addView(backspaceKey(), keyParams(1f))
-            addView(digit("0").apply {
-                // phone numbers: a long press types +
-                setOnLongClickListener { send('+'.code); true }
-            }, keyParams(1f))
-            addView(enterKey(), keyParams(1f))
+        val zero = digit("0").apply {
+            // phone numbers: a long press types +
+            setOnLongClickListener { send('+'.code); true }
+        }
+        val bar = LinearLayout(context).apply { orientation = HORIZONTAL }
+        if (extras.isEmpty()) {
+            block.addView(digitRows(), LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+            bar.addView(backspaceKey(), keyParams(1f))
+            bar.addView(zero, keyParams(1f))
+            bar.addView(enterKey(), keyParams(1f))
+        } else {
+            val top = LinearLayout(context).apply { orientation = HORIZONTAL }
+            top.addView(digitRows(), LayoutParams(0, LayoutParams.MATCH_PARENT, 3f))
+            val side = LinearLayout(context).apply { orientation = VERTICAL }
+            for ((label, char) in extras) side.addView(text(label, char), keyParams(1f, vertical = true))
+            side.addView(backspaceKey(), keyParams((3 - extras.size).coerceAtLeast(1).toFloat(), vertical = true))
+            top.addView(side, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+            block.addView(top, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+            bar.addView(zero, keyParams(3f))
+            bar.addView(enterKey(), keyParams(1f))
         }
         block.addView(bar, LayoutParams(LayoutParams.MATCH_PARENT, dp(56)))
-        bottomBars = bottomBars + bar
-        // room at both sides, the pad in the middle
+        plainBar = bar
+        // room at both sides, the pad in the middle (a little wider with its extra column)
+        val width = if (extras.isEmpty()) PLAIN_PAD else PLAIN_PAD + 1f
         addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, PLAIN_SIDE))
-        addView(block, LayoutParams(0, LayoutParams.MATCH_PARENT, PLAIN_PAD))
+        addView(block, LayoutParams(0, LayoutParams.MATCH_PARENT, width))
         addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, PLAIN_SIDE))
+    }
+
+    /**
+     * The number field's kind ([android.text.InputType]): which extra keys its pad shows. A
+     * plain number or a phone number gets none; signed numbers −, decimals a point, dates /,
+     * times :, dates with times both.
+     */
+    fun setInputType(inputType: Int) {
+        val cls = inputType and android.text.InputType.TYPE_MASK_CLASS
+        val variation = inputType and android.text.InputType.TYPE_MASK_VARIATION
+        val next = when (cls) {
+            android.text.InputType.TYPE_CLASS_NUMBER -> buildList {
+                if (inputType and android.text.InputType.TYPE_NUMBER_FLAG_SIGNED != 0) add("\u2212" to '-')
+                if (inputType and android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL != 0) add("." to '.')
+            }
+            android.text.InputType.TYPE_CLASS_DATETIME -> when (variation) {
+                android.text.InputType.TYPE_DATETIME_VARIATION_DATE -> listOf("/" to '/')
+                android.text.InputType.TYPE_DATETIME_VARIATION_TIME -> listOf(":" to ':')
+                else -> listOf("/" to '/', ":" to ':')
+            }
+            else -> emptyList()
+        }
+        if (next == extras) return
+        extras = next
+        val old = plain
+        val shown = old?.visibility ?: GONE
+        plain = plainPad(next).also { it.visibility = shown }
+        if (old != null) removeView(old)
+        addView(plain, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        if (visibility == VISIBLE) alignWithKeyboard()
     }
 
     /** 1 2 3 / 4 5 6 / 7 8 9, three rows sharing the height above the bottom bar. */
@@ -229,7 +281,7 @@ class NumpadPanelView @JvmOverloads constructor(
 
     private fun digit(d: String) = key(d, letter = true, size = 26f) { lycheeHost()?.lycheeSendCode(d[0].code) }
 
-    private fun text(t: String) = key(t, letter = false) { lycheeHost()?.lycheeSendCode(t[0].code) }
+    private fun text(t: String, types: Char = t[0]) = key(t, letter = false) { lycheeHost()?.lycheeSendCode(types.code) }
 
     /** A symbol in the scrolling list: small and plain, rippling when tapped. */
     private fun symbolItem(t: String) = TextView(context).apply {
