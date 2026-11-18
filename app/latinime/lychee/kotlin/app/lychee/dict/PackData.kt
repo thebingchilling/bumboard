@@ -196,6 +196,16 @@ object PackData {
     fun hasStrokes(context: Context) = db(context, "strokes_zh", "strokes.db") != null
 
     /** Every character's stroke shapes (medians, as stored), for the handwriting stroke matcher. */
+    /** The characters Japanese writes (KanjiVG's kana and kanji), or null without the stroke pack. */
+    fun japaneseCharacters(context: Context): Set<String>? {
+        val db = db(context, "strokes_zh", "strokes.db") ?: return null
+        return runCatching {
+            db.rawQuery("SELECT ch FROM char_ja", null).use { c ->
+                buildSet { while (c.moveToNext()) add(c.getString(0)) }
+            }
+        }.getOrNull()?.takeIf { it.isNotEmpty() }
+    }
+
     fun allMedians(context: Context): List<Pair<String, String>> {
         val db = db(context, "strokes_zh", "strokes.db") ?: return emptyList()
         val chinese = runCatching {

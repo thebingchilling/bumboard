@@ -395,9 +395,11 @@ class HandwritingPanelView @JvmOverloads constructor(
         // kanji; Chinese, the characters its dictionary has (no kana, Hangul, or characters
         // only Japanese or Korean use)
         val chinese = if (engine == "ko" || engine == "ja") null else chineseCharacters()
+        // Japanese: kana, and kanji as Japanese writes them (not characters only Chinese uses)
+        val japanese = if (engine == "ja") japaneseCharacters(context) else null
         val allowed: (String) -> Boolean = when (engine) {
             "ko" -> { ch -> ch.length == 1 && ch[0] in '\uAC00'..'\uD7A3' }
-            "ja" -> { ch -> isKana(ch) || isHan(ch) }
+            "ja" -> { ch -> isKana(ch) || (isHan(ch) && (japanese == null || ch in japanese)) }
             else -> { ch -> isHan(ch) && (chinese == null || ch in chinese) }
         }
         val score = LinkedHashMap<String, Float>()
@@ -830,6 +832,15 @@ class HandwritingPanelView @JvmOverloads constructor(
         /** The Chinese dictionary's single characters, read once (null until it is open). */
         @Volatile
         private var chineseSet: Set<String>? = null
+
+        /** The Japanese characters (KanjiVG's), read once. */
+        @Volatile
+        private var japaneseSet: Set<String>? = null
+
+        fun japaneseCharacters(context: Context): Set<String>? {
+            japaneseSet?.let { return it }
+            return app.lychee.dict.PackData.japaneseCharacters(context)?.also { japaneseSet = it }
+        }
 
         fun chineseCharacters(): Set<String>? {
             chineseSet?.let { return it }
