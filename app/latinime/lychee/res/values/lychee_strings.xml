@@ -291,6 +291,11 @@
     <string name="lychee_addons_title">Add-ons</string>
     <string name="lychee_addons_summary">Dictionaries, fonts and emoji: what is installed, what you can get, and the space they take</string>
     <string name="lychee_addons_used">%1$s on this phone</string>
+    <string name="lychee_store_tagline">Fonts, dictionaries, emoji and more</string>
+    <string name="lychee_store_featured">Featured</string>
+    <string name="lychee_store_all">All</string>
+    <string name="lychee_store_free">Free</string>
+    <string name="lychee_store_browse">Browse add-ons</string>
     <string name="lychee_addons_from_file">Install from a file</string>
     <string name="lychee_addons_not_installed">Not installed</string>
     <string name="lychee_addons_how">Tap an add-on to get it. Your browser downloads it (Lychee itself never goes online); then open the file from the browser\'s notice, or choose it here.</string>

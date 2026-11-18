@@ -363,6 +363,9 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
         }
     }
 
+    // the add-ons store first, central and inviting: a tinted banner opening it
+    StoreBanner { open(Page.Packs) }
+
     // a few short groups, by what people look for
     Group(stringResource(R.string.lychee_section_languages)) {
         row {
@@ -419,12 +422,6 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
         }
     }
     Group(stringResource(R.string.lychee_section_more)) {
-        row {
-            NavRow(
-                it, stringResource(R.string.lychee_addons_title),
-                stringResource(R.string.lychee_addons_summary), R.drawable.ic_sym_download,
-            ) { open(Page.Packs) }
-        }
         row {
             NavRow(
                 it, stringResource(R.string.lychee_about),

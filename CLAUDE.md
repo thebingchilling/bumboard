@@ -115,8 +115,10 @@ packs page). Public facing, so be careful:
   fonts, pronunciation, the key by the comma, the voice key) show a live preview where they are
   changed. The packs page (`packs/site`) is the same: Material 2's components in Material 3's
   tonal colours.
-  Add-ons (`settings/AddonsPage.kt`) gets downloads through a sheet (download, then open or
-  choose the file); Storage lists everything kept by language and kind, and removes one pack
+  Add-ons (`settings/AddonsPage.kt`) is a store, opened from a banner at the top of Settings
+  (free and, later, paid add-ons: `price` and `featured` in packs.json; everything is free until
+  billing exists): featured cards, chips by language, store rows; it gets downloads through a
+  sheet (download, then open or choose the file); Storage lists everything kept by language and kind, and removes one pack
   or a whole language. A removed bundled pack stays out (`packs/PackStorage`, honoured by
   `BundledPacks.installAll`) until restored there.
 - Pronunciation (Settings > Pronunciation): Mandarin Mainland or Taiwan (CC-CEDICT's
@@ -151,7 +153,7 @@ is outside it.
   `cleanup.yml` (Actions storage is limited: after a successful build or packs run it deletes
   every other run of that workflow with its artifacts and logs, and stale caches; run by hand
   it cuts every workflow down to its newest successful run).
-- Packs that come with the app: the English dictionary, handwriting,
+- Packs that come with the app: the English dictionary, handwriting, Noto 3D emoji (about 62 MB),
   stroke order (Chinese, Japanese from KanjiVG, Korean made from letter strokes) and example
   sentences are bundled in the APK (`app/scripts/bundle-packs.py` fetches the newest
   published ones; `packs/BundledPacks.kt` in the app unpacks them). The Japanese and Korean

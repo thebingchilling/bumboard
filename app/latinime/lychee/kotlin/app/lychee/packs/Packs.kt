@@ -61,6 +61,10 @@ data class Pack(
     val emoji: String?,
     /** A picture of the font (an asset path), shown before it is downloaded. */
     val preview: String?,
+    /** What it costs, as shown ("£1.99"), or null when it is free (no billing yet: all are). */
+    val price: String? = null,
+    /** Shown first, large, at the top of the add-ons store. */
+    val featured: Boolean = false,
 )
 
 /**
@@ -101,6 +105,8 @@ object Packs {
                 lang = o.optString("lang").takeIf { it.isNotEmpty() },
                 emoji = o.optString("emoji").takeIf { it.isNotEmpty() },
                 preview = o.optString("preview").takeIf { it.isNotEmpty() },
+                price = o.optString("price").takeIf { it.isNotEmpty() },
+                featured = o.optBoolean("featured"),
             )
         }
         cached = packs

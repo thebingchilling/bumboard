@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
@@ -58,11 +59,13 @@ object AddonSheet {
 }
 
 /**
- * Settings > Add-ons: everything Lychee has or can add, the add-ons that come with it included,
- * as cards by language (then Misc), each saying plainly whether it is installed and how big it
- * is; your own fonts in a fold at the bottom. Tapping one opens its sheet, which walks through
+ * Settings > Add-ons, a store: a header with what is on the phone and the ways to get more, the
+ * featured add-ons as large cards in a row that scrolls sideways, chips to show one language's
+ * or kind's, then every add-on as a store row (a picture of what it is, its name, price, size
+ * and whether it is installed, and Get, Restore or remove). Free and paid add-ons sit side by
+ * side; for now all are free (no billing yet). Tapping one opens its sheet, which walks through
  * getting it: download it (the browser does that; Lychee has no internet access), then open the
- * downloaded file, or choose it here. This is also where add-ons are removed.
+ * downloaded file, or choose it here. Your own fonts are in a fold at the bottom.
  */
 @Composable
 fun AddonsPage() {
@@ -73,15 +76,25 @@ fun AddonsPage() {
     remember { Packs.removeUnlisted(context) }
     val total = remember(tick) { Packs.totalSize(context) }
     val colors = MaterialTheme.colorScheme
+    val catalog = remember { Packs.catalog(context) }
 
-    // how much is on the phone, and the ways to get more
-    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(stringResource(R.string.lychee_addons_used, Packs.formatSize(total)), style = MaterialTheme.typography.titleLarge,
-            color = colors.onSurface)
-        Text(stringResource(R.string.lychee_addons_how), style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+    // the store's header: a tinted banner with what is on the phone, updates and "from a file"
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(colors.primaryContainer, colors.tertiaryContainer)))
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(stringResource(R.string.lychee_store_tagline), style = MaterialTheme.typography.headlineSmall,
+            color = colors.onPrimaryContainer)
+        Text(stringResource(R.string.lychee_addons_used, Packs.formatSize(total)), style = MaterialTheme.typography.bodyMedium,
+            color = colors.onPrimaryContainer.copy(alpha = 0.8f))
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (app.lychee.packs.Updates.installed(context).isNotEmpty()) {
-                FilledTonalButton(onClick = { app.lychee.packs.Updates.check(context) }) {
+                Button(onClick = { app.lychee.packs.Updates.check(context) }) {
                     Text(stringResource(R.string.lychee_packs_updates))
                 }
             }
@@ -90,17 +103,45 @@ fun AddonsPage() {
     }
     PackMessage(actions)
     UpdatesCard()
-    val catalog = remember { Packs.catalog(context) }
-    for (section in PackStorage.Section.entries) {
-        if (section == PackStorage.Section.OWN) continue
+
+    // featured: large cards in a row that scrolls sideways
+    val featured = catalog.filter { it.featured && !it.custom }
+    if (featured.isNotEmpty()) {
+        GroupHeader(stringResource(R.string.lychee_store_featured))
+        androidx.compose.foundation.lazy.LazyRow(
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(featured.size) { i -> FeaturedCard(featured[i], tick) }
+        }
+    }
+
+    // a chip for each language and kind, to show only those
+    val sections = PackStorage.Section.entries.filter { s -> s != PackStorage.Section.OWN && catalog.any { PackStorage.section(it) == s } }
+    var only by remember { mutableStateOf<PackStorage.Section?>(null) }
+    androidx.compose.foundation.lazy.LazyRow(
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item {
+            androidx.compose.material3.FilterChip(selected = only == null, onClick = { only = null },
+                label = { Text(stringResource(R.string.lychee_store_all)) })
+        }
+        items(sections.size) { i ->
+            val s = sections[i]
+            androidx.compose.material3.FilterChip(selected = only == s, onClick = { only = if (only == s) null else s },
+                label = { Text(stringResource(sectionName(s))) })
+        }
+    }
+    for (section in sections) {
+        if (only != null && section != only) continue
         val packs = catalog.filter { PackStorage.section(it) == section }
-        if (packs.isEmpty()) continue
         SectionTitle(stringResource(sectionName(section)))
         packs.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { PackStorage.remove(context, pack); version++ }) { version++ } }
     }
     // your own fonts: folded away at the bottom
     val own = catalog.filter { PackStorage.section(it) == PackStorage.Section.OWN }
-    if (own.isNotEmpty()) {
+    if (own.isNotEmpty() && only == null) {
         SectionDivider()
         var open by remember { mutableStateOf(own.any { Packs.isInstalled(context, it.id) }) }
         Row(
@@ -133,6 +174,101 @@ fun AddonsPage() {
         }
     }
     AddonSheetHost(actions)
+}
+
+/**
+ * The add-ons store's banner at the top of Settings: emoji, kana, Hangul and a character on
+ * tonal tiles over a gradient, the store's name and what is in it; a tap opens the store.
+ */
+@Composable
+fun StoreBanner(onOpen: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    androidx.compose.material3.Surface(
+        onClick = onOpen,
+        shape = RoundedCornerShape(28.dp),
+        color = androidx.compose.ui.graphics.Color.Transparent,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Row(
+            Modifier
+                .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(colors.primaryContainer, colors.tertiaryContainer)))
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.lychee_addons_title), style = MaterialTheme.typography.titleLarge, color = colors.onPrimaryContainer)
+                Text(stringResource(R.string.lychee_store_tagline), style = MaterialTheme.typography.bodyMedium,
+                    color = colors.onPrimaryContainer.copy(alpha = 0.85f))
+                FilledTonalButton(onClick = onOpen, modifier = Modifier.padding(top = 8.dp)) {
+                    Text(stringResource(R.string.lychee_store_browse))
+                }
+            }
+            // a little stack of what is inside
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { BannerTile("\uD83D\uDE00"); BannerTile("\u3042") }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { BannerTile("\uD55C"); BannerTile("\u6C38") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BannerTile(text: String) {
+    val colors = MaterialTheme.colorScheme
+    Box(
+        Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(colors.surface.copy(alpha = 0.7f)),
+        contentAlignment = Alignment.Center,
+    ) { Text(text, color = colors.onSurface, fontSize = androidx.compose.ui.unit.TextUnit(20f, androidx.compose.ui.unit.TextUnitType.Sp)) }
+}
+
+/** What an add-on is, in a few characters for its picture (emoji, kana, Hangul, a character). */
+private fun sampleOf(pack: Pack): String = when {
+    pack.kind == PackKind.FONT_EMOJI -> "\uD83D\uDE00"
+    pack.kind == PackKind.FONT_JA || pack.id == "rime_ja" -> "\u3042"
+    pack.kind == PackKind.FONT_KO || pack.id == "dict_ko" -> "\uD55C"
+    pack.kind == PackKind.FONT_KEYS || pack.id == "dict_en" -> "Aa"
+    pack.id == "handwriting" -> "\u270D\uFE0F"
+    pack.id == "examples" -> "\u201C\u201D"
+    else -> "\u6C38"
+}
+
+/** An add-on's picture: a rounded tonal tile with [sampleOf] in it. */
+@Composable
+private fun AddonTile(pack: Pack, size: androidx.compose.ui.unit.Dp, fontSize: androidx.compose.ui.unit.TextUnit) {
+    val colors = MaterialTheme.colorScheme
+    Box(
+        Modifier
+            .size(size)
+            .clip(RoundedCornerShape(size / 4))
+            .background(colors.secondaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(sampleOf(pack), color = colors.onSecondaryContainer, fontSize = fontSize)
+    }
+}
+
+/** A featured add-on: a large card with its picture, name, what it is, its price and Get. */
+@Composable
+private fun FeaturedCard(pack: Pack, tick: Int) {
+    val context = LocalContext.current
+    val colors = MaterialTheme.colorScheme
+    val installed = remember(pack.id, tick) { Packs.isInstalled(context, pack.id) }
+    androidx.compose.material3.ElevatedCard(
+        onClick = { AddonSheet.open = pack },
+        modifier = Modifier.size(width = 248.dp, height = 196.dp),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            AddonTile(pack, 56.dp, androidx.compose.ui.unit.TextUnit(30f, androidx.compose.ui.unit.TextUnitType.Sp))
+            Text(addonName(pack), style = MaterialTheme.typography.titleMedium, color = colors.onSurface, maxLines = 1)
+            Text(pack.summary, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2,
+                modifier = Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Badge(pack.price ?: stringResource(R.string.lychee_store_free), strong = pack.price == null)
+                if (installed) Badge(stringResource(R.string.lychee_addons_installed), strong = true, check = true)
+                else if (pack.size.isNotEmpty()) Badge(pack.size, strong = false)
+            }
+        }
+    }
 }
 
 /** A section's heading on the add-ons page. */
@@ -180,6 +316,8 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            AddonTile(pack, 48.dp, androidx.compose.ui.unit.TextUnit(24f, androidx.compose.ui.unit.TextUnitType.Sp))
+            Spacer(Modifier.size(16.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(addonName(pack), style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
                 if (pack.summary.isNotEmpty()) {
@@ -192,6 +330,7 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
                         bundled -> stringResource(R.string.lychee_storage_removed)
                         else -> stringResource(R.string.lychee_addons_not_installed)
                     }
+                    if (!pack.custom) Badge(pack.price ?: stringResource(R.string.lychee_store_free), strong = false)
                     Badge(status, strong = installed, check = installed)
                     if (size.isNotEmpty()) Badge(size, strong = false)
                 }
@@ -206,7 +345,7 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
                     }
                     androidx.compose.material3.DropdownMenu(
                         expanded = asking, onDismissRequest = { asking = false },
-                        shape = M2Corner, containerColor = colors.surfaceContainer, shadowElevation = 8.dp,
+                        containerColor = colors.surfaceContainer,
                         modifier = Modifier.widthIn(max = 300.dp),
                     ) {
                         val needed = pack.id == "rime_ja" || pack.id == "dict_ko" || pack.id == "dict_en"
