@@ -362,7 +362,16 @@ private fun HomePage(status: ImeStatus, open: (Page) -> Unit) {
                 onValueChange = { sample = it },
                 placeholder = { Text(stringResource(R.string.lychee_try_it)) },
                 singleLine = false,
-                // Material 3's filled field
+                // Material 3's rounded filled field, like its search bar: no underline, a
+                // keyboard at its start
+                leadingIcon = { Icon(painterResource(R.drawable.ic_sym_keyboard), null) },
+                shape = RoundedCornerShape(28.dp),
+                colors = androidx.compose.material3.TextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                    unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
+                ),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
