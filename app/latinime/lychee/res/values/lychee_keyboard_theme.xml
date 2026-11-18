@@ -115,6 +115,33 @@
         <item name="lycheeColorAccentPressed">@color/lychee_palette_mono_accent_pressed</item>
         <item name="lycheeColorOnAccent">@color/lychee_palette_mono_on_accent</item>
     </style>
+    <!-- Dark themes: always dark (KeyStyle.night), so they need no night variant. -->
+    <style name="LycheeColors.Midnight" parent="">
+        <item name="lycheeColorBackground">#FF0D1321</item>
+        <item name="lycheeColorKey">#FF1D2638</item>
+        <item name="lycheeColorKeyPressed">#FF2B3650</item>
+        <item name="lycheeColorOnKey">#FFE3E8F4</item>
+        <item name="lycheeColorOnKeyVariant">#FFA9B3C9</item>
+        <item name="lycheeColorFunctional">#FF2A3449</item>
+        <item name="lycheeColorFunctionalPressed">#FF38445E</item>
+        <item name="lycheeColorOnFunctional">#FFD6DDEC</item>
+        <item name="lycheeColorAccent">#FF8AB4F8</item>
+        <item name="lycheeColorAccentPressed">#FFA8C7FA</item>
+        <item name="lycheeColorOnAccent">#FF0B1D3A</item>
+    </style>
+    <style name="LycheeColors.Black" parent="">
+        <item name="lycheeColorBackground">#FF000000</item>
+        <item name="lycheeColorKey">#FF161616</item>
+        <item name="lycheeColorKeyPressed">#FF2A2A2A</item>
+        <item name="lycheeColorOnKey">#FFF2F2F2</item>
+        <item name="lycheeColorOnKeyVariant">#FFA6A6A6</item>
+        <item name="lycheeColorFunctional">#FF262626</item>
+        <item name="lycheeColorFunctionalPressed">#FF383838</item>
+        <item name="lycheeColorOnFunctional">#FFE0E0E0</item>
+        <item name="lycheeColorAccent">#FFE8E8E8</item>
+        <item name="lycheeColorAccentPressed">#FFFFFFFF</item>
+        <item name="lycheeColorOnAccent">#FF000000</item>
+    </style>
 
     <style name="KeyboardIcons.LycheeM3" parent="KeyboardIcons.LXX_Light">
         <item name="iconShiftKey">@drawable/ic_sym_shift</item>

@@ -20,8 +20,16 @@ object KeyStyle {
     const val MODE_SYSTEM = "system"
     const val MODE_LIGHT = "light"
     const val MODE_DARK = "dark"
-    /** dark from 19:00 to 07:00 */
+    /** dark from 19:00 to 07:00 (kept for those who chose it; Settings now offers set times) */
     const val MODE_TIME = "time"
+    /** dark from sunset to sunrise where the phone's time zone is */
+    const val MODE_SUN = "sun"
+    /** dark between two set times ([PREF_DARK_FROM], [PREF_DARK_TO]) */
+    const val MODE_SCHEDULE = "schedule"
+    const val PREF_DARK_FROM = "lychee_dark_from"
+    const val PREF_DARK_TO = "lychee_dark_to"
+    const val DEFAULT_DARK_FROM = 19 * 60
+    const val DEFAULT_DARK_TO = 7 * 60
     /** Corner roundness in percent; 33 is the stock 8 dp. */
     const val DEFAULT_ROUNDNESS = 33
     private const val MAX_RADIUS_DP = 24f
@@ -45,11 +53,19 @@ object KeyStyle {
 
     /** True for dark, false for light, null to follow the system. */
     @JvmStatic
-    fun night(context: Context): Boolean? = when (prefs(context).getString(PREF_THEME_MODE, MODE_SYSTEM)) {
-        MODE_LIGHT -> false
-        MODE_DARK -> true
-        MODE_TIME -> Calendar.getInstance().get(Calendar.HOUR_OF_DAY).let { it >= 19 || it < 7 }
-        else -> null
+    fun night(context: Context): Boolean? {
+        // a dark palette (Midnight, Black) is always dark: the panels and the bar go dark with it
+        if (LycheeColorStyle.get(context) in LycheeColorStyle.DARK_ONLY) return true
+        val p = prefs(context)
+        return when (p.getString(PREF_THEME_MODE, MODE_SYSTEM)) {
+            MODE_LIGHT -> false
+            MODE_DARK -> true
+            MODE_TIME -> Calendar.getInstance().get(Calendar.HOUR_OF_DAY).let { it >= 19 || it < 7 }
+            MODE_SUN -> DarkSchedule.sunDown(context)
+            MODE_SCHEDULE -> DarkSchedule.between(DarkSchedule.nowMinutes(),
+                p.getInt(PREF_DARK_FROM, DEFAULT_DARK_FROM), p.getInt(PREF_DARK_TO, DEFAULT_DARK_TO))
+            else -> null
+        }
     }
 
     /**

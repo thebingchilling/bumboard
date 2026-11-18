@@ -932,6 +932,8 @@ private fun ThemePage() {
                     app.lychee.ui.LycheeColorStyle.LAVENDER to R.string.lychee_pref_colors_lavender,
                     app.lychee.ui.LycheeColorStyle.SUNSET to R.string.lychee_pref_colors_sunset,
                     app.lychee.ui.LycheeColorStyle.MONO to R.string.lychee_pref_colors_mono,
+                    app.lychee.ui.LycheeColorStyle.MIDNIGHT to R.string.lychee_pref_colors_midnight,
+                    app.lychee.ui.LycheeColorStyle.BLACK to R.string.lychee_pref_colors_black,
                 ),
                 colors.value,
             ) { id -> colors.set(id) }
@@ -986,18 +988,46 @@ private fun ThemePage() {
             }
         }
     }
+    // dark mode on a schedule: the times every half hour in the phone's own clock format, and
+    // today's sunset and sunrise where the phone's time zone is
+    val timeFormat = remember { android.text.format.DateFormat.getTimeFormat(context) }
+    fun label(m: Int): String = timeFormat.format(java.util.Calendar.getInstance().apply {
+        set(java.util.Calendar.HOUR_OF_DAY, m / 60); set(java.util.Calendar.MINUTE, m % 60)
+    }.time)
+    val times = remember { (0 until 48).map { it * 30 }.map { it to label(it) } }
+    val from = prefs.intPref(app.lychee.ui.KeyStyle.PREF_DARK_FROM) {
+        prefs.getInt(app.lychee.ui.KeyStyle.PREF_DARK_FROM, app.lychee.ui.KeyStyle.DEFAULT_DARK_FROM)
+    }
+    val to = prefs.intPref(app.lychee.ui.KeyStyle.PREF_DARK_TO) {
+        prefs.getInt(app.lychee.ui.KeyStyle.PREF_DARK_TO, app.lychee.ui.KeyStyle.DEFAULT_DARK_TO)
+    }
+    val sun = remember { app.lychee.ui.DarkSchedule.sunTimes(context) }
+    val sunTitle = stringResource(R.string.lychee_sun_today)
+    val sunText = if (sun == null) stringResource(R.string.lychee_sun_polar)
+        else stringResource(R.string.lychee_sun_times, label(sun.second), label(sun.first))
     Group(stringResource(R.string.lychee_group_appearance)) {
         row {
             ChoiceRow(
                 it, stringResource(R.string.lychee_pref_theme_mode), stringResource(R.string.lychee_pref_theme_mode_summary),
-                listOf(
+                listOfNotNull(
                     app.lychee.ui.KeyStyle.MODE_SYSTEM to stringResource(R.string.lychee_theme_system),
                     app.lychee.ui.KeyStyle.MODE_LIGHT to stringResource(R.string.lychee_theme_light),
                     app.lychee.ui.KeyStyle.MODE_DARK to stringResource(R.string.lychee_theme_dark),
-                    app.lychee.ui.KeyStyle.MODE_TIME to stringResource(R.string.lychee_theme_time),
+                    app.lychee.ui.KeyStyle.MODE_SUN to stringResource(R.string.lychee_theme_sun),
+                    app.lychee.ui.KeyStyle.MODE_SCHEDULE to stringResource(R.string.lychee_theme_schedule),
+                    // only for those who chose it before set times existed
+                    (app.lychee.ui.KeyStyle.MODE_TIME to stringResource(R.string.lychee_theme_time))
+                        .takeIf { themeMode.value == app.lychee.ui.KeyStyle.MODE_TIME },
                 ),
                 themeMode.value, onSelect = themeMode::set,
             )
+        }
+        if (themeMode.value == app.lychee.ui.KeyStyle.MODE_SCHEDULE) {
+            row { ChoiceRow(it, stringResource(R.string.lychee_dark_from), null, times, from.value, onSelect = from::set) }
+            row { ChoiceRow(it, stringResource(R.string.lychee_dark_to), null, times, to.value, onSelect = to::set) }
+        }
+        if (themeMode.value == app.lychee.ui.KeyStyle.MODE_SUN) {
+            row { TextRow(it, sunTitle, sunText) }
         }
     }
 }

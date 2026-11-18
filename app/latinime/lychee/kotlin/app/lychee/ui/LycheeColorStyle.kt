@@ -22,7 +22,11 @@ object LycheeColorStyle {
     const val LAVENDER = "lavender"
     const val SUNSET = "sunset"
     const val MONO = "mono"
-    val ALL = listOf(NEUTRAL, WALLPAPER, ROSE, OCEAN, FOREST, LAVENDER, SUNSET, MONO)
+    /** Dark themes: always dark, whatever the phone or the schedule says (KeyStyle.night). */
+    const val MIDNIGHT = "midnight"
+    const val BLACK = "black"
+    val DARK_ONLY = setOf(MIDNIGHT, BLACK)
+    val ALL = listOf(NEUTRAL, WALLPAPER, ROSE, OCEAN, FOREST, LAVENDER, SUNSET, MONO, MIDNIGHT, BLACK)
 
     @Suppress("DEPRECATION")
     @JvmStatic
@@ -46,6 +50,8 @@ object LycheeColorStyle {
         LAVENDER -> R.style.LycheeColors_Lavender
         SUNSET -> R.style.LycheeColors_Sunset
         MONO -> R.style.LycheeColors_Mono
+        MIDNIGHT -> R.style.LycheeColors_Midnight
+        BLACK -> R.style.LycheeColors_Black
         else -> R.style.LycheeColors_Neutral
     }
 
