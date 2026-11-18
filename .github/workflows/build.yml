@@ -94,8 +94,8 @@ jobs:
           hash=$( (git ls-files -s hwcompanion; grep mlkit gradle/libs.versions.toml) | sha256sum | cut -c1-16)
           have=$(gh release view handwriting-google --repo "$GITHUB_REPOSITORY" --json body -q .body 2>/dev/null | grep -o 'source [0-9a-f]*' | cut -d' ' -f2 || true)
           if [ "$hash" != "$have" ] && [ "$GITHUB_REF" = refs/heads/main ]; then
-            ./gradlew --no-daemon :hwcompanion:assembleDebug
-            cp hwcompanion/build/outputs/apk/debug/*.apk lychee-handwriting-google.apk
+            ./gradlew --no-daemon :hwcompanion:assembleRelease
+            cp hwcompanion/build/outputs/apk/release/*.apk lychee-handwriting-google.apk
             if ! gh release view handwriting-google --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
               gh release create handwriting-google --repo "$GITHUB_REPOSITORY" --prerelease --latest=false \
                 --title "Lychee handwriting (Google)" --notes "building"

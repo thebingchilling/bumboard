@@ -265,25 +265,23 @@ fun UpdatesCard() {
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
                 Text(
-                    updates.joinToString(" · ") { it.name },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-                Text(
                     stringResource(R.string.lychee_updates_available_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { app.lychee.packs.Updates.check(context, all = true) }) {
-                        Text(stringResource(R.string.lychee_updates_all))
+                // one at a time: each update its own download (browsers stop several at once)
+                updates.forEach { pack ->
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(pack.name, style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text(pack.file, style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                        }
+                        Button(onClick = { AddonSheet.open = pack }) {
+                            Text(stringResource(R.string.lychee_addons_update_short), maxLines = 1, softWrap = false)
+                        }
                     }
-                    TextButton(onClick = {
-                        context.startActivity(
-                            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("lychee://updates?install=1"))
-                                .setPackage(context.packageName),
-                        )
-                    }) { Text(stringResource(R.string.lychee_updates_install_downloaded)) }
                 }
             } else {
                 Text(

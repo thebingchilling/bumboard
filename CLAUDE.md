@@ -79,7 +79,8 @@ packs page). Public facing, so be careful:
   must be tiny. Handwriting (Chinese, Japanese, Korean only): PaddleOCR's PP-OCRv5 mobile
   recogniser (Apache-2.0, 13-16 MB, ONNX Runtime) comes in the APK (`app/scripts/fetch-ocr.sh`)
   as the basic engine; the higher-quality one is Google's ML Kit digital ink recognition in
-  Lychee's companion app (`app/hwcompanion`, package `app.lychee.hwgoogle`): ML Kit downloads its
+  Lychee's companion app (`app/hwcompanion`, package `app.lychee.hwgoogle`; only the ARM engines,
+  compressed and shrunk by R8, to keep it small): ML Kit downloads its
   models, so it needs the internet and its licence has it in an app of its own; Lychee stays
   offline and binds its service (a signature permission: only apps signed like Lychee), handing
   it the pad's strokes (`handwriting/GoogleHandwriting`). The companion hides its launcher icon
@@ -157,6 +158,8 @@ is outside it.
   CBDT by `packs/fonts/sbix_to_cbdt.py`; Android drew sbix fonts' outlines, black), and the user may pick their
   own emoji font or the phone's. Emoji font zips stay out of Actions artifacts (storage).
 - `app/latinime/lychee/assets/lychee/packs.json` — the downloads catalogue (fonts and data packs).
-- Pack updates: Lychee can't go online, so "Check for updates" opens the packs page with the
-  installed versions after the `#`; the page hands the newest back via `lychee://updates`
-  (`packs/Updates.kt`, `PackImportActivity`). Only installed packs are checked.
+- Pack updates: Lychee can't go online, so Updates opens the packs page (one small card) with the
+  installed versions after the `#`; it downloads nothing, it hands the newest back via
+  `lychee://updates` at once (`packs/Updates.kt`, `PackImportActivity`), and Lychee shows Update
+  on each add-on that has a newer version: one download at a time (browsers stop several), the
+  sheet naming the file. Only installed packs are checked.

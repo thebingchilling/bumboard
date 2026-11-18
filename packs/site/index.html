@@ -10,9 +10,9 @@
 <!--
   Lychee's add-on updates. Lychee has no internet access, so "Check for updates" opens this page
   with the installed add-ons and their versions after the '#' (it never reaches the server). The
-  page compares them with manifest.json, downloads the ones that changed by itself, then takes
-  you back to Lychee (a lychee://updates link), which opens the downloads to install. No
-  tracking, no cookies, nothing loaded from anywhere else.
+  page compares them with manifest.json and takes you straight back to Lychee (a lychee://updates
+  link) with the newest versions; Lychee then shows Update on each add-on that has one, each its
+  own download. No tracking, no cookies, nothing loaded from anywhere else.
 -->
 <style>
   /* Material 3: a tonal palette from the accent (Lychee's, or the phone's when opened from it) */
@@ -69,7 +69,6 @@
 <main class="card">
   <h1 id="title">Checking for updates…</h1>
   <p id="text">Comparing your Lychee add-ons with the newest versions.</p>
-  <div class="progress hidden" id="progress"><div id="bar"></div></div>
   <ul id="list"></ul>
   <div class="actions"><a class="button hidden" id="back">Back to Lychee</a></div>
 </main>
@@ -90,7 +89,7 @@
 
   // opened by itself, not from Lychee: what this page is for
   if (!params.has('have')) {
-    say('Lychee add-ons', 'In Lychee, open Settings › Add-ons and tap Updates: this page then downloads the newest versions of your add-ons and takes you back.');
+    say('Lychee add-ons', 'In Lychee, open Settings › Add-ons and tap Updates: this page checks your add-ons and takes you back.');
     return;
   }
 
@@ -103,44 +102,28 @@
     a.classList.remove('hidden');
     setTimeout(() => { location.href = url; }, delay);
   };
-  const download = (url) => {
-    const a = document.createElement('a');
-    a.href = url; a.rel = 'noopener';
-    document.body.append(a); a.click(); a.remove();
-  };
 
   fetch('manifest.json', { cache: 'no-store' })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(async (manifest) => {
+    .then((manifest) => {
       const packs = manifest.packs || {};
-      // only add-ons Lychee has installed are ever checked
+      // only add-ons Lychee has installed are ever checked; nothing is downloaded here: Lychee
+      // shows Update on each one that has a newer version, one download at a time
       const installed = Object.keys(packs).filter((id) => have.has(id));
       const updates = installed.filter((id) => packs[id].version !== have.get(id));
       const latest = installed.map((id) => id + ':' + packs[id].version).join(',');
       if (updates.length === 0) {
         say('All up to date', 'Your add-ons are the newest versions. Taking you back to Lychee…');
-        goBack(back(latest, false), 1500);
-        return;
+      } else {
+        say(updates.length === 1 ? '1 update' : updates.length + ' updates',
+          'Taking you back to Lychee: tap Update on each.');
+        updates.forEach((id) => {
+          const li = document.createElement('li');
+          li.textContent = packs[id].name;
+          $('list').append(li);
+        });
       }
-      say(updates.length === 1 ? 'Downloading 1 update' : 'Downloading ' + updates.length + ' updates',
-        'Your browser may ask once to allow several downloads.');
-      $('progress').classList.remove('hidden');
-      const items = updates.map((id) => {
-        const li = document.createElement('li');
-        li.textContent = packs[id].name;
-        $('list').append(li);
-        return li;
-      });
-      // one file at a time
-      for (let i = 0; i < updates.length; i++) {
-        download(packs[updates[i]].url);
-        items[i].classList.add('done');
-        items[i].textContent = '✓ ' + packs[updates[i]].name;
-        $('bar').style.width = ((i + 1) / updates.length * 100) + '%';
-        await new Promise((r) => setTimeout(r, 1200));
-      }
-      say('Downloaded', 'Taking you back to Lychee to install them…');
-      goBack(back(latest, true), 2500);
+      goBack(back(latest, false), 1200);
     })
     .catch(() => say("Couldn't check", "The add-ons list didn't load. Check your connection and try again."));
 })();

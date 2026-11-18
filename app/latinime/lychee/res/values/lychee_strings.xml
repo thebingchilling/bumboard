@@ -304,6 +304,7 @@
     <string name="lychee_addons_updates_short">Updates</string>
     <string name="lychee_addons_from_file_short">From file</string>
     <string name="lychee_addons_get_short">Get</string>
+    <string name="lychee_addons_update_short">Update</string>
     <string name="lychee_addons_choose_short">Choose</string>
     <string name="lychee_store_tagline">Fonts, dictionaries, emoji and more</string>
     <string name="lychee_store_featured">Featured</string>
@@ -320,7 +321,7 @@
     <string name="lychee_addons_done">Done</string>
     <string name="lychee_addons_step_choose">Choose a .ttf or .otf file on your phone</string>
     <string name="lychee_addons_step_download">Download it in your browser%1$s</string>
-    <string name="lychee_addons_step_install">When it has downloaded, open it from the browser\'s notice, or choose the file</string>
+    <string name="lychee_addons_step_install">When it has downloaded, open it from the browser\'s notice, or choose the file: %1$s</string>
     <string name="lychee_storage_title">Storage</string>
     <string name="lychee_storage_summary">What each language takes up; remove what you don\'t use</string>
     <string name="lychee_storage_body">Fonts, dictionaries and other data Lychee keeps on this phone, by language. Remove anything; bring it back any time.</string>

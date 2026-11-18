@@ -14,8 +14,31 @@ android {
         applicationId = "app.lychee.hwgoogle"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
+        // phones only (64-bit and 32-bit ARM), as Lychee: ML Kit's engine is a native library
+        // for each kind of processor, and the emulators' two were most of the app's size
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
+    }
+
+    packaging {
+        // the native libraries compressed in the APK (unpacked when installed): a much smaller download
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
+    buildTypes {
+        // what is shipped: the unused code of Google's libraries stripped out (their own keep
+        // rules come with them), signed with Lychee's key like the debug build
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            signingConfig = signingConfigs.getByName("debug")
+        }
     }
 
     signingConfigs {

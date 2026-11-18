@@ -363,6 +363,15 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
             }
             when {
                 busy -> androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                // a newer version (Updates found it): Update, one file at a time
+                installed && app.lychee.packs.Updates.hasUpdate(context, pack) -> FilledTonalButton(
+                    onClick = { AddonSheet.open = pack },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                ) {
+                    Icon(painterResource(R.drawable.ic_sym_refresh), null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.lychee_addons_update_short), maxLines = 1, softWrap = false,
+                        modifier = Modifier.padding(start = 6.dp))
+                }
                 // removing asks first, in a menu dropped from the bin (not a dialog)
                 installed -> Box {
                     var asking by remember { mutableStateOf(false) }
@@ -482,7 +491,8 @@ fun AddonSheetHost(actions: PackActions) {
             val facts = listOf(pack.size, pack.license).filter { it.isNotEmpty() }.joinToString(" · ")
             if (facts.isNotEmpty()) Text(facts, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
             if (actions.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            if (installed) {
+            // an installed add-on with a newer version gets the download steps again
+            if (installed && !app.lychee.packs.Updates.hasUpdate(context, pack)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(painterResource(R.drawable.ic_sym_check_circle), null, tint = colors.primary, modifier = Modifier.size(28.dp))
                     Text(stringResource(R.string.lychee_addons_installed), style = MaterialTheme.typography.titleMedium,
@@ -506,7 +516,7 @@ fun AddonSheetHost(actions: PackActions) {
                         downloaded = true
                     }) { Text(stringResource(R.string.lychee_packs_get)) }
                 }
-                Step(2, stringResource(R.string.lychee_addons_step_install), active = downloaded) {
+                Step(2, stringResource(R.string.lychee_addons_step_install, pack.file), active = downloaded) {
                     FilledTonalButton(onClick = { actions.import(pack) }, enabled = downloaded && !actions.busy) {
                         Text(stringResource(R.string.lychee_packs_choose_file))
                     }
