@@ -79,7 +79,7 @@ object LycheePanels {
     }
 
     /** The panels over the keys in [inputView] (to keep, rather than find each time). */
-    fun panels(inputView: View): List<View> = PANELS.mapNotNull { inputView.findViewById(it) }
+    fun panels(inputView: View): List<View> = PANELS.toList().mapNotNull { inputView.findViewById<View>(it) }
 
     @JvmStatic
     fun anyShown(inputView: View): Boolean =
