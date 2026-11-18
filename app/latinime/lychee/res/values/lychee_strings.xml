@@ -255,8 +255,8 @@
     <string name="lychee_google_hw_body">Google\'s handwriting recognition (ML Kit) for Chinese, Japanese and Korean: much better with messy and joined-up writing than Lychee\'s own.</string>
     <string name="lychee_google_hw_licence">Google\'s ML Kit licence requires a companion app (%1$s, plus about 20 MB per language for Google\'s handwriting models, downloaded once). Lychee itself stays offline, and what you write is read on this phone.</string>
     <string name="lychee_google_hw_steps">Your browser downloads the companion app: open the file to install it, then open it once to download the models. Its icon then hides itself.</string>
-    <string name="lychee_google_hw_get">Get the companion app</string>
-    <string name="lychee_google_hw_setup">Models and updates</string>
+    <string name="lychee_google_hw_get">Get companion</string>
+    <string name="lychee_google_hw_setup">Models</string>
     <string name="lychee_google_hw_remove">Remove</string>
     <string name="lychee_hw_unavailable">Handwriting couldn\'t start on this phone. Settings &gt; About &gt; Diagnostics says why.</string>
     <string name="lychee_hw_samples">Save handwriting samples</string>
@@ -301,6 +301,10 @@
     <string name="lychee_addons_title">Add-ons</string>
     <string name="lychee_addons_summary">Dictionaries, fonts and emoji: what is installed, what you can get, and the space they take</string>
     <string name="lychee_addons_used">%1$s on this phone</string>
+    <string name="lychee_addons_updates_short">Updates</string>
+    <string name="lychee_addons_from_file_short">From file</string>
+    <string name="lychee_addons_get_short">Get</string>
+    <string name="lychee_addons_choose_short">Choose</string>
     <string name="lychee_store_tagline">Fonts, dictionaries, emoji and more</string>
     <string name="lychee_store_featured">Featured</string>
     <string name="lychee_store_all">All</string>
@@ -373,6 +377,6 @@
     <string name="lychee_addons_bundled">Comes with Lychee</string>
     <string name="lychee_addons_page">All add-ons</string>
     <string name="lychee_addons_page_summary">Open the packs page to get add-ons that aren\'t on this phone</string>
-    <string name="lychee_addons_misc">Misc</string>
+    <string name="lychee_addons_misc">Others</string>
     <string name="lychee_dictionary_needed">Japanese dictionary needed · tap to get it</string>
 </resources>

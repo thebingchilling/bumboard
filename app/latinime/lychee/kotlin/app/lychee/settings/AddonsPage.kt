@@ -59,10 +59,10 @@ object AddonSheet {
 }
 
 /**
- * Settings > Add-ons, a store: a header with what is on the phone and the ways to get more, the
- * featured add-ons as large cards in a row that scrolls sideways, chips to show one language's
- * or kind's, then every add-on as a store row (a picture of what it is, its name, price, size
- * and whether it is installed, and Get, Restore or remove). Free and paid add-ons sit side by
+ * Settings > Add-ons, a store: a header with what is on the phone and the ways to get more,
+ * Google handwriting, then every add-on as a store row by language (Chinese, Japanese, Korean,
+ * English, then Others): a picture of what it is, its name and what it is (grey once
+ * installed), its size and version on the line under, and Get, Restore or remove. Free and paid add-ons sit side by
  * side; for now all are free (no billing yet). Tapping one opens its sheet, which walks through
  * getting it: download it (the browser does that; Lychee has no internet access), then open the
  * downloaded file, or choose it here. Your own fonts are in a fold at the bottom.
@@ -83,22 +83,29 @@ fun AddonsPage() {
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
-            .clip(RoundedCornerShape(28.dp))
-            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(colors.primaryContainer, colors.tertiaryContainer)))
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .clip(RoundedCornerShape(16.dp))
+            .background(colors.surfaceContainerLow)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(stringResource(R.string.lychee_store_tagline), style = MaterialTheme.typography.headlineSmall,
-            color = colors.onPrimaryContainer)
-        Text(stringResource(R.string.lychee_addons_used, Packs.formatSize(total)), style = MaterialTheme.typography.bodyMedium,
-            color = colors.onPrimaryContainer.copy(alpha = 0.8f))
+        Text(stringResource(R.string.lychee_store_tagline), style = MaterialTheme.typography.titleMedium,
+            color = colors.onSurface)
+        Text(stringResource(R.string.lychee_addons_used, Packs.formatSize(total)), style = MaterialTheme.typography.bodySmall,
+            color = colors.onSurfaceVariant)
+        // short labels with their icons, on one line (never wrapping)
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (app.lychee.packs.Updates.installed(context).isNotEmpty()) {
                 Button(onClick = { app.lychee.packs.Updates.check(context) }) {
-                    Text(stringResource(R.string.lychee_packs_updates))
+                    Icon(painterResource(R.drawable.ic_sym_refresh), null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.lychee_addons_updates_short), maxLines = 1, softWrap = false,
+                        modifier = Modifier.padding(start = 8.dp))
                 }
             }
-            OutlinedButton(onClick = { actions.import(null) }) { Text(stringResource(R.string.lychee_addons_from_file)) }
+            OutlinedButton(onClick = { actions.import(null) }) {
+                Icon(painterResource(R.drawable.ic_sym_folder_open), null, modifier = Modifier.size(18.dp))
+                Text(stringResource(R.string.lychee_addons_from_file_short), maxLines = 1, softWrap = false,
+                    modifier = Modifier.padding(start = 8.dp))
+            }
         }
     }
     PackMessage(actions)
@@ -106,44 +113,16 @@ fun AddonsPage() {
     // the higher-quality handwriting, first in the store
     GoogleHandwritingCard()
 
-    // featured: large cards in a row that scrolls sideways
-    val featured = catalog.filter { it.featured && !it.custom }
-    if (featured.isNotEmpty()) {
-        GroupHeader(stringResource(R.string.lychee_store_featured))
-        androidx.compose.foundation.lazy.LazyRow(
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(featured.size) { i -> FeaturedCard(featured[i], tick) }
-        }
-    }
-
-    // a chip for each language and kind, to show only those
-    val sections = PackStorage.Section.entries.filter { s -> s != PackStorage.Section.OWN && catalog.any { PackStorage.section(it) == s } }
-    var only by remember { mutableStateOf<PackStorage.Section?>(null) }
-    androidx.compose.foundation.lazy.LazyRow(
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        item {
-            androidx.compose.material3.FilterChip(selected = only == null, onClick = { only = null },
-                label = { Text(stringResource(R.string.lychee_store_all)) })
-        }
-        items(sections.size) { i ->
-            val s = sections[i]
-            androidx.compose.material3.FilterChip(selected = only == s, onClick = { only = if (only == s) null else s },
-                label = { Text(stringResource(sectionName(s))) })
-        }
-    }
+    // by language (Chinese, Japanese, Korean, English), then the others
+    val sections = PackStorage.Section.entries.filter { sec -> sec != PackStorage.Section.OWN && catalog.any { PackStorage.section(it) == sec } }
     for (section in sections) {
-        if (only != null && section != only) continue
         val packs = catalog.filter { PackStorage.section(it) == section }
         SectionTitle(stringResource(sectionName(section)))
         packs.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { PackStorage.remove(context, pack); version++ }) { version++ } }
     }
     // your own fonts: folded away at the bottom
     val own = catalog.filter { PackStorage.section(it) == PackStorage.Section.OWN }
-    if (own.isNotEmpty() && only == null) {
+    if (own.isNotEmpty()) {
         SectionDivider()
         var open by remember { mutableStateOf(own.any { Packs.isInstalled(context, it.id) }) }
         Row(
@@ -193,14 +172,14 @@ fun StoreBanner(onOpen: () -> Unit) {
     ) {
         Row(
             Modifier
-                .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(colors.primaryContainer, colors.tertiaryContainer)))
+                .background(colors.surfaceContainerLow)
                 .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.lychee_addons_title), style = MaterialTheme.typography.titleLarge, color = colors.onPrimaryContainer)
+                Text(stringResource(R.string.lychee_addons_title), style = MaterialTheme.typography.titleLarge, color = colors.onSurface)
                 Text(stringResource(R.string.lychee_store_tagline), style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onPrimaryContainer.copy(alpha = 0.85f))
+                    color = colors.onSurfaceVariant)
                 FilledTonalButton(onClick = onOpen, modifier = Modifier.padding(top = 8.dp)) {
                     Text(stringResource(R.string.lychee_store_browse))
                 }
@@ -261,15 +240,21 @@ private fun GoogleHandwritingCard() {
             if (!installed) {
                 Text(stringResource(R.string.lychee_google_hw_steps), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                 Button(onClick = { app.lychee.handwriting.GoogleHandwriting.download(context) }) {
-                    Text(stringResource(R.string.lychee_google_hw_get))
+                    Icon(painterResource(R.drawable.ic_sym_download), null, modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.lychee_google_hw_get), maxLines = 1, softWrap = false,
+                        modifier = Modifier.padding(start = 8.dp))
                 }
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalButton(onClick = { app.lychee.handwriting.GoogleHandwriting.openSetup(context) }) {
-                        Text(stringResource(R.string.lychee_google_hw_setup))
+                        Icon(painterResource(R.drawable.ic_sym_refresh), null, modifier = Modifier.size(18.dp))
+                        Text(stringResource(R.string.lychee_google_hw_setup), maxLines = 1, softWrap = false,
+                            modifier = Modifier.padding(start = 8.dp))
                     }
                     TextButton(onClick = { app.lychee.handwriting.GoogleHandwriting.openAppInfo(context) }) {
-                        Text(stringResource(R.string.lychee_google_hw_remove))
+                        Icon(painterResource(R.drawable.lychee_ic_delete), null, modifier = Modifier.size(18.dp))
+                        Text(stringResource(R.string.lychee_google_hw_remove), maxLines = 1, softWrap = false,
+                            modifier = Modifier.padding(start = 8.dp))
                     }
                 }
             }
@@ -300,30 +285,6 @@ private fun AddonTile(pack: Pack, size: androidx.compose.ui.unit.Dp, fontSize: a
         contentAlignment = Alignment.Center,
     ) {
         Text(sampleOf(pack), color = colors.onSecondaryContainer, fontSize = fontSize)
-    }
-}
-
-/** A featured add-on: a large card with its picture, name, what it is, its price and Get. */
-@Composable
-private fun FeaturedCard(pack: Pack, tick: Int) {
-    val context = LocalContext.current
-    val colors = MaterialTheme.colorScheme
-    val installed = remember(pack.id, tick) { Packs.isInstalled(context, pack.id) }
-    androidx.compose.material3.ElevatedCard(
-        onClick = { AddonSheet.open = pack },
-        modifier = Modifier.size(width = 248.dp, height = 196.dp),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            AddonTile(pack, 56.dp, androidx.compose.ui.unit.TextUnit(30f, androidx.compose.ui.unit.TextUnitType.Sp))
-            Text(addonName(pack), style = MaterialTheme.typography.titleMedium, color = colors.onSurface, maxLines = 1)
-            Text(pack.summary, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2,
-                modifier = Modifier.weight(1f))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Badge(pack.price ?: stringResource(R.string.lychee_store_free), strong = pack.price == null)
-                if (installed) Badge(stringResource(R.string.lychee_addons_installed), strong = true, check = true)
-                else if (pack.size.isNotEmpty()) Badge(pack.size, strong = false)
-            }
-        }
     }
 }
 
@@ -374,22 +335,31 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
         Row(Modifier.padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             AddonTile(pack, 48.dp, androidx.compose.ui.unit.TextUnit(24f, androidx.compose.ui.unit.TextUnitType.Sp))
             Spacer(Modifier.size(16.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(addonName(pack), style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                // installed: quieter, in grey; still to get: in full colour
+                Text(addonName(pack), style = MaterialTheme.typography.bodyLarge,
+                    color = if (installed) colors.onSurfaceVariant else colors.onSurface, maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 if (pack.summary.isNotEmpty()) {
-                    Text(pack.summary, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant, maxLines = 2)
+                    Text(pack.summary, style = MaterialTheme.typography.bodySmall,
+                        color = colors.onSurfaceVariant.copy(alpha = if (installed) 0.7f else 1f), maxLines = 2)
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val status = when {
-                        installed && bundled -> stringResource(R.string.lychee_addons_bundled)
-                        installed -> stringResource(R.string.lychee_addons_installed)
-                        bundled -> stringResource(R.string.lychee_storage_removed)
-                        else -> stringResource(R.string.lychee_addons_not_installed)
-                    }
-                    if (!pack.custom) Badge(pack.price ?: stringResource(R.string.lychee_store_free), strong = false)
-                    Badge(status, strong = installed, check = installed)
-                    if (size.isNotEmpty()) Badge(size, strong = false)
+                // the size and version on a line of their own; where it stands before them
+                val status = when {
+                    installed && bundled -> stringResource(R.string.lychee_addons_bundled)
+                    installed -> stringResource(R.string.lychee_addons_installed)
+                    bundled -> stringResource(R.string.lychee_storage_removed)
+                    else -> pack.price ?: stringResource(R.string.lychee_store_free)
                 }
+                val shownVersion = if (installed) Packs.installedVersion(context, pack.id) else null
+                Text(
+                    listOfNotNull(status, size.takeIf { it.isNotEmpty() }, shownVersion?.takeIf { it.isNotEmpty() }?.let { "v$it" })
+                        .joinToString("  ·  "),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (installed) colors.onSurfaceVariant else colors.primary,
+                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
             }
             when {
                 busy -> androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
@@ -432,9 +402,14 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
                         onChanged()
                         actions.refresh()
                     }
-                }) { Text(stringResource(R.string.lychee_storage_restore)) }
-                else -> FilledTonalButton(onClick = { AddonSheet.open = pack }) {
-                    Text(stringResource(if (pack.custom) R.string.lychee_fonts_choose else R.string.lychee_packs_get))
+                }) { Text(stringResource(R.string.lychee_storage_restore), maxLines = 1, softWrap = false) }
+                // short, with its icon, never wrapping
+                else -> FilledTonalButton(onClick = { AddonSheet.open = pack },
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp)) {
+                    Icon(painterResource(if (pack.custom) R.drawable.ic_sym_folder_open else R.drawable.ic_sym_download), null,
+                        modifier = Modifier.size(18.dp))
+                    Text(stringResource(if (pack.custom) R.string.lychee_addons_choose_short else R.string.lychee_addons_get_short),
+                        maxLines = 1, softWrap = false, modifier = Modifier.padding(start = 6.dp))
                 }
             }
         }

@@ -244,9 +244,13 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                 // each page counts its own groups (the first has no divider above it)
                 val counter = remember(shown, menu) { GroupCounter() }
                 androidx.compose.runtime.CompositionLocalProvider(LocalGroupCounter provides counter) {
+                Column(Modifier.fillMaxSize()) {
+                // the Theme page's keyboard preview stays at the top while its settings scroll
+                if (menu == null && shown == Page.Theme) PinnedThemePreview()
                 Column(
                     Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
+                        .weight(1f)
                         .verticalScroll(rememberScrollState())
                         .navigationBarsPadding()
                         .padding(bottom = 24.dp),
@@ -270,6 +274,7 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                         Page.Licences -> LicencesPage()
                         Page.Diagnostics -> DiagnosticsPage()
                     }
+                }
                 }
                 }
             }
@@ -912,11 +917,11 @@ private fun ThemePage() {
     var liveColumns by remember(columns.value) { mutableStateOf(if (columns.value > 0) columns.value else 9) }
 
     // the keyboard as it will look, changing with every choice below
-    KeyboardPreview(
-        palette = colors.value, roundness = liveRound, borders = borders.value,
-        raised = selected == ids.firstOrNull(), height = liveHeight, oneHanded = mode.value == "one_handed",
-        themeMode = themeMode.value,
-    )
+    // shown pinned at the top of the page (PinnedThemePreview), so every change is seen at once
+    androidx.compose.runtime.SideEffect {
+        ThemePreviewState.params = ThemePreviewParams(colors.value, liveRound, borders.value,
+            selected == ids.firstOrNull(), liveHeight, mode.value == "one_handed", themeMode.value)
+    }
     Group(stringResource(R.string.lychee_pref_colors)) {
         row {
             PaletteGrid(
