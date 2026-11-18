@@ -65,6 +65,9 @@ android {
         // are for loading straight from it: a much smaller download
         jniLibs {
             useLegacyPackaging = true
+            // phones only: the emulators' x86 libraries some dependencies bring (ONNX Runtime's
+            // were 30 MB of the universal APK) are left out
+            excludes += listOf("lib/x86/**", "lib/x86_64/**")
         }
     }
 
