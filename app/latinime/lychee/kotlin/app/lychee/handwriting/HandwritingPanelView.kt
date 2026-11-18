@@ -307,7 +307,8 @@ class HandwritingPanelView @JvmOverloads constructor(
         }
         // the characters' stroke shapes (a second opinion for Chinese and Japanese, and the
         // kana's shapes); and the Chinese dictionary's characters, for the filter
-        if (engine != "ko") loadMatcher(context) { if (visibility == VISIBLE && pad.hasInk) recognise() }
+        // (Korean too: its Hanja); not with Google's recognition, which needs no second opinion
+        if (!GoogleHandwriting.installed(context)) loadMatcher(context) { if (visibility == VISIBLE && pad.hasInk) recognise() }
         if (engine != "ko" && engine != "ja") worker.execute { chineseCharacters() }
         message.visibility = GONE
         message.text = context.getString(R.string.lychee_hw_unavailable)
@@ -398,16 +399,17 @@ class HandwritingPanelView @JvmOverloads constructor(
         // Japanese: kana, and kanji as Japanese writes them (not characters only Chinese uses)
         val japanese = if (engine == "ja") japaneseCharacters(context) else null
         val allowed: (String) -> Boolean = when (engine) {
-            "ko" -> { ch -> ch.length == 1 && ch[0] in '\uAC00'..'\uD7A3' }
+            // Korean: Hangul, and Hanja
+            "ko" -> { ch -> (ch.length == 1 && ch[0] in '\uAC00'..'\uD7A3') || isHan(ch) }
             "ja" -> { ch -> isKana(ch) || (isHan(ch) && (japanese == null || ch in japanese)) }
             else -> { ch -> isHan(ch) && (chinese == null || ch in chinese) }
         }
         val score = LinkedHashMap<String, Float>()
         o?.recognise(ink, 20, allowed)?.forEach { (ch, p) -> score[ch] = p }
-        // Google's recognition is far better than the stroke matcher, so the matcher only
-        // breaks near-ties for it; PP-OCR, which reads pictures, gets its full say
+        // with Google's recognition only it reads the pad (Lychee's own engines stay off);
+        // PP-OCR, which reads pictures, gets the stroke matcher's second opinion
         val own = o is GoogleHandwriting
-        if (engine != "ko" && m != null) {
+        if (m != null && !own) {
             // a second opinion from the strokes' shapes and directions (the stroke-order data),
             // which a roughly drawn character fools differently from the picture: agreement
             // lifts a character, and one the picture missed can still come up
