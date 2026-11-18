@@ -248,6 +248,16 @@
     <string name="lychee_voice_cancel">Cancel voice typing</string>
     <string name="lychee_voice_permission_granted">Microphone allowed. Tap the mic again to speak.</string>
     <string name="lychee_card_pronunciation">Pronunciation</string>
+    <string name="lychee_hw_upgrade">Better handwriting: Google\'s</string>
+    <string name="lychee_hw_upgrade_dismiss">Not now</string>
+    <string name="lychee_google_hw">Google handwriting</string>
+    <string name="lychee_google_hw_quality">Higher quality</string>
+    <string name="lychee_google_hw_body">Google\'s handwriting recognition (ML Kit) for Chinese, Japanese and Korean: much better with messy and joined-up writing than Lychee\'s own.</string>
+    <string name="lychee_google_hw_licence">Google\'s ML Kit licence requires a companion app (%1$s, plus about 20 MB per language for Google\'s handwriting models, downloaded once). Lychee itself stays offline, and what you write is read on this phone.</string>
+    <string name="lychee_google_hw_steps">Your browser downloads the companion app: open the file to install it, then open it once to download the models. Its icon then hides itself.</string>
+    <string name="lychee_google_hw_get">Get the companion app</string>
+    <string name="lychee_google_hw_setup">Models and updates</string>
+    <string name="lychee_google_hw_remove">Remove</string>
     <string name="lychee_hw_unavailable">Handwriting couldn\'t start on this phone. Settings &gt; About &gt; Diagnostics says why.</string>
     <string name="lychee_hw_samples">Save handwriting samples</string>
     <string name="lychee_hw_samples_summary">Keeps what you write on the handwriting pad on this phone, to share from Diagnostics when it reads you wrong, or to save as a file that teaches Lychee your handwriting</string>

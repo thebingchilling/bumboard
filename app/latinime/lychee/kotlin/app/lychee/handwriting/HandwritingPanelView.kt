@@ -2,6 +2,7 @@ package app.lychee.handwriting
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -46,10 +47,9 @@ import java.util.concurrent.Executors
  * Everything moves: the ink fades away moments after the last stroke (and at once, softly, when
  * a guess is picked), while the next character can already be written over it.
  *
- * Recognition is Lychee's own recogniser ([InkRecognizer], the handwriting pack), which reads
- * the pen's path stroke by stroke, trained on messy and joined-up writing made from the
- * stroke-order data. Without the pack, PaddleOCR's PP-OCRv5 text recogniser ([OcrRecognizer])
- * reads the ink as a picture: Chinese and Japanese with its Chinese model, Korean its Korean
+ * Recognition is Google's (ML Kit, [GoogleHandwriting]) when Lychee's companion app is
+ * installed, which reads the pen's path; otherwise PaddleOCR's PP-OCRv5 text recogniser
+ * ([OcrRecognizer]), which comes with Lychee, reads the ink as a picture: Chinese and Japanese with its Chinese model, Korean its Korean
  * model, the stroke matcher adding the kana it mistakes for look-alike kanji. Either is opened
  * only while the pad is open.
  */
@@ -100,6 +100,48 @@ class HandwritingPanelView @JvmOverloads constructor(
         }
     }
 
+    /**
+     * The offer of better handwriting, while Lychee's own reads the pad: a small chip at the
+     * pad's top; a tap opens Google handwriting in Settings > Add-ons, ✕ puts it away for good.
+     */
+    private val upgrade: View by lazy {
+        LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14), dp(6), dp(6), dp(6))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = dp(18).toFloat()
+                setColor(palette.secondaryContainer)
+            }
+            visibility = GONE
+            addView(TextView(context).apply {
+                setText(R.string.lychee_hw_upgrade)
+                setTextColor(palette.onSecondaryContainer)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            })
+            addView(ImageView(context).apply {
+                setImageResource(R.drawable.ic_sym_close)
+                imageTintList = ColorStateList.valueOf(palette.onSecondaryContainer)
+                scaleType = ImageView.ScaleType.CENTER
+                contentDescription = context.getString(R.string.lychee_hw_upgrade_dismiss)
+                setOnClickListener {
+                    @Suppress("DEPRECATION")
+                    android.preference.PreferenceManager.getDefaultSharedPreferences(context).edit()
+                        .putBoolean(PREF_UPGRADE_DISMISSED, true).apply()
+                    this@apply.visibility = GONE
+                }
+            }, LayoutParams(dp(32), dp(32)).apply { marginStart = dp(4) })
+            setOnClickListener {
+                runCatching {
+                    context.startActivity(Intent(context, app.lychee.settings.SettingsActivity::class.java)
+                        .putExtra(app.lychee.settings.SettingsActivity.EXTRA_PAGE, "Packs")
+                        .putExtra(app.lychee.settings.SettingsActivity.EXTRA_ADDON, GOOGLE_ADDON)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+            }
+        }
+    }
+
     init {
         orientation = VERTICAL
         isClickable = true
@@ -113,6 +155,8 @@ class HandwritingPanelView @JvmOverloads constructor(
             addView(hint, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(pad, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(message, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+            addView(upgrade, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(6) })
         }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         visibility = GONE
     }
@@ -236,12 +280,24 @@ class HandwritingPanelView @JvmOverloads constructor(
         // the model opens off the main thread (it is read from the APK); what is written
         // meanwhile is read as soon as it is open
         worker.execute {
-            // Lychee's own recogniser (the handwriting pack) when it is there, else PP-OCR
-            val opened: Recognizer? = InkRecognizer.open(context) ?: OcrRecognizer.open(context, lang)
+            // Google's (ML Kit, through Lychee's companion app) when it is installed, the better
+            // one; else PP-OCR, which comes with Lychee
+            @Suppress("DEPRECATION")
+            val simplified = app.lychee.chinese.ChineseScript.candidatesSimplified(
+                android.preference.PreferenceManager.getDefaultSharedPreferences(context))
+            val opened: Recognizer? = GoogleHandwriting.open(context, engine, simplified) {
+                runCatching { lycheeHost()?.lycheeInputConnection()?.getTextBeforeCursor(20, 0)?.toString() }.getOrNull().orEmpty()
+            }?.also { g -> g.padWidth = pad.width.toFloat().coerceAtLeast(1f); g.padHeight = pad.height.toFloat().coerceAtLeast(1f) }
+                ?: OcrRecognizer.open(context, lang)
             main.post {
                 if (visibility == VISIBLE && ocr == null) {
                     ocr = opened
                     message.visibility = if (opened == null) VISIBLE else GONE
+                    // Lychee's own reads the pad: offer Google's, unless put away
+                    @Suppress("DEPRECATION")
+                    val dismissed = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+                        .getBoolean(PREF_UPGRADE_DISMISSED, false)
+                    upgrade.visibility = if (opened !is GoogleHandwriting && !dismissed) VISIBLE else GONE
                     updateHint()
                     if (pad.hasInk) recognise()
                 } else if (opened != null) {
@@ -346,9 +402,9 @@ class HandwritingPanelView @JvmOverloads constructor(
         }
         val score = LinkedHashMap<String, Float>()
         o?.recognise(ink, 20, allowed)?.forEach { (ch, p) -> score[ch] = p }
-        // Lychee's own recogniser learnt from the same stroke shapes the matcher knows, so the
-        // matcher only breaks near-ties for it; PP-OCR, which reads pictures, gets its full say
-        val own = o is InkRecognizer
+        // Google's recognition is far better than the stroke matcher, so the matcher only
+        // breaks near-ties for it; PP-OCR, which reads pictures, gets its full say
+        val own = o is GoogleHandwriting
         if (engine != "ko" && m != null) {
             // a second opinion from the strokes' shapes and directions (the stroke-order data),
             // which a roughly drawn character fools differently from the picture: agreement
@@ -747,6 +803,10 @@ class HandwritingPanelView @JvmOverloads constructor(
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 
     private companion object {
+        /** The pad's offer of Google handwriting was put away. */
+        const val PREF_UPGRADE_DISMISSED = "lychee_hw_upgrade_dismissed"
+        /** Settings > Add-ons' Google handwriting card (SettingsActivity.EXTRA_ADDON). */
+        const val GOOGLE_ADDON = "google_handwriting"
         /** The pause after the last stroke before the ink fades away, and the fade. */
         const val AUTO_CLEAR_MS = 900L
         const val INK_FADE_MS = 220L

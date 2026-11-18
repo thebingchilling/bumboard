@@ -31,7 +31,13 @@
     <uses-permission android:name="android.permission.INTERNET" tools:node="remove"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" tools:node="remove"/>
+    <!-- LYCHEE: Google handwriting (ML Kit) runs in Lychee's companion app, which needs the
+         internet for its models; Lychee binds its service, which only apps signed like Lychee
+         may (declared here too, so Lychee holds it whichever is installed first). -->
+    <permission android:name="app.lychee.permission.HANDWRITING" android:protectionLevel="signature"/>
+    <uses-permission android:name="app.lychee.permission.HANDWRITING"/>
     <queries>
+        <package android:name="app.lychee.hwgoogle"/>
         <intent>
             <action android:name="android.speech.RecognitionService"/>
         </intent>

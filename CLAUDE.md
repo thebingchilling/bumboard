@@ -70,26 +70,24 @@ packs page). Public facing, so be careful:
 
 ## Product constraints
 
-- No network permissions, ever (`INTERNET`, `ACCESS_NETWORK_STATE`, ...). CI fails the
-  build if one appears. Downloads open in the browser (Custom Tab); opening the downloaded
+- No network permissions, ever (`INTERNET`, `ACCESS_NETWORK_STATE`, ...), in Lychee itself.
+  CI fails the build if one appears. (The optional Google handwriting companion has them, for
+  ML Kit's models only.) Downloads open in the browser (Custom Tab); opening the downloaded
   file installs it (`PackImportActivity`), or the user picks it.
 - Downloaded models may be any size, but must not slow the phone: memory-mapped data
   (Rime dictionaries) is fine; models that hold hundreds of MB in memory are not. AI features
-  must be tiny. Handwriting (Chinese, Japanese, Korean only) is Lychee's own recogniser
-  (`handwriting/InkRecognizer`, the bundled `handwriting` pack, about 7 MB, ONNX Runtime): it
-  reads the pen's path (`app/core` `InkFeatures`, identical to `packs/handwriting/ink.py`), not a
-  picture, and is trained by `packs/handwriting` on handwriting made up from the stroke-order
-  data (KanjiVG, Make Me a Hanzi, AnimCJK with Taiwan's forms and orders, Tomoe's hand-drawn
-  dictionaries, the Korean letters), mostly messy and joined-up, since that is how most people
-  write, plus real handwriting: open datasets (`packs/handwriting/real_sources.py`: rmpp-hwr-db,
-  hangul.ink's lines cut into syllables and kept only where the recogniser agrees) and
-  `packs/handwriting/real/` (testers' own samples, saved from Diagnostics, used only with their
-  agreement). Each also gives a real-writing test score per run. Research-only datasets
-  (CASIA, SCUT-COUCH, HIT-OR3C, TUAT, PE92, IAM-OnDB ...) are never used: their terms forbid
-  commercial use, and a model trained on them is that use. CASIA sells a commercial licence. Never trained on, or copied from, ML Kit or any other proprietary
-  recogniser (their terms forbid it); only data whose licence allows commercial use.
-  PaddleOCR's PP-OCRv5 (`app/scripts/fetch-ocr.sh`) stays as the fallback while the pack is
-  missing. Either is opened only while the pad is open.
+  must be tiny. Handwriting (Chinese, Japanese, Korean only): PaddleOCR's PP-OCRv5 mobile
+  recogniser (Apache-2.0, 13-16 MB, ONNX Runtime) comes in the APK (`app/scripts/fetch-ocr.sh`)
+  as the basic engine; the higher-quality one is Google's ML Kit digital ink recognition in
+  Lychee's companion app (`app/hwcompanion`, package `app.lychee.hwgoogle`): ML Kit downloads its
+  models, so it needs the internet and its licence has it in an app of its own; Lychee stays
+  offline and binds its service (a signature permission: only apps signed like Lychee), handing
+  it the pad's strokes (`handwriting/GoogleHandwriting`). The companion hides its launcher icon
+  once its models are in; Settings > Add-ons offers it (saying ML Kit's licence needs the
+  companion, and its size), and so does a chip on the pad. It is built once, and rebuilt only
+  when its code or ML Kit version changes (`build.yml`, the private `handwriting-google`
+  release). Never ML Kit's models copied into Lychee (its licence forbids it). Lychee's own
+  trained recogniser was dropped. Either engine is opened only while the pad is open.
 - A learning app: Japanese and Korean are typed in romanisation on QWERTY (no native kana or
   Hangul layouts). Candidates show readings and meanings. Korean candidates offer a word's Hanja
   right after it in Hangul, as Japanese offers Kanji; the bar's reading lines never show Kanji
@@ -142,18 +140,11 @@ is outside it.
     bundled in the APK.
 - `packs/` — the pack builders and the packs page (Japanese, Korean, English dictionaries,
   stroke order, examples, font mirrors; `packs/site`), run by `packs.yml`.
-  `packs/handwriting/` trains the handwriting recogniser. Training runs on a free Kaggle GPU
-  (`packs/handwriting/kaggle.py`, started by the owner in a Kaggle notebook), not on GitHub
-  Actions: the owner's Actions minutes are needed for everything else. It carries on from the
-  checkpoint on this private repository's `handwriting-training` pre-release and sends each new
-  checkpoint back there; `packs.yml` (with `handwriting_minutes` left at 0) then exports the
-  pack, only once it reads 80% of the fixed messy test samples right (`export.py`). Don't start
-  training runs on Actions (`handwriting_minutes` above 0) unless the owner asks.
 - `.github/workflows/` — `build.yml` (the app), `packs.yml` (the packs, by hand) and
   `cleanup.yml` (Actions storage is limited: after a successful build or packs run it deletes
   every other run of that workflow with its artifacts and logs, and stale caches; run by hand
   it cuts every workflow down to its newest successful run).
-- Packs that come with the app: the English dictionary, handwriting,
+- Packs that come with the app: the English dictionary,
   stroke order (Chinese, Japanese from KanjiVG, Korean made from letter strokes) and example
   sentences are bundled in the APK (`app/scripts/bundle-packs.py` fetches the newest
   published ones; `packs/BundledPacks.kt` in the app unpacks them). The Japanese and Korean

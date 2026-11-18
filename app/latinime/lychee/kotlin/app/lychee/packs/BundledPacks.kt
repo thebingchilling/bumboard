@@ -34,7 +34,6 @@ object BundledPacks {
         "dict_ko" to setOf("ko"),
         "strokes_zh" to setOf("yue", "cmn", "ja", "ko"),
         "examples" to setOf("yue", "cmn", "ja", "ko"),
-        "handwriting" to setOf("yue", "cmn", "ja", "ko"),
     )
 
     /** The engines of Lychee's enabled keyboards, or null when they can't be read. */

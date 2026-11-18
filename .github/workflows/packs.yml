@@ -10,12 +10,7 @@ name: Build Lychee packs
 # (packs/publish.py), and manifest.json, which the packs page uses to tell Lychee users
 # about updates, is refreshed. Nothing runs on a schedule or on pushes, to save Actions minutes.
 on:
-  workflow_dispatch:
-    inputs:
-      handwriting_minutes:
-        description: "Train the handwriting recogniser this many more minutes first (0: publish it as it is; at most 340). Training normally runs on Kaggle (packs/handwriting/kaggle.py), not here: it uses Actions minutes"
-        type: number
-        default: 0
+  workflow_dispatch: {}
 
 permissions:
   contents: write
@@ -26,63 +21,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Lychee's handwriting recogniser (packs/handwriting): training carries on from the last
-  # checkpoint, kept on this private repository's "handwriting-training" pre-release (never
-  # public; only the finished pack goes to lychee), for as long as asked, then the model is
-  # exported as the handwriting pack for the packs job below.
-  handwriting:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 355
-    env:
-      GH_TOKEN: ${{ github.token }}
-      MINUTES: ${{ inputs.handwriting_minutes || 0 }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install the training tools
-        run: |
-          pip install --quiet torch --index-url https://download.pytorch.org/whl/cpu
-          pip install --quiet numpy onnx onnxruntime pyarrow
-          echo "$(nproc) CPUs"
-
-      - name: The last checkpoint
-        run: |
-          mkdir -p packs/handwriting/out
-          gh release download handwriting-training --repo "$GITHUB_REPOSITORY" --pattern checkpoint.pt \
-            --dir packs/handwriting/out || echo "no checkpoint yet"
-
-      - name: Train
-        if: env.MINUTES != '0'
-        run: |
-          m=$(( MINUTES > 340 ? 340 : MINUTES ))
-          python3 packs/handwriting/train.py --minutes "$m" --checkpoint packs/handwriting/out/checkpoint.pt
-
-      - name: Keep the checkpoint
-        if: env.MINUTES != '0' && github.ref == 'refs/heads/main'
-        run: |
-          if ! gh release view handwriting-training --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create handwriting-training --repo "$GITHUB_REPOSITORY" --prerelease --latest=false \
-              --title "Handwriting training" --notes "The handwriting recogniser's training checkpoint (packs.yml carries on from it)."
-          fi
-          gh release upload handwriting-training packs/handwriting/out/checkpoint.pt --repo "$GITHUB_REPOSITORY" --clobber
-
-      - name: Export the handwriting pack
-        run: |
-          if [ -f packs/handwriting/out/checkpoint.pt ]; then
-            python3 packs/handwriting/export.py --checkpoint packs/handwriting/out/checkpoint.pt --out out/packs
-          else
-            echo "::warning::no handwriting model trained yet; run with handwriting_minutes"
-          fi
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: lychee-handwriting
-          path: out/packs/lychee-handwriting.zip
-          if-no-files-found: ignore
-          retention-days: 1
-
   packs:
-    needs: handwriting
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
@@ -109,12 +48,6 @@ jobs:
             packs/ja/.cache
             packs/dict/.cache
           key: lychee-pack-sources-${{ steps.week.outputs.week }}
-
-      - uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: lychee-handwriting
-          path: out/packs
 
       - name: Japanese dictionary pack
         run: python3 packs/ja/build_ja.py --out out/packs

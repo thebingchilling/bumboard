@@ -16,6 +16,8 @@ android {
         targetSdk = 36
         versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionName = System.getenv("BUILD_VERSION_NAME") ?: "0.1.0-dev"
+        // the Google handwriting companion's size (build.yml reads it off its release)
+        resValue("string", "lychee_companion_size", System.getenv("COMPANION_SIZE") ?: "about 20 MB")
         vectorDrawables.useSupportLibrary = false
         // phones only: 64-bit and 32-bit ARM (no x86, which only emulators and a few old
         // tablets use)
@@ -97,6 +99,7 @@ android {
 
     buildFeatures {
         compose = true
+        resValues = true
     }
 
     lint {

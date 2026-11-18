@@ -103,6 +103,8 @@ fun AddonsPage() {
     }
     PackMessage(actions)
     UpdatesCard()
+    // the higher-quality handwriting, first in the store
+    GoogleHandwritingCard()
 
     // featured: large cards in a row that scrolls sideways
     val featured = catalog.filter { it.featured && !it.custom }
@@ -219,6 +221,60 @@ private fun BannerTile(text: String) {
         Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(colors.surface.copy(alpha = 0.7f)),
         contentAlignment = Alignment.Center,
     ) { Text(text, color = colors.onSurface, fontSize = androidx.compose.ui.unit.TextUnit(20f, androidx.compose.ui.unit.TextUnitType.Sp)) }
+}
+
+/**
+ * Google handwriting: ML Kit's recognition through Lychee's companion app. Says plainly that
+ * Google's ML Kit licence is why a companion app is needed (and its size), then lets you get it
+ * (the browser downloads it), or, once installed, open it for its models and updates, or
+ * remove it.
+ */
+@Composable
+private fun GoogleHandwritingCard() {
+    val context = LocalContext.current
+    val colors = MaterialTheme.colorScheme
+    // re-checked whenever the page comes back (after installing or removing it)
+    @Suppress("UNUSED_VARIABLE") val refresh = PackRefresh.tick
+    val installed = app.lychee.handwriting.GoogleHandwriting.installed(context)
+    androidx.compose.material3.ElevatedCard(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)).background(colors.primaryContainer),
+                    contentAlignment = Alignment.Center,
+                ) { Text("\u270D\uFE0F", fontSize = androidx.compose.ui.unit.TextUnit(24f, androidx.compose.ui.unit.TextUnitType.Sp)) }
+                Spacer(Modifier.size(16.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(stringResource(R.string.lychee_google_hw), style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Badge(stringResource(R.string.lychee_store_free), strong = false)
+                        Badge(stringResource(R.string.lychee_google_hw_quality), strong = false)
+                        if (installed) Badge(stringResource(R.string.lychee_addons_installed), strong = true, check = true)
+                    }
+                }
+            }
+            Text(stringResource(R.string.lychee_google_hw_body), style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
+            Text(stringResource(R.string.lychee_google_hw_licence, stringResource(R.string.lychee_companion_size)),
+                style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            if (!installed) {
+                Text(stringResource(R.string.lychee_google_hw_steps), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                Button(onClick = { app.lychee.handwriting.GoogleHandwriting.download(context) }) {
+                    Text(stringResource(R.string.lychee_google_hw_get))
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = { app.lychee.handwriting.GoogleHandwriting.openSetup(context) }) {
+                        Text(stringResource(R.string.lychee_google_hw_setup))
+                    }
+                    TextButton(onClick = { app.lychee.handwriting.GoogleHandwriting.openAppInfo(context) }) {
+                        Text(stringResource(R.string.lychee_google_hw_remove))
+                    }
+                }
+            }
+        }
+    }
 }
 
 /** What an add-on is, in a few characters for its picture (emoji, kana, Hangul, a character). */

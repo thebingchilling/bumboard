@@ -11,5 +11,3 @@ packs/ja/.cache/
 packs/dict/.cache/
 out/
 __pycache__/
-packs/handwriting/.cache/
-packs/handwriting/out/

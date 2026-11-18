@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Lychee's Google handwriting companion. Its only screen downloads ML Kit's handwriting models
+    once, then hides its own launcher icon; Lychee binds RecognitionService to read what is
+    written on its pad. Only apps signed with Lychee's key may bind it (the signature permission,
+    which Lychee declares too, so it holds it whichever app is installed first).
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <permission
+        android:name="app.lychee.permission.HANDWRITING"
+        android:protectionLevel="signature" />
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@android:drawable/ic_menu_edit"
+        android:allowBackup="false"
+        android:theme="@android:style/Theme.Material.Light.DarkActionBar">
+
+        <!-- The setup screen: opened from Lychee (Settings > Add-ons) or, until it is done, the
+             launcher (the alias below, switched off once the models are in). -->
+        <activity
+            android:name=".SetupActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="app.lychee.hwgoogle.SETUP" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity-alias
+            android:name=".Launcher"
+            android:targetActivity=".SetupActivity"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <service
+            android:name=".RecognitionService"
+            android:exported="true"
+            android:permission="app.lychee.permission.HANDWRITING" />
+    </application>
+</manifest>

@@ -39,7 +39,7 @@ object PackStorage {
         pack.kind == PackKind.FONT_JA || pack.id == "rime_ja" -> Area.JAPANESE
         pack.kind == PackKind.FONT_KO || pack.id == "dict_ko" -> Area.KOREAN
         pack.id == "dict_en" -> Area.ENGLISH
-        pack.id == "strokes_zh" || pack.id == "examples" || pack.id == "handwriting" -> Area.SHARED
+        pack.id == "strokes_zh" || pack.id == "examples" -> Area.SHARED
         pack.kind == PackKind.FONT_EMOJI -> Area.EMOJI
         pack.kind == PackKind.FONT_KEYS -> Area.KEYBOARD
         pack.kind == PackKind.VOICE -> Area.VOICE

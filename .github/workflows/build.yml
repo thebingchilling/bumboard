@@ -84,6 +84,32 @@ jobs:
       - name: Core unit tests
         run: ./gradlew --no-daemon :core:test
 
+      # Lychee's Google handwriting companion (ML Kit): built once, and again only when its
+      # code or ML Kit's version changes; kept on this repository's "handwriting-google"
+      # pre-release, which Lychee's Add-ons links to. Its size goes into Lychee's text.
+      - name: Google handwriting companion (only when it changed)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          hash=$( (git ls-files -s hwcompanion; grep mlkit gradle/libs.versions.toml) | sha256sum | cut -c1-16)
+          have=$(gh release view handwriting-google --repo "$GITHUB_REPOSITORY" --json body -q .body 2>/dev/null | grep -o 'source [0-9a-f]*' | cut -d' ' -f2 || true)
+          if [ "$hash" != "$have" ] && [ "$GITHUB_REF" = refs/heads/main ]; then
+            ./gradlew --no-daemon :hwcompanion:assembleDebug
+            cp hwcompanion/build/outputs/apk/debug/*.apk lychee-handwriting-google.apk
+            if ! gh release view handwriting-google --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              gh release create handwriting-google --repo "$GITHUB_REPOSITORY" --prerelease --latest=false \
+                --title "Lychee handwriting (Google)" --notes "building"
+            fi
+            gh release upload handwriting-google lychee-handwriting-google.apk --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit handwriting-google --repo "$GITHUB_REPOSITORY" \
+              --notes "Google handwriting (ML Kit) companion for Lychee: install it, open it once to download the models. source $hash"
+          else
+            echo "companion unchanged ($hash)"
+          fi
+          size=$(gh release view handwriting-google --repo "$GITHUB_REPOSITORY" --json assets \
+            -q '.assets[] | select(.name=="lychee-handwriting-google.apk") | .size' 2>/dev/null || true)
+          if [ -n "$size" ]; then echo "COMPANION_SIZE=about $(( (size + 524288) / 1048576 )) MB" >> "$GITHUB_ENV"; fi
+
       - name: Build debug APK
         run: ./gradlew --no-daemon :latinime:assembleDebug
 
