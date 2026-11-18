@@ -63,7 +63,7 @@ class EmojiSearchBar @JvmOverloads constructor(
         })
         // Back, then the search pill: the emoji panel's top row is this very row
         val pillRow = searchRow(context) { close() }
-        queryView = pillRow.getChildAt(1) as TextView
+        queryView = pillRow.getChildAt(pillRow.childCount - 1) as TextView
         addView(pillRow, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
     }
 
@@ -329,17 +329,18 @@ class EmojiSearchBar @JvmOverloads constructor(
 /**
  * The search row: Back, then the search pill (magnifier and query). The emoji search and the
  * emoji panel's top row are both this one row, so they look exactly alike; its height is
- * [searchRowHeight]. The pill is the row's second child.
+ * [searchRowHeight]. The pill is the row's last child.
  */
-internal fun searchRow(context: Context, onBack: () -> Unit): LinearLayout {
+internal fun searchRow(context: Context, onBack: (() -> Unit)?): LinearLayout {
     val palette = M3Colors.of(context)
     val d = context.resources.displayMetrics.density
     fun dp(v: Int) = (d * v).toInt()
     return LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(4), dp(2), dp(8), dp(4))
-        addView(app.lychee.layout.LycheePanels.backButton(context, onBack),
+        // with Back (the search) or without it (the emoji panel, whose ABC is bottom left)
+        setPadding(if (onBack != null) dp(4) else dp(8), dp(2), dp(8), dp(4))
+        if (onBack != null) addView(app.lychee.layout.LycheePanels.backButton(context, onBack),
             LinearLayout.LayoutParams(dp(48), LinearLayout.LayoutParams.MATCH_PARENT))
         addView(TextView(context).apply {
             text = context.getString(R.string.lychee_emoji_search)
@@ -357,7 +358,7 @@ internal fun searchRow(context: Context, onBack: () -> Unit): LinearLayout {
                 setColor(palette.surfaceContainerHigh)
                 cornerRadius = dp(24).toFloat()
             }
-        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(4) })
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = if (onBack != null) dp(4) else 0 })
     }
 }
 

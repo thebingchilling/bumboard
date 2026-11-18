@@ -192,6 +192,9 @@ class EmojiPanelView @JvmOverloads constructor(
 
     fun startEmojiPalettes(switchToAlphaLabel: String?, keyVisualAttr: KeyVisualAttributes?, iconSet: KeyboardIconsSet?) {
         alignWithKeyboard()
+        // the panel's own content cross-fades in, settling from a hair smaller (LycheeMotion),
+        // whether or not the input view animates the panel itself
+        for (i in 0 until childCount) app.lychee.layout.LycheeMotion.enter(getChildAt(i))
         floatingDelete.animate().cancel()
         floatingDelete.apply { alpha = 1f; translationY = 0f; visibility = VISIBLE; isEnabled = true }
         applyColumns()
@@ -401,12 +404,9 @@ class EmojiPanelView @JvmOverloads constructor(
 
     // ------------------------------------------------------------ chrome
 
-    /**
-     * The top row, the emoji search's own row ([searchRow]): Back (to the letters, in place of
-     * an ABC key), then the search pill; a tap on the pill opens the search.
-     */
-    private fun searchBox() = searchRow(context) { sendCode(Constants.CODE_ALPHA_FROM_EMOJI) }.apply {
-        getChildAt(1).setOnClickListener { onSearch() }
+    /** The top row: the emoji search's pill ([searchRow]); a tap on it opens the search. */
+    private fun searchBox() = searchRow(context, null).apply {
+        getChildAt(childCount - 1).setOnClickListener { onSearch() }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -414,7 +414,18 @@ class EmojiPanelView @JvmOverloads constructor(
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(dp(6), dp(2), dp(6), dp(4))
-        // the categories get the whole bar: Back to the letters is in the top row, like search's
+        // ABC back to the letters in the bottom corner, like the keyboard's own ?123 / ABC key,
+        // then the categories
+        addView(TextView(context).apply {
+            text = context.getString(R.string.lychee_emoji_abc)
+            setTextColor(palette.onSecondaryContainer)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
+            gravity = Gravity.CENTER
+            background = functionalKey()
+            contentDescription = context.getString(R.string.lychee_emoji_abc)
+            setOnClickListener { sendCode(Constants.CODE_ALPHA_FROM_EMOJI) }
+        }, LayoutParams(dp(60), LayoutParams.MATCH_PARENT))
         tabs.gravity = Gravity.CENTER_VERTICAL
         addView(tabs, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(2); marginEnd = dp(2) })
     }

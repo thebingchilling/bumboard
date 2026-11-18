@@ -21,7 +21,7 @@ import com.android.inputmethod.latin.R
  * The candidates the row has no room for, over the keys, like Gboard's expanded candidates:
  * it goes on from the row's last candidate (none repeated), a scrolling grid of the words with
  * all their readings and meanings, as on the row, each candidate as wide
- * as it needs (1 to 3 columns), thin dividers between. Opened and closed with the ⌄ / ⌃ at the
+ * as it needs and spaced as tightly as on the row. Opened and closed with the ⌄ / ⌃ at the
  * end of the candidate row, or a swipe down on the row (the notch); tap one to type it.
  * Candidates the phone cannot draw are left out.
  */
@@ -106,14 +106,16 @@ class CandidatePanelView @JvmOverloads constructor(
 
     private fun spanFor(text: String): Int {
         // English: three words a row, each the same width, like the suggestion bar's
-        // an even grid of four: a long word takes two cells, a very long one the row
-        if (adapter.style.fontLang == "en") return 2
+        if (adapter.style.fontLang == "en") return COLUMNS / 3
+        // as the bar spaces them: each candidate as wide as its characters and their small side
+        // room (the readings and meaning under them fit that width), on a fine grid so short
+        // words sit close together
         val chars = text.codePointCount(0, text.length)
-        return when {
-            chars <= 2 -> 1
-            chars <= 5 -> 2
-            else -> COLUMNS
-        }
+        val width = grid.width - grid.paddingLeft - grid.paddingRight
+        if (width <= 0) return when { chars <= 1 -> 2; chars <= 3 -> 4; chars <= 6 -> 6; else -> COLUMNS }
+        val column = width / COLUMNS.toFloat()
+        val need = chars * CandidateBarView.CHAR_SP * adapter.scale * resources.displayMetrics.scaledDensity + dp(20)
+        return kotlin.math.ceil(maxOf(need, dp(44).toFloat()) / column).toInt().coerceIn(1, COLUMNS)
     }
 
     private inner class Adapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -214,13 +216,15 @@ class CandidatePanelView @JvmOverloads constructor(
         val h = CandidateBarView.CHAR_SP * adapter.scale * sp * 1.25f +
             readings * CandidateBarView.READING_SP * adapter.scale * sp * 1.3f +
             (if (meaning) CandidateBarView.MEANING_SP * adapter.scale * sp * 1.3f else 0f)
-        return (h + dp(16)).toInt()
+        // the bar's own room round each cell, no more
+        return (h + dp(6)).toInt()
     }
 
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 
     private companion object {
-        const val COLUMNS = 4
+        /** A fine grid: candidates take as many columns as their width needs. */
+        const val COLUMNS = 12
         val worker: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor()
     }
 }

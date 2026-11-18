@@ -172,6 +172,27 @@ object PackData {
         }.getOrDefault(emptyList())
     }
 
+    /** Korean words written with the Hanja [hanja] (學校 → 학교), their meanings first by rank. */
+    fun wordsByHanja(context: Context, hanja: String, limit: Int = 4): List<WordEntry> {
+        val db = wordDb(context, "ko") ?: return emptyList()
+        return runCatching {
+            db.rawQuery(
+                "SELECT form, lemma, reading, hanja, pos, gloss FROM word WHERE hanja = ? " +
+                    "ORDER BY (lemma = form) DESC, rank LIMIT $limit",
+                arrayOf(hanja),
+            ).use { c ->
+                buildList {
+                    while (c.moveToNext()) add(
+                        WordEntry(
+                            c.getString(0), c.getString(1), c.getString(2), c.getString(3), c.getString(4),
+                            c.getString(5).split('\n').filter { it.isNotBlank() },
+                        )
+                    )
+                }
+            }
+        }.getOrDefault(emptyList()).distinctBy { it.lemma }
+    }
+
     fun hasStrokes(context: Context) = db(context, "strokes_zh", "strokes.db") != null
 
     /** Every character's stroke shapes (medians, as stored), for the handwriting stroke matcher. */

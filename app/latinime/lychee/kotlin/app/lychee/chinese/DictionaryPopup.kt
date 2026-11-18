@@ -164,6 +164,8 @@ class DictionaryPopup(
                 typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
                 setPadding(0, 0, 0, dp(4))
             })
+            // the stroke order straight after the reading
+            if (lang == "ja" || lang == "ko") content.strokes(text)
             // a word written alike but said differently by meaning (lead, wind, tear): each
             // pronunciation says itself
             val pronunciations = entries.mapNotNull { e -> e.reading?.takeIf { it.isNotBlank() } }.distinct()
@@ -234,7 +236,6 @@ class DictionaryPopup(
                     else -> null
                 }
             }
-            if (lang == "ja" || lang == "ko") content.strokes(text)
         }
     }
 
@@ -277,12 +278,17 @@ class DictionaryPopup(
         val card = MaxHeightLayout(ctx, if (startCompact) space else room).apply {
             orientation = LinearLayout.VERTICAL
             isClickable = true
+            // raised well clear of the app behind it: a deep, dark shadow and a clear outline
             background = GradientDrawable().apply {
                 setColor(c.surfaceContainerHigh)
                 cornerRadius = dp(20).toFloat()
-                setStroke(dp(1), androidx.core.graphics.ColorUtils.setAlphaComponent(c.outlineVariant, 0x80))
+                setStroke(dp(1), androidx.core.graphics.ColorUtils.setAlphaComponent(c.outline, 0xA0))
             }
-            elevation = dp(10).toFloat()
+            elevation = dp(18).toFloat()
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                outlineSpotShadowColor = android.graphics.Color.BLACK
+                outlineAmbientShadowColor = android.graphics.Color.BLACK
+            }
             clipToOutline = true
             addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
             addView(actions)
@@ -378,8 +384,10 @@ class DictionaryPopup(
         val cardWidth = minOf(keysWidth - 2 * dp(16), dp(MAX_CARD_WIDTH_DP))
         panel.addView(card, FrameLayout.LayoutParams(cardWidth, ViewGroup.LayoutParams.WRAP_CONTENT,
             Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM).apply {
-            setMargins(0, dp(12), 0, dp(10))
+            setMargins(0, dp(20), 0, dp(10))
         })
+        panel.clipChildren = false
+        panel.clipToPadding = false
         panel.visibility = View.VISIBLE
         panel.bringToFront()
         // grows up out of the keyboard like a popup, fading in (LycheeMotion, like every card)
@@ -567,6 +575,8 @@ class DictionaryPopup(
                 }
             }
             if (showChinese) readingRows(r, main, text)
+            // the stroke order straight after the readings
+            strokes(text)
             if (compact) {
                 summary(r)
                 return
@@ -598,7 +608,6 @@ class DictionaryPopup(
             if (showChinese) examples(app.lychee.dict.PackData.examples(ctx, lang, forms2), sayIn = romanLang) { sentence ->
                 Readings.annotator?.romanise(sentence, romanLang, prefs)
             }
-            strokes(text)
         }
 
         /**
@@ -686,22 +695,34 @@ class DictionaryPopup(
                 ?: (if (r.lang == Lang.Cantonese) r.reading else r.otherReading)
             val cmn = hw?.readings?.get(Lang.Mandarin)?.firstOrNull()
                 ?: (if (r.lang == Lang.Mandarin) r.reading else r.otherReading)
+            // a phrase with no reading in one of the languages still gets one: read character by
+            // character (already formatted, so not formatted again)
+            val word = spoken ?: hw?.let { if (prefs.simplified) it.simplified else it.traditional }
+            fun forced(lang: Lang): String? = word?.let { w ->
+                runCatching { Readings.annotator?.romanise(w, lang, prefs) }.getOrNull()?.takeIf { it.isNotBlank() && !it.contains('?') }
+            }
+            class Row(val lang: Lang, val label: Int, val reading: String, val formatted: String)
             val rows = listOfNotNull(
-                yue?.let { Triple(Lang.Cantonese, R.string.lychee_card_cantonese, it) },
-                cmn?.let { Triple(Lang.Mandarin, R.string.lychee_card_mandarin, it) },
+                (yue?.let { Row(Lang.Cantonese, R.string.lychee_card_cantonese, it, Annotator.format(it, Lang.Cantonese, prefs)) }
+                    ?: forced(Lang.Cantonese)?.let { Row(Lang.Cantonese, R.string.lychee_card_cantonese, it, it) }),
+                (cmn?.let { Row(Lang.Mandarin, R.string.lychee_card_mandarin, it, Annotator.format(it, Lang.Mandarin, prefs)) }
+                    ?: forced(Lang.Mandarin)?.let { Row(Lang.Mandarin, R.string.lychee_card_mandarin, it, it) }),
             ).let { if (r.lang == Lang.Mandarin) it.reversed() else it }
-            // side by side, each with its speaker, to save room
+            // side by side, each with its speaker, to save room; a long phrase's readings one
+            // under the other, full width, so they wrap and show whole
+            val long = rows.any { it.formatted.length > LONG_READING }
             val pair = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
+                orientation = if (long) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
             for ((i, row) in rows.withIndex()) {
-                val (lang, label, reading) = row
-                mainReading[lang] = norm(reading)
+                mainReading[row.lang] = norm(row.reading)
                 // the main reading only; a reading with meanings of its own comes with them
-                pair.addView(readingTile(ctx.getString(label), Annotator.format(reading, lang, prefs),
-                    readingSpeaker(hw, reading, lang, spoken)),
-                    LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                pair.addView(readingTile(ctx.getString(row.label), row.formatted,
+                    readingSpeaker(hw, row.reading, row.lang, spoken)),
+                    if (long) LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                        if (i > 0) topMargin = dp(8)
+                    } else LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
                         if (i > 0) marginStart = dp(8)
                     })
             }
@@ -729,6 +750,9 @@ class DictionaryPopup(
                 addView(textView(reading, 18f, c.primary).apply {
                     typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
                     setPadding(0, dp(1), 0, 0)
+                    // a long reading wraps onto more lines, never cut off
+                    isSingleLine = false
+                    maxLines = Int.MAX_VALUE
                 })
             }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             if (speaker != null) {
@@ -1091,41 +1115,27 @@ class DictionaryPopup(
             }.map { String(Character.toChars(it)) }.distinct().take(MAX_STROKE_CHARS)
             val found = chars.mapNotNull { app.lychee.dict.PackData.strokes(ctx, it, fontLang) }
             if (found.isEmpty()) return
-            section(ctx.getString(R.string.lychee_card_strokes))
-            // every character of a long word, each on a tile of one fixed size (its grid never
-            // squeezed): as many to a line as fit, the rest flowing onto the next line
-            // not another copy of the word: each character on a tinted copybook tile, written in
-            // the accent colour over a faint copy, with its stroke count under it
-            val flow = FlowRow(ctx, dp(10))
-            run {
-                found.forEach { ch ->
-                    val cell = LinearLayout(ctx).apply {
-                        orientation = LinearLayout.VERTICAL
-                        gravity = Gravity.CENTER_HORIZONTAL
+            // right under the readings, small like the heading's: each character on a tinted
+            // copybook tile of one fixed size (its grid never squeezed), written in the accent
+            // colour over a faint copy; as many to a line as fit, the rest on the next line
+            val flow = FlowRow(ctx, dp(6))
+            found.forEach { ch ->
+                flow.addView(FrameLayout(ctx).apply {
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(12).toFloat()
+                        setColor(c.surfaceContainer)
                     }
-                    val tile = FrameLayout(ctx).apply {
-                        background = GradientDrawable().apply {
-                            cornerRadius = dp(14).toFloat()
-                            setColor(c.surfaceContainer)
-                        }
-                        setPadding(dp(6), dp(6), dp(6), dp(6))
-                        addView(app.lychee.dict.StrokeOrderView(ctx, ch, c.primary,
-                            androidx.core.graphics.ColorUtils.setAlphaComponent(c.onSurface, 0x1C),
-                            androidx.core.graphics.ColorUtils.setAlphaComponent(c.outline, 0x70),
-                            current = c.primary),
-                            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-                    }
-                    cell.addView(tile, LinearLayout.LayoutParams(dp(72), dp(72)))
-                    val count = ch.medians.size
-                    cell.addView(textView(ctx.resources.getQuantityString(R.plurals.lychee_card_stroke_count, count, count), 11f, c.onSurfaceVariant).apply {
-                        gravity = Gravity.CENTER
-                        setPadding(0, dp(3), 0, 0)
-                    })
-                    flow.addView(cell)
-                }
+                    setPadding(dp(4), dp(4), dp(4), dp(4))
+                    addView(app.lychee.dict.StrokeOrderView(ctx, ch, c.primary,
+                        androidx.core.graphics.ColorUtils.setAlphaComponent(c.onSurface, 0x1C),
+                        androidx.core.graphics.ColorUtils.setAlphaComponent(c.outline, 0x70),
+                        current = c.primary),
+                        FrameLayout.LayoutParams(dp(48), dp(48)))
+                    contentDescription = ctx.getString(R.string.lychee_card_strokes)
+                })
             }
             body.addView(flow, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                .apply { bottomMargin = dp(10) })
+                .apply { topMargin = dp(4); bottomMargin = dp(8) })
         }
 
         /** Example sentences, each with its romanisation ([romanise]) and English under it. */
@@ -1338,6 +1348,8 @@ class DictionaryPopup(
             const val MAX_SENSES = 12
             /** Meanings in the summary. */
             const val SUMMARY_SENSES = 3
+            /** A reading longer than this puts the two readings one under the other. */
+            const val LONG_READING = 14
             /** Every text on the card a step smaller than a page's (summary and full alike). */
             const val TEXT_SCALE = 0.86f
             /** Characters whose stroke order a card shows (a long word wraps onto more rows). */

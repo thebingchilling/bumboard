@@ -224,7 +224,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     /** Japanese and Korean: the word's entry from the installed dictionary pack. */
     private fun showWordCard(candidate: Candidate, onType: () -> Unit) {
         // every candidate has a card: one the dictionary lacks shows its readings and strokes
+        // a Korean word's Hanja (學校, a candidate of its own) has the Hangul word's meanings
+        val hanjaWord = engine == "ko" && candidate.text.codePoints().allMatch { app.lychee.core.Annotator.isHan(it) }
         val entries = app.lychee.dict.PackData.words(ime, engine, candidate.text)
+            .ifEmpty { if (hanjaWord) app.lychee.dict.PackData.wordsByHanja(ime, candidate.text) else emptyList() }
         val frame = keyboardFrame?.takeIf { it.height > 0 } ?: return
         val peek = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
         val lang = if (engine == "ja") "ja" else "ko"
