@@ -100,6 +100,9 @@ class EmojiPanelView @JvmOverloads constructor(
         setBackgroundColor(palette.surface)
         addView(searchBox().also { search = it }, LayoutParams(LayoutParams.MATCH_PARENT, searchRowHeight(context)))
         grid.layoutManager = layoutManager
+        // emoji cut by the bottom edge fade out instead of being sliced off
+        grid.isVerticalFadingEdgeEnabled = true
+        grid.setFadingEdgeLength(dp(20))
         grid.adapter = adapter
         grid.itemAnimator = null
         grid.setHasFixedSize(true)
@@ -127,7 +130,8 @@ class EmojiPanelView @JvmOverloads constructor(
                     rightMargin = dp(4); bottomMargin = dp(4)
                 })
         }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply {
-            setMargins(dp(GRID_SIDE_DP), 0, dp(GRID_SIDE_DP), dp(6))
+            // right down to the categories (no gap between them)
+            setMargins(dp(GRID_SIDE_DP), 0, dp(GRID_SIDE_DP), 0)
         })
         pinchToResize()
         swipeBetweenCategories()
@@ -151,21 +155,26 @@ class EmojiPanelView @JvmOverloads constructor(
 
     @Suppress("UNUSED_PARAMETER")
     /**
-     * Lines up with the keyboard it replaces: the top row exactly the emoji search's row, the
-     * bottom bar a key row of the keyboard's own height, gaps and bottom padding.
+     * Lines up with the keyboard it replaces: the top row is the emoji search's row in the bar's
+     * place (the pill where the search shows it, with the bar's room above it), the categories
+     * a slim bar above the keyboard's bottom padding, right under the emoji.
      */
     private fun alignWithKeyboard() {
-        // the top row exactly as the search shows it: the same height, no extra insets
         search?.let { s ->
             val lp = s.layoutParams as LayoutParams
-            lp.height = searchRowHeight(context)
+            val rowHeight = searchRowHeight(context)
+            // the suggestion bar's space (taller on the Chinese, Japanese and Korean keyboards),
+            // the pill at its bottom, as the voice bar and the search sit
+            val strip = app.lychee.layout.LycheePanels.stripHeight(this)
+            lp.height = maxOf(strip, rowHeight + dp(6))
             lp.setMargins(0, 0, 0, 0)
             s.layoutParams = lp
+            s.setPadding(s.paddingLeft, dp(2) + lp.height - rowHeight, s.paddingRight, dp(4))
         }
         val row = app.lychee.layout.LycheePanels.keyRow(this)
         bar?.let { b ->
             val lp = b.layoutParams as LayoutParams
-            lp.height = row.height
+            lp.height = dp(CATEGORY_BAR_DP)
             lp.setMargins(0, 0, 0, row.bottomPadding)
             b.layoutParams = lp
             b.setPadding(0, 0, 0, 0)
@@ -602,6 +611,8 @@ class EmojiPanelView @JvmOverloads constructor(
         /** Emoji glyph size as a share of its cell. */
         private const val EMOJI_FILL = 0.74f
         private const val GRID_SIDE_DP = 8
+        /** The categories' bar: the tabs and a little room round them. */
+        private const val CATEGORY_BAR_DP = 46
         /** The kaomoji section's id, and the keywords that mark its cells. */
         private const val KAOMOJI = "kaomoji"
 

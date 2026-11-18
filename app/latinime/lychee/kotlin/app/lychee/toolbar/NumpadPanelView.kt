@@ -29,7 +29,7 @@ import com.android.inputmethod.latin.common.Constants
  * 0 under the 8, = and period under the 9, Enter under the right-hand keys. ABC goes back to the
  * letters and !?# to the symbols.
  *
- * In number, phone and date fields ([forced]) it is a plain pad centred with room at its sides:
+ * In number, phone and date fields ([forced]) it is a plain pad as wide as the keyboard:
  * the digits, with backspace, 0 and Enter along the bottom bar (
  * phone numbers). What else the field takes ([setInputType]: − for signed numbers, a decimal
  * point for decimals, / and : for dates and times, + * # for phone numbers) is held on 0, like
@@ -97,7 +97,7 @@ class NumpadPanelView @JvmOverloads constructor(
         fullBar = bar
     }
 
-    /** The number field's pad, centred: the digits over ⌫ 0 Enter (its extras held on 0). */
+    /** The number field's pad, as wide as the keyboard: the digits over ⌫ 0 Enter (its extras held on 0). */
     private fun plainPad() = LinearLayout(context).apply {
         orientation = HORIZONTAL
         val block = LinearLayout(context).apply { orientation = VERTICAL }
@@ -108,10 +108,7 @@ class NumpadPanelView @JvmOverloads constructor(
         bar.addView(enterKey(), keyParams(1f))
         block.addView(bar, LayoutParams(LayoutParams.MATCH_PARENT, dp(56)))
         plainBar = bar
-        // room at both sides, the pad in the middle
-        addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, PLAIN_SIDE))
-        addView(block, LayoutParams(0, LayoutParams.MATCH_PARENT, PLAIN_PAD))
-        addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, PLAIN_SIDE))
+        addView(block, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
     }
 
     /**
@@ -456,8 +453,5 @@ class NumpadPanelView @JvmOverloads constructor(
         const val COLUMN_SYMBOLS = 0.8f
         const val COLUMN_DIGIT = 1.25f
         const val COLUMN_SIDE = 1.1f
-        /** the number field's pad: its width, and the room at each side */
-        const val PLAIN_PAD = 3f
-        const val PLAIN_SIDE = 1f
     }
 }

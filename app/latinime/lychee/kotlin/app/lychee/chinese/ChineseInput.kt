@@ -38,6 +38,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         }
     }
     private var engine: String? = null
+        set(value) {
+            field = value
+            rimeKeyboard = value != null
+        }
     private var bar: CandidateBarView? = null
     private var panel: CandidatePanelView? = null
     private var moreButton: android.widget.ImageView? = null
@@ -1227,6 +1231,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     }
 
     companion object {
+        /**
+         * Whether a Rime keyboard (Chinese, Japanese, Korean) is in use: LatinIME's automatic
+         * capitals stay off there (there are no capitals to type, and an automatic one at the
+         * start of a sentence went into the text as a letter instead of into the candidates).
+         */
+        @JvmStatic
+        @Volatile
+        var rimeKeyboard = false
+            private set
 
         /** ASCII punctuation and its Chinese full-width form. */
         private val PUNCTUATION = mapOf(

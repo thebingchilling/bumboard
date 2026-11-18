@@ -1801,6 +1801,9 @@ public final class InputLogic {
      */
     public int getCurrentAutoCapsState(final SettingsValues settingsValues) {
         if (!settingsValues.mAutoCap) return Constants.TextUtils.CAP_MODE_OFF;
+        // LYCHEE: no automatic capitals on the Chinese, Japanese and Korean keyboards (a capital
+        // is typed as is there, so the first letter of a sentence left the candidates)
+        if (app.lychee.chinese.ChineseInput.getRimeKeyboard()) return Constants.TextUtils.CAP_MODE_OFF;
 
         final EditorInfo ei = getCurrentInputEditorInfo();
         if (ei == null) return Constants.TextUtils.CAP_MODE_OFF;
