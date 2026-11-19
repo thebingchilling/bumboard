@@ -144,19 +144,20 @@ jobs:
           mkdir -p dist
           # three APKs, named by what they hold: universal (both), arm64-v8a (64-bit), armeabi-v7a (32-bit)
           apks=latinime/build/outputs/apk/debug
-          cp "$(ls $apks/*universal*.apk | head -1)" "dist/$tag-universal.apk"
-          cp "$(ls $apks/*arm64-v8a*.apk | head -1)" "dist/$tag-arm64-v8a.apk"
-          cp "$(ls $apks/*armeabi-v7a*.apk | head -1)" "dist/$tag-armeabi-v7a.apk"
+          # (just the ABI in the name: the release itself says which build it is)
+          cp "$(ls $apks/*universal*.apk | head -1)" "dist/lychee-universal.apk"
+          cp "$(ls $apks/*arm64-v8a*.apk | head -1)" "dist/lychee-arm64-v8a.apk"
+          cp "$(ls $apks/*armeabi-v7a*.apk | head -1)" "dist/lychee-armeabi-v7a.apk"
           # the Google handwriting companion beside it (the same build every time, from its own
           # release; it is only rebuilt when it changes)
-          files=("dist/$tag-universal.apk" "dist/$tag-arm64-v8a.apk" "dist/$tag-armeabi-v7a.apk")
+          files=("dist/lychee-universal.apk" "dist/lychee-arm64-v8a.apk" "dist/lychee-armeabi-v7a.apk")
           if gh release download handwriting-google --repo "$GITHUB_REPOSITORY" \
               --pattern lychee-handwriting-google.apk --dir dist --clobber; then
             files+=("dist/lychee-handwriting-google.apk")
           fi
           git log -1 --format=%B "$GITHUB_SHA" | grep -vE '^(Co-Authored-By|Claude-Session):' > notes.md
           printf '\nDebug-signed test build (the fixed debug key, so it installs over the last one).\n' >> notes.md
-          printf '%s-universal.apk works on every phone; %s-arm64-v8a.apk is for 64-bit phones (nearly all), %s-armeabi-v7a.apk for 32-bit ones; both smaller.\n' "$tag" "$tag" "$tag" >> notes.md
+          printf 'lychee-universal.apk works on every phone; lychee-arm64-v8a.apk is for 64-bit phones (nearly all), lychee-armeabi-v7a.apk for 32-bit ones; both smaller.\n' >> notes.md
           if [ ${#files[@]} -gt 3 ]; then
             printf 'lychee-handwriting-google.apk: the optional Google handwriting companion (install it; it gets its models by itself).\n' >> notes.md
           fi
