@@ -107,37 +107,10 @@ packs page). Public facing, so be careful:
   purchase or unlock isn't available (old Android, no Google Play, an emulator, a root tool
   changing Lychee's security key, a revoked phone model), say plainly why and what, if
   anything, they can do. Never fail silently or hide the reason.
-- Paid add-ons (planned, owner-approved; build only the store UI until billing exists), all in
-  USD, one-time purchases only, never subscriptions:
-  - Free forever, unlimited and unencrypted: typing in every language (Japanese kana-kanji too),
-    a simple dictionary card for every language, built-in handwriting, Noto Color Emoji,
-    LXGW WenKai, themes, clipboard, incognito, every free download, and demos of every paid
-    add-on (they work fully on beginner words: HSK 1-2, JLPT N5, TOPIK I).
-  - Individual add-ons cover every language: Google Handwriting $5.99, Font Pack (every font
-    and emoji style) $4.99, Stroke Order $3.99, Example Sentences $3.99; a full dictionary
-    card per language $9.99 (only language-specific things are per language).
-  - Packs, every language the same price ($14.99): Chinese (main; Cantonese and Mandarin in
-    one), Japanese, Korean. Each has the same six parts for its language (full card, learner
-    levels, pronunciation detail, grammar help, characters, bonus fonts) plus Google
-    Handwriting, Stroke Order and Example Sentences. Japanese and Korean get their extras
-    built before launch so all packs are equally deep.
-  - Full: everything Lychee makes, now and future, $29.99 at launch, $39.99 once flashcards
-    and the planned features land. Owning packs takes their price off Full (two packs unlock
-    it). Licensed third-party dictionaries, if ever, are sold separately with a Full discount.
-  - Security (Pleco-like): only paid add-ons are encrypted, entry by entry; the key is imported
-    into the phone's security chip (Android 9+, hardware key attestation chaining to Google's
-    root, not revoked) and never seen by the app; each entry is decrypted inside the chip;
-    Lychee never loads decrypted files; paid features live in the encrypted data, not code.
-    Root and unlocked bootloaders are welcome (bootloader state is never checked); root tools
-    that spoof keys should leave Lychee off their list. Emulators, software key storage,
-    Android 8.1 and older, revoked phone models and phones without Google Play can't buy (for
-    now: Lychee's own billing comes later), and are told why. Unlocking goes through the
-    browser (`lychee://unlock`, one-time codes; Lychee keeps no network permission) to a small
-    serverless function with a small database, set up at launch through this repository's
-    workflows: it checks the purchase, Play Integrity's app and account answers (never the
-    device answer) and the key attestation. Pleco-style registration ID and key: every purchase
-    attaches to it, entering the key restores everything; no fixed phone limit (flag only
-    extreme patterns); Google Play Family Library on.
+- Paid add-ons: everything agreed (offering, USD prices, packs, Full, demos, registration and
+  the security model) is in `PAID.md`; follow it, and update it when the owner changes a
+  decision. Build only the store UI until billing exists. One-time purchases only; every
+  language the same price; only paid add-ons are ever encrypted or limited.
 - Privacy: the clipboard panel is off until turned on (`clipboard/ClipboardStore`); incognito
   (`typing/Incognito`, automatic in password and no-learning fields) keeps nothing; anything
   that learns or stores what is typed must check `Incognito.active`.
