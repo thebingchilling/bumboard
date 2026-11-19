@@ -49,15 +49,17 @@ class SetupActivity : Activity() {
         val track = if (dark) tone(android.R.color.system_accent1_800, 0xFF005045.toInt())
             else tone(android.R.color.system_accent1_100, 0xFFCCE8E0.toInt())
 
-        // the dialog's surface: Material 3's extra-large corners
-        window.setBackgroundDrawable(GradientDrawable().apply {
-            cornerRadius = dp(28).toFloat()
-            setColor(surface)
-        })
+        // a full screen in the surface colour, its content in the middle
+        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(surface))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            window.statusBarColor = surface
+            window.navigationBarColor = surface
+            if (!dark) window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        }
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(24), dp(24), dp(16))
-            minimumWidth = dp(300)
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(24), dp(24), dp(24), dp(24))
         }
         root.addView(TextView(this).apply {
             text = getString(R.string.app_name)
@@ -128,8 +130,15 @@ class SetupActivity : Activity() {
             status.text = "The models couldn't be downloaded. Check the connection and try again."
             return
         }
-        status.text = "Ready. Lychee's handwriting pad now uses Google's handwriting recognition."
-        // nothing more to do here: it goes by itself
-        Handler(Looper.getMainLooper()).postDelayed({ if (!isFinishing) finishAndRemoveTask() }, 1500)
+        status.text = "Ready. Lychee's handwriting pad now uses Google's handwriting recognition. " +
+            "This app's icon is hidden now; Lychee's Settings > Add-ons opens it again."
+        // nothing more to do here: off the launcher
+        runCatching {
+            packageManager.setComponentEnabledSetting(
+                android.content.ComponentName(this, "$packageName.Launcher"),
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                android.content.pm.PackageManager.DONT_KILL_APP,
+            )
+        }
     }
 }

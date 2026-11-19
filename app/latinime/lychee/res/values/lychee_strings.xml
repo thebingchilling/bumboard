@@ -252,9 +252,9 @@
     <string name="lychee_hw_upgrade_dismiss">Not now</string>
     <string name="lychee_google_hw">Google handwriting</string>
     <string name="lychee_google_hw_quality">Higher quality</string>
-    <string name="lychee_google_hw_body">Google\'s handwriting recognition (ML Kit) for Chinese, Japanese and Korean: much better with messy and joined-up writing than Lychee\'s own.</string>
-    <string name="lychee_google_hw_licence">Google\'s ML Kit licence requires a companion app (%1$s, plus about 20 MB per language for Google\'s handwriting models, downloaded once). Lychee itself stays offline, and what you write is read on this phone.</string>
-    <string name="lychee_google_hw_steps">Your browser downloads the companion app: open the file to install it. That\'s all: it has no icon and nothing to open, and it gets Google\'s models by itself the first time you write (Lychee\'s own handwriting reads the pad until then).</string>
+    <string name="lychee_google_hw_body">Google\'s recognition for Chinese, Japanese and Korean. Reads messy, fast and joined-up writing.</string>
+    <string name="lychee_google_hw_licence">A small companion app (%1$s, plus about 20 MB per language). Writing stays on your phone.</string>
+    <string name="lychee_google_hw_steps">Install the downloaded file, open it once to get the models, and you\'re set.</string>
     <string name="lychee_google_hw_get">Get companion</string>
     <string name="lychee_google_hw_setup">Models</string>
     <string name="lychee_google_hw_remove">Remove</string>

@@ -14,8 +14,8 @@ android {
         applicationId = "app.lychee.hwgoogle"
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.4"
+        versionCode = 6
+        versionName = "1.5"
         // one APK for every phone: 64-bit and 32-bit ARM (ML Kit's engine is a native library
         // for each kind of processor; the emulators' x86 ones are left out)
         ndk {
@@ -31,13 +31,12 @@ android {
     }
 
     buildTypes {
-        // what is shipped: the unused code of Google's libraries stripped out (their own keep
-        // rules come with them), signed with Lychee's key like the debug build
+        // what is shipped: built whole, as the first companion that worked was. R8's shrinking
+        // (code and resources) broke ML Kit, which finds its classes and resources by name, so
+        // nothing is stripped; signed with Lychee's key like the debug build
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            // ML Kit kept whole (its start-up and native engine find classes by name)
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            isMinifyEnabled = false
+            isShrinkResources = false
             signingConfig = signingConfigs.getByName("debug")
         }
     }

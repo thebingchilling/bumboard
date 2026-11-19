@@ -83,14 +83,15 @@ packs page). Public facing, so be careful:
   recogniser (Apache-2.0, 13-16 MB, ONNX Runtime) comes in the APK (`app/scripts/fetch-ocr.sh`)
   as the basic engine; the higher-quality one is Google's ML Kit digital ink recognition in
   Lychee's companion app (`app/hwcompanion`, package `app.lychee.hwgoogle`; one APK with the
-  64-bit and 32-bit ARM engines, compressed and shrunk by R8, to keep it small): ML Kit downloads its
+  64-bit and 32-bit ARM engines, native libraries compressed; never shrunk by R8, which broke
+  ML Kit): ML Kit downloads its
   models, so it needs the internet and its licence has it in an app of its own; Lychee stays
   offline and binds its service (a signature permission: only apps signed like Lychee), handing
-  it the pad's strokes (`handwriting/GoogleHandwriting`). The companion has no launcher icon and
-  nothing to open: it fetches its models by itself when Lychee first binds it (PP-OCR reads the
-  pad meanwhile); its one screen, a Material 3 dialog in Material You colours (no Material
-  library, for size), is opened from Add-ons > Models, closes itself and stays out of recents.
-  With it installed only ML Kit reads the pad. Settings > Add-ons offers it (saying ML Kit's licence needs the
+  it the pad's strokes (`handwriting/GoogleHandwriting`). The companion is a small app with Lychee's icon: its full-screen
+  setup (Material You colours, no Material library, for size) downloads the models, then hides its
+  launcher icon; Lychee opens it again from Add-ons. It also fetches the models by itself when
+  Lychee first binds it (PP-OCR reads the pad meanwhile). This is how the first companion, which
+  worked, was made; the icon-less, R8-shrunk build that followed did not work. With it installed only ML Kit reads the pad. Settings > Add-ons offers it (saying ML Kit's licence needs the
   companion, and its size), and so does a chip on the pad. It is built once, and rebuilt only
   when its code or ML Kit version changes (`build.yml`, the private `handwriting-google`
   release), and attached to every build's debug release beside Lychee's APK. Never ML Kit's models copied into Lychee (its licence forbids it). Lychee's own
