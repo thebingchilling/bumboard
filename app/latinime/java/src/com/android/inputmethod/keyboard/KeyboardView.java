@@ -403,9 +403,11 @@ public class KeyboardView extends View {
             Drawable background = key.selectBackgroundDrawable(
                     mKeyBackground, mFunctionalKeyBackground, mSpacebarBackground);
             // LYCHEE: ?123, ABC and Enter are rounded squares like every other key
-            // LYCHEE: with key borders off, letter keys show a background only while pressed
-            final boolean hidden = background == mKeyBackground && !app.lychee.ui.KeyStyle.getBorders()
-                    && !key.isPressed();
+            // LYCHEE: with key borders off, every key (letters, ?123, emoji, backspace, space)
+            // shows a background only while pressed, like Gboard's; Enter keeps its accent fill
+            // and a locked shift its own
+            final boolean hidden = !app.lychee.ui.KeyStyle.getBorders() && !key.isPressed()
+                    && !key.lycheeKeepsBackgroundWithoutBorders();
             if (background != null && !hidden) {
                 if (lycheeFading) background.setAlpha(mLycheeFadeAlpha);
                 onDrawKeyBackground(key, canvas, background);
