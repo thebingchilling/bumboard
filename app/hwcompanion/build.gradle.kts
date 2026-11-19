@@ -14,8 +14,8 @@ android {
         applicationId = "app.lychee.hwgoogle"
         minSdk = 24
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
         // one APK for every phone: 64-bit and 32-bit ARM (ML Kit's engine is a native library
         // for each kind of processor; the emulators' x86 ones are left out)
         ndk {
@@ -36,7 +36,8 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            // ML Kit kept whole (its start-up and native engine find classes by name)
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("debug")
         }
     }

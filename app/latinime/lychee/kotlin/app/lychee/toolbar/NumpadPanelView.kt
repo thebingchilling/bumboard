@@ -29,9 +29,9 @@ import com.android.inputmethod.latin.common.Constants
  * 0 under the 8, = and period under the 9, Enter under the right-hand keys. ABC goes back to the
  * letters and !?# to the symbols.
  *
- * In number, phone and date fields ([forced]) it is a plain pad as wide as the keyboard:
- * the digits, with backspace, 0 and Enter along the bottom bar (
- * phone numbers). What else the field takes ([setInputType]: − for signed numbers, a decimal
+ * In number, phone and date fields ([forced]) it is a plain pad, as wide as the symbols page's
+ * digits and centred with space at each side: the digits, with backspace, 0 and Enter along the
+ * bottom bar. What else the field takes ([setInputType]: − for signed numbers, a decimal
  * point for decimals, / and : for dates and times, + * # for phone numbers) is held on 0, like
  * a key's alternatives on the keyboard: hold, slide onto one and let go; a small mark in 0's
  * corner shows what is there.
@@ -97,9 +97,14 @@ class NumpadPanelView @JvmOverloads constructor(
         fullBar = bar
     }
 
-    /** The number field's pad, as wide as the keyboard: the digits over ⌫ 0 Enter (its extras held on 0). */
+    /**
+     * The number field's pad: the digits over ⌫ 0 Enter (its extras held on 0), as wide as the
+     * symbols page's digits and centred, with space at each side.
+     */
     private fun plainPad() = LinearLayout(context).apply {
         orientation = HORIZONTAL
+        val side = (COLUMN_SYMBOLS + COLUMN_SIDE) / 2
+        addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, side))
         val block = LinearLayout(context).apply { orientation = VERTICAL }
         block.addView(digitRows(), LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
         val bar = LinearLayout(context).apply { orientation = HORIZONTAL }
@@ -108,7 +113,8 @@ class NumpadPanelView @JvmOverloads constructor(
         bar.addView(enterKey(), keyParams(1f))
         block.addView(bar, LayoutParams(LayoutParams.MATCH_PARENT, dp(56)))
         plainBar = bar
-        addView(block, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(block, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_DIGIT * 3))
+        addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, side))
     }
 
     /**
@@ -315,18 +321,21 @@ class NumpadPanelView @JvmOverloads constructor(
     }
 
     /**
-     * The bottom bar exactly as tall as the keyboard's bottom row, with its gaps and the
-     * keyboard's padding below it; the rows above share the rest.
+     * The bottom bar's keys exactly where the keyboard's bottom row keys are: as tall, and as
+     * high above the bottom. Each keyboard row's gap is below its keys (LatinIME's Key), so the
+     * bottom keys stand the gap plus the keyboard's padding above the bottom; the rows above
+     * share the rest.
      */
     private fun alignWithKeyboard() {
         val row = LycheePanels.keyRow(this)
-        if (paddingBottom != row.bottomPadding) setPadding(paddingLeft, paddingTop, paddingRight, row.bottomPadding)
-        val half = row.gap / 2
+        val margin = dp(3)
+        // the bar's keys keep the 3 dp margin the pad's other keys have; the gap below them
+        // is made up by the pad's own padding
+        val bottom = (row.bottomPadding + row.gap - margin).coerceAtLeast(0)
+        if (paddingBottom != bottom) setPadding(paddingLeft, paddingTop, paddingRight, bottom)
+        val height = row.height - row.gap + margin * 2
         for (bar in bottomBars) {
             val lp = bar.layoutParams as LayoutParams
-            // the bar's keys keep the 3 dp margin the pad's other keys have; the row's gap is
-            // made up around them
-            val height = row.height + dp(3) * 2 - 2 * half
             if (lp.height != height) {
                 lp.height = height
                 bar.layoutParams = lp

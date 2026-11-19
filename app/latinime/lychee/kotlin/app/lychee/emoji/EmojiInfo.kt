@@ -7,7 +7,6 @@ import android.graphics.drawable.GradientDrawable
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextView
@@ -55,6 +54,10 @@ class EmojiInfo(private val ctx: Context) {
                 gravity = Gravity.CENTER
             })
         }
+        // as wide as the screen allows (a margin each side), so a long name wraps, never cut off
+        val screen = ctx.resources.displayMetrics.widthPixels
+        val widest = (screen - dp(32)).coerceAtMost(dp(320))
+        val textWidth = widest - dp(36)
         name?.takeIf { it.isNotBlank() }?.let { n ->
             card.addView(TextView(ctx).apply {
                 this.text = n.replaceFirstChar { it.uppercase() }
@@ -62,7 +65,7 @@ class EmojiInfo(private val ctx: Context) {
                 setTextColor(c.onSurface)
                 typeface = app.lychee.fonts.LycheeFonts.ui(ctx, 500)
                 gravity = Gravity.CENTER
-                maxWidth = dp(240)
+                maxWidth = textWidth
                 setPadding(0, dp(8), 0, 0)
             })
         }
@@ -72,11 +75,15 @@ class EmojiInfo(private val ctx: Context) {
             setTextColor(c.onSurfaceVariant)
             typeface = app.lychee.fonts.LycheeFonts.ui(ctx)
             gravity = Gravity.CENTER
-            maxWidth = dp(240)
+            maxWidth = textWidth
             setPadding(0, dp(2), 0, 0)
         })
-        card.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
-        val popup = PopupWindow(card, ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, false).apply {
+        card.measure(View.MeasureSpec.makeMeasureSpec(widest, View.MeasureSpec.AT_MOST), View.MeasureSpec.UNSPECIFIED)
+        // its exact size, unclipped: the window manager never squeezes it (cutting the name off)
+        val w = card.measuredWidth
+        val h = card.measuredHeight
+        val popup = PopupWindow(card, w, h, false).apply {
+            isClippingEnabled = false
             animationStyle = com.android.inputmethod.latin.R.style.LycheePopupAnimation
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             isOutsideTouchable = true
@@ -84,9 +91,12 @@ class EmojiInfo(private val ctx: Context) {
             setOnDismissListener { if (window === this) window = null }
         }
         window = popup
-        val x = (anchor.width - card.measuredWidth) / 2
-        popup.showAsDropDown(anchor, x, -(anchor.height + card.measuredHeight + dp(6)))
-        app.lychee.layout.LycheeMotion.cardIn(card, card.measuredWidth / 2f, card.measuredHeight.toFloat())
+        // centred above what was held, kept on the screen
+        val at = IntArray(2).also { anchor.getLocationOnScreen(it) }
+        val left = (at[0] + (anchor.width - w) / 2).coerceIn(dp(8), (screen - w - dp(8)).coerceAtLeast(dp(8)))
+        val top = (at[1] - h - dp(6)).coerceAtLeast(0)
+        popup.showAtLocation(anchor, Gravity.NO_GRAVITY, left, top)
+        app.lychee.layout.LycheeMotion.cardIn(card, (at[0] + anchor.width / 2f - left).coerceIn(0f, w.toFloat()), h.toFloat())
     }
 
     private fun dp(v: Int) = (ctx.resources.displayMetrics.density * v).toInt()

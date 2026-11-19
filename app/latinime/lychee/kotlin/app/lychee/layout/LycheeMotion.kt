@@ -1,8 +1,7 @@
 package app.lychee.layout
 
-import android.animation.AnimatorSet
 import android.animation.LayoutTransition
-import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.PathInterpolator
@@ -43,23 +42,11 @@ object LycheeMotion {
             disableTransitionType(LayoutTransition.CHANGE_APPEARING)
             disableTransitionType(LayoutTransition.CHANGE_DISAPPEARING)
             disableTransitionType(LayoutTransition.CHANGING)
-            setAnimator(LayoutTransition.APPEARING, AnimatorSet().apply {
-                playTogether(
-                    ObjectAnimator.ofFloat(null, View.ALPHA, 0f, 1f),
-                    ObjectAnimator.ofFloat(null, View.SCALE_X, FROM, 1f),
-                    ObjectAnimator.ofFloat(null, View.SCALE_Y, FROM, 1f),
-                )
-            })
+            setAnimator(LayoutTransition.APPEARING, PanelAnimator(true))
             setDuration(LayoutTransition.APPEARING, IN)
             setInterpolator(LayoutTransition.APPEARING, enterEasing)
             setStartDelay(LayoutTransition.APPEARING, 0)
-            setAnimator(LayoutTransition.DISAPPEARING, AnimatorSet().apply {
-                playTogether(
-                    ObjectAnimator.ofFloat(null, View.ALPHA, 1f, 0f),
-                    ObjectAnimator.ofFloat(null, View.SCALE_X, 1f, TO),
-                    ObjectAnimator.ofFloat(null, View.SCALE_Y, 1f, TO),
-                )
-            })
+            setAnimator(LayoutTransition.DISAPPEARING, PanelAnimator(false))
             setDuration(LayoutTransition.DISAPPEARING, OUT)
             setInterpolator(LayoutTransition.DISAPPEARING, exitEasing)
             setStartDelay(LayoutTransition.DISAPPEARING, 0)
@@ -73,6 +60,48 @@ object LycheeMotion {
         }
         group.layoutTransition = transition
     }
+
+    /**
+     * A panel of the input view coming in or going. A going view is drawn above the others while
+     * it fades, so the keys and the emoji panel, which take each other's place, come in at once
+     * (opaque, under the one fading out): were both half see-through at the same moment, the app
+     * behind the keyboard would flash through. A panel over the keys fades in on top of them.
+     */
+    private class PanelAnimator(private val entering: Boolean) : ValueAnimator() {
+        private var view: View? = null
+
+        init {
+            setFloatValues(0f, 1f)
+            // the listener reads the animator it is given: LayoutTransition runs clones of this one
+            addUpdateListener { a -> (a as PanelAnimator).step(a.animatedValue as Float) }
+        }
+
+        override fun setTarget(target: Any?) {
+            view = target as? View
+        }
+
+        fun step(f: Float) {
+            val v = view ?: return
+            if (entering) {
+                if (replacesKeys(v)) {
+                    v.alpha = 1f; v.scaleX = 1f; v.scaleY = 1f
+                } else {
+                    val s = FROM + (1f - FROM) * f
+                    v.alpha = f; v.scaleX = s; v.scaleY = s
+                }
+            } else {
+                val s = 1f - (1f - TO) * f
+                v.alpha = 1f - f; v.scaleX = s; v.scaleY = s
+            }
+        }
+
+        override fun clone(): PanelAnimator = (super.clone() as PanelAnimator).also { it.view = null }
+    }
+
+    /** The keys and the emoji panel: each takes the whole keyboard's place. */
+    private fun replacesKeys(v: View) =
+        v.id == com.android.inputmethod.latin.R.id.main_keyboard_frame ||
+            v.id == com.android.inputmethod.latin.R.id.emoji_palettes_view
 
     /** [view] comes in: a cross-fade in place, settling from a hair smaller. */
     @JvmStatic

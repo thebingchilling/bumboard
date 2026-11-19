@@ -29,9 +29,12 @@ object Models {
     fun fetch(tag: String, done: (Boolean) -> Unit = {}) {
         val m = model(tag) ?: return done(false)
         fetching += tag
-        manager.download(m, DownloadConditions.Builder().build())
-            .addOnSuccessListener { fetching -= tag; done(true) }
-            .addOnFailureListener { fetching -= tag; done(false) }
+        // never a crash: ML Kit not starting is a failed download, tried again next time
+        runCatching {
+            manager.download(m, DownloadConditions.Builder().build())
+                .addOnSuccessListener { fetching -= tag; done(true) }
+                .addOnFailureListener { fetching -= tag; done(false) }
+        }.onFailure { fetching -= tag; done(false) }
     }
 
     /** Fetches every model not downloaded yet (in the background; nothing to open or tap). */
@@ -39,7 +42,9 @@ object Models {
         TAGS.forEach { tag ->
             val m = model(tag) ?: return@forEach
             if (tag in fetching) return@forEach
-            manager.isModelDownloaded(m).addOnSuccessListener { have -> if (!have && tag !in fetching) fetch(tag) }
+            runCatching {
+                manager.isModelDownloaded(m).addOnSuccessListener { have -> if (!have && tag !in fetching) fetch(tag) }
+            }
         }
     }
 
@@ -49,8 +54,13 @@ object Models {
         val all = TAGS.mapNotNull { t -> model(t)?.let { t to it } }
         if (all.isEmpty()) return done(emptyList())
         all.forEach { (tag, m) ->
-            manager.isModelDownloaded(m).addOnCompleteListener { task ->
-                results[tag] = task.isSuccessful && task.result == true
+            runCatching {
+                manager.isModelDownloaded(m).addOnCompleteListener { task ->
+                    results[tag] = task.isSuccessful && task.result == true
+                    if (results.size == all.size) done(TAGS.filter { results[it] == true })
+                }
+            }.onFailure {
+                results[tag] = false
                 if (results.size == all.size) done(TAGS.filter { results[it] == true })
             }
         }

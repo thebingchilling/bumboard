@@ -38,7 +38,9 @@ class RecognitionService : Service() {
                 STATUS -> Models.ready { tags ->
                     send(reply, STATUS_RESULT, msg.arg1, Bundle().apply { putStringArrayList("ready", ArrayList(tags)) })
                 }
-                RECOGNISE -> recognise(msg.data, reply, msg.arg1)
+                // a failure is an empty answer (Lychee's own engine then reads the pad), never a crash
+                RECOGNISE -> runCatching { recognise(msg.data, reply, msg.arg1) }
+                    .onFailure { send(reply, RESULT, msg.arg1, Bundle()) }
             }
         }
     })
@@ -46,7 +48,7 @@ class RecognitionService : Service() {
     override fun onCreate() {
         super.onCreate()
         // the models come by themselves: nothing to open after installing
-        Models.fetchMissing()
+        runCatching { Models.fetchMissing() }
     }
 
     private fun recognise(data: Bundle, reply: Messenger, id: Int) {
@@ -54,7 +56,7 @@ class RecognitionService : Service() {
         val model = Models.model(lang) ?: return send(reply, RESULT, id, Bundle())
         Models.manager.isModelDownloaded(model).addOnCompleteListener { task ->
             if (task.isSuccessful && task.result == true) {
-                read(lang, data, reply, id)
+                runCatching { read(lang, data, reply, id) }.onFailure { send(reply, RESULT, id, Bundle()) }
             } else {
                 send(reply, RESULT, id, Bundle().apply { putBoolean("notReady", true) })
                 Models.fetchMissing()
