@@ -113,7 +113,7 @@ class GoogleHandwriting private constructor(
          * Where the companion is downloaded (a release of Lychee's: the browser saves it, then
          * opening the file installs it). Its size, to show before downloading.
          */
-        const val DOWNLOAD = "https://github.com/thebingchilling/bumboard/releases/download/handwriting-google/lychee-handwriting-google.apk"
+        const val DOWNLOAD = "https://github.com/thebingchilling/bumboard/releases/download/handwriting-google/lychee-handwriting.apk"
 
         fun installed(context: Context): Boolean =
             runCatching { context.packageManager.getPackageInfo(PACKAGE, 0); true }.getOrDefault(false)

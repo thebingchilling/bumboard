@@ -95,19 +95,19 @@ jobs:
           have=$(gh release view handwriting-google --repo "$GITHUB_REPOSITORY" --json body -q .body 2>/dev/null | grep -o 'source [0-9a-f]*' | cut -d' ' -f2 || true)
           if [ "$hash" != "$have" ] && [ "$GITHUB_REF" = refs/heads/main ]; then
             ./gradlew --no-daemon :hwcompanion:assembleRelease
-            cp hwcompanion/build/outputs/apk/release/*.apk lychee-handwriting-google.apk
+            cp hwcompanion/build/outputs/apk/release/*.apk lychee-handwriting.apk
             if ! gh release view handwriting-google --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
               gh release create handwriting-google --repo "$GITHUB_REPOSITORY" --prerelease --latest=false \
                 --title "Lychee handwriting (Google)" --notes "building"
             fi
-            gh release upload handwriting-google lychee-handwriting-google.apk --repo "$GITHUB_REPOSITORY" --clobber
+            gh release upload handwriting-google lychee-handwriting.apk --repo "$GITHUB_REPOSITORY" --clobber
             gh release edit handwriting-google --repo "$GITHUB_REPOSITORY" \
               --notes "Google handwriting (ML Kit) companion for Lychee: install it; it gets Google's models by itself (nothing to open). source $hash"
           else
             echo "companion unchanged ($hash)"
           fi
           size=$(gh release view handwriting-google --repo "$GITHUB_REPOSITORY" --json assets \
-            -q '.assets[] | select(.name=="lychee-handwriting-google.apk") | .size' 2>/dev/null || true)
+            -q '.assets[] | select(.name=="lychee-handwriting.apk") | .size' 2>/dev/null || true)
           if [ -n "$size" ]; then echo "COMPANION_SIZE=about $(( (size + 524288) / 1048576 )) MB" >> "$GITHUB_ENV"; fi
 
       - name: Build debug APK
@@ -152,14 +152,14 @@ jobs:
           # release; it is only rebuilt when it changes)
           files=("dist/lychee-universal.apk" "dist/lychee-arm64-v8a.apk" "dist/lychee-armeabi-v7a.apk")
           if gh release download handwriting-google --repo "$GITHUB_REPOSITORY" \
-              --pattern lychee-handwriting-google.apk --dir dist --clobber; then
-            files+=("dist/lychee-handwriting-google.apk")
+              --pattern lychee-handwriting.apk --dir dist --clobber; then
+            files+=("dist/lychee-handwriting.apk")
           fi
           git log -1 --format=%B "$GITHUB_SHA" | grep -vE '^(Co-Authored-By|Claude-Session):' > notes.md
           printf '\nDebug-signed test build (the fixed debug key, so it installs over the last one).\n' >> notes.md
           printf 'lychee-universal.apk works on every phone; lychee-arm64-v8a.apk is for 64-bit phones (nearly all), lychee-armeabi-v7a.apk for 32-bit ones; both smaller.\n' >> notes.md
           if [ ${#files[@]} -gt 3 ]; then
-            printf 'lychee-handwriting-google.apk: the optional Google handwriting companion (install it; it gets its models by itself).\n' >> notes.md
+            printf 'lychee-handwriting.apk: Lychee handwriting, the optional companion for Google'"'"'s handwriting recognition (install it; it gets its models by itself).\n' >> notes.md
           fi
           gh release create "$tag" "${files[@]}" \
             --repo "$GITHUB_REPOSITORY" \
