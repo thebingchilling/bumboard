@@ -38,16 +38,12 @@ class SetupActivity : Activity() {
         super.onCreate(savedInstanceState)
         val d = resources.displayMetrics.density
         fun dp(v: Int) = (v * d).toInt()
-        val primary = if (dark) tone(android.R.color.system_accent1_200, 0xFF82D5C3.toInt())
-            else tone(android.R.color.system_accent1_600, 0xFF006A5D.toInt())
-        val surface = if (dark) tone(android.R.color.system_neutral1_800, 0xFF1B211F.toInt())
-            else tone(android.R.color.system_neutral1_50, 0xFFF0F5F2.toInt())
-        val onSurface = if (dark) tone(android.R.color.system_neutral1_100, 0xFFDEE4E1.toInt())
-            else tone(android.R.color.system_neutral1_900, 0xFF171D1B.toInt())
-        val onVariant = if (dark) tone(android.R.color.system_neutral2_200, 0xFFBEC9C5.toInt())
-            else tone(android.R.color.system_neutral2_700, 0xFF3F4946.toInt())
-        val track = if (dark) tone(android.R.color.system_accent1_800, 0xFF005045.toInt())
-            else tone(android.R.color.system_accent1_100, 0xFFCCE8E0.toInt())
+        // Lychee's rose palette, as in Lychee's settings (not the wallpaper's colours)
+        val primary = if (dark) 0xFFFFB2BC.toInt() else 0xFFA53A50.toInt()
+        val surface = if (dark) 0xFF1A1112.toInt() else 0xFFFFF8F7.toInt()
+        val onSurface = if (dark) 0xFFF0DEDF.toInt() else 0xFF22191A.toInt()
+        val onVariant = if (dark) 0xFFD7C1C3.toInt() else 0xFF524345.toInt()
+        val track = if (dark) 0xFF85233A.toInt() else 0xFFFFD9DD.toInt()
 
         // a full screen in the surface colour, its content in the middle
         window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(surface))
@@ -68,8 +64,9 @@ class SetupActivity : Activity() {
             typeface = Typeface.create("sans-serif", Typeface.NORMAL)
         })
         root.addView(TextView(this).apply {
-            text = "Getting Google's handwriting models for Chinese, Japanese and Korean (about 20 MB each). " +
-                "What you write is read on this phone."
+            text = "Google's ML Kit handwriting recognition for Lychee's handwriting pad: Chinese, Japanese and " +
+                "Korean. This app downloads Google's models (about 20 MB each); what you write is then read " +
+                "on this phone, never sent anywhere."
             setTextColor(onVariant)
             textSize = 14f
             setLineSpacing(0f, 1.2f)
@@ -106,6 +103,15 @@ class SetupActivity : Activity() {
             addView(close)
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         setContentView(root)
+        // the icon stays on the launcher (hiding it didn't work on every launcher): one that an
+        // earlier version hid comes back
+        runCatching {
+            packageManager.setComponentEnabledSetting(
+                android.content.ComponentName(this, "$packageName.Launcher"),
+                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT,
+                android.content.pm.PackageManager.DONT_KILL_APP,
+            )
+        }
         download()
     }
 
@@ -130,15 +136,7 @@ class SetupActivity : Activity() {
             status.text = "The models couldn't be downloaded. Check the connection and try again."
             return
         }
-        status.text = "Ready. Lychee's handwriting pad now uses Google's handwriting recognition. " +
-            "This app's icon is hidden now; Lychee's Settings > Add-ons opens it again."
-        // nothing more to do here: off the launcher
-        runCatching {
-            packageManager.setComponentEnabledSetting(
-                android.content.ComponentName(this, "$packageName.Launcher"),
-                android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                android.content.pm.PackageManager.DONT_KILL_APP,
-            )
-        }
+        status.text = "Ready: $ok of ${Models.TAGS.size} languages. Lychee's handwriting pad now uses " +
+            "Google's ML Kit recognition, on this phone. Open this app any time to check for newer models."
     }
 }

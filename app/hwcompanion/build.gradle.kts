@@ -14,8 +14,8 @@ android {
         applicationId = "app.lychee.hwgoogle"
         minSdk = 24
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.6"
+        versionCode = 8
+        versionName = "1.7"
         // one APK for every phone: 64-bit and 32-bit ARM (ML Kit's engine is a native library
         // for each kind of processor; the emulators' x86 ones are left out)
         ndk {

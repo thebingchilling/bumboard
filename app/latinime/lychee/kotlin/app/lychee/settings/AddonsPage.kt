@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -111,12 +112,16 @@ fun AddonsPage() {
     }
     PackMessage(actions)
     UpdatesCard()
-    // the higher-quality handwriting, first in the store
-    GoogleHandwritingCard()
-    // the paid add-ons: bundles, then every add-on (only the UI so far: free for now)
+    // the paid add-ons: bundles, then every add-on (Google Handwriting among the features; only the
+    // UI so far: free for now). Each opens its own page
     StoreSection()
 
-    // by language (Chinese, Japanese, Korean, English), then the others
+    // the free downloads, by language (Chinese, Japanese, Korean, English), then the others
+    SectionDivider()
+    GroupHeader("Free downloads")
+    Text("Dictionaries, fonts and emoji, free for everyone. Each is open data or open source, with its licence inside.",
+        style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 4.dp))
     val sections = PackStorage.Section.entries.filter { sec -> sec != PackStorage.Section.OWN && catalog.any { PackStorage.section(it) == sec } }
     for (section in sections) {
         val packs = catalog.filter { PackStorage.section(it) == section }
@@ -125,7 +130,11 @@ fun AddonsPage() {
     }
     // (your own fonts are chosen where fonts are picked: Settings > Fonts)
     Spacer(Modifier.height(16.dp))
+    // the registration (with billing), out of the way at the very bottom
+    RegistrationSection()
+    Spacer(Modifier.height(16.dp))
     AddonSheetHost(actions)
+    ProductSheetHost()
 }
 
 /**
@@ -309,11 +318,10 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 // installed: quieter, in grey; still to get: in full colour
                 Text(addonName(pack), style = MaterialTheme.typography.bodyLarge,
-                    color = if (installed) colors.onSurfaceVariant else colors.onSurface, maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    color = if (installed) colors.onSurfaceVariant else colors.onSurface)
                 if (pack.summary.isNotEmpty()) {
                     Text(pack.summary, style = MaterialTheme.typography.bodySmall,
-                        color = colors.onSurfaceVariant.copy(alpha = if (installed) 0.7f else 1f), maxLines = 2)
+                        color = colors.onSurfaceVariant.copy(alpha = if (installed) 0.7f else 1f))
                 }
                 // the paid add-on this download belongs to, and the packs that include it
                 app.lychee.store.Store.forPack(pack.id)?.let { product ->
@@ -339,21 +347,18 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
                         .joinToString("  ·  "),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (installed && update == null) colors.onSurfaceVariant else colors.primary,
-                    maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 2.dp),
                 )
             }
+            // room between what it is and what can be done with it
+            Spacer(Modifier.size(12.dp))
             when {
                 busy -> androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
                 // a newer version (Updates found it): Update, one file at a time
-                installed && app.lychee.packs.Updates.hasUpdate(context, pack) -> FilledTonalButton(
-                    onClick = { AddonSheet.open = pack },
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                ) {
-                    Icon(painterResource(R.drawable.ic_sym_refresh), null, modifier = Modifier.size(18.dp))
-                    Text(stringResource(R.string.lychee_addons_update_short), maxLines = 1, softWrap = false,
-                        modifier = Modifier.padding(start = 6.dp))
-                }
+                installed && app.lychee.packs.Updates.hasUpdate(context, pack) ->
+                    androidx.compose.material3.FilledTonalIconButton(onClick = { AddonSheet.open = pack }) {
+                        Icon(painterResource(R.drawable.ic_sym_refresh), stringResource(R.string.lychee_addons_update_short))
+                    }
                 // removing asks first, in a menu dropped from the bin (not a dialog)
                 installed -> Box {
                     var asking by remember { mutableStateOf(false) }
@@ -375,7 +380,8 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
                         MenuItem(stringResource(android.R.string.cancel), icon = R.drawable.ic_sym_close) { asking = false }
                     }
                 }
-                bundled -> TextButton(onClick = {
+                // a removed pack that comes with Lychee: the download icon brings it back (from the app)
+                bundled -> androidx.compose.material3.FilledTonalIconButton(onClick = {
                     busy = true
                     scope.launch {
                         withContext(Dispatchers.IO) { PackStorage.restore(context, pack) }
@@ -383,14 +389,10 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
                         onChanged()
                         actions.refresh()
                     }
-                }) { Text(stringResource(R.string.lychee_storage_restore), maxLines = 1, softWrap = false) }
-                // short, with its icon, never wrapping
-                else -> FilledTonalButton(onClick = { AddonSheet.open = pack },
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 8.dp)) {
-                    Icon(painterResource(if (pack.custom) R.drawable.ic_sym_folder_open else R.drawable.ic_sym_download), null,
-                        modifier = Modifier.size(18.dp))
-                    Text(stringResource(if (pack.custom) R.string.lychee_addons_choose_short else R.string.lychee_addons_get_short),
-                        maxLines = 1, softWrap = false, modifier = Modifier.padding(start = 6.dp))
+                }) { Icon(painterResource(R.drawable.ic_sym_download), stringResource(R.string.lychee_packs_get)) }
+                else -> androidx.compose.material3.FilledTonalIconButton(onClick = { AddonSheet.open = pack }) {
+                    Icon(painterResource(if (pack.custom) R.drawable.ic_sym_folder_open else R.drawable.ic_sym_download),
+                        stringResource(if (pack.custom) R.string.lychee_addons_choose_short else R.string.lychee_addons_get_short))
                 }
             }
         }
@@ -444,6 +446,7 @@ fun AddonSheetHost(actions: PackActions) {
         Column(
             Modifier
                 .fillMaxWidth()
+                .verticalScroll(androidx.compose.foundation.rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 24.dp)
                 .navigationBarsPadding(),
@@ -460,8 +463,17 @@ fun AddonSheetHost(actions: PackActions) {
                 Image(picture, null, contentScale = ContentScale.Fit, alignment = Alignment.CenterStart,
                     modifier = Modifier.fillMaxWidth().height(48.dp))
             }
-            val facts = listOf(pack.size, pack.license).filter { it.isNotEmpty() }.joinToString(" · ")
-            if (facts.isNotEmpty()) Text(facts, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+            // the facts, as on a store page: free, its size, the version installed or to download
+            val shownVersion = Packs.installedVersion(context, pack.id) ?: app.lychee.packs.Updates.latestOf(context, pack)
+            val facts = listOfNotNull("Free", pack.size.takeIf { it.isNotEmpty() }, shownVersion?.let { "Version $it" },
+                "Works offline").joinToString("  ·  ")
+            Text(facts, style = MaterialTheme.typography.labelLarge, color = colors.primary)
+            // the paid add-on it is part of, when it is one
+            app.lychee.store.Store.forPack(pack.id)?.let { product ->
+                Text("Part of ${product.name} (free while Lychee is in testing). Tap for its page.",
+                    style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
+                    modifier = Modifier.clickable { AddonSheet.open = null; ProductSheet.open = product })
+            }
             if (actions.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             // an installed add-on with a newer version gets the download steps again
             if (installed && !app.lychee.packs.Updates.hasUpdate(context, pack)) {
@@ -502,6 +514,17 @@ fun AddonSheetHost(actions: PackActions) {
                 }
             }
             actions.message?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.primary) }
+            // where it comes from, under which licence, and what stays on the phone
+            if (!pack.custom) {
+                Text("Source and licence", style = MaterialTheme.typography.titleSmall, color = colors.primary)
+                Text(listOf(pack.credit, pack.license).filter { it.isNotEmpty() }.joinToString(". ")
+                    .ifEmpty { "Its licence is in the downloaded file." },
+                    style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
+                Text("Privacy", style = MaterialTheme.typography.titleSmall, color = colors.primary)
+                Text("The browser downloads it; Lychee itself has no internet permission. Once installed it works " +
+                    "offline, and nothing you type ever leaves your phone.",
+                    style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
+            }
         }
     }
 }

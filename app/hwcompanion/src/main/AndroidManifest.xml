@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Lychee's Google handwriting companion, a small app of its own (ML Kit's licence needs that).
-    Its screen downloads ML Kit's handwriting models; until they are in, its icon is on the
-    launcher (the alias below), and it hides itself once they are. It also fetches them by itself
+    Its screen downloads ML Kit's handwriting models and shows their status; its icon stays on the
+    launcher (the alias below: hiding it didn't work on every launcher). It also fetches them by itself
     the first time Lychee binds RecognitionService (Lychee's pad uses its own engine until they
     are in). Lychee opens the screen from Settings > Add-ons. Only apps signed with Lychee's key
     may bind the service (the signature permission, which Lychee declares too, so it holds it
@@ -34,7 +34,7 @@
             </intent-filter>
         </activity>
 
-        <!-- on the launcher until the models are in (SetupActivity then switches it off) -->
+        <!-- always on the launcher: opening it shows the models' status and fetches newer ones -->
         <activity-alias
             android:name=".Launcher"
             android:targetActivity=".SetupActivity"

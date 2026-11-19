@@ -94,8 +94,9 @@ packs page). Public facing, so be careful:
   models, so it needs the internet and its licence has it in an app of its own; Lychee stays
   offline and binds its service (a signature permission: only apps signed like Lychee), handing
   it the pad's strokes (`handwriting/GoogleHandwriting`). The companion is a small app with Lychee's icon: its full-screen
-  setup (Material You colours, no Material library, for size) downloads the models, then hides its
-  launcher icon; Lychee opens it again from Add-ons. It also fetches the models by itself when
+  setup (Lychee's rose palette, no Material library, for size) downloads the models and shows
+  their status; its launcher icon always stays (hiding it failed on some launchers), and Lychee
+  opens it from Add-ons too. It also fetches the models by itself when
   Lychee first binds it (PP-OCR reads the pad meanwhile). This is how the first companion, which
   worked, was made; the icon-less, R8-shrunk build that followed did not work. With it installed only ML Kit reads the pad. Settings > Add-ons offers it (saying ML Kit's licence needs the
   companion, and its size), and so does a chip on the pad. It is built once, and rebuilt only
@@ -128,14 +129,23 @@ packs page). Public facing, so be careful:
   never slide in like a window; cards grow out of what was touched.
 - Settings: full Material 3 (`settings/Components.kt`, `settings/Buttons.kt`, `settings/Theme.kt`):
   Material 3's components (switches, sliders, buttons, cards, menus, app bar), shapes, type scale
-  and colour scheme (Material You's tonal palette, the same on every page), laid out with
+  and colour scheme (Lychee's own rose palette from the icon, with a leaf green, the same on every
+  page and phone: not the wallpaper's Material You colours, whose dark blues looked poor), laid out with
   Material 2's spacing and format: a one-line app bar, plain full-width lists, group headings in
   the accent colour with a thin divider between groups, 24 dp grey icons on a 72 dp keyline,
   choices in dropdown menus dropped from their row. Visual settings (theme, keys, key shape, height, candidate size, emoji size,
   fonts, pronunciation, the key by the comma, the voice key) show a live preview where they are
   changed. The packs page (`packs/site`) is the same: Material 2's components in Material 3's
   tonal colours.
-  Add-ons (`settings/AddonsPage.kt`) is a store, opened from a banner at the top of Settings
+  Add-ons (`settings/AddonsPage.kt`) is a store, opened from a banner at the top of Settings:
+  an honest introduction (a student developer, one-time purchases, no ads or tracking, offline),
+  the bundles and every paid add-on (`settings/StoreSection.kt`; Google Handwriting is a listing
+  like the others, noting it needs the free Lychee handwriting app), then the free downloads by
+  language, and the registration at the very bottom. Every listing opens its own page like
+  Pleco's (`settings/ProductSheet.kt`, the downloads' sheet): price, size, version, a worked
+  example, what it gives, its free trial, sources and licences, privacy. Rows show their text in
+  full and act by icon only (delete, download; no "Restore"). Wording sells honestly: no "Pro" or
+  hype; ML Kit, open data, licences, open source and privacy named plainly
   (free and, later, paid add-ons: `price` and `featured` in packs.json; everything is free until
   billing exists): featured cards, chips by language, store rows; it gets downloads through a
   sheet (download, then open or choose the file); Storage lists everything kept by language and kind, and removes one pack

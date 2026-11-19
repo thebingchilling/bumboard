@@ -133,7 +133,11 @@ class SettingsActivity : ComponentActivity() {
 
     /** An add-on whose sheet opens with the page (the keyboard asking for its dictionary). */
     private fun addonOf(intent: Intent?) {
-        intent?.getStringExtra(EXTRA_ADDON)?.let { id -> app.lychee.packs.Packs.byId(this, id)?.let { AddonSheet.open = it } }
+        // a download's page, or a store listing's (the handwriting pad's chip opens Google Handwriting's)
+        intent?.getStringExtra(EXTRA_ADDON)?.let { id ->
+            app.lychee.packs.Packs.byId(this, id)?.let { AddonSheet.open = it }
+                ?: app.lychee.store.Store.byId(id)?.let { ProductSheet.open = it }
+        }
     }
 
     private fun pageOf(intent: Intent?): Page? =

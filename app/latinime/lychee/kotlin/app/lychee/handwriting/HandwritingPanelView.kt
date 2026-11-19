@@ -829,8 +829,8 @@ class HandwritingPanelView @JvmOverloads constructor(
     private companion object {
         /** The pad's offer of Google handwriting was put away. */
         const val PREF_UPGRADE_DISMISSED = "lychee_hw_upgrade_dismissed"
-        /** Settings > Add-ons' Google handwriting card (SettingsActivity.EXTRA_ADDON). */
-        const val GOOGLE_ADDON = "google_handwriting"
+        /** Settings > Add-ons' Google Handwriting page (SettingsActivity.EXTRA_ADDON, the store listing's id). */
+        const val GOOGLE_ADDON = "handwriting"
         /** After the pen lifts: the quick read, and the full one if no new stroke has begun (ms). */
         const val QUICK_READ_MS = 150L
         const val FULL_READ_MS = 450L

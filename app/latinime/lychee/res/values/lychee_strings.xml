@@ -250,7 +250,7 @@
     <string name="lychee_card_pronunciation">Pronunciation</string>
     <string name="lychee_hw_upgrade">Better handwriting: Google\'s</string>
     <string name="lychee_hw_upgrade_dismiss">Not now</string>
-    <string name="lychee_google_hw">Google handwriting</string>
+    <string name="lychee_google_hw">Google Handwriting</string>
     <string name="lychee_google_hw_quality">Higher quality</string>
     <string name="lychee_google_hw_body">Google\'s recognition for Chinese, Japanese and Korean. Reads messy, fast and joined-up writing.</string>
     <string name="lychee_google_hw_licence">A small companion app (%1$s, plus about 20 MB per language). Writing stays on your phone.</string>
@@ -312,7 +312,7 @@
     <string name="lychee_addons_get_short">Get</string>
     <string name="lychee_addons_update_short">Update</string>
     <string name="lychee_addons_choose_short">Choose</string>
-    <string name="lychee_store_tagline">Fonts, dictionaries, emoji and more</string>
+    <string name="lychee_store_tagline">Deeper dictionaries, Google handwriting, stroke order, fonts and more, all offline</string>
     <string name="lychee_store_featured">Featured</string>
     <string name="lychee_store_all">All</string>
     <string name="lychee_store_free">Free</string>
