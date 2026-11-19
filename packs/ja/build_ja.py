@@ -277,11 +277,29 @@ def verb_class(p: str) -> str | None:
     return None
 
 
+def fetch_retrying(url: str, dest: Path, tries: int = 4) -> bool:
+    """Downloads [url] to [dest], trying again after a pause; whether it arrived."""
+    import time
+    for attempt in range(tries):
+        try:
+            with urllib.request.urlopen(url, timeout=60) as r:
+                data = r.read()
+            dest.write_bytes(data)
+            return True
+        except OSError as e:
+            print(f"{url}: {e} (attempt {attempt + 1} of {tries})", file=sys.stderr)
+            time.sleep(10 * (attempt + 1))
+    return False
+
+
 def kanji_parts(cache: Path) -> dict[str, list[str]]:
     """KRADFILE: each kanji -> the parts it is drawn from."""
     src = cache / "kradfile.gz"
-    if not src.exists():
-        urllib.request.urlretrieve(KRADFILE, src)
+    if not src.exists() and not fetch_retrying(KRADFILE, src):
+        # EDRDG's server is sometimes unreachable from the build machines: the pack is still
+        # built, its kanji just have no parts this time
+        print("kradfile: unreachable, kanji parts left out", file=sys.stderr)
+        return {}
     out: dict[str, list[str]] = {}
     with gzip.open(src) as f:
         for line in f.read().decode("euc_jp", errors="replace").splitlines():
