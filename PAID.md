@@ -148,80 +148,105 @@ store in Settings > Add-ons).
   stored.
 - **Every purchase attaches to the registration**: Google Play now, Lychee's own website later.
 - **New phone, reinstall or family:** enter the registration key; the unlock page checks the
-  purchases and issues keys for that phone.
+  purchases and issues keys for that phone's security chip.
 - **No fixed phone limit.** A page lists the registration's phones, where the owner can remove
   old ones; only extreme patterns (hundreds of phones) are flagged for review, never blocked
   automatically.
 - **Google Play Family Library** is on for every paid add-on (up to six family members on their
   own accounts).
-- A leaked registration key only unlocks the genuine Lychee on more phones, which the owner sees
-  in the list and can remove.
+- A leaked registration key can't be used to pirate: it only puts keys into the security chips
+  of more phones running the genuine Lychee, which the owner sees in the list and can remove.
 
 ## Who can buy
 
 | Phone | Paid add-ons |
 |---|---|
-| Any phone Lychee runs on (Android 7 or newer) with Google Play | Yes |
-| Rooted, unlocked bootloader, root tools that spoof keys (e.g. TrickyStore) | **Yes.** Nothing about the phone is checked; nobody has to change their setup for Lychee |
-| Emulators with Google Play | Yes: they pay like anyone else |
+| Android 9 or newer, Google Play, keys proven to be in the phone's security chip | Yes |
+| Rooted, or with an unlocked bootloader | **Yes.** The chip still keeps keys safe; root and the bootloader are never refused |
+| A rooted phone that fails Google's integrity checks | Yes: the chip's own certificate proves the genuine Lychee instead |
+| A root tool faking keys for Lychee (e.g. TrickyStore with a leaked key) | No, until Lychee is left off the tool's list (one setting); then it uses the real chip and works |
+| Emulators; phones storing keys in software only | No |
+| Android 8.1 and older (they can't put keys straight into the chip) | No |
+| A phone model whose own factory key was leaked and revoked | No |
 | No Google Play (de-Googled Android, Huawei, mainland China) | Not yet: once Lychee's own billing exists, through registration keys |
 
-Phones without Google Play keep everything free, every free download and every demo, and are
-told plainly why paid add-ons aren't available yet and what is coming. Phones that can't buy
-don't see purchase buttons, so nobody pays for something they can't use.
+Everyone who can't buy keeps everything free, every free download and every demo, and is told
+plainly why and what, if anything, they can do. For example, a refused unlock with a faked key
+says: "Your phone's security key isn't the phone's own, which usually means a root tool is
+changing it for Lychee. Lychee works with root and unlocked bootloaders: remove Lychee from your
+root tool's list (for example TrickyStore's), then try again." Phones that can't buy don't see
+purchase buttons, so nobody pays for something that won't work.
 
 ## Security model
 
-**The one rule:** nothing but Lychee's own unlock can turn on a paid feature in the genuine
-Lychee. Keys and decrypted content may leak, as with any app; what matters is that a leaked key,
-a decrypted file or a copied pack is useless in Lychee. Lychee has no way to accept them.
+**The rule:** only the genuine Lychee can ever unlock or run paid add-ons, however the app is
+modified. No app can stop someone changing their own copy, so the rule isn't enforced by checks
+inside Lychee (they could be deleted). It is enforced by two things a cracked copy can't change:
+the unlock function, and the phone's security chip.
 
-**How Lychee enforces it:**
+| Layer | What it stops | Removable from the app? |
+|---|---|---|
+| **1. The unlock function only serves the genuine Lychee:** it requires Google's signed Play Integrity answer, or the security chip's certificate, naming Lychee's package and signing key | Cracked copies ever getting a key | **No:** it lives in the function and in Google's or the chip's signatures |
+| **2. Keys only in the security chip**, usable only by the app with Lychee's signature | Cracked copies using a genuine install's keys, even on the same phone; keys being copied out | **No:** enforced by the chip |
+| 3. Google Play's automatic protection (Play Console), once Lychee is on Google Play: Google's own obfuscated anti-tampering, which makes a modified copy refuse to run | Modified copies running at all | Yes, with effort: an extra layer |
+| 4. Lychee checks its own signature and switches paid features off if it doesn't match | Casual tampering | Yes: an extra layer |
+
+Layers 1 and 2 are the guarantee; 3 and 4 only raise the effort.
+
+**How the content is protected:**
 1. **Paid content is encrypted**, entry by entry (each paid dictionary entry, level, pitch accent,
    Hanja breakdown, conjugation and sound-change rule, paid example sentence and stroke order),
    with one key per pack. The headword list stays open (the free card shows it anyway). Free
    features, free downloads and demos are never encrypted. The encrypted packs can stay on the
    public release, and a pack's key stays the same across versions.
 2. **Paid features live in the encrypted data, not in code.** Conjugation rules, sound-change
-   rules, levels: all data. With no unlocked key there is nothing to show.
-3. **Lychee only ever takes a key from its own unlock**: a key wrapped for this phone's own key
-   (created in the phone's secure key storage, which only this install of Lychee can use) and
-   signed by Lychee's unlock function for this request's one-time code. There is no way to type,
-   paste, import or load a key, and no code that reads a plain file of paid entries. A key from
-   anywhere else, or one unlocked on another phone, is simply never accepted.
-4. **The phone's secure key storage holds the key.** Where the phone supports it (Android 9 and
-   newer), the key goes straight into the security chip and decryption happens there; on older
-   phones the key is unwrapped by the secure key storage and used in memory. Either way it is
-   only ever usable by this install, and nothing about the phone itself is checked.
+   rules, levels: all data. A copy with every check removed still has nothing to show.
+3. **The key goes straight into the security chip** (Android's secure key import) and never
+   comes out; Lychee's code never sees it. When a card opens, Lychee hands that one entry to the
+   chip and gets back only that entry's text (a few milliseconds). Nothing ever decrypts a whole
+   file.
+4. **Lychee only ever takes a key from its own unlock.** There is no way to type, paste, import or
+   load a key, and no code that reads a plain file of paid entries, so a decrypted dump can't be
+   imported back.
 
 **Buying:** Google Play Billing inside Lychee; the Play Store app does the network part, so
-Lychee keeps no network permission (to confirm when building).
+Lychee keeps no network permission (to confirm when building, for Billing and Play Integrity).
 
 **Unlocking** (through the browser, like updates):
-1. Lychee creates its own key in the phone's secure key storage.
-2. It opens the unlock page in the browser with, after the `#`: the purchase receipt (or the
-   registration key), a one-time code, Play Integrity's answers about the app and the account
-   (never about the device), and its public key.
-3. The unlock function checks the purchase with Google and that the request comes from the
-   genuine Lychee from Google Play (Play Integrity's app answer). It never checks root, the
-   bootloader or the phone's security level.
-4. It returns the pack key wrapped for that install's key and signed for the one-time code,
+1. Lychee creates its own key in the phone's secure key storage and gets the chip's certificate
+   for it (key attestation: which app owns the key and its signing fingerprint, whether it is in
+   hardware, chained to Google's root).
+2. It asks Google Play for a Play Integrity token bound to this request's one-time code.
+3. It opens the unlock page in the browser with, after the `#`: the purchase receipt (or the
+   registration key), the one-time code, the Play Integrity token and the chip's certificate.
+4. The unlock function checks, with Google: the purchase; that the request comes from the genuine
+   Lychee, by Play Integrity's app answer (from Google Play, Lychee's signing key) or, when that
+   answer isn't given (phones failing Google's most basic integrity level, as some rooted phones
+   do), by the chip's certificate naming Lychee's package and signing key; and that the key is in
+   hardware (TEE or StrongBox), with a chain to Google's root whose factory key isn't on Google's
+   revocation list. It never refuses root or an unlocked bootloader, and ignores Play Integrity's
+   device answer.
+5. It returns the pack key wrapped for that phone's chip and signed for the one-time code,
    through `lychee://unlock`.
 
 **What each attack gets:**
 
 | Attack | Result |
 |---|---|
-| A leaked pack key, a decrypted dump, copied packs or backups | Useless in Lychee: it only accepts keys from its own unlock, wrapped for itself |
-| Reading or patching Lychee's code (by hand or with AI) | The app holds no secret, and the unlock function only serves the genuine Lychee from Google Play |
-| Intercepting the unlock | The key in transit opens only for that install; one-time codes stop replays |
-| Frida, LSPosed, root, emulators | Can't make the genuine Lychee accept anything but its own unlock |
+| Removing the Play Integrity call from a copy | No token, so no key |
+| Faking a Play Integrity token or a chip certificate | Impossible: only Google or the chip's factory key can sign them |
+| Borrowing a token from the genuine Lychee | Fails: each is tied to one request's one-time code, and Google reports the installed app's signature |
+| Patching a copy to skip unlocking | The paid packs stay encrypted, with no key to open them |
+| Reading Lychee's code (by hand or with AI) | Nothing: the app holds no key or secret |
+| A leaked key, a decrypted dump, copied packs or backups | Useless in Lychee, which only takes keys from its own unlock; the key never leaves the chip anyway |
+| Intercepting the unlock | The key in transit opens only inside that phone's chip; one-time codes stop replays |
+| Emulators, faked keys, software key storage | Refused: no hardware certificate, or a revoked chain |
 
-**The honest limit:** someone could pull a key out of their own phone (easier with root or an
-emulator) and build a cracked copy of Lychee that uses it. That copy is not Lychee: it gets no
-updates, no new packs and no unlock, and much of the paid data is openly licensed and free
-elsewhere anyway. What Lychee sells is the dictionary in the keyboard, kept up to date. No
-watermarking, and no refusing phones over it.
+**The precise limit:** on a rooted phone with a real purchase, someone could use hooking tools to
+make the genuine Lychee decrypt its own entries one by one, save the text, and ship it inside a
+cracked copy. No app can rule that out, Pleco's included. It needs a real purchase and great
+effort, for data that is mostly openly licensed and free elsewhere; what Lychee sells is the
+dictionary in the keyboard, kept up to date. No watermarking.
 
 **Decrypted text never touches storage.** Paid entries exist in plain text only on screen and
 in memory while a card shows: never written to caches, files, logs, crash reports or the
@@ -238,11 +263,11 @@ or an unlock), and the person is told why.
 within three days; Lychee acknowledges on the phone as soon as the purchase completes (no network
 needed), so nobody loses a purchase by not finishing the unlock straight away.
 
-**Works offline after unlocking, forever.** Once unlocked, the add-on needs nothing online again,
-unless the person moves it to another phone or a refund removes it.
+**Works offline after unlocking, forever.** Once a key is in the chip, the add-on needs nothing
+online again, unless the person moves it to another phone or a refund removes it.
 
-**Obfuscation** (R8 on Lychee's own code) is an extra speed bump only; the protection never
-depends on it. The handwriting companion stays unshrunk (R8 broke ML Kit).
+**Obfuscation** (R8 on Lychee's own code) is an extra speed bump only, like layers 3 and 4; the
+protection never depends on it. The handwriting companion stays unshrunk (R8 broke ML Kit).
 
 **Google Handwriting:** the companion has network access, so it checks a licence signed by the
 unlock function, for that phone. Pirating it is pointless anyway: Gboard's handwriting is free.
@@ -256,22 +281,24 @@ font files stay free downloads.
 - **The unlock function and its small database**: a serverless function (e.g. Cloudflare
   Workers, with D1 or KV, on the free tier), under the lychee-keyboard name, set up and updated
   only through this repository's workflows with stored secrets (pack keys, Google Play
-  credentials), never from a session. It checks purchases and registrations and Play Integrity's
-  app and account answers, issues wrapped keys, keeps registrations,
+  credentials), never from a session. It checks purchases and registrations, Play Integrity's
+  app answer and the chip's certificate (with Google's revocation list), issues wrapped keys, keeps registrations,
   purchases and phones, and never sees anything typed. There is no server today; none is
   needed until billing.
 - **Pack builders**: paid content as entry-by-entry encrypted data, demos as separate open
   files; free packs unchanged.
-- **Lychee**: the store (UI first), registration, `lychee://unlock`, its own key in the secure
-  key storage, secure key import where supported, entry-by-entry decryption, no other way in for
-  keys or paid data, Play Billing and Play Integrity
+- **Lychee**: the store (UI first), registration, `lychee://unlock`, its own key and the chip's
+  certificate, secure key import, decryption inside the chip, no other way in for keys or paid
+  data, its own signature check (layer 4), Play Billing and Play Integrity
   (each confirmed to add no network permission), honest notes wherever paid add-ons can't be
   offered, R8 on its own code.
 - **The handwriting companion**: the server-signed licence check.
 - **The unlock function's limits**: rate limits per phone and per registration, and long random
   registration keys, so keys can't be guessed or the function flooded.
 - **A privacy policy** (Google Play requires one): what the unlock function receives (the
-  receipt, the one-time code, the public key and an optional email), that it never receives
+  receipt, the one-time code, the Play Integrity token, the chip's certificate and an optional
+  email), that it never receives
   anything typed, and that Lychee itself never goes online.
-- **Testing before launch**: decryption speed per entry on phones with StrongBox, TEE and older
-  software key storage.
+- **On Google Play**: turn on automatic protection in Play Console (layer 3).
+- **Testing before launch**: Chromebooks running Android apps (they may not give a hardware
+  certificate), and decryption speed per entry with StrongBox versus TEE.

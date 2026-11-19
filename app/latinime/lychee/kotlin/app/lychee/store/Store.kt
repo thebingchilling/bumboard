@@ -1,6 +1,7 @@
 package app.lychee.store
 
 import android.content.Context
+import android.os.Build
 
 /**
  * Lychee's paid add-ons as PAID.md describes them: every individual add-on (covering every
@@ -161,15 +162,22 @@ object Store {
     fun owns(context: Context, id: String): Boolean = FREE_FOR_NOW
 
     /**
-     * Why paid add-ons can't be offered on this phone, said plainly, or null when they can. Only
-     * Google Play matters: nothing about the phone itself (root, bootloader, Android version,
-     * emulator) is ever checked (PAID.md).
+     * Why paid add-ons can't be offered on this phone, said plainly, or null when they can
+     * (PAID.md). Root and an unlocked bootloader are never a reason. Emulators, faked or
+     * software-stored keys and revoked phone models are found when an add-on is unlocked, and
+     * that step says why too.
      */
-    fun unavailableReason(context: Context): String? =
-        if (hasGooglePlay(context)) null
-        else "Paid add-ons will be bought through Google Play, which isn't on this phone. Lychee's " +
-            "own way to buy, for phones without Google Play, comes later. Everything free, and " +
-            "every demo, keeps working."
+    fun unavailableReason(context: Context): String? = when {
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.P ->
+            "Paid add-ons will need Android 9 or newer, which can keep their keys inside the " +
+                "phone's security chip. This phone has Android ${Build.VERSION.RELEASE}. Everything " +
+                "free, and every demo, keeps working."
+        !hasGooglePlay(context) ->
+            "Paid add-ons will be bought through Google Play, which isn't on this phone. Lychee's " +
+                "own way to buy, for phones without Google Play, comes later. Everything free, and " +
+                "every demo, keeps working."
+        else -> null
+    }
 
     private fun hasGooglePlay(context: Context): Boolean =
         runCatching { context.packageManager.getPackageInfo("com.android.vending", 0); true }.getOrDefault(false)
