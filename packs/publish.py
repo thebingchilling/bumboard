@@ -159,6 +159,20 @@ def main():
         if old and old.get("digest") != d and old.get("digest_v") != DIGEST_V and same_as_published(old, d):
             old = dict(old, digest=d, digest_v=DIGEST_V)
             packs[pid] = old
+        source_now = str(info.get("version", ""))
+        if old and old.get("digest") == d and not old.get("source") and source_now and old["version"] != source_now:
+            # published under a build date before versions were the sources' own: the same
+            # contents take their source's version, and the old one is recorded as the same
+            # ("same_as"), so the packs page doesn't offer it as an update
+            name = versioned_name(cat.get("name", old.get("name", pid)), source_now)
+            label = {"id": pid, "name": info.get("name", cat.get("name", pid)), "version": source_now, "source": source_now}
+            rewrite(zip_path, args.upload / name, label)
+            rewrite(zip_path, args.upload / zip_path.name, label)
+            packs[pid] = dict(old, version=source_now, source=source_now, digest_v=DIGEST_V,
+                              same_as=[old["version"]] + old.get("same_as", []),
+                              download_file=name, download=RELEASE + name)
+            changed.append(f"{pid} {old['version']} -> {source_now} (same contents, relabelled)")
+            continue
         if old and old.get("digest") == d:
             # published before versioned names: its version uploaded once under one
             if not old.get("download_file"):

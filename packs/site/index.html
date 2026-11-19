@@ -166,14 +166,17 @@
       const packs = manifest.packs || {};
       const ids = Object.keys(packs).sort((a, b) => packs[a].name.localeCompare(packs[b].name));
       const installed = ids.filter((id) => have.has(id));
-      const updates = installed.filter((id) => packs[id].version !== have.get(id));
-      const latest = installed.map((id) => id + ':' + packs[id].version).join(',');
+      // a version recorded as the same contents ("same_as": relabelled with its source's own
+      // version) is up to date: hand back the installed one, so Lychee shows no update
+      const current = (id) => ((packs[id].same_as || []).includes(have.get(id)) ? have.get(id) : packs[id].version);
+      const updates = installed.filter((id) => current(id) !== have.get(id));
+      const latest = installed.map((id) => id + ':' + current(id)).join(',');
       const files = ids.filter((id) => packs[id].download_file).map((id) => id + ':' + packs[id].download_file).join(',');
       const url = back(latest, files);
       if (all) {
         say('Lychee add-ons', 'Every add-on, with what is on your phone. Downloaded files install when you choose them in Lychee.');
         list('Updates', updates, packs, (id, p) => item(p, 'Update: ' + have.get(id) + ' → ' + p.version, true, 'Download'));
-        list('Installed', installed.filter((id) => !updates.includes(id)), packs, (id, p) => item(p, 'Installed · ' + p.version, false, null));
+        list('Installed', installed.filter((id) => !updates.includes(id)), packs, (id, p) => item(p, 'Installed · ' + current(id), false, null));
         list('Not installed', ids.filter((id) => !have.has(id)), packs, (id, p) => item(p, size(p.size) + ' · ' + p.version, false, 'Download'));
         showBack(url);
         return;
