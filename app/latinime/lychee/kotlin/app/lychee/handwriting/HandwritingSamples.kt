@@ -20,9 +20,9 @@ object HandwritingSamples {
     /** Past this size the file is cut back to the newest [KEEP]. */
     private const val MAX_BYTES = 40L shl 20
 
-    @Suppress("DEPRECATION")
-    fun enabled(context: Context) =
-        PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREF, false)
+    /** Never: handwriting samples are no longer collected (Diagnostics is a plain error report now). */
+    @Suppress("UNUSED_PARAMETER")
+    fun enabled(context: Context) = false
 
     @Synchronized
     fun save(context: Context, strokes: List<FloatArray>, typed: String?, guesses: List<String>, engine: String?) {

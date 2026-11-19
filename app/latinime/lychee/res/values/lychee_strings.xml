@@ -266,7 +266,7 @@
     <string name="lychee_hw_samples_save">Save to a file</string>
     <string name="lychee_diagnostics">Diagnostics</string>
     <string name="lychee_diagnostics_summary">What the keyboard did lately, to share when something doesn\'t work</string>
-    <string name="lychee_diagnostics_body">The keyboard\'s recent steps: packs unpacked, dictionaries loaded and anything that failed. It stays on this phone unless you share it.</string>
+    <string name="lychee_diagnostics_body">Errors Lychee ran into and its recent log, to send if something goes wrong. It stays on this phone unless you share it.</string>
     <string name="lychee_diagnostics_clear">Clear</string>
     <!-- the settings' pages -->
     <string name="lychee_readings_title">Readings &amp; candidates</string>

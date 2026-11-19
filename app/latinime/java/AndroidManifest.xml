@@ -40,6 +40,8 @@
         <package android:name="app.lychee.hwgoogle"/>
         <!-- LYCHEE: whether Google Play is here (paid add-ons are bought through it) -->
         <package android:name="com.android.vending"/>
+        <!-- LYCHEE: Google's speech engine, preferred when installed (its voices for every language) -->
+        <package android:name="com.google.android.tts"/>
         <intent>
             <action android:name="android.speech.RecognitionService"/>
         </intent>

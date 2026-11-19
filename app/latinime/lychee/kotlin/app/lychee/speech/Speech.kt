@@ -23,7 +23,7 @@ object Speech {
         mandarinTaiwan = Pronunciation.mandarinTaiwan(context)
         if (tts != null) return
         val app = context.applicationContext
-        tts = TextToSpeech(app) { status ->
+        tts = newEngine(app) { status ->
             ready = status == TextToSpeech.SUCCESS
             val t = tts
             if (!ready || t == null) {
@@ -46,7 +46,7 @@ object Speech {
         pending = text to locales
         if (engine != null) return
         val app = context.applicationContext
-        tts = TextToSpeech(app) { status ->
+        tts = newEngine(app) { status ->
             ready = status == TextToSpeech.SUCCESS
             val p = pending
             pending = null
@@ -90,6 +90,8 @@ object Speech {
             Toast.makeText(context, R.string.lychee_speech_no_voice, Toast.LENGTH_LONG).show()
             return
         }
+        // the voice's own pitch and speed (Settings > Pronunciation > Voices), else the engine's
+        tune(context, engine, voice)
         engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lychee")
     }
 
@@ -131,16 +133,132 @@ object Speech {
         return all.filter(::matches).ifEmpty { all.filter { it.locale.language == want.language } }.sortedBy { it.name }
     }
 
-    /** A voice's name for people: female or male when its name says, else its place in the list. */
-    fun voiceLabel(v: android.speech.tts.Voice, index: Int): String {
-        val n = v.name.lowercase()
-        val gender = when {
-            "female" in n || Regex("[-_#]f\\d|smtf|-f-").containsMatchIn(n) -> "Female"
-            "male" in n || Regex("[-_#]m\\d|smtm|-m-").containsMatchIn(n) -> "Male"
-            else -> null
+    /** Google's speech engine: preferred when installed, for its voices in every language. */
+    const val GOOGLE_TTS = "com.google.android.tts"
+
+    /** The engine Lychee speaks with: Google's when it is installed, else the phone's default. */
+    fun engineName(context: Context): String? =
+        runCatching { context.packageManager.getPackageInfo(GOOGLE_TTS, 0); GOOGLE_TTS }.getOrNull()
+
+    /** A new engine (Google's when installed). */
+    fun newEngine(context: Context, listener: TextToSpeech.OnInitListener): TextToSpeech =
+        engineName(context)?.let { TextToSpeech(context, listener, it) } ?: TextToSpeech(context, listener)
+
+    // each voice's own settings, by its name: a name of the user's, pitch and speed (x100), and
+    // its measured pitch (Hz)
+    const val PREF_VOICE_NAME = "lychee_voice_name_"
+    const val PREF_VOICE_PITCH = "lychee_voice_pitch_"
+    const val PREF_VOICE_RATE = "lychee_voice_rate_"
+    const val PREF_VOICE_HZ = "lychee_voice_hz_"
+
+    @Suppress("DEPRECATION")
+    private fun prefs(context: Context) = android.preference.PreferenceManager.getDefaultSharedPreferences(context.applicationContext)
+
+    /** Sets [engine]'s pitch and speed to [voice]'s own (1.0 for none). */
+    fun tune(context: Context, engine: TextToSpeech, voice: android.speech.tts.Voice?) {
+        val p = prefs(context)
+        val pitch = voice?.let { p.getInt(PREF_VOICE_PITCH + it.name, 100) } ?: 100
+        val rate = voice?.let { p.getInt(PREF_VOICE_RATE + it.name, 100) } ?: 100
+        runCatching {
+            engine.setPitch(pitch / 100f)
+            engine.setSpeechRate(rate / 100f)
         }
-        val number = "Voice ${index + 1}"
-        return if (gender != null) "$number · $gender" else number
+    }
+
+    /** The short code a voice is known by in its engine ("cmn-cn-x-ccc-local" -> "ccc"). */
+    fun voiceCode(v: android.speech.tts.Voice): String =
+        Regex("-x-([a-z0-9]+)").find(v.name.lowercase())?.groupValues?.get(1) ?: v.name
+
+    /**
+     * A voice's name for people: the user's own name for it, else its place in the list, how high
+     * or low it sounds (measured, see [measure]) and its code. No made-up names, no guessed
+     * gender.
+     */
+    fun voiceLabel(context: Context, v: android.speech.tts.Voice, index: Int): String {
+        val p = prefs(context)
+        p.getString(PREF_VOICE_NAME + v.name, null)?.takeIf { it.isNotBlank() }?.let { return it }
+        val hz = p.getFloat(PREF_VOICE_HZ + v.name, 0f)
+        val sound = when {
+            hz <= 0f -> null
+            hz < 145f -> "lower voice"
+            hz < 190f -> "middle voice"
+            else -> "higher voice"
+        }
+        return listOfNotNull("Voice ${index + 1}", sound, voiceCode(v)).joinToString(" · ")
+    }
+
+    /**
+     * Measures how high [voice] sounds: says [text] into a file, finds the pitch of each voiced
+     * stretch (autocorrelation) and keeps the median, in Hz, for [voiceLabel]. [done] gets it on
+     * the main thread, or null when it couldn't be measured.
+     */
+    fun measure(context: Context, engine: TextToSpeech, voice: android.speech.tts.Voice, text: String, done: (Float?) -> Unit) {
+        val app = context.applicationContext
+        val file = java.io.File(app.cacheDir, "voice-sample.wav")
+        val id = "lychee-measure-" + voice.name
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
+        engine.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {}
+            override fun onDone(utteranceId: String?) {
+                if (utteranceId != id) return
+                val hz = runCatching { medianPitch(file.readBytes()) }.getOrNull()
+                file.delete()
+                if (hz != null) prefs(app).edit().putFloat(PREF_VOICE_HZ + voice.name, hz).apply()
+                main.post { done(hz) }
+            }
+            @Deprecated("Deprecated in Java")
+            override fun onError(utteranceId: String?) { main.post { done(null) } }
+        })
+        runCatching {
+            engine.setVoice(voice)
+            engine.setPitch(1f)
+            engine.setSpeechRate(1f)
+            engine.synthesizeToFile(text, android.os.Bundle(), file, id)
+        }.onFailure { done(null) }
+    }
+
+    /** The median pitch (Hz) of a 16-bit PCM WAV file's voiced stretches, or null. */
+    private fun medianPitch(wav: ByteArray): Float? {
+        if (wav.size < 64) return null
+        fun le32(i: Int) = (wav[i].toInt() and 0xff) or ((wav[i + 1].toInt() and 0xff) shl 8) or
+            ((wav[i + 2].toInt() and 0xff) shl 16) or ((wav[i + 3].toInt() and 0xff) shl 24)
+        val rate = le32(24).takeIf { it in 8000..96000 } ?: return null
+        // the samples: after the "data" chunk's header
+        var at = 12
+        var start = -1
+        var size = 0
+        while (at + 8 <= wav.size) {
+            val idTag = String(wav, at, 4, Charsets.US_ASCII)
+            val len = le32(at + 4)
+            if (idTag == "data") { start = at + 8; size = minOf(len, wav.size - start); break }
+            at += 8 + len
+        }
+        if (start < 0) return null
+        val n = size / 2
+        val x = FloatArray(n) { i -> ((wav[start + 2 * i].toInt() and 0xff) or (wav[start + 2 * i + 1].toInt() shl 8)).toShort() / 32768f }
+        val frame = rate / 25   // 40 ms
+        val minLag = rate / 400
+        val maxLag = rate / 70
+        val found = ArrayList<Float>()
+        var f = 0
+        while (f + frame + maxLag < n) {
+            var energy = 0f
+            for (i in f until f + frame) energy += x[i] * x[i]
+            if (energy / frame > 1e-4f) {
+                var best = 0f
+                var bestLag = 0
+                for (lag in minLag..maxLag) {
+                    var c = 0f
+                    for (i in f until f + frame) c += x[i] * x[i + lag]
+                    if (c > best) { best = c; bestLag = lag }
+                }
+                if (bestLag > 0 && best / energy > 0.5f) found += rate.toFloat() / bestLag
+            }
+            f += frame
+        }
+        if (found.size < 3) return null
+        found.sort()
+        return found[found.size / 2]
     }
 
     fun shutdown() {

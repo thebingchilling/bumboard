@@ -1352,7 +1352,8 @@ private fun VoicesGroup(mandarinTaiwan: Boolean, english: String) {
     var tts by remember { mutableStateOf<android.speech.tts.TextToSpeech?>(null) }
     var ready by remember { mutableStateOf(false) }
     androidx.compose.runtime.DisposableEffect(Unit) {
-        val engine = android.speech.tts.TextToSpeech(context) { status ->
+        // Google's engine when it is installed (as the keyboard speaks with), else the phone's
+        val engine = app.lychee.speech.Speech.newEngine(context) { status ->
             ready = status == android.speech.tts.TextToSpeech.SUCCESS
         }
         tts = engine
@@ -1378,24 +1379,88 @@ private fun VoicesGroup(mandarinTaiwan: Boolean, english: String) {
                 val voices = remember(tag) { app.lychee.speech.Speech.voicesFor(engine, tag) }
                 val key = app.lychee.speech.Speech.PREF_VOICE + tag
                 val pref = prefs.stringPref(key) { prefs.getString(key, null) ?: "" }
+                // relabelled once a voice is measured or renamed
+                var labels by remember(tag) { mutableStateOf(0) }
+                Column {
                 ChoiceRow(
                     it, stringResource(name),
                     if (voices.isEmpty()) stringResource(R.string.lychee_voices_none) else stringResource(R.string.lychee_voices_summary),
                     listOf("" to stringResource(R.string.lychee_voices_auto)) +
-                        voices.mapIndexed { i, v -> v.name to app.lychee.speech.Speech.voiceLabel(v, i) },
+                        voices.mapIndexed { i, v -> v.name to (labels.let { app.lychee.speech.Speech.voiceLabel(context, v, i) }) },
                     pref.value,
                     // open while voices are tried: each tap says the sample in that voice
                     keepOpen = true,
                 ) { picked ->
                     pref.set(picked)
-                    // a sample in the voice just picked
                     val voice = voices.firstOrNull { v -> v.name == picked }
-                    runCatching {
-                        if (voice != null) engine.voice = voice else engine.language = java.util.Locale.forLanguageTag(tag)
-                        engine.speak(samples[tag] ?: "", android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "lychee-sample")
-                    }
+                    if (voice != null && prefs.getFloat(app.lychee.speech.Speech.PREF_VOICE_HZ + voice.name, 0f) <= 0f) {
+                        // first time: measured (how high or low it sounds), then said
+                        app.lychee.speech.Speech.measure(context, engine, voice, samples[tag] ?: "") {
+                            labels++
+                            sayIn(engine, voice, tag, samples[tag] ?: "", context)
+                        }
+                    } else sayIn(engine, voice, tag, samples[tag] ?: "", context)
+                }
+                // the chosen voice's own name, pitch and speed
+                voices.firstOrNull { v -> v.name == pref.value }?.let { voice ->
+                    VoiceTuning(it, engine, voice, tag, samples[tag] ?: "")
+                }
                 }
             }
+        }
+    }
+}
+
+/** Says [text] in [voice] (or the language's default), with the voice's own pitch and speed. */
+private fun sayIn(engine: android.speech.tts.TextToSpeech, voice: android.speech.tts.Voice?, tag: String, text: String,
+                  context: android.content.Context) {
+    runCatching {
+        if (voice != null) engine.voice = voice else engine.language = java.util.Locale.forLanguageTag(tag)
+        app.lychee.speech.Speech.tune(context, engine, voice)
+        engine.speak(text, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "lychee-sample")
+    }
+}
+
+/**
+ * A chosen voice made one's own: a name for it, its pitch and speed (both kept per voice and used
+ * wherever Lychee speaks), and a button to hear it.
+ */
+@Composable
+private fun VoiceTuning(shape: androidx.compose.ui.graphics.Shape, engine: android.speech.tts.TextToSpeech,
+                        voice: android.speech.tts.Voice, tag: String, sample: String) {
+    val context = LocalContext.current
+    val prefs = prefs()
+    val S = app.lychee.speech.Speech
+    var name by remember(voice.name) { mutableStateOf(prefs.getString(S.PREF_VOICE_NAME + voice.name, null).orEmpty()) }
+    var pitch by remember(voice.name) { mutableStateOf(prefs.getInt(S.PREF_VOICE_PITCH + voice.name, 100)) }
+    var rate by remember(voice.name) { mutableStateOf(prefs.getInt(S.PREF_VOICE_RATE + voice.name, 100)) }
+    Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        androidx.compose.material3.OutlinedTextField(
+            value = name,
+            onValueChange = { v -> name = v.take(30); prefs.edit().putString(S.PREF_VOICE_NAME + voice.name, name).apply() },
+            label = { Text("Your name for this voice") },
+            placeholder = { Text(S.voiceCode(voice)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text("Pitch ${pitch}%", style = MaterialTheme.typography.bodyMedium)
+        androidx.compose.material3.Slider(
+            value = pitch.toFloat(), valueRange = 50f..200f, steps = 14,
+            onValueChange = { pitch = it.roundToInt() },
+            onValueChangeFinished = { prefs.edit().putInt(S.PREF_VOICE_PITCH + voice.name, pitch).apply(); sayIn(engine, voice, tag, sample, context) },
+        )
+        Text("Speed ${rate}%", style = MaterialTheme.typography.bodyMedium)
+        androidx.compose.material3.Slider(
+            value = rate.toFloat(), valueRange = 50f..200f, steps = 14,
+            onValueChangeFinished = { prefs.edit().putInt(S.PREF_VOICE_RATE + voice.name, rate).apply(); sayIn(engine, voice, tag, sample, context) },
+            onValueChange = { rate = it.roundToInt() },
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilledTonalButton(onClick = { sayIn(engine, voice, tag, sample, context) }) { Text("Play") }
+            TextButton(onClick = {
+                pitch = 100; rate = 100
+                prefs.edit().remove(S.PREF_VOICE_PITCH + voice.name).remove(S.PREF_VOICE_RATE + voice.name).apply()
+            }) { Text("Reset") }
         }
     }
 }
@@ -1490,35 +1555,44 @@ private fun AboutPage(openLicences: () -> Unit, openDiagnostics: () -> Unit) {
 private fun DiagnosticsPage() {
     val context = LocalContext.current
     var text by remember { mutableStateOf(app.lychee.DiagLog.read(context)) }
+    var crash by remember { mutableStateOf(app.lychee.CrashLog.read(context)) }
     val packs = remember {
         app.lychee.packs.Packs.catalog(context).filter { app.lychee.packs.Packs.isInstalled(context, it.id) }
             .joinToString("\n") { "${it.id} ${app.lychee.packs.Packs.installedVersion(context, it.id)}" }
     }
     val version = remember { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "" }
+    // handwriting samples are no longer collected: any kept from before are deleted, with their switch
+    remember {
+        app.lychee.handwriting.HandwritingSamples.clear(context)
+        @Suppress("DEPRECATION") PreferenceManager.getDefaultSharedPreferences(context).edit()
+            .remove(app.lychee.handwriting.HandwritingSamples.PREF).apply()
+    }
+    // errors only: what failed (the log's lines that say so), then the last crash
+    val errors = text.lines().filter { l -> listOf("fail", "error", "exception", "can't", "couldn't", "unavailable")
+        .any { l.contains(it, ignoreCase = true) } }
     val report = "Lychee $version\nAndroid ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}), ${Build.MANUFACTURER} ${Build.MODEL}\n\n" +
-        "Installed packs:\n$packs\n\n$text"
-    var samples by remember { mutableStateOf(app.lychee.handwriting.HandwritingSamples.count(context)) }
-    // all the samples as a file (sharing as text holds only the newest 150)
-    val saveSamples = androidx.activity.compose.rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("text/plain"),
-    ) { uri ->
-        if (uri != null) runCatching {
-            context.contentResolver.openOutputStream(uri)?.use { app.lychee.handwriting.HandwritingSamples.writeAll(context, it) }
-        }.onFailure { app.lychee.DiagLog.log("saving handwriting samples failed", it) }
-    }
-    val prefs = prefs()
-    val hwSamples = prefs.boolPref(app.lychee.handwriting.HandwritingSamples.PREF) {
-        prefs.getBoolean(app.lychee.handwriting.HandwritingSamples.PREF, false)
-    }
-    // characters written on the handwriting pad, kept on the phone to check misreadings
-    Group {
-        row {
-            SwitchRow(it, stringResource(R.string.lychee_hw_samples), stringResource(R.string.lychee_hw_samples_summary),
-                hwSamples.value, hwSamples::set)
+        "Installed packs:\n$packs\n\n" + (crash?.let { "Last crash:\n$it\n\n" } ?: "") + "Log:\n$text"
+    PageNote(stringResource(R.string.lychee_diagnostics_body))
+    // a summary first: all well, or how many errors
+    RaisedCard {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                when {
+                    crash != null -> "Lychee crashed recently"
+                    errors.isEmpty() -> "No errors"
+                    else -> "${errors.size} error${if (errors.size == 1) "" else "s"}"
+                },
+                style = MaterialTheme.typography.titleMedium,
+                color = if (crash != null || errors.isNotEmpty()) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            )
+            Text("Lychee $version · Android ${Build.VERSION.RELEASE} · ${Build.MANUFACTURER} ${Build.MODEL}",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            errors.takeLast(5).forEach { e ->
+                Text(e, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
+            }
         }
     }
-    PageNote(stringResource(R.string.lychee_diagnostics_body))
-    Row(Modifier.padding(horizontal = 24.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.padding(horizontal = 24.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Button(onClick = {
             context.startActivity(
                 Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, report), null)
@@ -1526,32 +1600,11 @@ private fun DiagnosticsPage() {
             )
         }) { Text(stringResource(R.string.lychee_crash_share)) }
         FilledTonalButton(onClick = {
-            context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Lychee diagnostics", report))
+            context.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Lychee report", report))
         }) { Text(stringResource(R.string.lychee_crash_copy)) }
-        TextButton(onClick = { app.lychee.DiagLog.clear(context); text = "" }) { Text(stringResource(R.string.lychee_diagnostics_clear)) }
-    }
-    // the handwriting samples (Settings > Advanced), shared as text: one character per line
-    if (samples > 0) {
-        Text(
-            stringResource(R.string.lychee_hw_samples_count, samples),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp),
-        )
-        Row(Modifier.padding(horizontal = 24.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(onClick = {
-                val data = app.lychee.handwriting.HandwritingSamples.read(context)
-                context.startActivity(
-                    Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, data), null)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
-            }) { Text(stringResource(R.string.lychee_hw_samples_share)) }
-            FilledTonalButton(onClick = { saveSamples.launch("lychee-handwriting-samples.jsonl") }) {
-                Text(stringResource(R.string.lychee_hw_samples_save))
-            }
-            TextButton(onClick = { app.lychee.handwriting.HandwritingSamples.clear(context); samples = 0 }) {
-                Text(stringResource(R.string.lychee_diagnostics_clear))
-            }
-        }
+        TextButton(onClick = {
+            app.lychee.DiagLog.clear(context); app.lychee.CrashLog.clear(context); text = ""; crash = null
+        }) { Text(stringResource(R.string.lychee_diagnostics_clear)) }
     }
     RaisedCard {
         Text(
@@ -1565,25 +1618,75 @@ private fun DiagnosticsPage() {
 @Composable
 private fun LicencesPage() {
     val context = LocalContext.current
+    val colors = MaterialTheme.colorScheme
     val software = remember {
         context.resources.openRawResource(R.raw.lychee_software_licenses).bufferedReader().use { it.readText() }
     }
     val data = remember {
-        runCatching {
-            context.assets.open("lychee/data-licenses.txt").bufferedReader().use { it.readText() }
-        }.getOrDefault("")
+        runCatching { context.assets.open("lychee/data-licenses.txt").bufferedReader().use { it.readText() } }.getOrDefault("")
     }
     val packs = remember {
         app.lychee.packs.Packs.catalog(context).filter { it.credit.isNotEmpty() }
-            .joinToString("\n\n") { "${it.name}\n${it.credit}\n${it.license}" }
+            .map { it.name to "${it.credit}\n${it.license}" }
     }
-    Group {
-        row { TextRow(it, stringResource(R.string.lychee_licences_software), software) }
-        if (data.isNotEmpty()) {
-            row { TextRow(it, stringResource(R.string.lychee_licences_data), data) }
+    // a thank-you first: Lychee stands on open source and open data
+    RaisedCard(color = colors.primaryContainer, contentColor = colors.onPrimaryContainer) {
+        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Built on open source and open data", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Lychee exists thanks to the people who share their work: Android's keyboard, the Rime engine, " +
+                    "dictionaries written by volunteers, open fonts. Each is listed here with its licence. " +
+                    "Lychee's own dictionary data is shared under CC BY-SA 4.0, as its sources ask.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
-        row { TextRow(it, stringResource(R.string.lychee_licences_packs), packs) }
     }
+    LicenceGroup("Software", licenceEntries(software))
+    LicenceGroup("Google ML Kit, in Lychee handwriting", listOf(
+        "Google ML Kit Digital Ink Recognition" to "Used under Google's ML Kit terms, in the separate Lychee handwriting " +
+            "app (its licence keeps it in an app of its own). Its models are downloaded from Google, never copied into Lychee.",
+    ))
+    if (data.isNotEmpty()) LicenceGroup("Dictionary data", licenceEntries(data))
+    LicenceGroup("Add-on packs", packs)
+    Spacer(Modifier.height(24.dp))
+}
+
+/** A titled group of licence entries: each its name, then where it comes from and its licence. */
+@Composable
+private fun LicenceGroup(title: String, entries: List<Pair<String, String>>) {
+    if (entries.isEmpty()) return
+    val colors = MaterialTheme.colorScheme
+    GroupHeader(title)
+    entries.forEach { (name, body) ->
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(name, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
+            if (body.isNotBlank()) Text(body, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+        }
+    }
+    SectionDivider()
+}
+
+/**
+ * The entries of a licences text ("  * Name — https://… — Licence. (c) …", with indented
+ * continuation lines): each as its name and the rest.
+ */
+private fun licenceEntries(text: String): List<Pair<String, String>> {
+    val out = mutableListOf<Pair<String, StringBuilder>>()
+    for (line in text.lines()) {
+        val t = line.trimEnd()
+        when {
+            t.trimStart().startsWith("* ") -> {
+                val item = t.trimStart().removePrefix("* ")
+                val cut = listOf(" — ", " (").map { item.indexOf(it) }.filter { it > 0 }.minOrNull()
+                val name = if (cut != null) item.substring(0, cut) else item
+                val rest = if (cut != null) item.substring(cut).removePrefix(" — ").trim() else ""
+                out += name to StringBuilder(rest)
+            }
+            t.startsWith("    ") && out.isNotEmpty() -> out.last().second.append(" ").append(t.trim())
+            else -> {}
+        }
+    }
+    return out.map { (n, b) -> n to b.toString().trim() }
 }
 
 private fun keySoundName(style: String) = when (style) {

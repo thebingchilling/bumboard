@@ -153,6 +153,15 @@ packs page). Public facing, so be careful:
   `BundledPacks.installAll`) until restored there.
 - Pronunciation (Settings > Pronunciation): Mandarin Mainland or Taiwan (CC-CEDICT's
   "Taiwan pr." readings, a zh-TW voice), English both, US or UK (`speech/Pronunciation`).
+  Lychee speaks with Google's speech engine when it is installed, else the phone's default
+  (`speech/Speech`), offline voices only. Voices have no names in the engines, so none are made
+  up and no gender is guessed: each is "Voice N", how high or low it sounds (measured from a
+  spoken sample), and its engine code, unless the user names it; each voice keeps its own pitch
+  and speed.
+- Diagnostics is a plain error report (errors, the last crash, the log; shared only by the user).
+  Handwriting samples are no longer collected. Licences (Settings > About) lists every software
+  component, Google ML Kit (in Lychee handwriting), the dictionary data and the packs, each with
+  its source and licence.
 
 ## Layout
 
