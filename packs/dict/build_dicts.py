@@ -20,6 +20,7 @@ from __future__ import annotations
 import argparse
 import bz2
 import json
+import os
 import re
 import shutil
 import sqlite3
@@ -334,6 +335,11 @@ def english_to_korean(english, cache: Path, work: Path) -> dict[str, Path]:
     shutil.rmtree(user, ignore_errors=True)
     user.mkdir()
     build = shared / "build"
+    # Rime records its sources' modification times in what it builds: a fixed time, so the same
+    # data builds the same files and the pack isn't offered as an update when nothing changed
+    for f in shared.rglob("*"):
+        if f.is_file():
+            os.utime(f, (946684800, 946684800))
     subprocess.run(["rime_deployer", "--build", str(user), str(shared), str(build)], check=True)
     files = {f"rime/{n}": shared / n for n in ("lychee_en_ko.schema.yaml", "lychee_en_ko.dict.yaml")}
     for f in sorted(build.iterdir()):

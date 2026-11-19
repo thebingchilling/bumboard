@@ -66,7 +66,8 @@ def font_bytes(data: bytes) -> bytes:
 
 
 # 2: fonts' 'head' timestamps and checksums are left out of the digest (font_bytes)
-DIGEST_V = 2
+# 3: so are Rime's recorded build times (rime_bytes)
+DIGEST_V = 3
 
 
 def same_as_published(old: dict, d: str) -> bool:
@@ -89,6 +90,26 @@ def same_as_published(old: dict, d: str) -> bool:
         return False
 
 
+def rime_bytes(name: str, data: bytes) -> bytes:
+    """A compiled Rime file without what records when it was built: the build schema's
+    __build_info block (its sources' times) and the prism's schema checksum (taken over them).
+    The dictionary itself (table, prism, dict checksum) still counts."""
+    if name.endswith(".schema.yaml") and "/build/" in name:
+        out, skip = [], False
+        for line in data.decode("utf-8", "replace").splitlines(True):
+            if line.startswith("__build_info:"):
+                skip = True
+                continue
+            if skip and line[:1] not in (" ", "\t"):
+                skip = False
+            if not skip:
+                out.append(line)
+        return "".join(out).encode("utf-8")
+    if name.endswith(".prism.bin") and len(data) > 40:
+        return data[:36] + b"\0" * 4 + data[40:]
+    return data
+
+
 def digest(zip_path: Path) -> str:
     """The pack's contents, without pack.json (which holds the version) or zip dates, and with
     fonts' save timestamps ignored: a pack is only new when what is in it changed."""
@@ -98,6 +119,8 @@ def digest(zip_path: Path) -> str:
             data = z.read(name)
             if name.lower().endswith(FONT):
                 data = font_bytes(data)
+            elif name.startswith("rime/"):
+                data = rime_bytes(name, data)
             h.update(name.encode() + b"\0")
             h.update(hashlib.sha256(data).digest())
     return h.hexdigest()

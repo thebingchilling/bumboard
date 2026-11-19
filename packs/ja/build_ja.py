@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import gzip
 import json
+import os
 import sqlite3
 import xml.etree.ElementTree as ET
 import math
@@ -461,6 +462,11 @@ def main():
     user = work / "user"
     user.mkdir()
     build = shared / "build"
+    # Rime records its sources' modification times in what it builds: a fixed time, so the same
+    # data builds the same files and the pack isn't offered as an update when nothing changed
+    for f in shared.rglob("*"):
+        if f.is_file():
+            os.utime(f, (946684800, 946684800))
     subprocess.run(["rime_deployer", "--build", str(user), str(shared), str(build)], check=True)
     for p in build.glob("*.userdb*"):
         shutil.rmtree(p, ignore_errors=True) if p.is_dir() else p.unlink()
