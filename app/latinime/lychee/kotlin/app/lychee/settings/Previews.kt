@@ -110,9 +110,9 @@ private fun PronLine(word: String, first: String, second: String, firstOn: Boole
     val colors = MaterialTheme.colorScheme
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(word, fontSize = 20.sp, color = colors.onSurface, modifier = Modifier.width(88.dp))
-        Text(first, fontSize = 15.sp, color = if (firstOn) colors.primary else colors.onSurfaceVariant.copy(alpha = 0.45f),
+        Text(first, fontSize = 15.sp, color = if (firstOn) colors.onSurface else colors.onSurfaceVariant.copy(alpha = 0.45f),
             modifier = Modifier.weight(1f))
-        Text(second, fontSize = 15.sp, color = if (secondOn) colors.primary else colors.onSurfaceVariant.copy(alpha = 0.45f),
+        Text(second, fontSize = 15.sp, color = if (secondOn) colors.onSurface else colors.onSurfaceVariant.copy(alpha = 0.45f),
             modifier = Modifier.weight(1f))
     }
 }
@@ -184,7 +184,8 @@ fun CandidatePreview(scale: Float, display: app.lychee.core.DisplayPrefs, meanin
                             val other = if (mandarin) fmt(s.yue, app.lychee.core.Lang.Cantonese) else fmt(s.cmn, app.lychee.core.Lang.Mandarin)
                             // pinyin and Zhuyin together are two lines, like the bar
                             (main.split("  ") + if (display.showOtherLanguage) other.split("  ") else emptyList()).forEach { line ->
-                                Text(line, fontSize = (CandidateBarView.READING_SP * scale).sp, color = colors.primary, maxLines = 1)
+                                // the bar's reading colour: the text's, a little softer (never the accent)
+                                Text(line, fontSize = (CandidateBarView.READING_SP * scale).sp, color = colors.onSurface.copy(alpha = 0xD0 / 255f), maxLines = 1)
                             }
                             Text(if (display.simplified) s.simp else s.trad, fontSize = (CandidateBarView.CHAR_SP * scale).sp,
                                 color = colors.onSurface, maxLines = 1)

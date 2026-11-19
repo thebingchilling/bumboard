@@ -116,6 +116,8 @@
     <string name="lychee_pref_dictionary_pin">Hold to pin</string>
     <string name="lychee_candidates_all">All candidates</string>
     <string name="lychee_pref_comma_key_none">Nothing</string>
+    <string name="lychee_pref_comma_hold">Hold the comma</string>
+    <string name="lychee_pref_comma_hold_menu">Shortcuts menu</string>
     <string name="lychee_pref_comma_place">Where</string>
     <string name="lychee_pref_comma_place_in">In the comma</string>
     <string name="lychee_pref_comma_place_beside">Beside the comma</string>

@@ -785,6 +785,7 @@ private fun KeysPage() {
     val voice = prefs.boolPref(Settings.PREF_VOICE_INPUT_KEY) { prefs.getBoolean(Settings.PREF_VOICE_INPUT_KEY, true) }
     val numberRow = prefs.boolPref(LycheeLayout.PREF_NUMBER_ROW) { prefs.getBoolean(LycheeLayout.PREF_NUMBER_ROW, true) }
     val commaKey = prefs.stringPref(LycheeLayout.PREF_COMMA_KEY) { prefs.getString(LycheeLayout.PREF_COMMA_KEY, null) ?: "combined" }
+    val commaHold = prefs.stringPref(LycheeLayout.PREF_COMMA_HOLD) { prefs.getString(LycheeLayout.PREF_COMMA_HOLD, null) ?: LycheeLayout.HOLD_MENU }
     val hasVibrator = AudioAndHapticFeedbackManager.getInstance().hasVibrator()
     val spacebar = prefs.stringPref(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR) {
         prefs.getString(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR, null) ?: "language"
@@ -823,7 +824,23 @@ private fun KeysPage() {
                     "language" to stringResource(R.string.lychee_pref_comma_key_language),
                 ),
                 extra,
+                icons = listOf(R.drawable.ic_sym_close, R.drawable.ic_sym_mood, R.drawable.ic_sym_language),
                 onSelect = { id -> commaKey.set(id) },
+            )
+        }
+        row {
+            // what holding the comma does: its popup of shortcuts, or one thing straight away
+            ChoiceRow(
+                it, stringResource(R.string.lychee_pref_comma_hold), null,
+                listOf(
+                    LycheeLayout.HOLD_MENU to stringResource(R.string.lychee_pref_comma_hold_menu),
+                    LycheeLayout.HOLD_EMOJI to stringResource(R.string.lychee_pref_comma_key_emoji),
+                    LycheeLayout.HOLD_LANGUAGE to stringResource(R.string.lychee_pref_comma_key_language),
+                    LycheeLayout.HOLD_NONE to stringResource(R.string.lychee_pref_comma_key_none),
+                ),
+                commaHold.value,
+                icons = listOf(R.drawable.ic_sym_apps_outlined, R.drawable.ic_sym_mood, R.drawable.ic_sym_language, R.drawable.ic_sym_close),
+                onSelect = { id -> commaHold.set(id) },
             )
         }
         row {

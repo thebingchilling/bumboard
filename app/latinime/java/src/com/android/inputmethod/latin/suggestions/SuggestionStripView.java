@@ -149,10 +149,11 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         mVoiceKey = (ImageButton)findViewById(R.id.suggestions_strip_voice_key);
         mLycheeToolbar = (app.lychee.toolbar.ToolbarView)findViewById(R.id.lychee_toolbar);
         mLycheeScriptKey = (TextView)findViewById(R.id.lychee_script_key);
-        mLycheeScriptKey.setBackground(lycheeRoundRaisedButton(context,
-                context.getColor(R.color.lychee_m3_primary_container)));
+        // LYCHEE: 繁/简, 英 and the mic are plain like the shortcuts: no fill, no shadow, a
+        // round ripple when touched
+        mLycheeScriptKey.setBackground(lycheeFlatButton(context));
         mLycheeScriptKey.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
-        mLycheeScriptKey.setTextColor(context.getColor(R.color.lychee_m3_on_primary_container));
+        mLycheeScriptKey.setTextColor(app.lychee.ui.M3Colors.Companion.of(context).getOnSurface());
         // LYCHEE: buttons with a character on them in a fixed heavy font
         app.lychee.fonts.LycheeFonts.fixHeavy(mLycheeScriptKey);
         mLycheeScriptKey.setIncludeFontPadding(false);
@@ -203,11 +204,10 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         keyboardAttr.recycle();
         mVoiceKey.setImageDrawable(iconVoice);
         mVoiceKey.setOnClickListener(this);
-        // LYCHEE: the mic is a raised round key with a soft shadow, like 繁/简
+        // LYCHEE: the mic is plain like the shortcuts and 繁/简
         mVoiceKey.setImageTintList(android.content.res.ColorStateList.valueOf(
-                app.lychee.ui.LycheeColorStyle.color(context, R.attr.lycheeColorOnKey)));
-        mVoiceKey.setBackground(lycheeRoundRaisedButton(context,
-                app.lychee.ui.LycheeColorStyle.color(context, R.attr.lycheeColorKey)));
+                app.lychee.ui.M3Colors.Companion.of(context).getOnSurface()));
+        mVoiceKey.setBackground(lycheeFlatButton(context));
         setLycheeScriptKey(null, null);
     }
 
@@ -265,10 +265,10 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         if (shown) {
             if (!label.contentEquals(mLycheeZhongKey.getText())) mLycheeZhongKey.setText(label);
             final Context context = getContext();
-            mLycheeZhongKey.setBackground(lycheeRoundRaisedButton(context, app.lychee.ui.LycheeColorStyle.color(context, active
-                    ? R.attr.lycheeColorAccent : R.attr.lycheeColorKey)));
-            mLycheeZhongKey.setTextColor(app.lychee.ui.LycheeColorStyle.color(context, active
-                    ? R.attr.lycheeColorOnAccent : R.attr.lycheeColorOnKey));
+            // plain like the shortcuts; on, it is in the accent colour
+            final app.lychee.ui.M3Colors palette = app.lychee.ui.M3Colors.Companion.of(context);
+            mLycheeZhongKey.setBackground(lycheeFlatButton(context));
+            mLycheeZhongKey.setTextColor(active ? palette.getPrimary() : palette.getOnSurface());
             mLycheeZhongKey.setContentDescription(context.getString(active
                     ? R.string.lychee_zhong_key_on : R.string.lychee_zhong_key_off));
         }
@@ -293,6 +293,19 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
     }
 
     /** A round key with a soft shadow under it, like the raised keys. */
+    /** A button with nothing around it, like a shortcut: only a round ripple when touched. */
+    private static android.graphics.drawable.Drawable lycheeFlatButton(final Context context) {
+        final int ink = app.lychee.ui.M3Colors.Companion.of(context).getOnSurface();
+        // borderless: a circle the size of a shortcut's, whatever the button's shape
+        final android.graphics.drawable.RippleDrawable ripple =
+                new android.graphics.drawable.RippleDrawable(
+                        android.content.res.ColorStateList.valueOf(
+                                androidx.core.graphics.ColorUtils.setAlphaComponent(ink, 0x1F)),
+                        null, null);
+        ripple.setRadius((int) (20 * context.getResources().getDisplayMetrics().density));
+        return ripple;
+    }
+
     private static android.graphics.drawable.Drawable lycheeRoundRaisedButton(final Context context,
             final int color) {
         final float density = context.getResources().getDisplayMetrics().density;

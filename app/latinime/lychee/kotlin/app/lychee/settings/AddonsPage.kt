@@ -384,11 +384,11 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
                             style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                         )
-                        MenuItem(stringResource(R.string.lychee_packs_remove), color = colors.error) {
+                        MenuItem(stringResource(R.string.lychee_packs_remove), icon = R.drawable.ic_sym_delete, color = colors.error) {
                             asking = false
                             onRemove()
                         }
-                        MenuItem(stringResource(android.R.string.cancel)) { asking = false }
+                        MenuItem(stringResource(android.R.string.cancel), icon = R.drawable.ic_sym_close) { asking = false }
                     }
                 }
                 bundled -> TextButton(onClick = {

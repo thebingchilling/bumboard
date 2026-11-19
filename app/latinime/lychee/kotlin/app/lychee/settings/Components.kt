@@ -323,6 +323,8 @@ fun MenuItem(
     chosen: Boolean = false,
     @DrawableRes icon: Int? = null,
     color: Color = Color.Unspecified,
+    /** The tick at the end of the chosen item (left out when its icon already shows it). */
+    tick: Boolean = true,
     onClick: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -338,9 +340,13 @@ fun MenuItem(
         onClick = onClick,
         leadingIcon = icon?.let { res ->
             { Icon(painterResource(res), contentDescription = null, modifier = Modifier.size(20.dp),
-                tint = if (chosen) colors.onSecondaryContainer else colors.onSurfaceVariant) }
+                tint = when {
+                    chosen -> colors.onSecondaryContainer
+                    color != Color.Unspecified -> color
+                    else -> colors.onSurfaceVariant
+                }) }
         },
-        trailingIcon = if (chosen) {
+        trailingIcon = if (chosen && tick) {
             {
                 Icon(painterResource(com.android.inputmethod.latin.R.drawable.ic_sym_check), contentDescription = null,
                     tint = colors.onSecondaryContainer, modifier = Modifier.size(20.dp))
@@ -388,7 +394,11 @@ fun <T> ChoiceRow(
                 )
             }
             options.forEachIndexed { i, (value, label) ->
-                MenuItem(label, chosen = value == selected, icon = icons?.getOrNull(i)) {
+                // every item has an icon: its own, or a radio mark showing the one chosen
+                val own = icons?.getOrNull(i)
+                val mark = if (value == selected) com.android.inputmethod.latin.R.drawable.ic_sym_check_circle
+                    else com.android.inputmethod.latin.R.drawable.ic_sym_radio_button_unchecked
+                MenuItem(label, chosen = value == selected, icon = own ?: mark, tick = own != null) {
                     onSelect(value)
                     if (!keepOpen) open = false
                 }

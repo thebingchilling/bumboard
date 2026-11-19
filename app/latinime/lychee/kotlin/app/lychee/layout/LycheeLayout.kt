@@ -49,7 +49,19 @@ class LycheeLayout private constructor(private val prefs: SharedPreferences) {
      * one-handed mode and whichever of emoji and next language has no key beside the comma;
      * shortcuts already on the bar above the keys are left out.
      */
-    fun commaMenu(): List<Shortcut> = chosenCommaMenu().filter { it !in ShortcutStore(prefs).toolbar() }
+    fun commaMenu(): List<Shortcut> = when (commaHold) {
+        // one thing on the hold (Settings > Keys > Hold the comma): nothing else in the popup
+        HOLD_EMOJI -> listOf(Shortcut.EMOJI)
+        HOLD_LANGUAGE -> listOf(Shortcut.LANGUAGE)
+        HOLD_NONE -> emptyList()
+        else -> chosenCommaMenu().filter { it !in ShortcutStore(prefs).toolbar() }
+    }
+
+    /**
+     * What holding the comma does: [HOLD_MENU] its popup of shortcuts (chosen in Settings), or
+     * straight to [HOLD_EMOJI], [HOLD_LANGUAGE], or [HOLD_NONE] nothing.
+     */
+    val commaHold: String get() = prefs.getString(PREF_COMMA_HOLD, null) ?: HOLD_MENU
 
     /** The comma popup as chosen in Settings, before leaving out what is on the bar. */
     fun chosenCommaMenu(): List<Shortcut> {
@@ -73,7 +85,9 @@ class LycheeLayout private constructor(private val prefs: SharedPreferences) {
     fun commaMoreKeys(@Suppress("UNUSED_PARAMETER") languageKey: Boolean, engine: String?): String =
         // the chosen shortcuts first (the popup opens on the first of them), Settings last
         (commaMenu().filter { app.lychee.toolbar.Shortcuts.available(it, engine) }
-            .map { "!icon/lychee_sc_${it.id}|!code/key_lychee_sc_${it.id}" } + "!text/keyspec_settings")
+            .map { "!icon/lychee_sc_${it.id}|!code/key_lychee_sc_${it.id}" } +
+            // Settings only in the popup of shortcuts, not on a hold that does one thing
+            listOfNotNull("!text/keyspec_settings".takeIf { commaHold == HOLD_MENU }))
             .joinToString(",")
 
     /**
@@ -110,6 +124,11 @@ class LycheeLayout private constructor(private val prefs: SharedPreferences) {
         const val PREF_NUMBER_ROW = "lychee_number_row"
         const val PREF_COMMA_KEY = "lychee_comma_key"
         const val PREF_COMMA_MENU = "lychee_comma_menu"
+        const val PREF_COMMA_HOLD = "lychee_comma_hold"
+        const val HOLD_MENU = "menu"
+        const val HOLD_EMOJI = "emoji"
+        const val HOLD_LANGUAGE = "language"
+        const val HOLD_NONE = "none"
 
         const val MIN_HEIGHT = 0.7f
         const val MAX_HEIGHT = 1.5f
