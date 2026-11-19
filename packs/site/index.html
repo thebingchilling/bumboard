@@ -95,6 +95,28 @@
   const $ = (id) => document.getElementById(id);
   const say = (title, text) => { $('title').textContent = title; $('text').textContent = text; };
 
+  // where each version's own file is: "lychee-korean-dictionary-2026.11.18.2.zip"
+  const FILES = 'https://github.com/lychee-keyboard/lychee/releases/download/packs/';
+  const fileOf = (p) => p.download_file ? FILES + encodeURIComponent(p.download_file) : (p.download || p.url);
+
+  // Download in Lychee (get=id): straight on to the newest version's file, named with its
+  // version, so the download says which version it is
+  const get = params.get('get');
+  if (get) {
+    say('Downloading…', 'Getting the newest version.');
+    fetch('manifest.json', { cache: 'no-store' })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((manifest) => {
+        const p = (manifest.packs || {})[get];
+        if (!p) throw new Error('unknown');
+        say('Downloading ' + p.name, (p.download_file || '') + ' · ' + p.version +
+          '. When it is done, go back to Lychee and choose the file.');
+        location.href = fileOf(p);
+      })
+      .catch(() => say("Couldn't download", "The add-ons list didn't load. Check your connection and try again."));
+    return;
+  }
+
   // opened by itself, not from Lychee: what this page is for
   if (!params.has('have') && !all) {
     say('Lychee add-ons', 'In Lychee, open Settings › Add-ons and tap Updates: this page checks your add-ons and takes you back.');
@@ -131,7 +153,7 @@
     if (link) {
       const a = document.createElement('a');
       a.className = 'button tonal';
-      a.href = p.download || p.url;
+      a.href = fileOf(p);
       a.textContent = link;
       li.append(a);
     }

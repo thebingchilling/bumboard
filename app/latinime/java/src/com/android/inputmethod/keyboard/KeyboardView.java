@@ -403,11 +403,9 @@ public class KeyboardView extends View {
             Drawable background = key.selectBackgroundDrawable(
                     mKeyBackground, mFunctionalKeyBackground, mSpacebarBackground);
             // LYCHEE: ?123, ABC and Enter are rounded squares like every other key
-            // LYCHEE: with key borders off, every key (letters, ?123, emoji, backspace, space)
-            // shows a background only while pressed, like Gboard's; Enter keeps its accent fill
-            // and a locked shift its own
-            final boolean hidden = !app.lychee.ui.KeyStyle.getBorders() && !key.isPressed()
-                    && !key.lycheeKeepsBackgroundWithoutBorders();
+            // LYCHEE: with key borders off, every key (letters, ?123, emoji, backspace, space,
+            // Enter, a locked shift) shows a background only while pressed
+            final boolean hidden = !app.lychee.ui.KeyStyle.getBorders() && !key.isPressed();
             if (background != null && !hidden) {
                 if (lycheeFading) background.setAlpha(mLycheeFadeAlpha);
                 onDrawKeyBackground(key, canvas, background);
@@ -507,7 +505,8 @@ public class KeyboardView extends View {
             if (key.isEnabled()) {
                 paint.setColor(key.selectTextColor(params));
                 // LYCHEE: labels on the action key sit on the primary colour.
-                if (key.isActionKey() && mLycheeActionColor != 0) {
+                // (borderless, Enter has no fill: its label is the other keys' colour)
+                if (key.isActionKey() && mLycheeActionColor != 0 && lycheeFilled(key)) {
                     paint.setColor(mLycheeActionColor);
                 }
                 // LYCHEE: the selected key of a popup is white on its accent circle
@@ -692,12 +691,21 @@ public class KeyboardView extends View {
                 || c == '\u2018' || c == '\u2019';
     }
 
+    /** LYCHEE: whether [key] is drawn on its fill (key borders on, or pressed). */
+    private static boolean lycheeFilled(@Nonnull final Key key) {
+        return app.lychee.ui.KeyStyle.getBorders() || key.isPressed();
+    }
+
     private int lycheeIconTint(@Nonnull final Key key) {
         if (mLycheeIconColor == 0) {
             return 0;
         }
         if (key.isPressed() && mLycheePressedTextColor != 0) {
             return mLycheePressedTextColor;
+        }
+        // borderless, Enter and a locked shift have no fill: the other keys' colour
+        if (!lycheeFilled(key)) {
+            return mLycheeIconColor;
         }
         if (key.isActionKey() && mLycheeActionColor != 0) {
             return mLycheeActionColor;

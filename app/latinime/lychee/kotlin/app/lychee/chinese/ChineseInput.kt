@@ -1287,8 +1287,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         /** A key taking longer than this (Rime and the candidates) is noted in Diagnostics. */
         private const val SLOW_KEY_MS = 60L
         private val warmer: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor()
-        /** Characters made in Japan (kokuji) in common use; Chinese has none of them as its own. */
-        private val KOKUJI: Set<String> = "働峠込畑畠匂枠栃塀凪凧辻榊樫笹雫躾鰯鱈鴫麿噺俣匁枡籾糀鋲颪鱚粁糎粍杢椛毟裃襷鯱"
+        /**
+         * Characters made in Japan (kokuji): Wiktionary's "Japanese-coined CJKV characters"
+         * (every one it lists, the rare ones in Unicode's extensions too), and the common ones
+         * it leaves out.
+         */
+        private val KOKUJI: Set<String> = "𫡤㐧𮯶俤俧𪜽働𪞄凧凩凪𪞵𫥲𫥻𫦤𫦥𪟗𫦫𫦹𪟧匁匂𠥼哘噺囎圦圷圸垰垳﨏塀墹𪥽嬶𫳍𡱖屶岾峅峠𪩣𪩩怺𪫧𫿾𭤪𬀧𪰪膤杢杤𣏒枠枡栃𪱻桛桝梺椙椛椣椥﨓榊樫𪳤𬄉𬇐𪸉燵𤘩狆瓩𤭯畑畠硲硴𥫤笹簓𬕮籾粁粂粍糀糎𥿠纃聢腺𦝻膵艝萙𦻙蘒﨡𬠎蟎𬠳裃𫌷𮘁𬣄𬣐𬣗躮躾𫏮𬧬軈轌辷𫐞辻込迚﨤𫐤遖𨛗酛釺𫒎銯𨦈錺錻鎹𬮑𨸶雫鞆颪𬵂鮗𫙕𬵑鯥鯰鯱鯳𩸕𩸽𫙧鰯𫠍鱈鳰鴫鶎鶫𫛘麿𪚲𲔁𳅃俣鋲鱚毟襷"
             .codePoints().toArray().map { String(Character.toChars(it)) }.toHashSet()
         /** Candidates fetched per keystroke; the bar scrolls through these. */
         private const val CANDIDATE_LIMIT = 40

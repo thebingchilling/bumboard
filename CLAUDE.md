@@ -155,8 +155,10 @@ is outside it.
   stroke order (Chinese, Japanese from KanjiVG, Korean made from letter strokes) and example
   sentences are bundled in the APK (`app/scripts/bundle-packs.py` fetches the newest
   published ones; `packs/BundledPacks.kt` in the app unpacks them). The Japanese and Korean
-  dictionaries, fonts and emoji are downloads (Settings > Add-ons, by language, Misc and Your own;
-  Check for updates covers every installed pack, bundled ones too). Emoji are
+  dictionaries, fonts and emoji are downloads (Settings > Add-ons, by language and Misc; your own
+  fonts are chosen in Settings > Fonts, not in Add-ons; Check for updates covers every installed
+  pack, bundled ones too). Every download is a file named with its version: the one the last
+  check named, else the packs page's `#get=<id>` goes straight on to the newest one's file. Emoji are
   the bundled Noto Color Emoji by default: Google Fonts' build (google/fonts
   `ofl/notocoloremoji`, COLRv1, pinned in `app/data/emoji_sources.json`; Google's own CBDT
   release has broken gradients), drawn from Android 13 (older phones use their own emoji);

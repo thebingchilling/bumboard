@@ -110,12 +110,24 @@ object Updates {
      * ("lychee-korean-dictionary-2026.11.18.2.zip"), so it is told apart from earlier downloads.
      */
     fun downloadFile(context: Context, pack: Pack): String =
-        stored(context, PREF_FILES).optString(pack.id).takeIf { it.isNotEmpty() && it.matches(SAFE_FILE) } ?: pack.file
+        stored(context, PREF_FILES).optString(pack.id).takeIf { it.isNotEmpty() && it.matches(SAFE_FILE) }
+            // not checked yet: the packs page picks the newest, named the same way
+            ?: if (pack.download.ifEmpty { pack.url }.startsWith(FILES)) {
+                "lychee-" + pack.name.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-') + "-<version>.zip"
+            } else pack.file
 
-    /** Where [pack]'s file downloads from (see [downloadFile]). */
+    /**
+     * Where [pack]'s file downloads from: always a file named with its version (see
+     * [downloadFile]). Known from the last check, that file itself; otherwise the packs page,
+     * which looks up the newest version and goes straight on to its file. Packs not published
+     * on Lychee's release (fonts fetched from their makers) download from where they are.
+     */
     fun downloadUrl(context: Context, pack: Pack): String {
         val file = stored(context, PREF_FILES).optString(pack.id).takeIf { it.isNotEmpty() && it.matches(SAFE_FILE) }
-        return if (file != null) FILES + file else pack.download.ifEmpty { pack.url }
+        if (file != null) return FILES + file
+        val direct = pack.download.ifEmpty { pack.url }
+        if (!direct.startsWith(FILES)) return direct
+        return PAGE + "#get=" + Uri.encode(pack.id) + "&app=" + Uri.encode(context.packageName)
     }
 
     private val SAFE_FILE = Regex("lychee-[A-Za-z0-9.-]+\\.zip")

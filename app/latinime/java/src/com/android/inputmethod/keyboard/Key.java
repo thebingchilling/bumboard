@@ -647,12 +647,6 @@ public class Key implements Comparable<Key> {
         return mBackgroundType == BACKGROUND_TYPE_ACTION;
     }
 
-    // LYCHEE: with key borders off, only Enter and a locked shift keep their fill.
-    public final boolean lycheeKeepsBackgroundWithoutBorders() {
-        return mBackgroundType == BACKGROUND_TYPE_ACTION
-                || mBackgroundType == BACKGROUND_TYPE_STICKY_ON;
-    }
-
     // LYCHEE: lets KeyboardView tint a key's icon to suit the key's fill.
     public final boolean hasFunctionalBackground() {
         return mBackgroundType == BACKGROUND_TYPE_FUNCTIONAL

@@ -65,7 +65,7 @@ object AddonSheet {
  * installed), its size and version on the line under, and Get, Restore or remove. Free and paid add-ons sit side by
  * side; for now all are free (no billing yet). Tapping one opens its sheet, which walks through
  * getting it: download it (the browser does that; Lychee has no internet access), then open the
- * downloaded file, or choose it here. Your own fonts are in a fold at the bottom.
+ * downloaded file, or choose it here. Your own fonts are chosen in Settings > Fonts, not here.
  */
 @Composable
 fun AddonsPage() {
@@ -121,34 +121,7 @@ fun AddonsPage() {
         SectionTitle(stringResource(sectionName(section)))
         packs.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { PackStorage.remove(context, pack); version++ }) { version++ } }
     }
-    // your own fonts: folded away at the bottom
-    val own = catalog.filter { PackStorage.section(it) == PackStorage.Section.OWN }
-    if (own.isNotEmpty()) {
-        SectionDivider()
-        var open by remember { mutableStateOf(own.any { Packs.isInstalled(context, it.id) }) }
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clickable { open = !open }
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(stringResource(R.string.lychee_addons_fonts), style = MaterialTheme.typography.titleSmall,
-                color = colors.primary, modifier = Modifier.weight(1f))
-            // the arrow turns over as it opens
-            val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, label = "arrow")
-            Icon(painterResource(R.drawable.ic_sym_keyboard_arrow_down), null, tint = colors.onSurfaceVariant,
-                modifier = Modifier.graphicsLayer { rotationZ = turn })
-        }
-        // a fold that drops down from its heading (and folds back up), never growing from a corner
-        androidx.compose.animation.AnimatedVisibility(
-            open,
-            enter = androidx.compose.animation.expandVertically(expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.shrinkVertically(shrinkTowards = Alignment.Top) + androidx.compose.animation.fadeOut(),
-        ) {
-            Column { own.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { PackStorage.remove(context, pack); version++ }) { version++ } } }
-        }
-    }
+    // (your own fonts are chosen where fonts are picked: Settings > Fonts)
     Spacer(Modifier.height(16.dp))
     AddonSheetHost(actions)
 }

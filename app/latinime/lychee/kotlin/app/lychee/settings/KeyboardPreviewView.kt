@@ -139,12 +139,17 @@ class KeyboardPreviewView(context: Context) : View(context) {
             val l = x + hGap / 2
             val r = x + w - hGap / 2
             val d = when (kind) { 0 -> look.letter; 1 -> look.functional; else -> look.action }
-            // with key borders off, only Enter keeps a background (as on the keyboard)
-            if (kind == 2 || borders) {
+            // with key borders off, no key has a background (as on the keyboard)
+            if (borders) {
                 d.setBounds(l.toInt(), y.toInt(), r.toInt(), (y + keyH).toInt())
                 d.draw(canvas)
             }
-            val color = when (kind) { 0 -> look.onKey; 1 -> look.onFunctional; else -> look.onAccent }
+            val color = when {
+                kind == 0 -> look.onKey
+                kind == 1 -> look.onFunctional
+                borders -> look.onAccent
+                else -> look.onKey
+            }
             if (icon != null) {
                 context.getDrawable(icon)?.mutate()?.let { ic ->
                     val s = (keyH * 0.42f).toInt()
