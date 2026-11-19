@@ -28,7 +28,9 @@ def png_size(data: bytes) -> tuple[int, int]:
 
 
 def convert(src: str, dst: str) -> int:
-    font = TTFont(src)
+    # keep the source's own timestamp: otherwise every save stamps the time into 'head' and the
+    # same font looks new on every packs run (publish.py would then offer a 62 MB "update")
+    font = TTFont(src, recalcTimestamp=False)
     sbix = font["sbix"]
     ppem = max(sbix.strikes)
     strike = sbix.strikes[ppem]

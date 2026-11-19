@@ -42,13 +42,63 @@ FONT = (".ttf", ".otf", ".ttc")
 sys.path.insert(0, str(HERE / "fonts"))
 
 
+def font_bytes(data: bytes) -> bytes:
+    """A TrueType/OpenType font with its 'head' table's checksum adjustment and modified time
+    zeroed: tools stamp the time into fonts they save, which would make an unchanged font look
+    new. Anything that isn't a single sfnt font is returned as it is."""
+    if len(data) < 12 or data[:4] not in (b"\x00\x01\x00\x00", b"OTTO", b"true"):
+        return data
+    count = int.from_bytes(data[4:6], "big")
+    for i in range(count):
+        rec = 12 + 16 * i
+        if data[rec:rec + 4] == b"head":
+            off = int.from_bytes(data[rec + 8:rec + 12], "big")
+            if off + 36 > len(data):
+                return data
+            b = bytearray(data)
+            b[off + 8:off + 12] = b"\0" * 4    # checkSumAdjustment
+            b[off + 28:off + 36] = b"\0" * 8   # modified
+            # the head table's own checksum in the directory changes with them
+            b[rec + 4:rec + 8] = b"\0" * 4
+            return bytes(b)
+    return data
+
+
+# 2: fonts' 'head' timestamps and checksums are left out of the digest (font_bytes)
+DIGEST_V = 2
+
+
+def same_as_published(old: dict, d: str) -> bool:
+    """Whether the published file of [old] has digest [d] (the new way): downloaded once, for
+    entries whose digest was made the old way."""
+    import tempfile
+    import urllib.request
+    url = old.get("download") or old.get("url")
+    if not url:
+        return False
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            f = Path(tmp) / "published.zip"
+            with urllib.request.urlopen(url, timeout=120) as r, open(f, "wb") as out:
+                while chunk := r.read(1 << 20):
+                    out.write(chunk)
+            return digest(f) == d
+    except Exception as e:  # unreachable or not a zip: treat the pack as changed
+        print(f"{url}: {e}", file=sys.stderr)
+        return False
+
+
 def digest(zip_path: Path) -> str:
-    """The pack's contents, without pack.json (which holds the version) or zip dates."""
+    """The pack's contents, without pack.json (which holds the version) or zip dates, and with
+    fonts' save timestamps ignored: a pack is only new when what is in it changed."""
     h = hashlib.sha256()
     with zipfile.ZipFile(zip_path) as z:
         for name in sorted(n for n in z.namelist() if n != "pack.json" and not n.endswith("/")):
+            data = z.read(name)
+            if name.lower().endswith(FONT):
+                data = font_bytes(data)
             h.update(name.encode() + b"\0")
-            h.update(hashlib.sha256(z.read(name)).digest())
+            h.update(hashlib.sha256(data).digest())
     return h.hexdigest()
 
 
@@ -110,6 +160,11 @@ def main():
         cat = catalogue.get(pid, {})
         d = digest(zip_path)
         old = previous.get(pid)
+        # a digest made the old way (fonts' save timestamps counted): compare with the published
+        # file itself, digested the new way, so a font that only got a new timestamp isn't new
+        if old and old.get("digest") != d and old.get("digest_v") != DIGEST_V and same_as_published(old, d):
+            old = dict(old, digest=d, digest_v=DIGEST_V)
+            packs[pid] = old
         if old and old.get("digest") == d:
             # published before versioned names: its version uploaded once under one
             if not old.get("download_file"):
@@ -132,6 +187,7 @@ def main():
             "file": zip_path.name,
             "url": RELEASE + zip_path.name,
             "digest": d,
+            "digest_v": DIGEST_V,
             "updated": today,
         }
         if cat.get("kind") == "font_emoji":
