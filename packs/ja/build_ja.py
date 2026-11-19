@@ -291,6 +291,29 @@ def verb_class(p: str) -> str | None:
     return None
 
 
+def kradfile_from_github() -> dict[str, list[str]] | None:
+    """KRADFILE as jmdict-simplified publishes it (JSON, same EDRDG data and licence) in its
+    newest GitHub release: kanji -> parts; None when it can't be had."""
+    import io
+    try:
+        req = urllib.request.Request("https://api.github.com/repos/scriptin/jmdict-simplified/releases/latest",
+                                     headers={"Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            release = json.load(r)
+        url = next(a["browser_download_url"] for a in release.get("assets", [])
+                   if a["name"].startswith("kradfile") and a["name"].endswith(".json.zip"))
+        with urllib.request.urlopen(url, timeout=120) as r:
+            data = r.read()
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            doc = json.loads(z.read(next(n for n in z.namelist() if n.endswith(".json"))))
+        out = {k: list(v) for k, v in doc.get("kanji", {}).items()}
+        print(f"kradfile (jmdict-simplified): {len(out)} kanji", file=sys.stderr)
+        return out or None
+    except Exception as e:
+        print(f"kradfile from GitHub: {e}", file=sys.stderr)
+        return None
+
+
 def fetch_retrying(url: str, dest: Path, tries: int = 4) -> bool:
     """Downloads [url] to [dest], trying again after a pause; whether it arrived."""
     import time
@@ -309,11 +332,17 @@ def fetch_retrying(url: str, dest: Path, tries: int = 4) -> bool:
 def kanji_parts(cache: Path) -> dict[str, list[str]]:
     """KRADFILE: each kanji -> the parts it is drawn from."""
     src = cache / "kradfile.gz"
-    if not src.exists() and not fetch_retrying(KRADFILE, src):
-        # EDRDG's server is sometimes unreachable from the build machines: the pack is still
-        # built, its kanji just have no parts this time
-        print("kradfile: unreachable, kanji parts left out", file=sys.stderr)
-        return {}
+    if not src.exists() and not fetch_retrying(KRADFILE, src, tries=2):
+        # EDRDG's server is sometimes unreachable from the build machines: the same KRADFILE
+        # from jmdict-simplified's newest release on GitHub instead
+        parts = kradfile_from_github()
+        if parts:
+            return parts
+        # neither answered: no Japanese pack this run, so the published one stays as it is
+        # (never a pack without kanji parts offered as an update)
+        print("::warning::KRADFILE unreachable (EDRDG and GitHub): the Japanese pack is left as published",
+              file=sys.stderr)
+        sys.exit(0)
     out: dict[str, list[str]] = {}
     with gzip.open(src) as f:
         for line in f.read().decode("euc_jp", errors="replace").splitlines():
