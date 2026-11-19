@@ -123,6 +123,22 @@ def fetch(pack: dict):
         raise LookupError(f"{e}; release files: {', '.join(assets) or 'none'}")
 
 
+def font_version(data: bytes) -> str | None:
+    """The version a font's maker wrote into it: its name table's version string ("Version
+    2.051; ttfautohint ...", as "2.051"), else its head table's revision."""
+    import io
+    from fontTools.ttLib import TTFont
+    try:
+        font = TTFont(io.BytesIO(data), lazy=True, fontNumber=0)
+        name = font["name"].getDebugName(5) if "name" in font else None
+        m = re.search(r"(\d+(?:\.\d+)+)", name or "")
+        if m:
+            return m.group(1)
+        return "%.3f" % font["head"].fontRevision
+    except Exception:
+        return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=Path, required=True)
@@ -138,6 +154,10 @@ def main():
             # one font that cannot be found must not hold the others back
             print(f"::warning::{pack['id']} not mirrored: {e}", file=sys.stderr)
             continue
+        # the version: the release's tag, or (no release: "latest") the font's own version, as
+        # its maker set it (Noto 3D: Google's) — never the time of this build
+        if not re.search(r"\d", version or ""):
+            version = font_version(font) or version
         if pack["kind"] == "font_emoji" and b"sbix" in font[:12 + 16 * 64]:
             # Apple's format (Noto 3D): Android drew its placeholder outlines, black; make it
             # a bitmap-only CBDT font like Noto Color Emoji

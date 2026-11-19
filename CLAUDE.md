@@ -62,8 +62,13 @@ packs page). Public facing, so be careful:
   only the packs page (`packs/site`: index.html, manifest.json, Google Sans Flex) on
   `lychee-keyboard.github.io`. No app code, APKs, internal notes or anything else from this repository.
 - `packs.yml` runs only when started by hand (no schedule, not on pushes): it rebuilds every
-  pack from its sources' newest data and uploads only the packs whose contents changed, with
-  a date version (`packs/publish.py`). It uses a token of the
+  pack from its sources' newest data and uploads only the packs whose contents changed
+  (`packs/publish.py`; fonts' save timestamps don't count). A pack's version is its source's
+  own, never a build timestamp: a font's release tag or its maker's version (Noto 3D: Google's),
+  a dictionary's release date (JMdict's for Japanese, the Wiktionary extract's for Korean and
+  English, KanjiVG's release for stroke order, Tatoeba's export for examples), plus "-2", "-3"
+  when Lychee's build of the same source changed. Lychee offers an update whenever the published
+  version differs from the installed one. It uses a token of the
   lychee-keyboard account (`PACKS_TOKEN` secret), so uploads appear as lychee-keyboard's.
 - The packs page (https://lychee-keyboard.github.io/) is pushed by the same runs to the
   `lychee-keyboard/lychee-keyboard.github.io` repository (main branch), which GitHub Pages

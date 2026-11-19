@@ -242,6 +242,19 @@ def add_kanji(cache: Path, db: sqlite3.Connection):
     print(f"ja.db: {len(rows)} kanji from KANJIDIC2", file=sys.stderr)
 
 
+def jmdict_date(cache: Path) -> str | None:
+    """JMdict's release date from its header ("<!-- JMdict created: 2026-11-18 -->"), as
+    "2026.11.18"."""
+    import re
+    src = cache / "JMdict_e.gz"
+    if not src.exists():
+        return None
+    with gzip.open(src) as f:
+        head = f.read(1 << 20).decode("utf-8", "ignore")
+    m = re.search(r"JMdict created: (\d{4})-(\d\d)-(\d\d)", head)
+    return ".".join(m.groups()) if m else None
+
+
 def verb_class(p: str) -> str | None:
     """JMdict's part-of-speech text -> the conjugation class Lychee's tables use: v1 (ichidan),
     v5u v5k v5g v5s v5t v5n v5b v5m v5r (godan, by ending), v5k-s (行く), v5r-i (ある), v5aru
@@ -455,7 +468,9 @@ def main():
     pack = args.out / "lychee-rime-ja.zip"
     pack.unlink(missing_ok=True)
     with zipfile.ZipFile(pack, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("pack.json", json.dumps({"id": "rime_ja", "name": "Japanese dictionary", "version": PACK_VERSION}))
+        # the version: JMdict's own release date (the dictionary everything else is joined to)
+        z.writestr("pack.json", json.dumps({"id": "rime_ja", "name": "Japanese dictionary",
+                                            "version": jmdict_date(args.cache) or PACK_VERSION}))
         for name in ["lychee_ja.schema.yaml", "lychee_ja.dict.yaml", "lychee_en_ja.schema.yaml", "lychee_en_ja.dict.yaml"]:
             z.write(shared / name, f"rime/{name}")
         for f in sorted(build.iterdir()):

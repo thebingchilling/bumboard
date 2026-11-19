@@ -26,9 +26,17 @@ object PackImporter {
         data class Error(val message: String) : Result()
     }
 
-    /** The version a published file is named with, or null. */
-    fun versionInName(name: String): String? =
-        Regex("-(\\d{4}\\.\\d{1,2}\\.\\d{1,2}(?:\\.\\d+)?)(?: ?\\(\\d+\\))?\\.zip$").find(name)?.groupValues?.get(1)
+    /**
+     * The version [pack]'s published file is named with ("lychee-noto-3d-2.051.zip" -> "2.051",
+     * "lychee-japanese-dictionary-2026.11.19-2 (1).zip" -> "2026.11.19-2"), or null.
+     */
+    fun versionInName(name: String, pack: Pack): String? {
+        val prefix = "lychee-" + pack.name.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-') + "-"
+        if (!name.startsWith(prefix) || !name.endsWith(".zip")) return null
+        // a browser's second copy: "... (1).zip"
+        val v = name.removePrefix(prefix).removeSuffix(".zip").replace(Regex(" ?\\(\\d+\\)$"), "")
+        return v.takeIf { it.isNotEmpty() && it[0].isDigit() }
+    }
 
     /** Files bigger than this are refused outright. */
     private const val MAX_BYTES = 700L shl 20
@@ -66,11 +74,10 @@ object PackImporter {
             // Downloads): say which file is the update, rather than installing the old one again
             // the version: the pack's own, else the one its file is named with
             // ("lychee-korean-dictionary-2026.11.18.2.zip", "... (1).zip" for a second download)
-            val fileVersion = info?.optString("version")?.takeIf { it.isNotEmpty() } ?: versionInName(name)
+            val fileVersion = info?.optString("version")?.takeIf { it.isNotEmpty() } ?: versionInName(name, pack)
             val wanted = Updates.latestOf(context, pack)
-            if (fileVersion != null && wanted != null && Packs.isInstalled(context, pack.id) &&
-                Updates.compare(fileVersion, wanted) < 0) {
-                return Result.Error("That's ${pack.name} $fileVersion, an earlier version. Choose ${Updates.downloadFile(context, pack)} (version $wanted).")
+            if (fileVersion != null && wanted != null && Packs.isInstalled(context, pack.id) && fileVersion != wanted) {
+                return Result.Error("That's ${pack.name} $fileVersion, not the update. Choose ${Updates.downloadFile(context, pack)} (version $wanted).")
             }
             val out = File(staging, "pack").apply { mkdirs() }
             val main: String? = when {

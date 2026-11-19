@@ -125,17 +125,22 @@ jobs:
           gh release upload packs out/site/manifest.json --repo "$REPO" --clobber
           # versioned copies (lychee-<name>-<version>.zip): the newest three of each pack stay
           # (someone who checked a while ago still gets theirs), older ones go
-          gh release view packs --repo "$REPO" --json assets -q '.assets[].name' > out/assets.txt
-          python3 - out/assets.txt > out/prune.txt <<'PY'
-          import re, sys
-          groups = {}
-          for name in open(sys.argv[1]).read().split():
-              m = re.fullmatch(r"(lychee-.+)-(\d{4}\.\d\d\.\d\d(?:\.\d+)?)\.zip", name)
-              if m:
-                  groups.setdefault(m[1], []).append((tuple(int(x) for x in m[2].split(".")), name))
-          for items in groups.values():
-              for _, name in sorted(items, reverse=True)[3:]:
-                  print(name)
+          gh release view packs --repo "$REPO" --json assets -q '.assets[] | "\(.createdAt) \(.name)"' > out/assets.txt
+          python3 - out/assets.txt out/site/manifest.json > out/prune.txt <<'PY'
+          import json, sys
+          # each pack's versioned files share "lychee-<name>-" (versions are the sources' own, so
+          # they aren't all dates): keep the newest three of each by upload time
+          assets = [line.split(" ", 1) for line in open(sys.argv[1]).read().splitlines() if " " in line]
+          packs = json.load(open(sys.argv[2])).get("packs", {})
+          for p in packs.values():
+              f, v = p.get("download_file", ""), p.get("version", "")
+              if not f.endswith(f"-{v}.zip"):
+                  continue
+              prefix = f[: -len(f"{v}.zip")]
+              mine = sorted((a for a in assets if a[1].startswith(prefix) and a[1].endswith(".zip")), reverse=True)
+              for _, name in mine[3:]:
+                  if name != f:
+                      print(name)
           PY
           while read -r old; do
             [ -n "$old" ] && gh release delete-asset packs "$old" --repo "$REPO" --yes || true

@@ -69,8 +69,45 @@ def fetch(url: str, cache: Path, name: str | None = None) -> Path:
         with urllib.request.urlopen(url) as r, open(tmp, "wb") as f:
             while chunk := r.read(1 << 20):
                 f.write(chunk)
+            # the source's own date (when it was last published), the pack's version
+            date = http_date(r.headers.get("Last-Modified"))
         tmp.rename(dest)
+        if date:
+            dest.with_name(dest.name + ".date").write_text(date)
     return dest
+
+
+def http_date(value: str | None) -> str | None:
+    """An HTTP date ("Sat, 15 Nov 2026 03:12:00 GMT") as a version: "2026.11.15"."""
+    if not value:
+        return None
+    from email.utils import parsedate_to_datetime
+    try:
+        return parsedate_to_datetime(value).strftime("%Y.%m.%d")
+    except (TypeError, ValueError):
+        return None
+
+
+def source_date(path: Path, url: str | None = None) -> str | None:
+    """When the file [path] was published by its source, as "2026.11.15": what fetch recorded,
+    else asked of [url] (a file cached before dates were kept)."""
+    f = path.with_name(path.name + ".date")
+    if f.exists():
+        return f.read_text().strip()
+    if url:
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, method="HEAD"), timeout=60) as r:
+                date = http_date(r.headers.get("Last-Modified"))
+            if date:
+                f.write_text(date)
+                return date
+        except OSError as e:
+            print(f"{url}: {e}", file=sys.stderr)
+    return None
+
+
+# the English Wiktionary extract is streamed, not saved: its date is kept here
+EN_SOURCE_DATE: list[str] = []
 
 
 def new_db(path: Path, schema: str) -> sqlite3.Connection:
@@ -87,11 +124,13 @@ def finish(db: sqlite3.Connection):
 
 
 def write_pack(out: Path, file: str, pack_id: str, name: str, db: Path, licences: dict[str, str],
-               extra: dict[str, Path] | None = None):
+               extra: dict[str, Path] | None = None, version: str | None = None):
+    """The pack's version is its source's own (a release, or the date its source published the
+    data), never the time of this build."""
     pack = out / file
     pack.unlink(missing_ok=True)
     with zipfile.ZipFile(pack, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("pack.json", json.dumps({"id": pack_id, "name": name, "version": PACK_VERSION}))
+        z.writestr("pack.json", json.dumps({"id": pack_id, "name": name, "version": version or PACK_VERSION}))
         z.write(db, f"data/{db.name}")
         for arc, f in (extra or {}).items():
             z.write(f, arc)
@@ -246,7 +285,10 @@ def build_ko(out: Path, cache: Path, work: Path):
           f"{sum(1 for e in nikl if e['level'])} with a level", file=sys.stderr)
     finish(db)
     rime = english_to_korean(english, cache, work)
-    write_pack(out, "lychee-dict-ko.zip", "dict_ko", "Korean dictionary", db_path, extra=rime, licences={
+    # the version: when kaikki.org last extracted Wiktionary's Korean (the learner dictionary is a
+    # fixed 2019 export)
+    write_pack(out, "lychee-dict-ko.zip", "dict_ko", "Korean dictionary", db_path, extra=rime,
+               version=source_date(src, KAIKKI_KO) or "2019.08.02", licences={
         "LICENSE.txt": "Korean dictionary data from Wiktionary (https://en.wiktionary.org), extracted by "
                        "kaikki.org (Tatu Ylonen, Wiktextract). Licensed CC BY-SA 4.0 and GFDL; this pack "
                        "is shared under CC BY-SA 4.0: https://creativecommons.org/licenses/by-sa/4.0/\n"
@@ -382,7 +424,8 @@ def build_en(out: Path, cache: Path, work: Path):
     db.execute("CREATE INDEX word_form ON word(form)")
     finish(db)
     print(f"en.db: {len(rows)} forms", file=sys.stderr)
-    write_pack(out, "lychee-dict-en.zip", "dict_en", "English dictionary", db_path, {
+    # the version: when kaikki.org last extracted Wiktionary's English (WordNet changes yearly)
+    write_pack(out, "lychee-dict-en.zip", "dict_en", "English dictionary", db_path, version=(EN_SOURCE_DATE or [None])[0], licences={
         "LICENSE.txt": "English definitions from Open English WordNet (https://en-word.net), "
                        "CC BY 4.0: https://creativecommons.org/licenses/by/4.0/\n"
                        "Words WordNet lacks (the, of, because, don't ...) from English Wiktionary "
@@ -556,6 +599,8 @@ def wiktionary_en(order: dict[str, int], covered: dict[str, set], sounds: dict[s
     seen: set[tuple[str, str, bool]] = set()
     print(f"streaming {KAIKKI_EN}", file=sys.stderr)
     with urllib.request.urlopen(KAIKKI_EN) as r, gzip.GzipFile(fileobj=r) as f:
+        if (d := http_date(r.headers.get("Last-Modified"))):
+            EN_SOURCE_DATE.append(d)
         for raw in f:
             # most lines are words no one types: skip them before parsing the JSON
             head = raw[:200]
@@ -686,7 +731,10 @@ def build_strokes(out: Path, cache: Path, work: Path):
     db.executemany("INSERT INTO char_ko VALUES(?,?,?)", ko)
     finish(db)
     print(f"strokes: {len(rows)} characters, {len(ja)} Japanese, {len(ko)} Korean", file=sys.stderr)
-    write_pack(out, "lychee-strokes.zip", "strokes_zh", "Stroke order", db_path, {
+    # the version: KanjiVG's release (Make Me a Hanzi is pinned)
+    kvg = re.search(r"/r(\d{4})(\d\d)(\d\d)/", KANJIVG)
+    write_pack(out, "lychee-strokes.zip", "strokes_zh", "Stroke order", db_path,
+               version=".".join(kvg.groups()) if kvg else None, licences={
         "LICENSE.txt": "Stroke order and character data from Make Me a Hanzi by Shaunak Kishore "
                        "(https://github.com/skishore/makemeahanzi).\n"
                        "graphics (stroke shapes): derived from fonts by Arphic Technology, under the "
@@ -744,7 +792,11 @@ def build_examples(out: Path, cache: Path, work: Path, per_lang: int = 60000):
         print(f"examples {code}: {len(rows)}", file=sys.stderr)
     db.execute("CREATE INDEX ex_lang ON ex(lang)")
     finish(db)
-    write_pack(out, "lychee-examples.zip", "examples", "Example sentences", db_path, {
+    # the version: Tatoeba's newest export among the languages
+    dates = [d for d in (source_date(p, TATOEBA.format(p.name.split("_")[0], p.name))
+                         for p in cache.glob("*_sentences.tsv.bz2")) if d]
+    write_pack(out, "lychee-examples.zip", "examples", "Example sentences", db_path,
+               version=max(dates) if dates else None, licences={
         "LICENSE.txt": "Example sentences and their English translations from Tatoeba "
                        "(https://tatoeba.org), licensed CC BY 2.0 FR "
                        "(https://creativecommons.org/licenses/by/2.0/fr/). Each sentence was written "

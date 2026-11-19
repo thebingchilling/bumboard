@@ -151,14 +151,16 @@ object Updates {
     }
 
     /**
-     * The newer version of an installed [pack], or null when it is up to date (or unknown). A
-     * copy newer than the page's (one that came with an app update) has none.
+     * The published version of an installed [pack] when it isn't the one installed, or null when
+     * it is up to date (or unknown). Versions are each source's own (a font's release, a
+     * dictionary's release date), not all in one order, so any difference from the published
+     * one is the update; a pack is only republished when its contents change.
      */
     fun newer(context: Context, pack: Pack): String? {
         if (pack.custom) return null
         val installed = Packs.installedVersion(context, pack.id) ?: return null
         val latest = latestOf(context, pack) ?: return null
-        return latest.takeIf { compare(it, installed) > 0 }
+        return latest.takeIf { it != installed }
     }
 
     fun hasUpdate(context: Context, pack: Pack) = newer(context, pack) != null

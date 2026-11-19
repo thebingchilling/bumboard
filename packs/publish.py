@@ -3,9 +3,10 @@
 
 The packs workflow rebuilds every pack from its sources' newest data. A pack whose contents
 are the same as the published one's (compared file by file, ignoring pack.json and zip dates)
-is left alone; a changed one gets a new version, the date ("2026.10.28", with ".2" and so on
-for a second change that day), written into its pack.json, and goes into --upload. A pack the
-manifest doesn't list yet keeps the version its build gave it.
+is left alone; a changed one gets a new version: its source's own (a font's release or its
+maker's version, a dictionary's release date: never the time of the build), or, when Lychee's
+build of the same source changed, a revision of it ("2026.11.18-2"), written into its
+pack.json, and goes into --upload.
 
 Each published version is also uploaded under a name that says what it is and which version
 ("lychee-korean-dictionary-2026.11.18.2.zip", the manifest's "download_file"): Lychee downloads
@@ -129,13 +130,6 @@ def versioned_name(name: str, version: str) -> str:
     return f"lychee-{slug}-{version}.zip"
 
 
-def next_version(previous: str | None, today: str) -> str:
-    if not previous or not previous.startswith(today):
-        return today
-    rest = previous[len(today):].lstrip(".")
-    return f"{today}.{int(rest) + 1 if rest.isdigit() else 2}"
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--packs", type=Path, required=True)
@@ -174,11 +168,16 @@ def main():
                 packs[pid] = dict(old, download_file=name, download=RELEASE + name)
                 changed.append(f"{pid} {old['version']} (as {name})")
             continue
-        # what the build called it (a font's release tag, a builder's version), for the notes
-        source = str(info.get("version", ""))
-        # a pack's first listing keeps the version it was already published with, so packs
-        # installed before the manifest existed don't all show an update
-        version = next_version(old["version"], today) if old else (source or today)
+        # the version is the source's own (a font's release or its maker's version, a dictionary's
+        # release date), never this run's time. Lychee's build of the same source changing (new
+        # data added from elsewhere, a fix) makes a revision of it: "2026.11.18-2"
+        source = str(info.get("version", "")) or (old or {}).get("source") or "1"
+        if old and old.get("source") == source:
+            rest = old["version"][len(source):] if old["version"].startswith(source) else ""
+            n = int(rest[1:]) + 1 if rest.startswith("-") and rest[1:].isdigit() else 2
+            version = f"{source}-{n}"
+        else:
+            version = source
         info = {"id": pid, "name": info.get("name", cat.get("name", pid)), "version": version, "source": source}
         entry = {
             "name": cat.get("name", info["name"]),
@@ -188,6 +187,7 @@ def main():
             "url": RELEASE + zip_path.name,
             "digest": d,
             "digest_v": DIGEST_V,
+            "source": source,
             "updated": today,
         }
         if cat.get("kind") == "font_emoji":
