@@ -33,7 +33,7 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
   the runs on `main` after pushing and fix any red build.
 - Every build on `main` is published by `build.yml` as a debug release (a full release, not a
   pre-release) of this private repository (`lychee-0.1.0-dev.N`, notes from the commit), like Quartz's releases,
-  with three APKs (ABI splits: the universal `lychee-…apk`, `…-arm64.apk` and `…-32bit.apk`)
+  with three APKs named by ABI (`lychee-…-universal.apk`, `…-arm64-v8a.apk` and `…-armeabi-v7a.apk`)
   and the Google handwriting companion;
   a manual run with "Publish a release" ticked does the same.
   Never publish the Lychee app anywhere else (public repositories, stores) until the owner says so.
