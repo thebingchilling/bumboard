@@ -107,7 +107,11 @@ class DictionaryPopup(
      * One Kanji or Hanja of a Japanese or Korean word: its readings in that language (kana or
      * Hangul with their romanisation), what its speaker says, and its meaning.
      */
-    class CharReading(val ch: String, val rows: List<Pair<String?, List<Pair<String, String>>>>, val say: String, val meaning: String?)
+    class CharReading(
+        val ch: String, val rows: List<Pair<String?, List<Pair<String, String>>>>, val say: String, val meaning: String?,
+        /** A kanji's form: its old (traditional) form where Japan simplified it, or Japan-made. */
+        val note: String? = null,
+    )
 
     /**
      * One kind of a character's Japanese or Korean readings: its label, as shown, and what is
@@ -141,6 +145,8 @@ class DictionaryPopup(
         characters: List<CharReading> = emptyList(),
         /** The heading over [characters]: Kanji or Hanja. */
         charactersTitle: String? = null,
+        /** A Japanese word's old (traditional) form, where Japan simplified any of its kanji. */
+        oldForm: String? = null,
         onType: () -> Unit,
     ) {
         present(keyboard, peek, onType) { c, body, compact ->
@@ -164,6 +170,19 @@ class DictionaryPopup(
                 typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
                 setPadding(0, 0, 0, dp(4))
             })
+            // the other way of writing it: a Korean word's Hanja (the alternative to its
+            // Hangul), a Japanese word's old form (traditional kanji)
+            val alternative = when {
+                hanja != null && hanja != text -> ctx.getString(R.string.lychee_card_hanja) to hanja
+                lang == "ja" && oldForm != null && oldForm != text -> ctx.getString(R.string.lychee_card_old_form) to oldForm
+                else -> null
+            }
+            alternative?.let { (label, form) ->
+                body.addView(content.labelled(label, form).apply {
+                    textLocale = if (lang == "ko") java.util.Locale.KOREAN else java.util.Locale.TRADITIONAL_CHINESE
+                    setPadding(0, 0, 0, dp(4))
+                })
+            }
             // the stroke order straight after the reading
             if (lang == "ja" || lang == "ko") content.strokes(text)
             // a word written alike but said differently by meaning (lead, wind, tear): each
@@ -853,6 +872,9 @@ class DictionaryPopup(
                         setPadding(0, 0, 0, dp(2))
                     })
                 }
+                cr.note?.let { n ->
+                    col.addView(textView(n, 13f, c.primary).apply { setPadding(0, 0, 0, dp(2)) })
+                }
                 for ((label, readings) in cr.rows) {
                     val chips = readings.map { (native, roman) ->
                         // まな(ぶ) is said まなぶ
@@ -860,7 +882,7 @@ class DictionaryPopup(
                         ReadingChip(roman, native, onSpeak?.let { speak -> { speak(said, null) } })
                     }
                     // (one kind alone, as Korean's, needs no label)
-                    chipLines(label.takeIf { cr.rows.size > 1 }, chips, perLine = 2, labelWidth = 32).forEach { col.addView(it) }
+                    chipLines(label.takeIf { cr.rows.size > 1 }, chips, perLine = 2, labelWidth = 64).forEach { col.addView(it) }
                 }
                 row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                 body.addView(row)
@@ -897,28 +919,29 @@ class DictionaryPopup(
             }
             // a card of its own, tinted apart from the rest: this is Chinese, not the word's language
             endSection()
-            val box = sectionCard(null, c.secondaryContainer)
+            // a light wash of the accent colour, not a dark grey block
+            val box = sectionCard(null, androidx.core.graphics.ColorUtils.setAlphaComponent(c.primaryContainer, 0x66))
             val (tradText, tradDiffers) = marked(trad)
             val (simpText, simpDiffers) = marked(simp)
             val same = !tradDiffers && !simpDiffers
             // the heading: "Chinese", and that it is written alike when no character differs
             box.addView(textView(
                 if (same) ctx.getString(R.string.lychee_card_chinese_same) else ctx.getString(R.string.lychee_card_chinese_readings),
-                11f, c.onSurfaceVariant,
-            ).apply { typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500) })
-            // the forms: 繁 學校  简 学校 (one form when both are written alike)
-            box.addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                // marked in English: Trad and Simp
-                val forms = if (simp == trad) listOf(null to tradText) else listOf("Trad" to tradText, "Simp" to simpText)
-                for ((mark, word) in forms) {
-                    if (mark != null) addView(textView(mark, 11f, c.onSurfaceVariant).apply { setPadding(0, 0, dp(4), 0) })
-                    addView(textView(word, 20f, c.onSurface).apply {
-                        textLocale = java.util.Locale.TRADITIONAL_CHINESE.takeIf { mark != "Simp" } ?: java.util.Locale.SIMPLIFIED_CHINESE
-                        setPadding(0, 0, dp(14), 0)
+                13f, c.primary,
+            ).apply { typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600) })
+            // the forms: Traditional 學校  Simplified 学校 (one form when both are written
+            // alike), wrapping onto a line each when narrow
+            box.addView(FlowRow(ctx, dp(12)).apply {
+                // marked in English, in full: Traditional and Simplified
+                val forms = if (simp == trad) listOf(null to tradText) else listOf(TRADITIONAL to tradText, SIMPLIFIED to simpText)
+                for ((mark, word) in forms) addView(LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    if (mark != null) addView(textView(mark, 13f, c.onSurface).apply { setPadding(0, 0, dp(6), 0) })
+                    addView(textView(word, 24f, c.onSurface).apply {
+                        textLocale = java.util.Locale.TRADITIONAL_CHINESE.takeIf { mark != SIMPLIFIED } ?: java.util.Locale.SIMPLIFIED_CHINESE
                     })
-                }
+                })
                 setPadding(0, dp(2), 0, dp(2))
             })
             // the readings: 粵 hok6 haau6 🔈   普 xuéxiào 🔈, wrapping onto two lines when narrow
@@ -929,11 +952,11 @@ class DictionaryPopup(
             for ((lang, mark, reading) in readings) {
                 val line = TextView(ctx).apply {
                     val sb = SpannableStringBuilder()
-                    sb.append(mark, ForegroundColorSpan(c.onSurfaceVariant), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    sb.append(mark, ForegroundColorSpan(c.onSurface), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                     sb.append("  ")
                     sb.append(Annotator.format(reading, lang, prefs), ForegroundColorSpan(c.primary), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                     this.text = sb
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
                 }
                 val speaker = onSpeak?.let { say -> smallSpeaker { say(wordToSay, lang) } }
                 box.addView(readingRow(line, speaker))
@@ -1346,6 +1369,8 @@ class DictionaryPopup(
         private fun dp(v: Int) = (ctx.resources.displayMetrics.density * v).toInt()
 
         companion object {
+            const val TRADITIONAL = "Traditional"
+            const val SIMPLIFIED = "Simplified"
             const val MAX_SENSES = 12
             /** Meanings in the summary. */
             const val SUMMARY_SENSES = 3

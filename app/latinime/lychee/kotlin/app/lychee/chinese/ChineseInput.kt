@@ -257,6 +257,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             onSpeakAs = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) },
             chinese = chinese, chinesePrefs = display, chineseForm = hanForm,
             characters = characterReadings(hanForm),
+            oldForm = if (engine == "ja") oldForm(candidate.text) else null,
             charactersTitle = ime.getString(if (engine == "ko") R.string.lychee_card_hanja else R.string.lychee_card_kanji)) {
             onType()
         }
@@ -264,13 +265,13 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
 
     /**
      * A Japanese or Korean candidate's reading and meaning: the kana reading (furigana) of words
-     * with kanji, else the romanisation Rime typed; Hanja beside Korean words.
+     * with kanji, else the romanisation Rime typed.
      */
     private fun wordAnnotation(candidate: Candidate, showMeaning: Boolean): Annotation? {
         val entry = app.lychee.dict.PackData.words(ime, engine, candidate.text, limit = 1).firstOrNull()
         val meaning = entry?.senses?.firstOrNull()?.takeIf { showMeaning }?.let { app.lychee.core.Annotator.shorten(it) }
         // the readings in Latin letters only (kana and Hangul readings are on the word's card),
-        // never Kanji or Hanja: a Korean word's Hanja are a candidate of their own (withHanja)
+        // never Kanji or Hanja (a Korean word's Hanja are on its card)
         val lines = readingLines(candidate, entry, native = false)
             .filter { line -> line.codePoints().noneMatch { app.lychee.core.Annotator.isHan(it) } }
         val under = meaning
@@ -382,8 +383,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                 val on = (kanji?.onyomi?.split('、')?.filter { it.isNotBlank() } ?: all.filter(::isKatakana)).take(2).map(::kana)
                 val kun = (kanji?.kunyomi?.split('、')?.filter { it.isNotBlank() } ?: all.filterNot(::isKatakana)).take(2).map(::kana)
                 listOfNotNull(
-                    on.takeIf { it.isNotEmpty() }?.let { ime.getString(R.string.lychee_card_on) to it },
-                    kun.takeIf { it.isNotEmpty() }?.let { ime.getString(R.string.lychee_card_kun) to it },
+                    on.takeIf { it.isNotEmpty() }?.let { ime.getString(R.string.lychee_card_onyomi) to it },
+                    kun.takeIf { it.isNotEmpty() }?.let { ime.getString(R.string.lychee_card_kunyomi) to it },
                 )
             } else {
                 db?.charReadings(ch, "ko").orEmpty().take(2).map { h -> h to app.lychee.core.SentenceRomanizer.korean(h) }
@@ -394,8 +395,40 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                 ?: Readings.annotator?.resolve(ch, "", InputMode.Cantonese)?.meaning
             // the first reading as written, without its okurigana brackets: まな(ぶ) says まなぶ
             val say = rows.first().second.first().first.replace("(", "").replace(")", "")
-            DictionaryPopup.CharReading(ch, rows, say, meaning?.let { app.lychee.core.Annotator.shorten(it) })
+            DictionaryPopup.CharReading(ch, rows, say, meaning?.let { app.lychee.core.Annotator.shorten(it) },
+                note = if (engine == "ja") kanjiNote(ch) else null)
         }
+    }
+
+    /**
+     * What a kanji's form is, where it is not simply the traditional character: made in Japan
+     * (kokuji), or simplified by Japan (shinjitai), with its old form and whether Simplified
+     * Chinese simplifies it the same way or differently (Unihan's kJapaneseOldVariant).
+     */
+    private fun kanjiNote(ch: String): String? {
+        if (ch in KOKUJI) return ime.getString(R.string.lychee_card_kokuji)
+        val db = Readings.db ?: return null
+        val old = db.charReadings(ch, "ja_old").firstOrNull() ?: return null
+        val cn = db.charReadings(ch, "ja_cn").firstOrNull()
+        return when (cn) {
+            ch -> ime.getString(R.string.lychee_card_shinjitai_same, old)
+            null -> ime.getString(R.string.lychee_card_shinjitai_kept, old)
+            else -> ime.getString(R.string.lychee_card_shinjitai_own, old, cn)
+        }
+    }
+
+    /** [form] in old (traditional) kanji, or null when Japan writes none of them simplified. */
+    private fun oldForm(form: String): String? {
+        val db = Readings.db ?: return null
+        var changed = false
+        val out = StringBuilder()
+        form.codePoints().forEach { cp ->
+            val ch = String(Character.toChars(cp))
+            val old = if (app.lychee.core.Annotator.isHan(cp)) db.charReadings(ch, "ja_old").firstOrNull() else null
+            if (old != null) changed = true
+            out.append(old ?: ch)
+        }
+        return out.toString().takeIf { changed }
     }
 
     /** Readings for handwriting guesses: Cantonese readings, or Mandarin when typing Simplified. */
@@ -847,65 +880,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private var displayMap: IntArray? = null
 
     /**
-     * Korean, like Japanese with its Kanji: a word's Hanja (from the Korean dictionary pack) as a
-     * candidate of its own, right after the word in Hangul (학교, 學校). The lookups never hold up
-     * the bar: known words' Hanja come from a cache; the others are looked up on a thread of
-     * their own, and the bar is shown again with them if the letters typed haven't changed.
+     * The candidates as shown. Korean words stay in Hangul in the bar: a word's Hanja are only
+     * on its card, as the alternative way of writing it.
      */
     private fun withHanja(c: Composition?): Composition? {
         displayMap = null
-        if (c == null || engine != "ko" || englishMode || c.candidates.isEmpty()) return c
-        val out = ArrayList<Candidate>(c.candidates.size + 4)
-        val map = ArrayList<Int>(c.candidates.size + 4)
-        val seen = c.candidates.mapTo(HashSet()) { it.text }
-        val missing = ArrayList<String>()
-        c.candidates.forEachIndexed { i, cand ->
-            out += cand
-            map += i
-            if (i < HANJA_LOOKUPS) {
-                val known = synchronized(hanjaCache) { hanjaCache[cand.text] }
-                if (known == null) missing += cand.text
-                val hanja = known?.takeIf { h -> h.isNotEmpty() && seen.add(h) }
-                if (hanja != null) {
-                    out += Candidate(hanja, cand.comment)
-                    map += -1
-                }
-            }
-        }
-        if (missing.isNotEmpty()) lookUpHanja(missing)
-        if (out.size == c.candidates.size) return c
-        displayMap = map.toIntArray()
-        return c.copy(candidates = out)
-    }
-
-    /** Hangul word -> its Hanja ("" for none), the most recent [HANJA_CACHE] words. */
-    private val hanjaCache = object : LinkedHashMap<String, String>(256, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > HANJA_CACHE
-    }
-    private val hanjaWorker = java.util.concurrent.Executors.newSingleThreadExecutor()
-    private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
-
-    private fun lookUpHanja(words: List<String>) {
-        val input = runCatching { Rime.input(session) }.getOrNull()
-        hanjaWorker.execute {
-            var found = false
-            for (w in words) {
-                if (synchronized(hanjaCache) { hanjaCache.containsKey(w) }) continue
-                val hanja = runCatching { app.lychee.dict.PackData.words(ime, "ko", w, 2)
-                    // the word itself (not a dictionary form found for an inflected one)
-                    .firstOrNull { it.form == w || it.lemma == w }?.hanja }.getOrNull()
-                    ?.trim()
-                    ?.takeIf { h -> h.isNotEmpty() && h.codePoints().anyMatch { app.lychee.core.Annotator.isHan(it) } }
-                synchronized(hanjaCache) { hanjaCache[w] = hanja.orEmpty() }
-                if (hanja != null) found = true
-            }
-            // still the same letters: the bar again, now with the Hanja
-            if (found) mainHandler.post {
-                if (isComposing && engine == "ko" && runCatching { Rime.input(session) }.getOrNull() == input) {
-                    show(withHanja(Rime.composition(session, CANDIDATE_LIMIT)))
-                }
-            }
-        }
+        return c
     }
 
     /** Whether the next " and ' open a quotation (they alternate, like Chinese IMEs). */
@@ -1303,14 +1283,13 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         const val PREF_FUZZY = "lychee_fuzzy_"
         /** Per keyboard ("…yue", "…cmn", "…ja", "…ko"): 英 (영) is on. */
         const val PREF_ENGLISH_MODE = "lychee_english_mode_"
-        /** Korean candidates whose Hanja are looked up (the first few, typing never waits long). */
-        const val HANJA_LOOKUPS = 6
-        /** Korean words whose Hanja are remembered. */
-        const val HANJA_CACHE = 2000
         private const val KEY_BACKSPACE = 0xff08
         /** A key taking longer than this (Rime and the candidates) is noted in Diagnostics. */
         private const val SLOW_KEY_MS = 60L
         private val warmer: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor()
+        /** Characters made in Japan (kokuji) in common use; Chinese has none of them as its own. */
+        private val KOKUJI: Set<String> = "働峠込畑畠匂枠栃塀凪凧辻榊樫笹雫躾鰯鱈鴫麿噺俣匁枡籾糀鋲颪鱚粁糎粍杢椛毟裃襷鯱"
+            .codePoints().toArray().map { String(Character.toChars(it)) }.toHashSet()
         /** Candidates fetched per keystroke; the bar scrolls through these. */
         private const val CANDIDATE_LIMIT = 40
     }

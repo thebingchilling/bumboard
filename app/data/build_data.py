@@ -222,7 +222,8 @@ def parse_unihan(zip_path: Path):
         if not line.startswith("U+"):
             continue
         cp, field, value = line.split("\t", 2)
-        if field in ("kSimplifiedVariant", "kTraditionalVariant", "kZVariant", "kSemanticVariant"):
+        if field in ("kSimplifiedVariant", "kTraditionalVariant", "kZVariant", "kSemanticVariant",
+                     "kJapaneseOldVariant"):
             variants[chr(int(cp[2:], 16))][field] = [
                 chr(int(v.split("<")[0][2:], 16)) for v in value.split()
             ]
@@ -323,7 +324,8 @@ class Readings:
             CREATE TABLE info(hw INTEGER PRIMARY KEY, hsk INTEGER, band INTEGER, reg TEXT,
                               cl TEXT, pos TEXT);
             -- a character's Japanese and Korean readings (Unihan): lang 'ja' (kana: on'yomi in
-            -- katakana, kun'yomi in hiragana), 'ja_on' and 'ja_kun' (romaji), 'ko' (Hangul)
+            -- katakana, kun'yomi in hiragana), 'ja_on' and 'ja_kun' (romaji), 'ko' (Hangul);
+            -- 'ja_old' a kanji's old (kyūjitai) form, 'ja_cn' that form in Simplified Chinese
             CREATE TABLE charread(ch TEXT NOT NULL, lang TEXT NOT NULL, rank INTEGER NOT NULL,
                                   r TEXT NOT NULL, PRIMARY KEY(ch, lang, rank)) WITHOUT ROWID;
             """
@@ -700,6 +702,19 @@ def main():
         hangul = [v.split(":")[0] for v in fields.get("kHangul", "").split()]
         for rank, r in enumerate(dict.fromkeys(h for h in hangul if h)):
             R.char_readings.append((ch, "ko", rank, r))
+
+    # a Japanese kanji's old (traditional, kyūjitai) form where Japan simplified it (駅 -> 驛,
+    # Unihan's kJapaneseOldVariant): 'ja_old'; and how Simplified Chinese writes that old form
+    # when it differs from it (驛 -> 驿): 'ja_cn', so the card can say whether Japan's
+    # simplification is its own or the same as China's
+    for ch, fields in variants.items():
+        old = [o for o in fields.get("kJapaneseOldVariant", []) if o != ch]
+        if not old:
+            continue
+        R.char_readings.append((ch, "ja_old", 0, old[0]))
+        cn = variants.get(old[0], {}).get("kSimplifiedVariant", [old[0]])[0]
+        if cn != old[0]:
+            R.char_readings.append((ch, "ja_cn", 0, cn))
 
     # per-character reading weights, used to rank the readings of single characters
     pinlu_share: dict[str, dict[str, float]] = {
