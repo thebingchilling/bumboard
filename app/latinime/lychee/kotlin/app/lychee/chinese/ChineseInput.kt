@@ -245,6 +245,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                 ?.takeIf { r -> r.reading?.contains("?") == false }
                 ?.let { r -> app.lychee.core.Annotator.regional(r, display) }
         } else null
+        val learner = learnerExtras(candidate.text, entries.firstOrNull())
         popup?.showWord(frame, candidate.text, wordReading(candidate, entries.firstOrNull()), entries,
             examples, peek, onSpeak = { text, l ->
                 val voices = when (l) {
@@ -258,6 +259,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             chinese = chinese, chinesePrefs = display, chineseForm = hanForm,
             characters = characterReadings(hanForm),
             oldForm = if (engine == "ja") oldForm(candidate.text) else null,
+            badges = learner.badges, pronunciation = learner.pronunciation, conjugation = learner.conjugation,
             charactersTitle = ime.getString(if (engine == "ko") R.string.lychee_card_hanja else R.string.lychee_card_kanji)) {
             onType()
         }
@@ -396,7 +398,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             // the first reading as written, without its okurigana brackets: まな(ぶ) says まなぶ
             val say = rows.first().second.first().first.replace("(", "").replace(")", "")
             DictionaryPopup.CharReading(ch, rows, say, meaning?.let { app.lychee.core.Annotator.shorten(it) },
-                note = if (engine == "ja") kanjiNote(ch) else null)
+                note = if (engine == "ja") kanjiNote(ch) else null,
+                // a kanji's school grade, how common it is and the parts it is drawn from
+                details = kanji?.let { k ->
+                    listOfNotNull(
+                        k.grade?.let { g -> if (g in 1..6) "Grade $g" else "Secondary school" },
+                        k.freq?.let { f -> "#$f most common" },
+                        k.parts?.takeIf { it.isNotBlank() }?.let { p -> "Parts $p" },
+                    ).joinToString("  ·  ").ifEmpty { null }
+                })
         }
     }
 
@@ -416,6 +426,56 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             else -> ime.getString(R.string.lychee_card_shinjitai_own, old, cn)
         }
     }
+
+    private class Learner(
+        val badges: List<String> = emptyList(),
+        val pronunciation: CharSequence? = null,
+        val conjugation: List<app.lychee.core.Conjugated>? = null,
+    )
+
+    /**
+     * A Japanese or Korean word's learner extras for its card: its level (JLPT, or the National
+     * Institute of Korean Language's beginner / intermediate / advanced), how it is said (pitch
+     * accent; Korean sound changes) and its conjugation table.
+     */
+    private fun learnerExtras(text: String, entry: app.lychee.dict.WordEntry?): Learner = runCatching {
+        when (engine) {
+            "ja" -> {
+                val form = entry?.lemma ?: text
+                val reading = entry?.reading?.takeIf { r -> r.isNotBlank() && r.none { it in 'a'..'z' } } ?: form
+                val x = app.lychee.dict.PackData.japaneseExtras(ime, form, reading) ?: return Learner()
+                val pitch = x.accent?.let { app.lychee.core.JapanesePitch.numbers(it) }.orEmpty()
+                val pron = pitch.firstOrNull()?.let { n ->
+                    val more = pitch.drop(1).take(2).joinToString("  ") { app.lychee.core.JapanesePitch.marked(reading, it) }
+                    "Pitch  " + app.lychee.core.JapanesePitch.marked(reading, n) +
+                        "  ·  " + app.lychee.core.JapanesePitch.typeName(reading, n) +
+                        (if (more.isNotEmpty()) "\nAlso  $more" else "")
+                }
+                Learner(
+                    badges = listOfNotNull(x.jlpt?.let { "JLPT N$it" }),
+                    pronunciation = pron,
+                    conjugation = app.lychee.core.JapaneseConjugation.table(form, x.vclass),
+                )
+            }
+            "ko" -> {
+                val lemma = entry?.lemma ?: text
+                val x = app.lychee.dict.PackData.koreanExtras(ime, lemma) ?: return Learner()
+                val level = when (x.level) { 1 -> "Beginner"; 2 -> "Intermediate"; 3 -> "Advanced"; else -> null }
+                // sound changes: the standard pronunciation where it differs from the spelling
+                val spoken = x.pron?.takeIf { p -> p.replace(" ", "") != lemma.replace(" ", "") }
+                // ("adverb" contains "verb": the parts of speech are matched whole)
+                val verb = x.pos == "verb" || x.pos == "auxiliary verb"
+                val adjective = x.pos == "adjective" || x.pos == "auxiliary adjective"
+                Learner(
+                    badges = listOfNotNull(level?.let { "$it level" }),
+                    pronunciation = spoken?.let { "Said  [$it]  ·  " + app.lychee.core.SentenceRomanizer.korean(it) },
+                    conjugation = if ((verb || adjective) && x.forms.isNotEmpty())
+                        app.lychee.core.KoreanConjugation.table(lemma, x.forms.map { it.first }, verb) else null,
+                )
+            }
+            else -> Learner()
+        }
+    }.getOrDefault(Learner())
 
     /** [form] in old (traditional) kanji, or null when Japan writes none of them simplified. */
     private fun oldForm(form: String): String? {

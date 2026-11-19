@@ -111,6 +111,8 @@ class DictionaryPopup(
         val ch: String, val rows: List<Pair<String?, List<Pair<String, String>>>>, val say: String, val meaning: String?,
         /** A kanji's form: its old (traditional) form where Japan simplified it, or Japan-made. */
         val note: String? = null,
+        /** A kanji's details: school grade, frequency, parts. */
+        val details: String? = null,
     )
 
     /**
@@ -147,6 +149,12 @@ class DictionaryPopup(
         charactersTitle: String? = null,
         /** A Japanese word's old (traditional) form, where Japan simplified any of its kanji. */
         oldForm: String? = null,
+        /** Small badges under the word: its learner level ("JLPT N5", "Beginner"). */
+        badges: List<String> = emptyList(),
+        /** How it is said, beyond its spelling: a Japanese word's pitch accent, a Korean word's sound changes. */
+        pronunciation: CharSequence? = null,
+        /** A verb's or adjective's conjugation table. */
+        conjugation: List<app.lychee.core.Conjugated>? = null,
         onType: () -> Unit,
     ) {
         present(keyboard, peek, onType) { c, body, compact ->
@@ -183,6 +191,9 @@ class DictionaryPopup(
                     setPadding(0, 0, 0, dp(4))
                 })
             }
+            // the learner level, then how it is said (pitch accent, sound changes)
+            if (badges.isNotEmpty()) content.badges(badges)
+            pronunciation?.let { body.addView(content.textView(it, 15f, c.onSurface).apply { setPadding(0, dp(2), 0, dp(4)) }) }
             // the stroke order straight after the reading
             if (lang == "ja" || lang == "ko") content.strokes(text)
             // a word written alike but said differently by meaning (lead, wind, tear): each
@@ -243,7 +254,9 @@ class DictionaryPopup(
                 setPadding(0, dp(8), 0, dp(4))
             })
             if (compact) return@present
-            // after the meanings: each Kanji or Hanja with its readings, then the word in Chinese
+            // after the meanings: how it conjugates, each Kanji or Hanja with its readings, then
+            // the word in Chinese
+            conjugation?.takeIf { it.size > 1 }?.let { content.conjugation(it) }
             if (characters.isNotEmpty()) content.characterReadings(charactersTitle ?: "", characters)
             chinese?.let { content.chineseBox(chineseForm ?: text, it) }
             content.examples(examples) { sentence ->
@@ -544,6 +557,41 @@ class DictionaryPopup(
             })
             return card
         }
+        /** Small tonal badges in a row (a word's learner level). */
+        fun badges(list: List<String>) {
+            body.addView(FlowRow(ctx, dp(6)).apply {
+                list.forEach { b ->
+                    addView(textView(b, 12f, c.onSecondaryContainer).apply {
+                        typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
+                        setPadding(dp(10), dp(3), dp(10), dp(3))
+                        background = GradientDrawable().apply {
+                            cornerRadius = dp(8).toFloat()
+                            setColor(c.secondaryContainer)
+                        }
+                    })
+                }
+                setPadding(0, dp(2), 0, dp(4))
+            })
+        }
+
+        /** A verb's or adjective's forms: a section of two columns, what each is and the word in it. */
+        fun conjugation(rows: List<app.lychee.core.Conjugated>) {
+            section(ctx.getString(R.string.lychee_card_conjugation))
+            rows.forEach { r ->
+                body.addView(LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(0, dp(3), 0, dp(3))
+                    addView(textView(r.label, 13f, c.onSurfaceVariant),
+                        LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    addView(textView(r.text, 16f, c.onSurface).apply {
+                        app.lychee.fonts.LycheeFonts.forText(ctx, r.text, fontLang)?.let { typeface = it }
+                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.4f))
+                })
+            }
+            endSection()
+        }
+
         /** The word's language ("ja", "ko"; null for Chinese), which picks the font. */
         var fontLang: String? = null
         /** The short summary: the word, its readings and first meanings, the essentials only. */
@@ -874,6 +922,9 @@ class DictionaryPopup(
                 }
                 cr.note?.let { n ->
                     col.addView(textView(n, 13f, c.primary).apply { setPadding(0, 0, 0, dp(2)) })
+                }
+                cr.details?.let { d ->
+                    col.addView(textView(d, 12f, c.onSurfaceVariant).apply { setPadding(0, 0, 0, dp(2)) })
                 }
                 for ((label, readings) in cr.rows) {
                     val chips = readings.map { (native, roman) ->

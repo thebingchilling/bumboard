@@ -58,10 +58,10 @@ object Store {
         "The full Japanese card: every meaning, kanji in depth", 999, Category.DICTIONARIES,
         listOf(
             Line("Every meaning, with old kanji forms and Japan-made kanji noted"),
-            Line("JLPT levels", coming = true),
-            Line("Pitch accent", coming = true),
-            Line("Verb and adjective conjugation tables", coming = true),
-            Line("Kanji details: parts, grade, frequency, readings", coming = true),
+            Line("JLPT levels"),
+            Line("Pitch accent"),
+            Line("Verb and adjective conjugation tables"),
+            Line("Kanji details: parts, grade, frequency, readings"),
         ),
     )
     val CARD_KO = Product(
@@ -69,10 +69,10 @@ object Store {
         "The full Korean card: every meaning, Hanja in depth", 999, Category.DICTIONARIES,
         listOf(
             Line("Every meaning, with each word's Hanja"),
-            Line("TOPIK levels", coming = true),
-            Line("Sound changes shown, like 학교 said [학꾜]", coming = true),
-            Line("Verb and adjective conjugation tables", coming = true),
-            Line("Each Hanja's meaning and sound, linked to Chinese and Japanese", coming = true),
+            Line("Beginner, intermediate and advanced levels"),
+            Line("Sound changes shown, like 학교 said [학꾜]"),
+            Line("Verb and adjective conjugation tables"),
+            Line("Each Hanja's meaning and sound"),
         ),
     )
     val HANDWRITING = Product(

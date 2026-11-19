@@ -298,6 +298,7 @@
     <string name="lychee_card_on">On</string>
     <string name="lychee_card_kun">Kun</string>
     <string name="lychee_card_hanja">Hanja</string>
+    <string name="lychee_card_conjugation">Conjugation</string>
     <string name="lychee_card_old_form">Traditional</string>
     <string name="lychee_card_kokuji">Made in Japan (kokuji): not a Chinese character</string>
     <string name="lychee_card_shinjitai_same">Simplified in Japan as in Chinese · traditional %1$s</string>

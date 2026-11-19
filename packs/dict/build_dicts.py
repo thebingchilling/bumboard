@@ -41,6 +41,13 @@ HERE = Path(__file__).resolve().parent
 RIME = HERE.parent.parent / "app" / "data" / "rime"
 KO_WORDS = "https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/ko/ko_50k.txt"
 KAIKKI_KO = "https://kaikki.org/dictionary/Korean/kaikki.org-dictionary-Korean.jsonl"
+# The National Institute of Korean Language's Basic Korean Dictionary (한국어기초사전,
+# krdict.korean.go.kr), CC BY-SA 2.0 KR, as its XML export mirrored by spellcheck-ko (pinned):
+# learner levels (초급/중급/고급), standard pronunciations and key conjugated forms
+KRDICT = ("https://raw.githubusercontent.com/spellcheck-ko/korean-dict-nikl-krdict/"
+          "e7249562dca526461a347eb2cc5a2e67a17c4488/{}.xml")
+KRDICT_FILES = ["5000", "10000", "15000", "20000", "25000", "30000", "35000", "40000", "45000",
+                "50000", "51947"]
 HANZI = "https://raw.githubusercontent.com/skishore/makemeahanzi/bddc96d41bef78427ed0e034e9f7e31d71fd1b92/{}"
 TATOEBA = "https://downloads.tatoeba.org/exports/per_language/{0}/{1}"
 OEWN = "https://github.com/globalwordnet/english-wordnet/releases/download/2025-edition/english-wordnet-2025.xml.gz"
@@ -107,6 +114,70 @@ CREATE TABLE word(form TEXT NOT NULL, lemma TEXT NOT NULL, reading TEXT, hanja T
 """
 
 
+KR_POS = {"명사": "noun", "동사": "verb", "형용사": "adjective", "부사": "adverb", "대명사": "pronoun",
+          "수사": "number", "조사": "particle", "감탄사": "interjection", "관형사": "determiner",
+          "보조 동사": "auxiliary verb", "보조 형용사": "auxiliary adjective", "의존 명사": "bound noun",
+          "어미": "ending", "접사": "affix"}
+KR_LEVEL = {"초급": 1, "중급": 2, "고급": 3}
+
+
+def krdict(cache: Path) -> list[dict]:
+    """The Basic Korean Dictionary's entries: lemma, Hanja, part of speech, level, standard
+    pronunciation (without length marks), key conjugated forms with their pronunciations, and
+    English equivalents."""
+    import gzip
+    import tempfile
+    import xml.etree.ElementTree as ET
+    # only this compact summary is kept in the (size-limited) Actions cache, not the 370 MB of XML
+    summary = cache / "krdict.json.gz"
+    if summary.exists():
+        with gzip.open(summary, "rt", encoding="utf-8") as f:
+            return json.load(f)
+    out = []
+    tmp = Path(tempfile.mkdtemp(prefix="krdict-"))
+    for name in KRDICT_FILES:
+        src = fetch(KRDICT.format(name), tmp, f"krdict_{name}.xml")
+        # one export has a bare "<" inside an attribute value (a French equivalent): escaped first
+        text = re.sub(r'val="([^"]*)"', lambda m: 'val="' + m.group(1).replace("<", "&lt;") + '"',
+                      src.read_text(encoding="utf-8"))
+        import io
+        for _, e in ET.iterparse(io.BytesIO(text.encode("utf-8"))):
+            if e.tag != "LexicalEntry":
+                continue
+            feats = {f.get("att"): f.get("val") for f in e.findall("feat")}
+            lemma = e.find("Lemma/feat[@att='writtenForm']")
+            lemma = lemma.get("val") if lemma is not None else None
+            if not lemma or feats.get("lexicalUnit") not in ("단어", None):
+                e.clear()
+                continue
+            pron, forms = None, []
+            for wf in e.findall("WordForm"):
+                f = {x.get("att"): x.get("val") for x in wf.findall("feat")}
+                p = (f.get("pronunciation") or "").replace("ː", "").strip() or None
+                if f.get("type") == "발음" and pron is None:
+                    pron = p
+                elif f.get("type") == "활용" and f.get("writtenForm"):
+                    forms.append((f["writtenForm"], p or f["writtenForm"]))
+            english = []
+            for eq in e.iter("Equivalent"):
+                f = {x.get("att"): x.get("val") for x in eq.findall("feat")}
+                if f.get("language") == "영어" and f.get("lemma") and f["lemma"] not in english:
+                    english.append(f["lemma"])
+            out.append({
+                "lemma": lemma, "hanja": feats.get("origin") or None,
+                "pos": KR_POS.get(feats.get("partOfSpeech", ""), feats.get("partOfSpeech")),
+                "level": KR_LEVEL.get(feats.get("vocabularyLevel", "")),
+                "pron": pron,
+                "forms": forms, "english": english,
+            })
+            e.clear()
+        src.unlink()
+    shutil.rmtree(tmp, ignore_errors=True)
+    with gzip.open(summary, "wt", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False)
+    return out
+
+
 def build_ko(out: Path, cache: Path, work: Path):
     src = fetch(KAIKKI_KO, cache)
     db_path = work / "ko.db"
@@ -153,8 +224,26 @@ def build_ko(out: Path, cache: Path, work: Path):
                 if x.get("source") == "conjugation" and form not in seen and all("가" <= c <= "힣" for c in form):
                     seen.add(form)
                     rows.append((form, word, x.get("roman"), hanja, KO_POS.get(pos, pos), gloss, rank))
+    # the learner dictionary's words Wiktionary lacks, with its English equivalents
+    nikl = krdict(cache)
+    known = {r[0] for r in rows}
+    for e in nikl:
+        if e["lemma"] not in known and e["english"]:
+            rank += 1
+            rows.append((e["lemma"], e["lemma"], None, e["hanja"], e["pos"], "\n".join(e["english"][:8]), rank + 1_000_000))
+            known.add(e["lemma"])
     db.executemany("INSERT INTO word VALUES(?,?,?,?,?,?,?)", rows)
     db.execute("CREATE INDEX word_form ON word(form)")
+    # level (1 beginner, 2 intermediate, 3 advanced), standard pronunciation (its sound changes:
+    # 학교 [학꾜]) and key conjugated forms ("먹어|머거\n먹으니|머그니\n먹는|멍는") per word
+    db.execute("CREATE TABLE nikl(lemma TEXT NOT NULL, hanja TEXT, pos TEXT, level INTEGER, "
+               "pron TEXT, forms TEXT)")
+    db.executemany("INSERT INTO nikl VALUES(?,?,?,?,?,?)", [
+        (e["lemma"], e["hanja"], e["pos"], e["level"], e["pron"], "\n".join(f"{w}|{p}" for w, p in e["forms"]) or None)
+        for e in nikl if e["level"] or e["pron"] or e["forms"]])
+    db.execute("CREATE INDEX nikl_lemma ON nikl(lemma)")
+    print(f"ko.db: {len(nikl)} learner dictionary entries, "
+          f"{sum(1 for e in nikl if e['level'])} with a level", file=sys.stderr)
     finish(db)
     rime = english_to_korean(english, cache, work)
     write_pack(out, "lychee-dict-ko.zip", "dict_ko", "Korean dictionary", db_path, extra=rime, licences={
@@ -163,6 +252,13 @@ def build_ko(out: Path, cache: Path, work: Path):
                        "is shared under CC BY-SA 4.0: https://creativecommons.org/licenses/by-sa/4.0/\n"
                        "Changes: entries were reduced to their first meanings, Hanja and conjugated forms, "
                        "and converted to SQLite.\n"
+                       "Learner levels, standard pronunciations, key conjugated forms and the English "
+                       "meanings of words Wiktionary lacks (the nikl table, and those words) from the "
+                       "National Institute of Korean Language's Basic Korean Dictionary "
+                       "(한국어기초사전, https://krdict.korean.go.kr), licensed CC BY-SA 2.0 KR "
+                       "(https://creativecommons.org/licenses/by-sa/2.0/kr/), shared here under CC BY-SA "
+                       "4.0 as that licence allows. Changes: reduced to level, pronunciation (length "
+                       "marks removed), conjugated forms and English equivalents; no audio.\n"
                        "The English lookup (rime/lychee_en_ko) is made from the same meanings, ordered by "
                        "FrequencyWords (Hermit Dave, from OpenSubtitles 2018), CC BY-SA 4.0.\n",
     })

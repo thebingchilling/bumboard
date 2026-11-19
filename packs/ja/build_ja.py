@@ -37,7 +37,15 @@ MOZC = "https://raw.githubusercontent.com/google/mozc/master/src/data/dictionary
 JMDICT = "http://ftp.edrdg.org/pub/Nihongo/JMdict_e.gz"
 # KANJIDIC2 (EDRDG, CC BY-SA 4.0): each kanji's readings, meanings, school grade, strokes
 KANJIDIC = "http://ftp.edrdg.org/pub/Nihongo/kanjidic2.xml.gz"
-PACK_VERSION = "2"
+# JLPT levels: Jonathan Waller's lists (tanos.co.uk, CC BY), as compiled with JMdict ids by
+# stephenmk/yomitan-jlpt-vocab (CC BY-SA 4.0); one CSV per level: jmdict_seq,kana,kanji,definition
+JLPT = "https://raw.githubusercontent.com/stephenmk/yomitan-jlpt-vocab/main/original_data/n{}.csv"
+# pitch accent: Kanjium (mifunetoshiro/kanjium, CC BY-SA 4.0; accents by Uros O.):
+# word \t reading \t accent ("0", "2", "0,2", "(副)0,(名)3")
+ACCENTS = "https://raw.githubusercontent.com/mifunetoshiro/kanjium/master/data/source_files/raw/accents.txt"
+# KRADFILE (EDRDG, CC BY-SA 4.0): each kanji's parts, "<kanji> : <part> <part> ...", EUC-JP
+KRADFILE = "http://ftp.edrdg.org/pub/Nihongo/kradfile.gz"
+PACK_VERSION = "3"
 
 # hiragana -> Hepburn romaji
 BASE = {
@@ -155,7 +163,7 @@ def build_meanings(cache: Path, path: Path, english: list | None = None) -> int:
     db.executescript("""
         PRAGMA page_size=4096;
         CREATE TABLE word(form TEXT NOT NULL, lemma TEXT NOT NULL, reading TEXT, hanja TEXT, pos TEXT,
-                          gloss TEXT NOT NULL, rank INTEGER NOT NULL);
+                          gloss TEXT NOT NULL, rank INTEGER NOT NULL, vclass TEXT);
     """)
     rows = []
     rank = 0
@@ -168,7 +176,7 @@ def build_meanings(cache: Path, path: Path, english: list | None = None) -> int:
             # common words (news, ichi, spec lists) rank first
             common = any(p.text and p.text[:4] in ("news", "ichi", "spec")
                          for p in e.iter() if p.tag in ("ke_pri", "re_pri"))
-            senses, pos = [], None
+            senses, pos, vclass = [], None, None
             kana_usually = any(m.text and "usually written using kana" in m.text
                                for m in e.iter("misc"))
             for s in e.findall("sense"):
@@ -177,6 +185,8 @@ def build_meanings(cache: Path, path: Path, english: list | None = None) -> int:
                     senses.append("; ".join(gl))
                 if pos is None and s.find("pos") is not None:
                     pos = short_pos(s.findtext("pos") or "")
+                if vclass is None:
+                    vclass = next((c for c in (verb_class(p.text or "") for p in s.findall("pos")) if c), None)
             e.clear()
             if not senses or not kana:
                 continue
@@ -187,10 +197,11 @@ def build_meanings(cache: Path, path: Path, english: list | None = None) -> int:
             if english is not None:
                 english.append((kana[0] if kana_usually or not kanji else kanji[0], senses[:8], 1.0 if common else 0.4))
             for form in dict.fromkeys(kanji + kana):
-                rows.append((form, lemma, kana[0], None, pos, gloss, r))
-    db.executemany("INSERT INTO word VALUES(?,?,?,?,?,?,?)", rows)
+                rows.append((form, lemma, kana[0], None, pos, gloss, r, vclass))
+    db.executemany("INSERT INTO word VALUES(?,?,?,?,?,?,?,?)", rows)
     db.execute("CREATE INDEX word_form ON word(form)")
     add_kanji(cache, db)
+    add_learner(cache, db, {r[0] for r in rows})
     db.commit()
     db.execute("VACUUM")
     db.close()
@@ -205,7 +216,8 @@ def add_kanji(cache: Path, db: sqlite3.Connection):
     if not src.exists():
         urllib.request.urlretrieve(KANJIDIC, src)
     db.execute("CREATE TABLE kanji(ch TEXT PRIMARY KEY, onyomi TEXT, kunyomi TEXT, meanings TEXT, "
-               "grade INTEGER, strokes INTEGER) WITHOUT ROWID")
+               "grade INTEGER, strokes INTEGER, jlpt INTEGER, freq INTEGER, parts TEXT) WITHOUT ROWID")
+    parts = kanji_parts(cache)
     rows = []
     with gzip.open(src) as f:
         for _, e in ET.iterparse(f, events=("end",)):
@@ -218,13 +230,105 @@ def add_kanji(cache: Path, db: sqlite3.Connection):
             meanings = [m.text for m in e.iter("meaning") if m.get("m_lang") is None and m.text][:3]
             grade = e.findtext("misc/grade")
             strokes = e.findtext("misc/stroke_count")
+            # KANJIDIC2's (old, four-level) JLPT level and its newspaper frequency rank (1-2500)
+            jlpt = e.findtext("misc/jlpt")
+            freq = e.findtext("misc/freq")
             e.clear()
             if ch and (on or kun or meanings):
-                rows.append((ch, "、".join(on), "、".join(kun), "; ".join(meanings),
-                             int(grade) if grade and grade.isdigit() else None,
-                             int(strokes) if strokes and strokes.isdigit() else None))
-    db.executemany("INSERT OR IGNORE INTO kanji VALUES(?,?,?,?,?,?)", rows)
+                num = lambda v: int(v) if v and v.isdigit() else None  # noqa: E731
+                rows.append((ch, "、".join(on), "、".join(kun), "; ".join(meanings), num(grade), num(strokes),
+                             num(jlpt), num(freq), " ".join(p for p in parts.get(ch, []) if p != ch) or None))
+    db.executemany("INSERT OR IGNORE INTO kanji VALUES(?,?,?,?,?,?,?,?,?)", rows)
     print(f"ja.db: {len(rows)} kanji from KANJIDIC2", file=sys.stderr)
+
+
+def verb_class(p: str) -> str | None:
+    """JMdict's part-of-speech text -> the conjugation class Lychee's tables use: v1 (ichidan),
+    v5u v5k v5g v5s v5t v5n v5b v5m v5r (godan, by ending), v5k-s (行く), v5r-i (ある), v5aru
+    (いらっしゃる, ください...), v5u-s (問う), vk (来る), vs (する and suru verbs), vs-i (する),
+    adj-i, adj-ix (いい/よい), adj-na; None for anything else."""
+    q = p.lower()
+    if "ichidan verb" in q:
+        return "v1"
+    if "kuru verb" in q:
+        return "vk"
+    if "iku/yuku special class" in q:
+        return "v5k-s"
+    if "-aru special class" in q:
+        return "v5aru"
+    if "'ru' ending (irregular" in q:
+        return "v5r-i"
+    if "'u' ending (special class)" in q:
+        return "v5u-s"
+    if "godan verb with '" in q:
+        end = q.split("godan verb with '", 1)[1].split("'", 1)[0]
+        return {"u": "v5u", "ku": "v5k", "gu": "v5g", "su": "v5s", "tsu": "v5t", "nu": "v5n",
+                "bu": "v5b", "mu": "v5m", "ru": "v5r"}.get(end)
+    if "suru verb - included" in q or "suru verb - special class" in q:
+        return "vs-i"
+    if "takes the aux. verb suru" in q:
+        return "vs"
+    if "yoi/ii class" in q:
+        return "adj-ix"
+    if "adjective (keiyoushi)" in q:
+        return "adj-i"
+    if "adjectival nouns or quasi-adjectives" in q:
+        return "adj-na"
+    return None
+
+
+def kanji_parts(cache: Path) -> dict[str, list[str]]:
+    """KRADFILE: each kanji -> the parts it is drawn from."""
+    src = cache / "kradfile.gz"
+    if not src.exists():
+        urllib.request.urlretrieve(KRADFILE, src)
+    out: dict[str, list[str]] = {}
+    with gzip.open(src) as f:
+        for line in f.read().decode("euc_jp", errors="replace").splitlines():
+            if line.startswith("#") or " : " not in line:
+                continue
+            ch, rest = line.split(" : ", 1)
+            out[ch.strip()] = rest.split()
+    print(f"kradfile: {len(out)} kanji", file=sys.stderr)
+    return out
+
+
+def add_learner(cache: Path, db: sqlite3.Connection, forms: set[str]):
+    """The learner's extras: each word's JLPT level (5 = N5 ... 1 = N1) and its pitch accent
+    (the mora after which the pitch drops, 0 for none), for the words the dictionary has."""
+    db.execute("CREATE TABLE jlpt(form TEXT NOT NULL, reading TEXT NOT NULL, level INTEGER NOT NULL)")
+    rows = []
+    for n in range(1, 6):
+        src = cache / f"jlpt_n{n}.csv"
+        if not src.exists():
+            urllib.request.urlretrieve(JLPT.format(n), src)
+        import csv
+        with open(src, encoding="utf-8") as f:
+            for r in csv.DictReader(f):
+                kana, kanji = (r.get("kana") or "").strip(), (r.get("kanji") or "").strip()
+                if kana:
+                    rows.append((kanji or kana, kana, n))
+    # a word on two lists keeps the easier level (the higher number)
+    best: dict[tuple[str, str], int] = {}
+    for form, kana, n in rows:
+        best[(form, kana)] = max(best.get((form, kana), 0), n)
+    db.executemany("INSERT INTO jlpt VALUES(?,?,?)", [(f, k, n) for (f, k), n in best.items()])
+    db.execute("CREATE INDEX jlpt_form ON jlpt(form)")
+    print(f"ja.db: {len(best)} JLPT words", file=sys.stderr)
+
+    db.execute("CREATE TABLE accent(form TEXT NOT NULL, reading TEXT NOT NULL, accent TEXT NOT NULL)")
+    src = cache / "accents.txt"
+    if not src.exists():
+        urllib.request.urlretrieve(ACCENTS, src)
+    acc = []
+    with open(src, encoding="utf-8") as f:
+        for line in f:
+            p = line.rstrip("\n").split("\t")
+            if len(p) >= 3 and (p[0] in forms or p[1] in forms):
+                acc.append((p[0], p[1], p[2]))
+    db.executemany("INSERT INTO accent VALUES(?,?,?)", acc)
+    db.execute("CREATE INDEX accent_form ON accent(form)")
+    print(f"ja.db: {len(acc)} pitch accents", file=sys.stderr)
 
 
 def short_pos(p: str) -> str:
@@ -348,9 +452,16 @@ def main():
                    "(https://www.edrdg.org/edrdg/licence.html), used under CC BY-SA 4.0; this file "
                    "is shared under the same licence. Changes: reduced to the first glosses of each "
                    "sense and converted to SQLite.\n"
-                   "Kanji readings, meanings, grades and stroke counts (the kanji table) from "
-                   "KANJIDIC2, also the property of the EDRDG, used under CC BY-SA 4.0. Changes: "
-                   "up to four readings and three meanings each, converted to SQLite.\n")
+                   "Kanji readings, meanings, grades, stroke counts, JLPT levels and frequencies (the "
+                   "kanji table) from KANJIDIC2, and each kanji's parts from KRADFILE, both the "
+                   "property of the EDRDG, used under CC BY-SA 4.0. Changes: up to four readings and "
+                   "three meanings each, converted to SQLite.\n"
+                   "JLPT word levels (the jlpt table) from Jonathan Waller's JLPT Resources "
+                   "(http://www.tanos.co.uk/jlpt/, CC BY), as compiled by stephenmk/yomitan-jlpt-vocab "
+                   "(CC BY-SA 4.0). Changes: reduced to word, reading and level.\n"
+                   "Pitch accents (the accent table) from Kanjium "
+                   "(https://github.com/mifunetoshiro/kanjium), CC BY-SA 4.0, with accent data by "
+                   "Uros O. Changes: reduced to the words in this dictionary.\n")
     print(f"{pack}: {len(lines)} entries, {pack.stat().st_size >> 20} MB", file=sys.stderr)
 
 

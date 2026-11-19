@@ -136,19 +136,81 @@ object PackData {
         }.getOrDefault(emptyList())
     }
 
-    /** A kanji's KANJIDIC2 entry (in the Japanese pack): readings, meanings, grade, strokes. */
-    data class KanjiInfo(val onyomi: String, val kunyomi: String, val meanings: String, val grade: Int?, val strokes: Int?)
+    /**
+     * A kanji's KANJIDIC2 entry (in the Japanese pack): readings, meanings, grade, strokes, and
+     * (version 3 packs) its old four-level JLPT level, newspaper frequency rank and parts.
+     */
+    data class KanjiInfo(
+        val onyomi: String, val kunyomi: String, val meanings: String, val grade: Int?, val strokes: Int?,
+        val jlpt: Int? = null, val freq: Int? = null, val parts: String? = null,
+    )
 
     fun kanji(context: Context, ch: String): KanjiInfo? {
         val db = wordDb(context, "ja") ?: return null
+        fun Int.orNull(c: android.database.Cursor) = if (c.isNull(this)) null else c.getInt(this)
         return runCatching {
+            db.rawQuery("SELECT onyomi, kunyomi, meanings, grade, strokes, jlpt, freq, parts FROM kanji WHERE ch = ?", arrayOf(ch)).use { c ->
+                if (!c.moveToFirst()) null else KanjiInfo(
+                    c.getString(0).orEmpty(), c.getString(1).orEmpty(), c.getString(2).orEmpty(),
+                    3.orNull(c), 4.orNull(c), 5.orNull(c), 6.orNull(c), c.getString(7),
+                )
+            }
+        }.recoverCatching {
+            // an older pack: no JLPT, frequency or parts columns
             db.rawQuery("SELECT onyomi, kunyomi, meanings, grade, strokes FROM kanji WHERE ch = ?", arrayOf(ch)).use { c ->
                 if (!c.moveToFirst()) null else KanjiInfo(
                     c.getString(0).orEmpty(), c.getString(1).orEmpty(), c.getString(2).orEmpty(),
-                    if (c.isNull(3)) null else c.getInt(3), if (c.isNull(4)) null else c.getInt(4),
+                    3.orNull(c), 4.orNull(c),
                 )
             }
         }.getOrNull() // an older pack has no kanji table
+    }
+
+    /**
+     * A Japanese word's learner extras (Japanese pack version 3): its JLPT level (5 = N5 ...
+     * 1 = N1), its pitch accents (the mora after which the pitch drops, 0 for none; several when
+     * it varies, possibly marked by part of speech: "(副)0,(名)3") and its conjugation class
+     * (JapaneseConjugation's). Null fields when the pack has none.
+     */
+    data class JapaneseExtras(val jlpt: Int?, val accent: String?, val vclass: String?)
+
+    fun japaneseExtras(context: Context, form: String, reading: String?): JapaneseExtras? {
+        val db = wordDb(context, "ja") ?: return null
+        fun first(sql: String, vararg args: String): String? = runCatching {
+            db.rawQuery(sql, args).use { c -> if (c.moveToFirst() && !c.isNull(0)) c.getString(0) else null }
+        }.getOrNull()
+        val r = reading ?: form
+        val jlpt = first("SELECT level FROM jlpt WHERE form = ? AND reading = ? ORDER BY level DESC LIMIT 1", form, r)
+            ?: first("SELECT level FROM jlpt WHERE form = ? ORDER BY level DESC LIMIT 1", form)
+        val accent = first("SELECT accent FROM accent WHERE form = ? AND reading = ? LIMIT 1", form, r)
+            ?: first("SELECT accent FROM accent WHERE form = ? LIMIT 1", form)
+        val vclass = first("SELECT vclass FROM word WHERE form = ? AND vclass IS NOT NULL ORDER BY (lemma = form) DESC, rank LIMIT 1", form)
+        if (jlpt == null && accent == null && vclass == null) return null
+        return JapaneseExtras(jlpt?.toIntOrNull(), accent, vclass)
+    }
+
+    /**
+     * A Korean word's learner extras (Korean pack, the National Institute of Korean Language's
+     * learner dictionary): its level (1 beginner, 2 intermediate, 3 advanced), its standard
+     * pronunciation (학교 -> 학꾜) and its key conjugated forms with their pronunciations.
+     */
+    data class KoreanExtras(val level: Int?, val pron: String?, val forms: List<Pair<String, String>>, val pos: String?)
+
+    fun koreanExtras(context: Context, lemma: String): KoreanExtras? {
+        val db = wordDb(context, "ko") ?: return null
+        return runCatching {
+            // a graded homonym first
+            db.rawQuery("SELECT level, pron, forms, pos FROM nikl WHERE lemma = ? ORDER BY (level IS NULL), level LIMIT 1", arrayOf(lemma)).use { c ->
+                if (!c.moveToFirst()) null else KoreanExtras(
+                    if (c.isNull(0)) null else c.getInt(0),
+                    c.getString(1),
+                    c.getString(2).orEmpty().split('\n').mapNotNull { line ->
+                        line.split('|').takeIf { it.size == 2 && it[0].isNotBlank() }?.let { it[0] to it[1] }
+                    },
+                    c.getString(3),
+                )
+            }
+        }.getOrNull() // an older pack has no nikl table
     }
 
     /** Entries for [text] typed on the [engine] keyboard, the word itself before forms of others. */

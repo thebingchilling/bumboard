@@ -43,7 +43,7 @@ limit or a count, so there is nothing stored on the phone to reset.
 
 | Add-on | Free demo |
 |---|---|
-| Full dictionary card (each language) | The complete card for beginner words: HSK 1-2 (Chinese), JLPT N5 (Japanese), TOPIK I (Korean); other words get the simple card with the pack's sections as headings |
+| Full dictionary card (each language) | The complete card for beginner words: HSK 1-2 (Chinese), JLPT N5 (Japanese), beginner level (Korean, from the National Institute of Korean Language); other words get the simple card with the pack's sections as headings |
 | Stroke Order | Animated for the beginner characters |
 | Example Sentences | All sentences for beginner words, one for other words |
 | Google Handwriting | Single characters; whole words and phrases are paid |
@@ -77,19 +77,20 @@ Order and Example Sentences.
 | | Chinese (Cantonese and Mandarin) | Japanese | Korean |
 |---|---|---|---|
 | 1. Full dictionary card | All meanings, both languages side by side, Taiwan readings, colloquial Cantonese labels | All meanings, old kanji forms and kokuji notes (built) | All meanings, Hanja on the card (built) |
-| 2. Learner levels | HSK (in the data), Cantonese frequency bands | JLPT (Jonathan Waller's lists, CC BY) | TOPIK (source still to find; the national list's licence is unclear) |
-| 3. Pronunciation detail | Tones in both languages, tone colours | Pitch accent (Kanjium, CC BY-SA) | Sound changes shown, e.g. 학교 [학꾜] (Lychee's own rules) |
-| 4. Grammar help | Measure words (CC-CEDICT) | Verb and adjective conjugation tables (Lychee's own) | Verb and adjective conjugation tables (Lychee's own) |
-| 5. Characters | Character breakdown (parts, radical), English-to-Chinese lookup | Kanji details: parts, grade, frequency, readings (KANJIDIC2 and KRADFILE, CC BY-SA) | Each Hanja's meaning and sound (훈음), links to the Chinese and Japanese forms |
+| 2. Learner levels | HSK (in the data), Cantonese frequency bands | JLPT (Jonathan Waller's lists, CC BY; built) | Beginner, intermediate, advanced (the National Institute of Korean Language's Basic Korean Dictionary, CC BY-SA 2.0 KR; built). TOPIK's own list has no reuse licence |
+| 3. Pronunciation detail | Tones in both languages, tone colours | Pitch accent (Kanjium, CC BY-SA; built) | Sound changes shown, e.g. 학교 [학꾜] (the Basic Korean Dictionary's standard pronunciations; built) |
+| 4. Grammar help | Measure words (CC-CEDICT) | Verb and adjective conjugation tables (Lychee's own rules, by JMdict's verb classes; built) | Verb and adjective conjugation tables (from the Basic Korean Dictionary's key forms, which carry every irregularity; built) |
+| 5. Characters | Character breakdown (parts, radical), English-to-Chinese lookup | Kanji details: parts, grade, frequency, readings (KANJIDIC2 and KRADFILE, CC BY-SA; built) | Each Hanja's meaning and sound (built) |
 | 6. Bonus fonts (pack only) | Chinese fonts | Japanese fonts | Korean fonts |
 
 Value of each pack bought as separate add-ons: $9.99 + $5.99 + $3.99 + $3.99 = $23.96 (the bonus
 fonts are not counted), so a pack is about 63% of its parts.
 
-**Before launch:** build the Japanese and Korean extras (JLPT, pitch accent, conjugation, kanji
-details; TOPIK once a usable licence is found, sound changes, conjugation, Hanja meaning and
-sound) so every $14.99 pack is equally deep. Every data source is licence-checked first
-(commercial use allowed: no NC or ND).
+**Built:** the Japanese and Korean extras above are in the packs (Japanese pack version 3,
+Korean pack with the Basic Korean Dictionary's data) and on the word card, so every pack is
+equally deep. Every data source is licensed for commercial use (no NC or ND), with attribution
+in each pack's LICENSE.txt. Still to do before paid launch: move the conjugation rules into the
+encrypted pack data (they are code for now), per the security model.
 
 ## Full
 
