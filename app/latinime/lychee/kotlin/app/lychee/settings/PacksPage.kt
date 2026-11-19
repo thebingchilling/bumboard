@@ -72,6 +72,9 @@ fun rememberPackActions(): PackActions {
                 is PackImporter.Result.Error -> result.message
             }
             version++
+            // everything reading the packs (the Updates banner, the cards) reads them again: the
+            // picker hands back before the install is done, so resuming came too early
+            PackRefresh.tick++
         }
     }
     return PackActions(
@@ -89,6 +92,7 @@ fun rememberPackActions(): PackActions {
         remove = { pack ->
             Packs.remove(context, pack.id)
             version++
+            PackRefresh.tick++
         },
         dismiss = { message = null },
         refresh = { version++ },

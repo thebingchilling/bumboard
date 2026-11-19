@@ -26,6 +26,10 @@ object PackImporter {
         data class Error(val message: String) : Result()
     }
 
+    /** The version a published file is named with, or null. */
+    fun versionInName(name: String): String? =
+        Regex("-(\\d{4}\\.\\d{1,2}\\.\\d{1,2}(?:\\.\\d+)?)(?: ?\\(\\d+\\))?\\.zip$").find(name)?.groupValues?.get(1)
+
     /** Files bigger than this are refused outright. */
     private const val MAX_BYTES = 700L shl 20
 
@@ -60,7 +64,9 @@ object PackImporter {
             }
             // an update was found, and this is an earlier download of the pack (an older file in
             // Downloads): say which file is the update, rather than installing the old one again
-            val fileVersion = info?.optString("version")?.takeIf { it.isNotEmpty() }
+            // the version: the pack's own, else the one its file is named with
+            // ("lychee-korean-dictionary-2026.11.18.2.zip", "... (1).zip" for a second download)
+            val fileVersion = info?.optString("version")?.takeIf { it.isNotEmpty() } ?: versionInName(name)
             val wanted = Updates.latestOf(context, pack)
             if (fileVersion != null && wanted != null && Packs.isInstalled(context, pack.id) &&
                 Updates.compare(fileVersion, wanted) < 0) {
@@ -80,7 +86,7 @@ object PackImporter {
                 val problem = checkFont(file, pack.kind)
                 if (problem != null) return Result.Error(problem)
             }
-            val version = info?.optString("version")?.takeIf { it.isNotEmpty() }
+            val version = fileVersion
                 ?: pack.version.takeIf { it.isNotEmpty() && it != "latest" }
                 ?: name
             // swap in the new copy
