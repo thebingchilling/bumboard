@@ -38,6 +38,8 @@
     <uses-permission android:name="app.lychee.permission.HANDWRITING"/>
     <queries>
         <package android:name="app.lychee.hwgoogle"/>
+        <!-- LYCHEE: whether Google Play is here (paid add-ons are bought through it) -->
+        <package android:name="com.android.vending"/>
         <intent>
             <action android:name="android.speech.RecognitionService"/>
         </intent>

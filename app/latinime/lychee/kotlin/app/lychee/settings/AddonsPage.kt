@@ -113,6 +113,8 @@ fun AddonsPage() {
     UpdatesCard()
     // the higher-quality handwriting, first in the store
     GoogleHandwritingCard()
+    // the paid add-ons: bundles, then every add-on (only the UI so far: free for now)
+    StoreSection()
 
     // by language (Chinese, Japanese, Korean, English), then the others
     val sections = PackStorage.Section.entries.filter { sec -> sec != PackStorage.Section.OWN && catalog.any { PackStorage.section(it) == sec } }
@@ -312,6 +314,15 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
                 if (pack.summary.isNotEmpty()) {
                     Text(pack.summary, style = MaterialTheme.typography.bodySmall,
                         color = colors.onSurfaceVariant.copy(alpha = if (installed) 0.7f else 1f), maxLines = 2)
+                }
+                // the paid add-on this download belongs to, and the packs that include it
+                app.lychee.store.Store.forPack(pack.id)?.let { product ->
+                    Text(
+                        product.name + " · in " + app.lychee.store.Store.includedIn(product.id)
+                            .joinToString(", ") { it.name.removePrefix("Lychee ") },
+                        style = MaterialTheme.typography.labelSmall, color = colors.primary, maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
                 }
                 // the size and version on a line of their own; where it stands before them
                 val update = if (installed) app.lychee.packs.Updates.newer(context, pack) else null

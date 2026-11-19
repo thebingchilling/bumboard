@@ -98,7 +98,7 @@ sound) so every $14.99 pack is equally deep. Every data source is licence-checke
   emoji style.
 - **$29.99 at launch**, rising to **$39.99** for new buyers once flashcards and the planned
   features land (early buyers got the better deal).
-- Value today: $46.93 of add-ons, so Full is about 64% and falls as more is added.
+- Value today: $48.93 of add-ons, so Full is about 61% and falls as more is added.
 - **Owning packs takes their price off Full**, down to $0: one pack leaves $15.00 to pay; owning
   two packs ($29.98) unlocks Full automatically.
 - **Licensed third-party dictionaries**, if ever added, are sold separately with a 30% discount
@@ -112,6 +112,10 @@ sound) so every $14.99 pack is equally deep. Every data source is licence-checke
 - Full is $24.99 for the first month after launch.
 
 ## The store (UI first, no billing)
+
+**Built:** `store/Store.kt` (every add-on, pack and Full with its price, contents, what is still to
+come, and the honest reasons paid add-ons won't be available) and `settings/StoreSection.kt` (the
+store in Settings > Add-ons).
 
 - Opens with "Pick a bundle, or buy add-ons individually".
 - Bundle cards first, Full at the top as the best value; each states its price, its item count
@@ -131,6 +135,8 @@ sound) so every $14.99 pack is equally deep. Every data source is licence-checke
 - Licensed dictionaries, sold separately (see Full).
 - Lychee's own billing (direct purchase on its website, Pleco-style) for phones without Google
   Play.
+- Classroom licences: a teacher buys several registrations at once (later, with Lychee's own
+  billing).
 
 ## Registration (Pleco-style)
 
@@ -228,6 +234,24 @@ thousands of entries one at a time, a cracked copy kept working through every up
 payoff small (much of the data is openly licensed and free elsewhere; what Lychee sells is the
 dictionary in the keyboard, kept up to date). No watermarking.
 
+**Decrypted text never touches storage.** Paid entries exist in plain text only on screen and
+in memory while a card shows: never written to caches, files, logs, crash reports or the
+diagnostics log, and the paid packs and keys are left out of Android backups.
+
+**Pack keys can be replaced.** If a pack's key ever leaked, its next version gets a new key, and
+the next update check through the browser fetches it, using the registration.
+
+**Refunds.** Google tells the unlock function about refunded purchases. Lychee can't hear that
+offline, so a refunded add-on is removed at the next trip through the browser (an update check
+or an unlock), and the person is told why.
+
+**Purchases are acknowledged at once.** Google Play refunds purchases that aren't acknowledged
+within three days; Lychee acknowledges on the phone as soon as the purchase completes (no network
+needed), so nobody loses a purchase by not finishing the unlock straight away.
+
+**Works offline after unlocking, forever.** Once a key is in the chip, the add-on needs nothing
+online again, unless the person asks to move it or a refund removes it.
+
 **Obfuscation** (R8 on Lychee's own code) is an extra speed bump only; the protection never
 depends on it. The handwriting companion stays unshrunk (R8 broke ML Kit).
 
@@ -255,5 +279,10 @@ font files stay free downloads.
   (each confirmed to add no network permission), honest notes wherever paid add-ons can't be
   offered, R8 on its own code.
 - **The handwriting companion**: the server-signed licence check.
+- **The unlock function's limits**: rate limits per phone and per registration, and long random
+  registration keys, so keys can't be guessed or the function flooded.
+- **A privacy policy** (Google Play requires one): what the unlock function receives (the
+  receipt, the one-time code, the attestation and an optional email), that it never receives
+  anything typed, and that Lychee itself never goes online.
 - **Testing before launch**: Chromebooks running Android apps (they may not report hardware
   attestation), and phones with StrongBox versus TEE (StrongBox is slower per entry).
