@@ -245,7 +245,7 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
         meaning(listOf(hw), lang, null)?.let { return shorten(it, 16) }
         val cps = hw.traditional.codePoints().toArray()
         if (cps.size > 1) {
-            val chars = cps.mapNotNull { cp ->
+            val chars = cps.toList().mapNotNull { cp ->
                 lookup(String(Character.toChars(cp))).firstOrNull()?.let { meaning(listOf(it), lang, null) }
                     ?.let { shorten(it, 12) }
             }
