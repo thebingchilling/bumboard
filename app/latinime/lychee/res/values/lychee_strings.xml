@@ -229,23 +229,13 @@
     <string name="lychee_key_style_raised">Raised keys with shadows</string>
 
     <!-- Voice typing -->
-    <string name="lychee_voice_starting">Starting…</string>
-    <string name="lychee_voice_listening">Speak now</string>
-    <string name="lychee_voice_starting_offline">Starting on this phone…</string>
-    <string name="lychee_voice_listening_offline">Speak now · offline</string>
     <string name="lychee_pref_voice_offline">Voice typing offline</string>
     <string name="lychee_pref_voice_offline_summary">Recognise speech on this phone when it can (Android 12+), so nothing is sent anywhere</string>
-    <string name="lychee_voice_offline_missing">%1$s isn\'t on this phone for offline voice typing</string>
-    <string name="lychee_voice_download">Download</string>
-    <string name="lychee_voice_online_once">Online this time</string>
-    <string name="lychee_voice_downloading">Downloading %1$s… %2$d%%</string>
-    <string name="lychee_voice_downloaded">%1$s downloaded. Tap the mic to speak</string>
-    <string name="lychee_voice_download_scheduled">Android will download %1$s (see its notification)</string>
-    <string name="lychee_voice_download_failed">The download didn\'t work. Try again later</string>
-    <string name="lychee_voice_working">Working…</string>
+    <string name="lychee_voice_no_recogniser">Voice typing needs a speech recogniser, and this phone has none. Speech Services by Google adds one</string>
+    <string name="lychee_voice_no_network">Voice typing needs the internet here: the phone\'s speech recogniser works online</string>
+    <string name="lychee_voice_no_permission">The speech recogniser isn\'t allowed to use the microphone (Android Settings › Apps)</string>
     <string name="lychee_voice_error">Voice typing isn’t available right now</string>
-    <string name="lychee_voice_stop">Stop listening</string>
-    <string name="lychee_voice_cancel">Cancel voice typing</string>
+    <string name="lychee_voice_stop_listening">Stop listening and type what was said</string>
     <string name="lychee_voice_permission_granted">Microphone allowed. Tap the mic again to speak.</string>
     <string name="lychee_card_pronunciation">Pronunciation</string>
     <string name="lychee_hw_upgrade">Better handwriting: Google\'s</string>
@@ -301,6 +291,7 @@
     <string name="lychee_card_conjugation">Conjugation</string>
     <string name="lychee_card_old_form">Traditional</string>
     <string name="lychee_card_kokuji">Made in Japan (kokuji): not a Chinese character</string>
+    <string name="lychee_card_gukja">Made in Korea (gukja): not a Chinese character</string>
     <string name="lychee_card_shinjitai_same">Simplified in Japan as in Chinese · traditional %1$s</string>
     <string name="lychee_card_shinjitai_own">Japanese simplification · traditional %1$s, Simplified Chinese %2$s</string>
     <string name="lychee_card_shinjitai_kept">Japanese simplification · traditional %1$s, as Chinese writes it</string>

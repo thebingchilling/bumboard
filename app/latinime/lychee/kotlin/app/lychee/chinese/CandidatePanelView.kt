@@ -40,8 +40,15 @@ class CandidatePanelView @JvmOverloads constructor(
     private val adapter = Adapter()
     private val layoutManager = GridLayoutManager(context, COLUMNS)
     private val divider = Paint().apply {
-        color = androidx.core.graphics.ColorUtils.setAlphaComponent(palette.outlineVariant, 0xB0)
+        color = androidx.core.graphics.ColorUtils.setAlphaComponent(palette.outlineVariant, 0x80)
         strokeWidth = resources.displayMetrics.density
+    }
+    /** The list fades out at the bottom, above the navigation buttons, instead of being cut. */
+    private val fade = android.view.View(context).apply {
+        background = android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(palette.surface and 0x00FFFFFF, androidx.core.graphics.ColorUtils.setAlphaComponent(palette.surface, 0xE0), palette.surface),
+        )
     }
 
     init {
@@ -52,8 +59,25 @@ class CandidatePanelView @JvmOverloads constructor(
         }
         grid.layoutManager = layoutManager
         grid.adapter = adapter
-        // no grid lines: the candidates sit on the page as they do on the bar
+        // slight dividers keep the candidates apart: a short line between neighbours, a faint
+        // one under each row
+        grid.addItemDecoration(object : RecyclerView.ItemDecoration() {
+            override fun onDraw(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
+                val inset = dp(10).toFloat()
+                for (i in 0 until parent.childCount) {
+                    val v = parent.getChildAt(i)
+                    val l = v.left + v.translationX
+                    val r = v.right + v.translationX
+                    val t = v.top + v.translationY
+                    val b = v.bottom + v.translationY
+                    if (r < parent.width - parent.paddingRight - dp(4)) c.drawLine(r, t + inset, r, b - inset, divider)
+                    c.drawLine(l + inset / 2, b, r - inset / 2, b, divider)
+                }
+            }
+        })
+        grid.clipToPadding = false
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(fade, LayoutParams(LayoutParams.MATCH_PARENT, dp(FADE_DP), Gravity.BOTTOM))
         visibility = GONE
     }
 
@@ -87,6 +111,10 @@ class CandidatePanelView @JvmOverloads constructor(
         adapter.annotated = annotate != null
         adapter.notifyDataSetChanged()
         grid.scrollToPosition(0)
+        // room under the last row: it scrolls clear of the fade and the navigation buttons
+        val nav = app.lychee.KeyboardInsets.bottomPadding(rootView)
+        grid.setPadding(0, 0, 0, nav + dp(FADE_DP))
+        fade.layoutParams = (fade.layoutParams as LayoutParams).apply { height = nav + dp(FADE_DP) }
         visibility = VISIBLE
         if (annotate == null) return
         val items = adapter.items
@@ -225,6 +253,8 @@ class CandidatePanelView @JvmOverloads constructor(
     private companion object {
         /** A fine grid: candidates take as many columns as their width needs. */
         const val COLUMNS = 12
+        /** How tall the fade at the bottom is (above any navigation buttons). */
+        const val FADE_DP = 32
         val worker: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor()
     }
 }

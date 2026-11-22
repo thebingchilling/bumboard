@@ -179,6 +179,27 @@ class HandwritingPanelView @JvmOverloads constructor(
         placeOverKey(deleteKey, Constants.CODE_DELETE)
     }
 
+    /**
+     * The candidates' dropdown opens over the keys: the pad's own ⌫ and ABC (in the parent, on
+     * top) step out of its way until it closes.
+     */
+    private val dropdownWatcher = android.view.ViewTreeObserver.OnGlobalLayoutListener {
+        if (this.visibility != VISIBLE) return@OnGlobalLayoutListener
+        val open = rootView.findViewById<View>(R.id.lychee_candidate_panel)?.visibility == VISIBLE
+        val want = if (open) GONE else VISIBLE
+        for (k in listOf(deleteKey, backKey)) if (k.parent != null && k.visibility != want) k.visibility = want
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        viewTreeObserver.addOnGlobalLayoutListener(dropdownWatcher)
+    }
+
+    override fun onDetachedFromWindow() {
+        viewTreeObserver.removeOnGlobalLayoutListener(dropdownWatcher)
+        super.onDetachedFromWindow()
+    }
+
     /** Back, laid exactly over the keyboard's ?123 key (beside the pad, in the panel's parent). */
     private fun placeBack() = placeOverKey(backKey, Constants.CODE_SWITCH_ALPHA_SYMBOL)
 
@@ -410,17 +431,27 @@ class HandwritingPanelView @JvmOverloads constructor(
      * kana come in too.
      */
     private fun rank(o: Recognizer?, m: StrokeMatcher?, ink: List<FloatArray>, engine: String?, before: String? = null): List<String> {
-        // each keyboard only its own language's characters: Korean, Hangul; Japanese, kana and
-        // kanji; Chinese, the characters its dictionary has (no kana, Hangul, or characters
-        // only Japanese or Korean use)
+        // each keyboard every character of its own language, whichever script the candidates
+        // are in, and nothing else: Chinese, every Chinese character, Traditional and Simplified
+        // (not those only Japan or Korea made, unless Chinese writes them too, as 腺); Japanese,
+        // kana and every kanji (Unihan's Japanese readings, the kanji dictionary, kokuji, never
+        // Korea's own); Korean, Hangul and every Hanja (Unihan's Korean readings, and gukja such
+        // as 乭 畓 欌, never Japan's own)
         val chinese = if (engine == "ko" || engine == "ja") null else chineseCharacters()
-        // Japanese: kana, and kanji as Japanese writes them (not characters only Chinese uses)
         val japanese = if (engine == "ja") japaneseCharacters(context) else null
+        val db = app.lychee.chinese.Readings.db
+        val kokuji = app.lychee.chinese.CjkForms.KOKUJI
+        val gukja = app.lychee.chinese.CjkForms.GUKJA
         val allowed: (String) -> Boolean = when (engine) {
-            // Korean: Hangul, and Hanja
-            "ko" -> { ch -> (ch.length == 1 && ch[0] in '\uAC00'..'\uD7A3') || isHan(ch) }
-            "ja" -> { ch -> isKana(ch) || (isHan(ch) && (japanese == null || ch in japanese)) }
-            else -> { ch -> isHan(ch) && (chinese == null || ch in chinese) }
+            "ko" -> { ch ->
+                (ch.length == 1 && ch[0] in '\uAC00'..'\uD7A3') ||
+                    (isHan(ch) && (ch in gukja || (ch !in kokuji && (db == null || hasReading(db, ch, "ko")))))
+            }
+            "ja" -> { ch ->
+                isKana(ch) || (isHan(ch) && ch !in gukja &&
+                    (ch in kokuji || japanese?.contains(ch) == true || db == null || hasReading(db, ch, "ja")))
+            }
+            else -> { ch -> isHan(ch) && (chinese?.contains(ch) == true || (ch !in kokuji && ch !in gukja)) }
         }
         val score = LinkedHashMap<String, Float>()
         o?.recognise(ink, 20, allowed)?.forEach { (ch, p) -> score[ch] = p }
@@ -462,18 +493,24 @@ class HandwritingPanelView @JvmOverloads constructor(
             if (n > 0) score[ch] = score.getValue(ch) + PERSONAL * kotlin.math.min(1f, kotlin.math.ln(1f + n) / 3f)
         }
         if (engine != "ko") {
-            val db = app.lychee.chinese.Readings.db
-            val logTop = db?.let { kotlin.math.ln(it.maxFrequency + 1.0) }?.takeIf { it > 0 }
-            if (db != null && logTop != null) {
+            val freqDb = app.lychee.chinese.Readings.db
+            val logTop = freqDb?.let { kotlin.math.ln(it.maxFrequency + 1.0) }?.takeIf { it > 0 }
+            if (freqDb != null && logTop != null) {
                 for (ch in score.keys.toList()) {
                     if (!isHan(ch)) continue
-                    val f = runCatching { db.frequency(ch) }.getOrDefault(0L)
+                    val f = runCatching { freqDb.frequency(ch) }.getOrDefault(0L)
                     score[ch] = score.getValue(ch) + COMMON * (kotlin.math.ln(f + 1.0) / logTop).toFloat()
                 }
             }
         }
         return score.entries.sortedByDescending { it.value }.map { it.key }
     }
+
+    /** Whether Unihan gives [ch] a reading in [lang] ("ja" kanji, "ko" Hanja), remembered. */
+    private fun hasReading(db: app.lychee.core.ReadingsDb, ch: String, lang: String): Boolean =
+        readingSeen.getOrPut(lang + ch) { db.charReadings(ch, lang).isNotEmpty() }
+
+    private val readingSeen = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 
     private fun isKana(ch: String) = ch.length == 1 && ch[0] in '\u3040'..'\u30FF'
 
@@ -617,11 +654,9 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     /** The recogniser's guesses for the ink on the pad, in the candidate bar. */
     private fun showGuesses(found: List<String>) {
-        // writing Traditional: every written form of each character (為 then 爲)
-        @Suppress("DEPRECATION")
-        val traditional = !app.lychee.chinese.ChineseScript.candidatesSimplified(
-            android.preference.PreferenceManager.getDefaultSharedPreferences(context))
-        val list = if (traditional) app.lychee.chinese.Variants.expand(context, found) else found
+        // every written form of each character (為 then 爲), whichever script the candidates are in
+        val list = if (lycheeHost()?.lycheeEngine().let { it == "ja" || it == "ko" }) found
+            else app.lychee.chinese.Variants.expand(context, found)
         guesses = list
         lycheeHost()?.lycheeShowGuesses(list) { i -> list.getOrNull(i)?.let { pick(it) } }
     }

@@ -26,6 +26,8 @@ import java.util.concurrent.atomic.AtomicInteger
 class GoogleHandwriting private constructor(
     private val context: Context,
     private val lang: String,
+    /** A second model read alongside (Chinese: the other script's), its guesses merged in. */
+    private val also: String?,
     private val before: () -> String,
     /** Reads the pad while the companion is still downloading this language's model. */
     private val fallback: () -> Recognizer?,
@@ -73,6 +75,7 @@ class GoogleHandwriting private constructor(
         val id = ids.incrementAndGet()
         val data = Bundle().apply {
             putString("lang", lang)
+            also?.let { putString("also", it) }
             putInt("count", strokes.size)
             strokes.forEachIndexed { i, st -> putFloatArray("s$i", st) }
             putFloat("width", padWidth)
@@ -126,10 +129,21 @@ class GoogleHandwriting private constructor(
             else -> if (simplified) "zh-Hani-CN" else "zh-Hani-TW"
         }
 
+        /**
+         * Chinese reads both scripts' models, so every character comes up whichever script the
+         * candidates are in: this is the other one (Traditional's for Simplified and back).
+         */
+        fun alsoFor(engine: String?, simplified: Boolean): String? = when (engine) {
+            "ja", "ko" -> null
+            "yue" -> if (simplified) "zh-Hani-HK" else "zh-Hani-CN"
+            else -> if (simplified) "zh-Hani-TW" else "zh-Hani-CN"
+        }
+
         /** Opens the companion when it is installed; null when it isn't. */
         fun open(context: Context, engine: String?, simplified: Boolean, before: () -> String,
                  fallback: () -> Recognizer? = { null }): GoogleHandwriting? =
-            if (installed(context)) GoogleHandwriting(context.applicationContext, languageFor(engine, simplified), before, fallback) else null
+            if (installed(context)) GoogleHandwriting(context.applicationContext, languageFor(engine, simplified),
+                alsoFor(engine, simplified), before, fallback) else null
 
         /** The companion's setup screen (downloads the models; also checks for newer ones). */
         fun openSetup(context: Context) {

@@ -19,7 +19,8 @@ import com.google.mlkit.vision.digitalink.recognition.WritingArea
  * What Lychee binds to read its handwriting pad (only apps with Lychee's signature may: the
  * manifest's permission). Messages, the same as Lychee's GoogleHandwriting:
  *
- *   RECOGNISE  data: "lang" (a Models.TAGS tag), "count", "s0".."sN" (each stroke's x, y pairs),
+ *   RECOGNISE  data: "lang" (a Models.TAGS tag), optionally "also" (a second tag, read alongside
+ *              and merged in: Chinese reads both scripts), "count", "s0".."sN" (each stroke's x, y pairs),
  *              "width", "height" (the pad), "before" (the text before the cursor)
  *              reply RESULT  data: "texts" (best first), or "notReady" while the model is
  *              still downloading (Lychee's own engine reads the pad meanwhile)
@@ -56,7 +57,16 @@ class RecognitionService : Service() {
         val model = Models.model(lang) ?: return send(reply, RESULT, id, Bundle())
         Models.manager.isModelDownloaded(model).addOnCompleteListener { task ->
             if (task.isSuccessful && task.result == true) {
-                runCatching { read(lang, data, reply, id) }.onFailure { send(reply, RESULT, id, Bundle()) }
+                // the second model only once it is downloaded (it comes by itself meanwhile)
+                val alsoModel = data.getString("also")?.takeIf { it != lang }?.let { Models.model(it) }
+                if (alsoModel == null) {
+                    runCatching { read(lang, false, data, reply, id) }.onFailure { send(reply, RESULT, id, Bundle()) }
+                } else {
+                    Models.manager.isModelDownloaded(alsoModel).addOnCompleteListener { t ->
+                        val alsoReady = t.isSuccessful && t.result == true
+                        runCatching { read(lang, alsoReady, data, reply, id) }.onFailure { send(reply, RESULT, id, Bundle()) }
+                    }
+                }
             } else {
                 send(reply, RESULT, id, Bundle().apply { putBoolean("notReady", true) })
                 Models.fetchMissing()
@@ -64,7 +74,7 @@ class RecognitionService : Service() {
         }
     }
 
-    private fun read(lang: String, data: Bundle, reply: Messenger, id: Int) {
+    private fun read(lang: String, alsoReady: Boolean, data: Bundle, reply: Messenger, id: Int) {
         val recognizer = recognizers.getOrPut(lang) {
             val model = Models.model(lang) ?: return send(reply, RESULT, id, Bundle())
             DigitalInkRecognition.getClient(DigitalInkRecognizerOptions.builder(model).build())
@@ -84,13 +94,29 @@ class RecognitionService : Service() {
             .setPreContext(data.getString("before").orEmpty())
             .setWritingArea(WritingArea(data.getFloat("width", 1f), data.getFloat("height", 1f)))
             .build()
-        recognizer.recognize(ink.build(), context)
-            .addOnSuccessListener { result ->
-                send(reply, RESULT, id, Bundle().apply {
-                    putStringArrayList("texts", ArrayList(result.candidates.map { it.text }))
-                })
+        val built = ink.build()
+        // a second model (Chinese: the other script's), when it is downloaded, read at the same
+        // time; the guesses alternate, the asked model's first, without repeats
+        val alsoTag = data.getString("also")?.takeIf { alsoReady && it != lang }
+        val alsoRecognizer = alsoTag?.let { tag ->
+            recognizers[tag] ?: Models.model(tag)?.let { m ->
+                DigitalInkRecognition.getClient(DigitalInkRecognizerOptions.builder(m).build()).also { recognizers[tag] = it }
             }
-            .addOnFailureListener { send(reply, RESULT, id, Bundle()) }
+        }
+        val first = recognizer.recognize(built, context)
+        val second = alsoRecognizer?.recognize(built, context)
+        val all = listOfNotNull(first, second)
+        com.google.android.gms.tasks.Tasks.whenAllComplete(all).addOnCompleteListener {
+            val a = if (first.isSuccessful) first.result.candidates.map { it.text } else emptyList()
+            val b = if (second != null && second.isSuccessful) second.result.candidates.map { it.text } else emptyList()
+            if (!first.isSuccessful && b.isEmpty()) return@addOnCompleteListener send(reply, RESULT, id, Bundle())
+            val merged = LinkedHashSet<String>()
+            for (i in 0 until maxOf(a.size, b.size)) {
+                a.getOrNull(i)?.let { merged += it }
+                b.getOrNull(i)?.let { merged += it }
+            }
+            send(reply, RESULT, id, Bundle().apply { putStringArrayList("texts", ArrayList(merged)) })
+        }
     }
 
     private fun send(to: Messenger, what: Int, id: Int, data: Bundle) {

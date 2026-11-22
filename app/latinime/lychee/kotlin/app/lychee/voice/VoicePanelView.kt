@@ -5,32 +5,33 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
-import android.os.Build
+import android.media.AudioManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.AttributeSet
 import android.util.Log
-import android.util.TypedValue
-import android.view.Gravity
-import android.view.View
 import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
-import app.lychee.ui.M3Colors
+import android.widget.Toast
 import com.android.inputmethod.latin.R
 
 /**
- * Voice typing in the bar above the keys, like Gboard's. Speech goes to Google's recognition
- * service when the phone has it (Speech Services by Google, then the Google app), or to the
- * system default; that service does its own networking, Lychee itself never does. The
- * panel shows what is heard as it is heard and hands the final text to [onText]; nothing is
- * typed until the recogniser is done, so LatinIME's own composing state is never disturbed.
+ * Voice typing, started and stopped by the mic key alone: a tap starts listening and the mic
+ * glows (brighter as you speak, [onLevel]); a second tap stops, and what was said is typed. No bar
+ * opens over the candidates. Speech goes to Google's recognition service when the phone has it
+ * (Speech Services by Google, then the Google app), or to the system default; that service does
+ * its own networking, Lychee itself never does. Nothing is typed until the recogniser is done, so
+ * LatinIME's own composing state is never disturbed. When voice typing can't start or fails, a
+ * short message says why.
+ *
+ * The recogniser's start and stop tones play at the media volume, loud for a key that is easily
+ * touched by accident: while listening, the media volume is turned down (to a third of where it
+ * was), and put back afterwards unless it was changed meanwhile.
+ *
+ * Kept as a view (it has no size and never shows) so the layout and LatinIME find it as before.
  */
 class VoicePanelView @JvmOverloads constructor(
     context: Context,
@@ -39,80 +40,28 @@ class VoicePanelView @JvmOverloads constructor(
 
     /** Final recognised text, ready to type. */
     var onText: (String) -> Unit = {}
-    /** The panel closed (done, cancelled or failed). */
-    var onClose: () -> Unit = {}
+    /** Listening started (true) or ended (false): the mic key glows while it listens. */
+    var onListening: (Boolean) -> Unit = {}
+    /** How loud the speech is now, 0..1, for the mic's glow. */
+    var onLevel: (Float) -> Unit = {}
 
-    private val palette = M3Colors.of(context)
     private var recognizer: SpeechRecognizer? = null
-    private val mic = ImageView(context)
-    private val micHalo = View(context)
-    private val status = TextView(context)
-    private val heard = TextView(context)
-    /** Offline language missing: Download, or online this time. */
-    private val choices = LinearLayout(context).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
+    private val main = Handler(Looper.getMainLooper())
+
+    val isActive: Boolean get() = recognizer != null
+
+    init {
         visibility = GONE
     }
 
-    val isActive: Boolean get() = visibility == VISIBLE
-
-    init {
-        // a bar in place of the strip, like Gboard's: Back, what is heard, and the mic
-        setBackgroundColor(palette.surface)
-        isClickable = true
-        val row = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+    /** The mic key: starts listening, or stops (and types what was said) when listening. */
+    fun toggle(language: String?): Boolean {
+        val r = recognizer
+        if (r != null) {
+            runCatching { r.stopListening() }.onFailure { cancel() }
+            return true
         }
-        row.addView(app.lychee.layout.LycheePanels.backButton(context) { cancel() },
-            LinearLayout.LayoutParams(dp(48), LayoutParams.MATCH_PARENT))
-        val words = FrameLayout(context)
-        status.apply {
-            setTextColor(palette.onSurfaceVariant)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        heard.apply {
-            setTextColor(palette.onSurface)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-            gravity = Gravity.CENTER_VERTICAL
-            isSingleLine = true
-            ellipsize = android.text.TextUtils.TruncateAt.START
-        }
-        words.addView(status, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-        words.addView(heard, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-        words.addView(choices, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT, Gravity.END))
-        row.addView(words, LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(8) })
-        val micBox = FrameLayout(context)
-        micHalo.background = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(palette.primaryContainer)
-        }
-        mic.apply {
-            setImageResource(R.drawable.ic_sym_mic)
-            imageTintList = ColorStateList.valueOf(palette.onPrimary)
-            scaleType = ImageView.ScaleType.CENTER
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(palette.primary)
-            }
-            contentDescription = context.getString(R.string.lychee_voice_stop)
-            // tap the mic to stop (or to start again after a stop)
-            setOnClickListener {
-                val r = recognizer
-                if (r != null) r.stopListening() else start(language)
-            }
-        }
-        micBox.addView(micHalo, LayoutParams(dp(42), dp(42), Gravity.CENTER))
-        micBox.addView(mic, LayoutParams(dp(40), dp(40), Gravity.CENTER))
-        row.addView(micBox, LinearLayout.LayoutParams(dp(56), LayoutParams.MATCH_PARENT))
-        // the panel covers the whole bar (taller on the Chinese, Japanese and Korean keyboards),
-        // but its row keeps the usual strip height at the bottom, right above the keys: it is in
-        // exactly the same place on every keyboard and never moves up
-        addView(row, LayoutParams(LayoutParams.MATCH_PARENT,
-            resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height), Gravity.BOTTOM))
-        visibility = GONE
+        return start(language)
     }
 
     /**
@@ -120,9 +69,7 @@ class VoicePanelView @JvmOverloads constructor(
      * Returns false when voice typing cannot start here (no recogniser, or the microphone
      * permission still has to be granted, in which case the permission screen is opened).
      */
-    fun start(language: String?): Boolean = start(language, online = false)
-
-    private fun start(language: String?, online: Boolean): Boolean {
+    fun start(language: String?): Boolean {
         if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             try {
                 context.startActivity(Intent(context, MicPermissionActivity::class.java)
@@ -135,150 +82,94 @@ class VoicePanelView @JvmOverloads constructor(
         return try {
             if (!SpeechRecognizer.isRecognitionAvailable(context)) {
                 Log.w(TAG, "no speech recogniser on this phone")
+                say(R.string.lychee_voice_no_recogniser)
                 return false
             }
-            cancel(notify = false)
-            this.language = language
-            // on this phone when it can (Android 12+): nothing leaves the phone, and the speech
-            // model runs in the system's own process, not Lychee's
-            onDevice = !online && offlinePreferred() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                SpeechRecognizer.isOnDeviceRecognitionAvailable(context)
-            val r = if (onDevice) {
-                SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
-            } else {
-                googleService()?.let { SpeechRecognizer.createSpeechRecognizer(context, it) }
-                    ?: SpeechRecognizer.createSpeechRecognizer(context)
-            }
+            cancel()
+            val r = googleService()?.let { SpeechRecognizer.createSpeechRecognizer(context, it) }
+                ?: SpeechRecognizer.createSpeechRecognizer(context)
             recognizer = r
             r.setRecognitionListener(listener)
-            heard.text = ""
-            choices.visibility = GONE
-            status.visibility = VISIBLE
-            status.setText(if (onDevice) R.string.lychee_voice_starting_offline else R.string.lychee_voice_starting)
-            visibility = VISIBLE
-            r.startListening(request())
+            quieten()
+            onListening(true)
+            r.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+                .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
+                .apply { language?.let { putExtra(RecognizerIntent.EXTRA_LANGUAGE, it) } })
             true
         } catch (t: Throwable) {
             // never take the keyboard down with it
             Log.e(TAG, "voice typing failed to start", t)
             app.lychee.DiagLog.log("voice typing failed to start", t)
-            recognizer = null
-            visibility = VISIBLE
-            status.visibility = VISIBLE
-            status.setText(R.string.lychee_voice_error)
+            cancel()
+            say(R.string.lychee_voice_error)
             false
         }
     }
 
-    private var language: String? = null
-    /** Whether the recogniser in use runs on this phone. */
-    private var onDevice = false
-
-    private fun request() = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-        .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-        .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-        .putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
-        .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, offlinePreferred())
-        .apply { language?.let { putExtra(RecognizerIntent.EXTRA_LANGUAGE, it) } }
-
-    /**
-     * Voice typing uses Google's recogniser (Speech Services by Google, or the Google app),
-     * which does its own networking: Lychee has no network permission. On-device recognition
-     * is off for now.
-     */
-    private fun offlinePreferred() = false
-
-    /**
-     * The on-device recogniser lacks this language. Nothing is downloaded unless asked: the
-     * bar offers Download (the system's own download, with its progress here on Android 14+)
-     * or online voice typing this once.
-     */
-    private fun offerDownload() {
-        recognizer?.run { setRecognitionListener(null); cancel(); destroy() }
-        recognizer = null
-        heard.text = ""
-        status.visibility = VISIBLE
-        status.text = context.getString(R.string.lychee_voice_offline_missing, languageName())
-        choices.removeAllViews()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            choices.addView(choice(R.string.lychee_voice_download) { download() })
-        }
-        choices.addView(choice(R.string.lychee_voice_online_once) { start(language, online = true) })
-        choices.visibility = VISIBLE
-    }
-
-    private fun languageName(): String =
-        language?.let { java.util.Locale.forLanguageTag(it).getDisplayName() } ?: ""
-
-    private fun download() {
-        choices.visibility = GONE
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        val r = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(context) }.getOrNull() ?: return
-        status.text = context.getString(R.string.lychee_voice_downloading, languageName(), 0)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            r.triggerModelDownload(request(), context.mainExecutor, object : android.speech.ModelDownloadListener {
-                override fun onProgress(completedPercent: Int) {
-                    status.text = context.getString(R.string.lychee_voice_downloading, languageName(), completedPercent)
-                }
-                override fun onSuccess() {
-                    status.text = context.getString(R.string.lychee_voice_downloaded, languageName())
-                    r.destroy()
-                }
-                override fun onScheduled() {
-                    status.text = context.getString(R.string.lychee_voice_download_scheduled, languageName())
-                    r.destroy()
-                }
-                override fun onError(error: Int) {
-                    status.setText(R.string.lychee_voice_download_failed)
-                    r.destroy()
-                }
-            })
-        } else {
-            // Android 13: the system downloads it and shows its own notification
-            runCatching { r.triggerModelDownload(request()) }
-            status.text = context.getString(R.string.lychee_voice_download_scheduled, languageName())
-            r.destroy()
-        }
-    }
-
-    private fun choice(label: Int, onClick: () -> Unit) = TextView(context).apply {
-        setText(label)
-        setTextColor(palette.onPrimaryContainer)
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
-        typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
-        gravity = Gravity.CENTER
-        setPadding(dp(14), 0, dp(14), 0)
-        background = GradientDrawable().apply {
-            cornerRadius = dp(16).toFloat()
-            setColor(palette.primaryContainer)
-        }
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(32)).apply { marginStart = dp(6) }
-        setOnClickListener { onClick() }
-    }
-
-
-    fun cancel() = cancel(notify = true)
-
-    private fun cancel(notify: Boolean) {
+    /** Stops listening without typing anything. */
+    fun cancel() {
         // a recogniser already gone (its service restarted, the permission just granted) must
         // not take the keyboard down with it
-        recognizer?.let { r ->
-            runCatching { r.setRecognitionListener(null) }
-            runCatching { r.cancel() }
-            runCatching { r.destroy() }
-        }
+        val r = recognizer ?: return
         recognizer = null
-        if (visibility != GONE) {
-            visibility = GONE
-            if (notify) onClose()
-        }
+        runCatching { r.setRecognitionListener(null) }
+        runCatching { r.cancel() }
+        runCatching { r.destroy() }
+        ended()
     }
 
     private fun finish(text: String?) {
-        cancel(notify = false)
+        cancel()
         if (!text.isNullOrBlank()) onText(text)
-        onClose()
     }
+
+    private fun ended() {
+        onLevel(0f)
+        onListening(false)
+        // after the recogniser's closing tone
+        main.postDelayed(::restoreVolume, 700)
+    }
+
+    private fun say(message: Int) {
+        runCatching { Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
+    }
+
+    // ------------------------------------------------------------------ the tones' volume
+
+    /** The media volume before listening, and what it was turned down to (-1: untouched). */
+    private var volumeBefore = -1
+    private var volumeQuiet = -1
+
+    private fun quieten() {
+        main.removeCallbacksAndMessages(null)
+        if (volumeBefore >= 0) return
+        runCatching {
+            val audio = context.getSystemService(AudioManager::class.java) ?: return
+            val now = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
+            val quiet = if (now <= 1) now else maxOf(1, now / 3)
+            if (quiet == now) return
+            audio.setStreamVolume(AudioManager.STREAM_MUSIC, quiet, 0)
+            volumeBefore = now
+            volumeQuiet = quiet
+        }
+    }
+
+    private fun restoreVolume() {
+        if (volumeBefore < 0 || recognizer != null) return
+        runCatching {
+            val audio = context.getSystemService(AudioManager::class.java) ?: return@runCatching
+            // put back only if it wasn't changed meanwhile (the person's own choice stays)
+            if (audio.getStreamVolume(AudioManager.STREAM_MUSIC) == volumeQuiet) {
+                audio.setStreamVolume(AudioManager.STREAM_MUSIC, volumeBefore, 0)
+            }
+        }
+        volumeBefore = -1
+        volumeQuiet = -1
+    }
+
+    // ------------------------------------------------------------------ recognition
 
     /** Google's recogniser, preferred over whatever the phone has set as default. */
     private fun googleService(): ComponentName? {
@@ -289,63 +180,44 @@ class VoicePanelView @JvmOverloads constructor(
     }
 
     private val listener = object : RecognitionListener {
-        override fun onReadyForSpeech(params: Bundle?) =
-            status.setText(if (onDevice) R.string.lychee_voice_listening_offline else R.string.lychee_voice_listening)
+        override fun onReadyForSpeech(params: Bundle?) {}
         override fun onBeginningOfSpeech() {}
-        override fun onRmsChanged(rmsdB: Float) {
-            val scale = 1f + (rmsdB.coerceIn(0f, 10f) / 10f) * 0.45f
-            micHalo.scaleX = scale
-            micHalo.scaleY = scale
-        }
+        override fun onRmsChanged(rmsdB: Float) = onLevel(rmsdB.coerceIn(0f, 10f) / 10f)
         override fun onBufferReceived(buffer: ByteArray?) {}
-        override fun onEndOfSpeech() = status.setText(R.string.lychee_voice_working)
+        override fun onEndOfSpeech() = onLevel(0f)
         override fun onError(error: Int) {
             Log.w(TAG, "recogniser error $error")
-            if (onDevice && (error == ERROR_LANGUAGE_NOT_SUPPORTED || error == ERROR_LANGUAGE_UNAVAILABLE)) {
-                offerDownload()
-                return
-            }
-            if (error == SpeechRecognizer.ERROR_NO_MATCH || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
-                finish(null)
-            } else {
-                status.visibility = VISIBLE
-                status.setText(R.string.lychee_voice_error)
-                app.lychee.DiagLog.log("voice typing error $error")
-                runCatching { recognizer?.destroy() }
-                recognizer = null
-            }
-        }
-        override fun onResults(results: Bundle?) = finish(best(results))
-        override fun onPartialResults(partialResults: Bundle?) {
-            best(partialResults)?.let {
-                heard.text = it
-                status.visibility = if (it.isEmpty()) VISIBLE else INVISIBLE
+            when (error) {
+                // nothing heard: just stop
+                SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> finish(null)
+                SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> {
+                    cancel()
+                    say(R.string.lychee_voice_no_network)
+                }
+                SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> {
+                    cancel()
+                    say(R.string.lychee_voice_no_permission)
+                }
+                else -> {
+                    app.lychee.DiagLog.log("voice typing error $error")
+                    cancel()
+                    say(R.string.lychee_voice_error)
+                }
             }
         }
+        override fun onResults(results: Bundle?) =
+            finish(results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull())
+        override fun onPartialResults(partialResults: Bundle?) {}
         override fun onEvent(eventType: Int, params: Bundle?) {}
     }
 
-    private fun best(results: Bundle?): String? =
-        results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-
     override fun onDetachedFromWindow() {
-        cancel(notify = false)
+        cancel()
         super.onDetachedFromWindow()
     }
 
-    private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
-
-    init {
-        status.typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
-    }
-
     companion object {
-        /** Voice typing on this phone (offline) when the phone can. */
-        const val PREF_OFFLINE = "lychee_voice_offline"
         private const val TAG = "LycheeVoice"
-        // SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED / _UNAVAILABLE (Android 12)
-        private const val ERROR_LANGUAGE_NOT_SUPPORTED = 12
-        private const val ERROR_LANGUAGE_UNAVAILABLE = 13
         private const val RECOGNITION_SERVICE = "android.speech.RecognitionService"
         private val GOOGLE_SERVICES = listOf(
             ComponentName("com.google.android.tts",

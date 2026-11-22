@@ -28,7 +28,7 @@ object Speech {
             val t = tts
             if (!ready || t == null) {
                 tts = null
-                return@TextToSpeech
+                return@newEngine
             }
             val p = pending
             pending = null

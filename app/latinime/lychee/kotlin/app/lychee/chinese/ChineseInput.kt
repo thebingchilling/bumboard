@@ -398,7 +398,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             // the first reading as written, without its okurigana brackets: まな(ぶ) says まなぶ
             val say = rows.first().second.first().first.replace("(", "").replace(")", "")
             DictionaryPopup.CharReading(ch, rows, say, meaning?.let { app.lychee.core.Annotator.shorten(it) },
-                note = if (engine == "ja") kanjiNote(ch) else null,
+                note = if (engine == "ja") kanjiNote(ch)
+                    else if (ch in CjkForms.GUKJA) ime.getString(R.string.lychee_card_gukja) else null,
                 // a kanji's school grade, how common it is and the parts it is drawn from
                 details = kanji?.let { k ->
                     listOfNotNull(
@@ -416,7 +417,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
      * Chinese simplifies it the same way or differently (Unihan's kJapaneseOldVariant).
      */
     private fun kanjiNote(ch: String): String? {
-        if (ch in KOKUJI) return ime.getString(R.string.lychee_card_kokuji)
+        if (ch in CjkForms.KOKUJI) return ime.getString(R.string.lychee_card_kokuji)
         val db = Readings.db ?: return null
         val old = db.charReadings(ch, "ja_old").firstOrNull() ?: return null
         val cn = db.charReadings(ch, "ja_cn").firstOrNull()
@@ -1206,6 +1207,15 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         return panels.none { it.visibility == View.VISIBLE }
     }
 
+    /** Whether the handwriting pad is open: it reads every character of the language, so no 繁/简. */
+    private fun writing(root: View): Boolean {
+        if (panelsRoot !== root) {
+            panelsRoot = root
+            panels = app.lychee.layout.LycheePanels.panels(root)
+        }
+        return panels.any { it is app.lychee.handwriting.HandwritingPanelView && it.visibility == View.VISIBLE }
+    }
+
     private var panelsRoot: View? = null
     private var panels: List<View> = emptyList()
 
@@ -1215,6 +1225,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     private var lastBarCandidates = false
     /** Whether 英 shows now, and the input view watched for pages and panels changing. */
     private var englishKeyShown = false
+    /** Whether 繁/简 shows now (not while the handwriting pad is open). */
+    private var scriptKeyShown = false
     private var watchedRoot: View? = null
 
     /**
@@ -1228,7 +1240,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         root.viewTreeObserver.addOnGlobalLayoutListener {
             val bar = strip as? SuggestionStripView ?: return@addOnGlobalLayoutListener
             val want = isActive && !lastHidden && !schemaMissing && englishAvailable && onMainKeys(bar.rootView)
-            if (want != englishKeyShown) updateScriptKey(bar, lastHidden)
+            val wantScript = isActive && !lastHidden && !schemaMissing && isChinese && !writing(bar.rootView)
+            if (want != englishKeyShown || wantScript != scriptKeyShown) updateScriptKey(bar, lastHidden)
         }
     }
 
@@ -1241,6 +1254,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             stripView.setLycheeScriptKey(null, null)
             stripView.setLycheeZhongKey(null, null)
             englishKeyShown = false
+            scriptKeyShown = false
             updateEdges(stripView)
             return
         }
@@ -1253,11 +1267,13 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             stripView.setLycheeZhongKey(null, null)
             englishKeyShown = false
         }
-        if (!isChinese) {
+        if (!isChinese || writing(stripView.rootView)) {
             stripView.setLycheeScriptKey(null, null)
+            scriptKeyShown = false
             updateEdges(stripView)
             return
         }
+        scriptKeyShown = true
         val simplified = ChineseScript.candidatesSimplified(prefs)
         stripView.setLycheeScriptKey(simplified) {
             prefs.edit().putString(PREF_SCRIPT, if (simplified) "traditional" else "simplified").apply()
@@ -1347,13 +1363,6 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         /** A key taking longer than this (Rime and the candidates) is noted in Diagnostics. */
         private const val SLOW_KEY_MS = 60L
         private val warmer: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor()
-        /**
-         * Characters made in Japan (kokuji): Wiktionary's "Japanese-coined CJKV characters"
-         * (every one it lists, the rare ones in Unicode's extensions too), and the common ones
-         * it leaves out.
-         */
-        private val KOKUJI: Set<String> = "𫡤㐧𮯶俤俧𪜽働𪞄凧凩凪𪞵𫥲𫥻𫦤𫦥𪟗𫦫𫦹𪟧匁匂𠥼哘噺囎圦圷圸垰垳﨏塀墹𪥽嬶𫳍𡱖屶岾峅峠𪩣𪩩怺𪫧𫿾𭤪𬀧𪰪膤杢杤𣏒枠枡栃𪱻桛桝梺椙椛椣椥﨓榊樫𪳤𬄉𬇐𪸉燵𤘩狆瓩𤭯畑畠硲硴𥫤笹簓𬕮籾粁粂粍糀糎𥿠纃聢腺𦝻膵艝萙𦻙蘒﨡𬠎蟎𬠳裃𫌷𮘁𬣄𬣐𬣗躮躾𫏮𬧬軈轌辷𫐞辻込迚﨤𫐤遖𨛗酛釺𫒎銯𨦈錺錻鎹𬮑𨸶雫鞆颪𬵂鮗𫙕𬵑鯥鯰鯱鯳𩸕𩸽𫙧鰯𫠍鱈鳰鴫鶎鶫𫛘麿𪚲𲔁𳅃俣鋲鱚毟襷"
-            .codePoints().toArray().map { String(Character.toChars(it)) }.toHashSet()
         /** Candidates fetched per keystroke; the bar scrolls through these. */
         private const val CANDIDATE_LIMIT = 40
     }

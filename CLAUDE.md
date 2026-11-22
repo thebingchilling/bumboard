@@ -122,6 +122,18 @@ packs page). Public facing, so be careful:
   (`typing/Incognito`, automatic in password and no-learning fields) keeps nothing; anything
   that learns or stores what is typed must check `Incognito.active`.
 - The keyboard follows Gboard's look and behaviour unless the owner chose otherwise.
+- Voice typing has no bar: the mic key starts listening and glows (brighter as you speak), a
+  second tap stops and types what was said (`voice/VoicePanelView`, a view that never shows).
+  The recogniser's tones play at media volume, so it is turned down to a third while listening
+  and put back after (unless changed meanwhile). Failures say why in a short message.
+- Handwriting reads every character of its keyboard's language, whatever the 繁/简 setting
+  (no 繁/简 key while the pad is open): Chinese, every Chinese character in both scripts
+  (ML Kit reads both scripts' models and merges them), not Japan's or Korea's own
+  (`chinese/CjkForms`: kokuji, gukja) unless Chinese writes them too; Japanese, kana and every
+  kanji (Unihan's Japanese readings, the kanji dictionary, kokuji); Korean, Hangul and every Hanja
+  (Unihan's Korean readings, gukja). Word cards name kokuji and gukja. The pad's ⌫ and ABC step
+  aside while the candidates' dropdown is open; the dropdown has slight dividers and fades out
+  at the bottom, above the navigation buttons.
 - Incognito has no switch: it follows the field. While on, its mark replaces the shortcuts
   menu button (a tap still opens the menu). Password, email and web address fields open in
   English, but the language key still switches (`typing/FieldKind`); number fields don't.

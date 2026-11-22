@@ -73,7 +73,7 @@ object LycheePanels {
         for (id in PANELS) {
             val panel = inputView.findViewById<View>(id) ?: continue
             if (panel !== except && panel.visibility == View.VISIBLE) {
-                if (panel is app.lychee.voice.VoicePanelView) panel.cancel() else panel.visibility = View.GONE
+                panel.visibility = View.GONE
             }
         }
     }
@@ -90,7 +90,7 @@ object LycheePanels {
         PANELS.any { id -> inputView.findViewById<View>(id)?.let { it !== except && it.visibility == View.VISIBLE } == true }
 
     private val PANELS = intArrayOf(
-        R.id.lychee_voice_panel, R.id.lychee_gallery_panel, R.id.lychee_text_edit_panel,
+        R.id.lychee_gallery_panel, R.id.lychee_text_edit_panel,
         R.id.lychee_numpad_panel, R.id.lychee_candidate_panel, R.id.lychee_handwriting_panel,
         R.id.lychee_resize_panel, R.id.lychee_clipboard_panel,
     )

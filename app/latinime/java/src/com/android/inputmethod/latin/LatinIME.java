@@ -935,24 +935,37 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                 mInputLogic.lycheeForgetEnteredText();
                 return kotlin.Unit.INSTANCE;
             });
+            // the mic key glows while listening, brighter as you speak
+            mLycheeVoice.setOnListening(on -> {
+                if (mSuggestionStripView != null) mSuggestionStripView.setLycheeVoiceListening(on);
+                return kotlin.Unit.INSTANCE;
+            });
+            mLycheeVoice.setOnLevel(level -> {
+                if (mSuggestionStripView != null) mSuggestionStripView.setLycheeVoiceLevel(level);
+                return kotlin.Unit.INSTANCE;
+            });
         }
     }
 
-    // LYCHEE: the mic key starts voice typing in the current keyboard's language.
+    // LYCHEE: the mic key starts voice typing in the current keyboard's language, or stops it
+    // (typing what was said) when it is listening. No bar opens: the mic glows meanwhile.
     private void startLycheeVoice() {
         if (mLycheeVoice == null) return;
+        if (mLycheeVoice.isActive()) {
+            mLycheeVoice.toggle(null);
+            return;
+        }
         mLycheeChinese.reset();
-        app.lychee.layout.LycheePanels.hideOthers(mInputView, mLycheeVoice);
         String language = mLycheeChinese.voiceLanguage();
         if (language == null) {
             language = mRichImm.getCurrentSubtypeLocale().toLanguageTag();
         }
         try {
-            mLycheeVoice.start(language);
+            mLycheeVoice.toggle(language);
         } catch (RuntimeException e) {
             // voice typing failing must never take the keyboard down with it
             app.lychee.DiagLog.log("voice typing failed to start", e);
-            mLycheeVoice.setVisibility(View.GONE);
+            mLycheeVoice.cancel();
         }
     }
 
@@ -1331,6 +1344,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             endLycheeEmojiSearch();
         }
         if (mInputView != null) app.lychee.layout.LycheePanels.hideOthers(mInputView, null);
+        // the keyboard closing stops voice typing (nothing typed)
+        if (mLycheeVoice != null) mLycheeVoice.cancel();
         mLycheeChinese.reset();
         cleanupInternalStateForFinishInput();
     }

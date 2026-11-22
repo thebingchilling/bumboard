@@ -213,6 +213,38 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
 
     // LYCHEE ---------------------------------------------------------------------------
 
+    /** Voice typing listening: the mic glows (a tonal circle behind it) until it stops. */
+    private boolean mLycheeVoiceListening;
+    private android.graphics.drawable.GradientDrawable mLycheeVoiceGlow;
+
+    public void setLycheeVoiceListening(final boolean listening) {
+        if (mLycheeVoiceListening == listening) return;
+        mLycheeVoiceListening = listening;
+        final app.lychee.ui.M3Colors palette = app.lychee.ui.M3Colors.Companion.of(getContext());
+        if (listening) {
+            if (mLycheeVoiceGlow == null) {
+                mLycheeVoiceGlow = new android.graphics.drawable.GradientDrawable();
+                mLycheeVoiceGlow.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            }
+            mLycheeVoiceGlow.setColor(palette.getPrimaryContainer());
+            mLycheeVoiceGlow.setAlpha(170);
+            mVoiceKey.setBackground(new android.graphics.drawable.InsetDrawable(mLycheeVoiceGlow,
+                    (int) (getResources().getDisplayMetrics().density * 4)));
+            mVoiceKey.setImageTintList(android.content.res.ColorStateList.valueOf(palette.getPrimary()));
+            mVoiceKey.setContentDescription(getContext().getString(R.string.lychee_voice_stop_listening));
+        } else {
+            mVoiceKey.setBackground(lycheeFlatButton(getContext()));
+            mVoiceKey.setImageTintList(android.content.res.ColorStateList.valueOf(palette.getOnSurface()));
+            mVoiceKey.setContentDescription(getContext().getString(R.string.spoken_description_mic));
+        }
+    }
+
+    /** How loud the speech is (0..1): the glow brightens as you speak. */
+    public void setLycheeVoiceLevel(final float level) {
+        if (!mLycheeVoiceListening || mLycheeVoiceGlow == null) return;
+        mLycheeVoiceGlow.setAlpha((int) (170 + 85 * Math.max(0f, Math.min(1f, level))));
+    }
+
     public app.lychee.toolbar.ToolbarView getLycheeToolbar() {
         return mLycheeToolbar;
     }
