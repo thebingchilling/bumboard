@@ -213,6 +213,12 @@ public final class KeyboardSwitcher implements KeyboardState.SwitchActions {
                 .hasMultipleEnabledIMEsOrSubtypes(true /* shouldIncludeAuxiliarySubtypes */);
         keyboardView.startDisplayLanguageOnSpacebar(subtypeChanged, languageOnSpacebarFormatType,
                 hasMultipleEnabledIMEsOrSubtypes);
+        // LYCHEE: LatinIME's own number and phone pads are never what shows: Lychee's one number
+        // pad covers them whenever they are set (and goes when the letters come back)
+        final int lycheeElement = newKeyboard.mId.mElementId;
+        mLatinIME.updateLycheeForcedNumpad(lycheeElement == KeyboardId.ELEMENT_NUMBER
+                || lycheeElement == KeyboardId.ELEMENT_PHONE
+                || lycheeElement == KeyboardId.ELEMENT_PHONE_SYMBOLS);
     }
 
     public Keyboard getKeyboard() {

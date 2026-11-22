@@ -72,6 +72,9 @@ object LycheePanels {
     fun hideOthers(inputView: View, except: View?) {
         for (id in PANELS) {
             val panel = inputView.findViewById<View>(id) ?: continue
+            // a number field's pad stays under another panel (it comes back as that one closes);
+            // only the field ending puts it away
+            if (except != null && panel is app.lychee.toolbar.NumpadPanelView && panel.forced) continue
             if (panel !== except && panel.visibility == View.VISIBLE) {
                 panel.visibility = View.GONE
             }

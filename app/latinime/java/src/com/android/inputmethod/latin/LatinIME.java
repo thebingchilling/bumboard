@@ -947,6 +947,36 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         }
     }
 
+    /**
+     * LYCHEE: the one number pad of number, phone and date fields (NumpadPanelView, forced):
+     * shown whenever the field is one of those or LatinIME has set one of its own number or
+     * phone pads ([numericKeys]), which it always covers; put away in any other field.
+     */
+    public void updateLycheeForcedNumpad(final boolean numericKeys) {
+        if (mInputView == null) return;
+        final View pad = mInputView.findViewById(R.id.lychee_numpad_panel);
+        if (!(pad instanceof app.lychee.toolbar.NumpadPanelView)) return;
+        final app.lychee.toolbar.NumpadPanelView numpad = (app.lychee.toolbar.NumpadPanelView) pad;
+        final EditorInfo editorInfo = getCurrentInputEditorInfo();
+        final boolean numeric = app.lychee.typing.FieldKind.getLanguageLocked() || numericKeys;
+        if (numeric) {
+            // what is held on 0 (−, a decimal point, / or :, + * #, and more)
+            numpad.setInputType(editorInfo != null ? editorInfo.inputType : 0);
+            numpad.setForced(true);
+            if (numpad.getVisibility() != View.VISIBLE) {
+                // once the keys are laid out, so the pad covers them exactly
+                mInputView.post(() -> mInputView.post(() -> {
+                    if (numpad.getForced() && numpad.getVisibility() != View.VISIBLE) {
+                        showLycheePanel(R.id.lychee_numpad_panel);
+                    }
+                }));
+            }
+        } else if (numpad.getForced()) {
+            numpad.setForced(false);
+            numpad.setVisibility(View.GONE);
+        }
+    }
+
     // LYCHEE: the mic key starts voice typing in the current keyboard's language, or stops it
     // (typing what was said) when it is listening. No bar opens: the mic glows meanwhile.
     private void startLycheeVoice() {
@@ -1096,28 +1126,9 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         mLycheeChinese.onSubtypeChanged(app.lychee.typing.FieldKind.getRestricted()
                 ? null : mRichImm.getCurrentSubtype().getRawSubtype());
         mLycheeChinese.onSettingsChanged();
-        // LYCHEE: number, phone and date fields get Lychee's own number pad (the symbols page's,
-        // in the keyboard's style) instead of LatinIME's; other fields put it away again
-        if (mInputView != null) {
-            final View pad = mInputView.findViewById(R.id.lychee_numpad_panel);
-            if (pad instanceof app.lychee.toolbar.NumpadPanelView) {
-                final app.lychee.toolbar.NumpadPanelView numpad = (app.lychee.toolbar.NumpadPanelView) pad;
-                if (app.lychee.typing.FieldKind.getLanguageLocked()) {
-                    // the extra keys this field takes (−, a decimal point, / or :)
-                    numpad.setInputType(editorInfo.inputType);
-                    numpad.setForced(true);
-                    // once the keys are laid out, so the pad covers them exactly
-                    mInputView.post(() -> mInputView.post(() -> {
-                        if (app.lychee.typing.FieldKind.getLanguageLocked()) {
-                            showLycheePanel(R.id.lychee_numpad_panel);
-                        }
-                    }));
-                } else if (numpad.getForced()) {
-                    numpad.setForced(false);
-                    numpad.setVisibility(View.GONE);
-                }
-            }
-        }
+        // LYCHEE: number, phone and date fields get Lychee's one number pad; other fields put
+        // it away again (KeyboardSwitcher asks again whenever LatinIME's own pads are set)
+        updateLycheeForcedNumpad(false);
         if (mInputView != null) {
             final View lycheeToolbar = mInputView.findViewById(R.id.lychee_toolbar);
             if (lycheeToolbar instanceof app.lychee.toolbar.ToolbarView) {

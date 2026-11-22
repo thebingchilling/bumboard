@@ -29,12 +29,13 @@ import com.android.inputmethod.latin.common.Constants
  * 0 under the 8, = and period under the 9, Enter under the right-hand keys. ABC goes back to the
  * letters and !?# to the symbols.
  *
- * In number, phone and date fields ([forced]) it is a plain pad, as wide as the symbols page's
- * digits and centred with space at each side: the digits, with backspace, 0 and Enter along the
- * bottom bar. What else the field takes ([setInputType]: − for signed numbers, a decimal
- * point for decimals, / and : for dates and times, + * # for phone numbers) is held on 0, like
- * a key's alternatives on the keyboard: hold, slide onto one and let go; a small mark in 0's
- * corner shows what is there.
+ * In number, phone and date fields ([forced]) it is the one number pad Lychee has there (LatinIME's
+ * own pads never show): the digits, as wide as the symbols page's and centred, with no keys at
+ * the sides, over a bottom row of three equal keys, backspace, 0 and Enter. Symbols are held on
+ * 0, like a key's alternatives: what the field takes first ([setInputType]: − for signed numbers,
+ * a decimal point for decimals, / and : for dates and times, + * # for phone numbers), then the
+ * others a number may need; hold, slide onto one and let go. A small mark in 0's corner shows
+ * there are some.
  */
 class NumpadPanelView @JvmOverloads constructor(
     context: Context,
@@ -125,7 +126,7 @@ class NumpadPanelView @JvmOverloads constructor(
     fun setInputType(inputType: Int) {
         val cls = inputType and android.text.InputType.TYPE_MASK_CLASS
         val variation = inputType and android.text.InputType.TYPE_MASK_VARIATION
-        extras = when (cls) {
+        val first: List<Pair<String, Char>> = when (cls) {
             android.text.InputType.TYPE_CLASS_NUMBER -> buildList {
                 if (inputType and android.text.InputType.TYPE_NUMBER_FLAG_SIGNED != 0) add("\u2212" to '-')
                 if (inputType and android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL != 0) add("." to '.')
@@ -138,7 +139,9 @@ class NumpadPanelView @JvmOverloads constructor(
             android.text.InputType.TYPE_CLASS_PHONE -> listOf("+" to '+', "*" to '*', "#" to '#')
             else -> emptyList()
         }
-        zeroHint?.text = extras.joinToString("") { it.first }
+        // what the field takes first, then the other symbols a number may need
+        extras = (first + MORE).distinctBy { it.second }
+        zeroHint?.text = extras.take(3).joinToString("") { it.first }
         zeroHint?.visibility = if (extras.isEmpty()) GONE else VISIBLE
     }
 
@@ -168,7 +171,7 @@ class NumpadPanelView @JvmOverloads constructor(
                     v.isPressed = true
                     repeat.postDelayed(hold, android.view.ViewConfiguration.getLongPressTimeout().toLong())
                 }
-                MotionEvent.ACTION_MOVE -> if (choices != null) pickAt(e.rawX)
+                MotionEvent.ACTION_MOVE -> if (choices != null) pickAt(e.rawX, e.rawY)
                 MotionEvent.ACTION_UP -> {
                     v.isPressed = false
                     repeat.removeCallbacks(hold)
@@ -194,8 +197,10 @@ class NumpadPanelView @JvmOverloads constructor(
 
     private fun showChoices(key: View) {
         hideChoices()
-        val row = LinearLayout(context).apply {
-            orientation = HORIZONTAL
+        // rows of up to five, the field's own symbols first (bottom row, nearest the finger)
+        val perRow = PER_ROW.coerceAtMost(extras.size)
+        val grid = LinearLayout(context).apply {
+            orientation = VERTICAL
             setPadding(dp(4), dp(4), dp(4), dp(4))
             background = android.graphics.drawable.GradientDrawable().apply {
                 cornerRadius = dp(12).toFloat()
@@ -203,36 +208,46 @@ class NumpadPanelView @JvmOverloads constructor(
             }
             elevation = dp(6).toFloat()
         }
-        val w = key.width.coerceAtMost(dp(64))
-        choiceViews = extras.map { (label, _) ->
-            TextView(context).apply {
-                text = label
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 24f)
-                typeface = app.lychee.fonts.LycheeFonts.ui(context, 400)
-                gravity = Gravity.CENTER
-            }.also { row.addView(it, LayoutParams(w, key.height - dp(8))) }
+        val w = key.width.coerceAtMost(dp(56))
+        val h = (key.height - dp(8)).coerceAtMost(dp(52))
+        val rows = extras.chunked(perRow)
+        val views = ArrayList<TextView>()
+        rows.forEach { row ->
+            val line = LinearLayout(context).apply { orientation = HORIZONTAL }
+            row.forEach { (label, _) ->
+                line.addView(TextView(context).apply {
+                    text = label
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+                    typeface = app.lychee.fonts.LycheeFonts.ui(context, 400)
+                    gravity = Gravity.CENTER
+                }.also { views += it }, LayoutParams(w, h))
+            }
+            // the first row at the bottom
+            grid.addView(line, 0)
         }
+        choiceViews = views
         chosen = 0
         paintChoices()
-        val popup = android.widget.PopupWindow(row, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, false).apply {
+        val popup = android.widget.PopupWindow(grid, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, false).apply {
             isClippingEnabled = false
             elevation = dp(6).toFloat()
         }
         val at = IntArray(2).also { key.getLocationInWindow(it) }
-        val width = w * extras.size + dp(8)
-        val x = at[0] + key.width / 2 - width / 2
-        val y = at[1] - key.height - dp(4)
+        val width = w * perRow + dp(8)
+        val height = h * rows.size + dp(8)
+        val x = (at[0] + key.width / 2 - width / 2).coerceAtLeast(0)
+        val y = at[1] - height - dp(4)
         popup.showAtLocation(key, Gravity.NO_GRAVITY, x, y)
         choices = popup
         // grown out of the key that was held
-        LycheeMotion.cardIn(row, width / 2f, key.height.toFloat())
+        LycheeMotion.cardIn(grid, width / 2f, height.toFloat())
     }
 
-    /** Picks the choice under the finger (by its x on the screen). */
-    private fun pickAt(rawX: Float) {
+    /** Picks the choice under the finger (by where it is on the screen). */
+    private fun pickAt(rawX: Float, rawY: Float) {
         val i = choiceViews.indexOfFirst { v ->
             val at = IntArray(2).also { v.getLocationOnScreen(it) }
-            rawX >= at[0] && rawX < at[0] + v.width
+            rawX >= at[0] && rawX < at[0] + v.width && rawY >= at[1] && rawY < at[1] + v.height
         }
         if (i >= 0 && i != chosen) {
             chosen = i
@@ -462,5 +477,9 @@ class NumpadPanelView @JvmOverloads constructor(
         const val COLUMN_SYMBOLS = 0.8f
         const val COLUMN_DIGIT = 1.25f
         const val COLUMN_SIDE = 1.1f
+        /** Held on a number field's 0 after the field's own: a row's worth at a time. */
+        const val PER_ROW = 5
+        val MORE = listOf("\u2212" to '-', "." to '.', "," to ',', "+" to '+', "/" to '/',
+            ":" to ':', "*" to '*', "#" to '#', "(" to '(', ")" to ')')
     }
 }

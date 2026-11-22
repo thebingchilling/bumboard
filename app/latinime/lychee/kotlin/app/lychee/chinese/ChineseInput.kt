@@ -246,6 +246,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                 ?.let { r -> app.lychee.core.Annotator.regional(r, display) }
         } else null
         val learner = learnerExtras(candidate.text, entries.firstOrNull())
+        // a phrase the dictionary lacks as a whole: what its words and characters mean
+        val parts = if (entries.isEmpty()) phraseParts(candidate.text) else emptyList()
         popup?.showWord(frame, candidate.text, wordReading(candidate, entries.firstOrNull()), entries,
             examples, peek, onSpeak = { text, l ->
                 val voices = when (l) {
@@ -260,6 +262,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             characters = characterReadings(hanForm),
             oldForm = if (engine == "ja") oldForm(candidate.text) else null,
             badges = learner.badges, pronunciation = learner.pronunciation, conjugation = learner.conjugation,
+            parts = parts,
             charactersTitle = ime.getString(if (engine == "ko") R.string.lychee_card_hanja else R.string.lychee_card_kanji)) {
             onType()
         }
@@ -271,7 +274,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
      */
     private fun wordAnnotation(candidate: Candidate, showMeaning: Boolean): Annotation? {
         val entry = app.lychee.dict.PackData.words(ime, engine, candidate.text, limit = 1).firstOrNull()
-        val meaning = entry?.senses?.firstOrNull()?.takeIf { showMeaning }?.let { app.lychee.core.Annotator.shorten(it) }
+        // a phrase the dictionary lacks as a whole: its pieces' meanings, so every candidate has one
+        val meaning = if (!showMeaning) null
+            else entry?.senses?.firstOrNull()?.let { app.lychee.core.Annotator.shorten(it) }
+                ?: phraseParts(candidate.text).takeIf { it.isNotEmpty() }?.joinToString(" + ") { it.meaning }
         // the readings in Latin letters only (kana and Hangul readings are on the word's card),
         // never Kanji or Hanja (a Korean word's Hanja are on its card)
         val lines = readingLines(candidate, entry, native = false)
@@ -279,6 +285,48 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val under = meaning
         if (lines.isEmpty() && under == null) return null
         return Annotation(lines, under, null)
+    }
+
+    /**
+     * A Japanese or Korean phrase the dictionary doesn't have as a whole, in pieces it has: the
+     * longest word at each point (勉強 する, 학교 에 가요), else a single Kanji or Hanja with its
+     * own meaning; kana or Hangul it knows nothing of, and spaces and punctuation, are skipped.
+     * Empty for a single character or when nothing is known.
+     */
+    private fun phraseParts(text: String): List<DictionaryPopup.PhrasePart> {
+        val cps = text.codePoints().toArray()
+        if (cps.size < 2 || cps.size > MAX_PHRASE) return emptyList()
+        val out = ArrayList<DictionaryPopup.PhrasePart>()
+        var i = 0
+        while (i < cps.size) {
+            if (!Character.isLetter(cps[i])) { i++; continue }
+            var matched = false
+            for (len in minOf(MAX_PIECE, cps.size - i) downTo 1) {
+                // the whole phrase is what is not in the dictionary
+                if (len == cps.size) continue
+                if ((0 until len).any { !Character.isLetter(cps[i + it]) }) continue
+                val sub = String(cps, i, len)
+                val e = app.lychee.dict.PackData.words(ime, engine, sub, 1).firstOrNull() ?: continue
+                val gloss = e.senses.firstOrNull() ?: continue
+                val reading = e.reading?.takeIf { engine == "ja" && it != sub && it.isNotBlank() }
+                out += DictionaryPopup.PhrasePart(sub, reading, app.lychee.core.Annotator.shorten(gloss, 20))
+                i += len
+                matched = true
+                break
+            }
+            if (matched) continue
+            val ch = String(Character.toChars(cps[i]))
+            if (app.lychee.core.Annotator.isHan(cps[i])) {
+                val kanji = if (engine == "ja") app.lychee.dict.PackData.kanji(ime, ch) else null
+                val meaning = kanji?.meanings?.split(',', ';')?.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: Readings.annotator?.resolve(ch, "", InputMode.Cantonese)?.meaning
+                val reading = if (engine == "ko") Readings.db?.charReadings(ch, "ko")?.firstOrNull()
+                    else kanji?.onyomi?.split('、')?.firstOrNull()?.takeIf { it.isNotBlank() }
+                meaning?.let { out += DictionaryPopup.PhrasePart(ch, reading, app.lychee.core.Annotator.shorten(it, 20)) }
+            }
+            i++
+        }
+        return out
     }
 
     /** The word card's reading: the kana (always, for words with kanji or katakana) and the romanisation. */
@@ -1363,6 +1411,9 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         /** A key taking longer than this (Rime and the candidates) is noted in Diagnostics. */
         private const val SLOW_KEY_MS = 60L
         private val warmer: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor()
+        /** Longest phrase broken into pieces, and longest piece looked up (in characters). */
+        private const val MAX_PHRASE = 24
+        private const val MAX_PIECE = 8
         /** Candidates fetched per keystroke; the bar scrolls through these. */
         private const val CANDIDATE_LIMIT = 40
     }

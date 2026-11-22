@@ -163,7 +163,15 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
         if (chars.isEmpty() || chars.none(::isHan)) return null
         val hint = if (mode.englishLookup) null else parseHint(comment, lang, chars.size)
         val hws = lookup(text)
-        if (hws.isNotEmpty()) return resolveWord(hws, hint, lang)
+        if (hws.isNotEmpty()) {
+            val word = resolveWord(hws, hint, lang)
+            // a word the dictionary has without a usable meaning: its characters' meanings,
+            // so every candidate means something
+            if (word.meaning == null && chars.size > 1) {
+                return word.copy(meaning = resolveComposed(chars, hint, lang, chars.size - 1).meaning)
+            }
+            return word
+        }
         return resolveComposed(chars, hint, lang)
     }
 
@@ -192,13 +200,14 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
         return Resolved(lang, reading, other, meaning(ordered, lang, reading), ordered, composed = false)
     }
 
-    private fun resolveComposed(chars: IntArray, hint: List<String>?, lang: Lang): Resolved {
+    private fun resolveComposed(chars: IntArray, hint: List<String>?, lang: Lang, maxSegment: Int = MAX_SEGMENT): Resolved {
         val readings = mutableListOf<String?>()
         val others = mutableListOf<String?>()
         val headwords = mutableListOf<Headword>()
+        val meanings = mutableListOf<String>()
         var i = 0
         while (i < chars.size) {
-            var len = minOf(MAX_SEGMENT, chars.size - i)
+            var len = minOf(maxSegment, chars.size - i)
             var found: List<Headword> = emptyList()
             while (len > 0) {
                 found = lookup(String(chars, i, len))
@@ -216,15 +225,33 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
             readings += r.reading ?: sub?.joinToString(" ")
             others += r.otherReading
             headwords += r.headwords.first()
+            // the piece's meaning as read here (行 hang4 walks, hong4 is a row)
+            (r.meaning?.let { shorten(it, 16) } ?: pieceMeaning(r.headwords.first(), lang))?.let { meanings += it }
             i += len
         }
         // every candidate gets a reading: a piece the dictionary doesn't know shows as "?"
         val reading = readings.takeIf { it.any { r -> r != null } }?.joinToString(" ") { it ?: "?" }
         val other = others.takeIf { it.any { r -> r != null } }?.joinToString(" ") { it ?: "?" }
         // a phrase read piece by piece: the pieces' meanings, so every candidate has one
-        val meaning = headwords.mapNotNull { meaning(listOf(it), lang, null)?.let { m -> shorten(m, 16) } }
-            .takeIf { it.isNotEmpty() }?.joinToString(" + ")
+        val meaning = meanings.takeIf { it.isNotEmpty() }?.joinToString(" + ")
         return Resolved(lang, reading, other, meaning, headwords, composed = true)
+    }
+
+    /**
+     * A piece's short meaning: its best sense; else, for a word, its characters' meanings
+     * (each its own best, "learn school"); else whatever sense it has (a variant's, a surname).
+     */
+    private fun pieceMeaning(hw: Headword, lang: Lang): String? {
+        meaning(listOf(hw), lang, null)?.let { return shorten(it, 16) }
+        val cps = hw.traditional.codePoints().toArray()
+        if (cps.size > 1) {
+            val chars = cps.mapNotNull { cp ->
+                lookup(String(Character.toChars(cp))).firstOrNull()?.let { meaning(listOf(it), lang, null) }
+                    ?.let { shorten(it, 12) }
+            }
+            if (chars.isNotEmpty()) return chars.joinToString(" ")
+        }
+        return hw.senses.firstOrNull { it.gloss.isNotBlank() }?.gloss?.let { shorten(it, 16) }
     }
 
     private fun matches(reading: String, hint: String, lang: Lang): Boolean = when (lang) {

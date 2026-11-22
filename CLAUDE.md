@@ -134,6 +134,17 @@ packs page). Public facing, so be careful:
   (Unihan's Korean readings, gukja). Word cards name kokuji and gukja. The pad's ⌫ and ABC step
   aside while the candidates' dropdown is open; the dropdown has slight dividers and fades out
   at the bottom, above the navigation buttons.
+- Number, phone and date fields have one number pad (`toolbar/NumpadPanelView`, forced): the
+  digits centred with no keys at the sides, over three equal keys (⌫ 0 Enter); 0 held shows
+  symbols (the field's own first). LatinIME's own number and phone pads never show: whenever
+  KeyboardSwitcher sets one, `LatinIME.updateLycheeForcedNumpad` covers it.
+- Every ordinary text field corrects and suggests, as Gboard does, whatever flags the app set;
+  only passwords, email and web addresses, filters and fields asking for no suggestions don't
+  (`InputAttributes`).
+- Every candidate has a meaning: a Chinese word or phrase the dictionary lacks (or has without
+  a usable meaning) shows its pieces' meanings ("I + walk"), and its card lists the parts; a
+  Japanese or Korean phrase is broken into the words and Kanji/Hanja the dictionary has, its
+  meaning their meanings, its card a Parts section.
 - Incognito has no switch: it follows the field. While on, its mark replaces the shortcuts
   menu button (a tap still opens the menu). Password, email and web address fields open in
   English, but the language key still switches (`typing/FieldKind`); number fields don't.

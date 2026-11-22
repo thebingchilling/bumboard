@@ -35,8 +35,14 @@ class AnnotatorTest {
             Sense(Lang.Mandarin, "la1 ji1", "Taiwan pr. [le4 se4]"),
         )
     )
+    // a word the dictionary has with no usable meaning (only a surname)
+    private val ngoHang = Headword(
+        5, "我行", "我行", 10,
+        mapOf(Lang.Mandarin to listOf("wo3 xing2"), Lang.Cantonese to listOf("ngo5 hang4")),
+        listOf(Sense(Lang.Mandarin, "wo3 xing2", "surname Woxing"))
+    )
     private val dict = Dictionary { form ->
-        listOf(hang, neihou, ngo, laji).filter { it.traditional == form || it.simplified == form }
+        listOf(hang, neihou, ngo, laji, ngoHang).filter { it.traditional == form || it.simplified == form }
     }
     private val annotator = Annotator(dict)
 
@@ -68,6 +74,12 @@ class AnnotatorTest {
     fun englishLookupIgnoresComment() {
         val a = annotator.annotate("你好", "", InputMode.EnglishToMandarin, DisplayPrefs())
         assertEquals(listOf("nǐ hǎo"), a.lines)
+    }
+
+    @Test
+    fun wordWithoutMeaningGetsItsCharacters() {
+        val a = annotator.annotate("我行", "ngo5 hang4", InputMode.Cantonese, DisplayPrefs())
+        assertEquals("I + walk", a.meaning)
     }
 
     @Test

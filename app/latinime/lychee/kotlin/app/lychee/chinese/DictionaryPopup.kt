@@ -116,6 +116,12 @@ class DictionaryPopup(
     )
 
     /**
+     * A piece of a Japanese or Korean phrase the dictionary doesn't have as a whole: a word it
+     * has (or a single Kanji or Hanja), its reading and its meaning, so the phrase can be read.
+     */
+    class PhrasePart(val form: String, val reading: String?, val meaning: String)
+
+    /**
      * One kind of a character's Japanese or Korean readings: its label, as shown, and what is
      * said; and each reading on its own ([items]: the kana or Hangul, its romanisation, what its
      * speaker says), so every reading, the rarer ones too, has a speaker.
@@ -155,6 +161,8 @@ class DictionaryPopup(
         pronunciation: CharSequence? = null,
         /** A verb's or adjective's conjugation table. */
         conjugation: List<app.lychee.core.Conjugated>? = null,
+        /** A phrase the dictionary lacks as a whole: the words and characters it is made of. */
+        parts: List<PhrasePart> = emptyList(),
         onType: () -> Unit,
     ) {
         present(keyboard, peek, onType) { c, body, compact ->
@@ -249,8 +257,14 @@ class DictionaryPopup(
                 e.senses.take(if (compact) Content.SUMMARY_SENSES else Content.MAX_SENSES)
                     .forEachIndexed { n, s -> content.plainSense(n + 1, s) }
             }
-            // a word the dictionary doesn't have still gets its card: the word and its voice
-            if (entries.isEmpty()) body.addView(content.textView(ctx.getString(R.string.lychee_card_no_definition), 14f, c.onSurfaceVariant).apply {
+            // a phrase the dictionary doesn't have as a whole: what its pieces mean, so it can
+            // still be understood; else the card says so (and still speaks the word)
+            if (entries.isEmpty() && parts.isNotEmpty()) {
+                body.addView(content.textView(parts.joinToString(" + ") { it.meaning }, 16f, c.onSurface).apply {
+                    setPadding(0, dp(6), 0, dp(4))
+                })
+                content.phraseParts(ctx.getString(R.string.lychee_card_parts), parts, if (compact) 3 else parts.size)
+            } else if (entries.isEmpty()) body.addView(content.textView(ctx.getString(R.string.lychee_card_no_definition), 14f, c.onSurfaceVariant).apply {
                 setPadding(0, dp(8), 0, dp(4))
             })
             if (compact) return@present
@@ -1350,6 +1364,35 @@ class DictionaryPopup(
                 s.written?.takeIf { it.isNotBlank() }?.let { "${ctx.getString(R.string.lychee_card_written)} $it" },
                 s.vernacular?.takeIf { it.isNotBlank() }?.let { "${ctx.getString(R.string.lychee_card_vernacular)} $it" },
             ))
+        }
+
+        /**
+         * A Japanese or Korean phrase's pieces under [title]: each word or character large on the
+         * left, its reading in the accent colour and its meaning under it (at most [limit]).
+         */
+        fun phraseParts(title: String, parts: List<PhrasePart>, limit: Int) {
+            section(title)
+            parts.take(limit).forEach { p ->
+                val row = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(0, dp(6), 0, dp(6))
+                }
+                row.addView(textView(p.form, 24f, c.onSurface).apply {
+                    typeface = app.lychee.fonts.LycheeFonts.forText(ctx, p.form, fontLang) ?: Typeface.DEFAULT
+                    minWidth = dp(48)
+                }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { marginEnd = dp(14) })
+                val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+                p.reading?.let { col.addView(textView(it, 15f, c.primary).apply {
+                    typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
+                }) }
+                col.addView(textView(p.meaning, 14f, c.onSurfaceVariant).apply { setPadding(0, dp(1), 0, 0) })
+                row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                onSpeak?.let { say -> row.addView(smallSpeaker { say(p.form, null) }) }
+                body.addView(row)
+            }
+            endSection()
         }
 
         /** One character or word of a composed candidate: both languages' readings, and its meaning. */

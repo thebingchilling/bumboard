@@ -105,8 +105,10 @@ public final class InputAttributes {
                 || InputTypeUtils.isEmailVariation(variation)
                 || InputType.TYPE_TEXT_VARIATION_URI == variation
                 || InputType.TYPE_TEXT_VARIATION_FILTER == variation
-                || flagNoSuggestions
-                || flagAutoComplete;
+                || flagNoSuggestions;
+        // LYCHEE: suggestions in fields that also complete for themselves (search boxes and
+        // many apps' text boxes are AutoCompleteTextViews), as Gboard does: an app's own
+        // completions only ever showed in full-screen mode, which Lychee never uses
         mShouldShowSuggestions = !shouldSuppressSuggestions;
 
         mShouldInsertSpacesAutomatically = InputTypeUtils.isAutoSpaceFriendlyType(inputType);
@@ -124,10 +126,11 @@ public final class InputAttributes {
         // disable auto correction, but keep suggestions on.
         // If NO_SUGGESTIONS is set, don't do prediction.
         // If it's not multiline and the autoCorrect flag is not set, then don't correct
-        mInputTypeNoAutoCorrect =
-                (variation == InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT && !flagAutoCorrect)
-                || flagNoSuggestions
-                || (!flagAutoCorrect && !flagMultiLine);
+        // LYCHEE: like Gboard, every ordinary text field corrects, whether or not the app asked
+        // for it (most single-line fields, web pages' boxes and chat boxes don't set the flag);
+        // only fields with no suggestions at all (passwords, email and web addresses, filters,
+        // and fields that ask for none) don't
+        mInputTypeNoAutoCorrect = shouldSuppressSuggestions;
 
         mApplicationSpecifiedCompletionOn = flagAutoComplete && isFullscreenMode;
 
