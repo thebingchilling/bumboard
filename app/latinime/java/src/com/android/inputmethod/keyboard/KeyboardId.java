@@ -184,7 +184,14 @@ public final class KeyboardId {
     }
 
     public int imeAction() {
-        return InputTypeUtils.getImeOptionsActionIdFromEditorInfo(mEditorInfo);
+        // LYCHEE: an app's own label for the action ("Done" in Pleco's search bar) never
+        // replaces Enter with a grey text key: Enter keeps its accent colour and shows the
+        // action's icon (✓ done, search, send, go, next), as Gboard does. The key still does
+        // the app's action (InputLogic reads the label from the field itself).
+        if ((mEditorInfo.imeOptions & EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0) {
+            return EditorInfo.IME_ACTION_NONE;
+        }
+        return mEditorInfo.imeOptions & EditorInfo.IME_MASK_ACTION;
     }
 
     public Locale getLocale() {

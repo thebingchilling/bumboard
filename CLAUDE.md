@@ -138,6 +138,9 @@ packs page). Public facing, so be careful:
   digits centred with no keys at the sides, over three equal keys (⌫ 0 Enter); 0 held shows
   symbols (the field's own first). LatinIME's own number and phone pads never show: whenever
   KeyboardSwitcher sets one, `LatinIME.updateLycheeForcedNumpad` covers it.
+- Enter always keeps its accent colour and an icon for the field's action (✓ done, search,
+  send, go, next): an app's own action label (Pleco's "Done") never turns it into a grey text
+  key (`KeyboardId.imeAction`); the key still does the app's action.
 - Every ordinary text field corrects and suggests, as Gboard does, whatever flags the app set;
   only passwords, email and web addresses, filters and fields asking for no suggestions don't
   (`InputAttributes`).
