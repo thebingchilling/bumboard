@@ -94,9 +94,12 @@ packs page). Public facing, so be careful:
   models, so it needs the internet and its licence has it in an app of its own; Lychee stays
   offline and binds its service (a signature permission: only apps signed like Lychee), handing
   it the pad's strokes (`handwriting/GoogleHandwriting`). The companion is a small app with Lychee's icon: its full-screen
-  setup (Lychee's rose palette, no Material library, for size) downloads the models and shows
-  their status; its launcher icon always stays (hiding it failed on some launchers), and Lychee
-  opens it from Add-ons too. It also fetches the models by itself when
+  setup (the Lychee logo's colours, no Material library, for size) lists each language's model
+  and whether it is ready, a plain privacy note, and a switch to hide its launcher icon (Lychee
+  opens it from Add-ons too, so a hidden icon is never a lost app). No tracking: ML Kit's usage
+  reporting (Google's data transport: its backend and schedulers) is removed in the companion's
+  manifest and `build.yml` fails if it comes back; the companion is meant to be open source
+  (`app/hwcompanion/README.md`), published only when the owner says where. It also fetches the models by itself when
   Lychee first binds it (PP-OCR reads the pad meanwhile). This is how the first companion, which
   worked, was made; the icon-less, R8-shrunk build that followed did not work. With it installed only ML Kit reads the pad. Settings > Add-ons offers it (saying ML Kit's licence needs the
   companion, and its size), and so does a chip on the pad. It is built once, and rebuilt only
@@ -125,7 +128,14 @@ packs page). Public facing, so be careful:
 - Voice typing has no bar: the mic key starts listening and glows (brighter as you speak), a
   second tap stops and types what was said (`voice/VoicePanelView`, a view that never shows).
   The recogniser's tones play at media volume, so it is turned down to a third while listening
-  and put back after (unless changed meanwhile). Failures say why in a short message.
+  and put back after (unless changed meanwhile). Failures say why in a short message. Offline
+  (Lychee can't check the network: no permission), Google's recogniser fails and Lychee tries the
+  phone's own offline recogniser (Android 12+) if it has one; else the mic dims and says Google
+  speech input needs the internet, until it works again.
+- The clipboard panel has its on/off switch at the right of its title (off forgets every copy).
+- The keyboard's default colours are the Lychee logo's (`LycheeColorStyle.LYCHEE`: blush keys,
+  the logo's red on Enter); panels, cards and outlines are Lychee's rose on every phone, never
+  the wallpaper's (only the Wallpaper colour style uses those).
 - Handwriting reads every character of its keyboard's language, whatever the 繁/简 setting
   (no 繁/简 key while the pad is open): Chinese, every Chinese character in both scripts
   (ML Kit reads both scripts' models and merges them), not Japan's or Korea's own

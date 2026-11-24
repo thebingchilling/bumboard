@@ -131,6 +131,30 @@ class TonePicker(private val ctx: Context) {
                 tones.forEach { addView(cell(it)) }
             })
         }
+        // under the emoji: what it is, its whole name (wrapped, never cut) and its code points,
+        // as wide as the emoji rows
+        content.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
+        val textWidth = (content.measuredWidth - dp(16)).coerceAtLeast(dp(120))
+        content.addView(TextView(ctx).apply {
+            text = emoji.name.replaceFirstChar { it.uppercase() }
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTextColor(c.onSurface)
+            typeface = app.lychee.fonts.LycheeFonts.ui(ctx, 500)
+            gravity = Gravity.CENTER
+            maxWidth = textWidth
+            setPadding(dp(4), dp(8), dp(4), 0)
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            .apply { gravity = Gravity.CENTER_HORIZONTAL })
+        content.addView(TextView(ctx).apply {
+            text = EmojiInfo.codePoints(emoji.base)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            setTextColor(c.onSurfaceVariant)
+            typeface = app.lychee.fonts.LycheeFonts.ui(ctx)
+            gravity = Gravity.CENTER
+            maxWidth = textWidth
+            setPadding(dp(4), dp(2), dp(4), dp(2))
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            .apply { gravity = Gravity.CENTER_HORIZONTAL })
         content.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         // exactly the measured size: the rows that fill the card's width would otherwise fill
         // the screen's

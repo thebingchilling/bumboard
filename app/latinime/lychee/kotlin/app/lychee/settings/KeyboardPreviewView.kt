@@ -22,7 +22,7 @@ import com.android.inputmethod.latin.R
  * with the bar above it. Every setting it shows can be given live (while a slider moves).
  */
 class KeyboardPreviewView(context: Context) : View(context) {
-    var palette = LycheeColorStyle.NEUTRAL
+    var palette = LycheeColorStyle.DEFAULT
     var roundness = KeyStyle.DEFAULT_ROUNDNESS
     var borders = true
     var raised = true

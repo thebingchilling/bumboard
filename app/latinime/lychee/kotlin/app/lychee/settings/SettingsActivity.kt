@@ -801,7 +801,7 @@ private fun KeysPage() {
     // the keys as they will be: the number row, the key by the comma, the spacebar's label
     val themeIds = res.getIntArray(R.array.keyboard_theme_ids)
     KeyboardPreview(
-        palette = prefs.getString(app.lychee.ui.LycheeColorStyle.PREF, null) ?: app.lychee.ui.LycheeColorStyle.NEUTRAL,
+        palette = prefs.getString(app.lychee.ui.LycheeColorStyle.PREF, null) ?: app.lychee.ui.LycheeColorStyle.DEFAULT,
         roundness = prefs.getInt(app.lychee.ui.KeyStyle.PREF_ROUNDNESS, app.lychee.ui.KeyStyle.DEFAULT_ROUNDNESS),
         borders = prefs.getBoolean(app.lychee.ui.KeyStyle.PREF_BORDERS, true),
         raised = KeyboardTheme.getKeyboardTheme(context).mThemeId == themeIds.firstOrNull(),
@@ -927,7 +927,7 @@ private fun ThemePage() {
 
     PageNote(stringResource(R.string.lychee_theme_note))
     val colors = prefs.stringPref(app.lychee.ui.LycheeColorStyle.PREF) {
-        prefs.getString(app.lychee.ui.LycheeColorStyle.PREF, null) ?: app.lychee.ui.LycheeColorStyle.NEUTRAL
+        prefs.getString(app.lychee.ui.LycheeColorStyle.PREF, null) ?: app.lychee.ui.LycheeColorStyle.DEFAULT
     }
     val themeMode = prefs.stringPref(app.lychee.ui.KeyStyle.PREF_THEME_MODE) {
         prefs.getString(app.lychee.ui.KeyStyle.PREF_THEME_MODE, null) ?: app.lychee.ui.KeyStyle.MODE_SYSTEM
@@ -951,6 +951,7 @@ private fun ThemePage() {
         row {
             PaletteGrid(
                 listOf(
+                    app.lychee.ui.LycheeColorStyle.LYCHEE to R.string.lychee_pref_colors_lychee,
                     app.lychee.ui.LycheeColorStyle.NEUTRAL to R.string.lychee_pref_colors_neutral,
                     app.lychee.ui.LycheeColorStyle.WALLPAPER to R.string.lychee_pref_colors_wallpaper,
                     app.lychee.ui.LycheeColorStyle.ROSE to R.string.lychee_pref_colors_rose,

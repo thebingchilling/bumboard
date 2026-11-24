@@ -37,6 +37,19 @@
         <item name="lycheeColorAccentPressed">@color/lychee_m3_primary_pressed</item>
         <item name="lycheeColorOnAccent">@color/lychee_m3_on_primary</item>
     </style>
+    <style name="LycheeColors.Lychee" parent="">
+        <item name="lycheeColorBackground">@color/lychee_palette_lychee_bg</item>
+        <item name="lycheeColorKey">@color/lychee_palette_lychee_key</item>
+        <item name="lycheeColorKeyPressed">@color/lychee_palette_lychee_key_pressed</item>
+        <item name="lycheeColorOnKey">@color/lychee_palette_lychee_on_key</item>
+        <item name="lycheeColorOnKeyVariant">@color/lychee_palette_lychee_on_key_variant</item>
+        <item name="lycheeColorFunctional">@color/lychee_palette_lychee_functional</item>
+        <item name="lycheeColorFunctionalPressed">@color/lychee_palette_lychee_functional_pressed</item>
+        <item name="lycheeColorOnFunctional">@color/lychee_palette_lychee_on_functional</item>
+        <item name="lycheeColorAccent">@color/lychee_palette_lychee_accent</item>
+        <item name="lycheeColorAccentPressed">@color/lychee_palette_lychee_accent_pressed</item>
+        <item name="lycheeColorOnAccent">@color/lychee_palette_lychee_on_accent</item>
+    </style>
     <style name="LycheeColors.Rose" parent="">
         <item name="lycheeColorBackground">@color/lychee_palette_rose_bg</item>
         <item name="lycheeColorKey">@color/lychee_palette_rose_key</item>

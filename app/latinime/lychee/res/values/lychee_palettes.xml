@@ -67,4 +67,16 @@
     <color name="lychee_palette_mono_accent">#333333</color>
     <color name="lychee_palette_mono_accent_pressed">#1F1F1F</color>
     <color name="lychee_palette_mono_on_accent">#FFFFFF</color>
+    <!-- Lychee: the logo's colours (its red #DA2D4C, deepened for white text) -->
+    <color name="lychee_palette_lychee_bg">#FBF1F2</color>
+    <color name="lychee_palette_lychee_key">#FFFFFF</color>
+    <color name="lychee_palette_lychee_key_pressed">#F3DCE0</color>
+    <color name="lychee_palette_lychee_on_key">#2B1619</color>
+    <color name="lychee_palette_lychee_on_key_variant">#6B4E53</color>
+    <color name="lychee_palette_lychee_functional">#F6D9DE</color>
+    <color name="lychee_palette_lychee_functional_pressed">#ECC0C8</color>
+    <color name="lychee_palette_lychee_on_functional">#64162A</color>
+    <color name="lychee_palette_lychee_accent">#C8283F</color>
+    <color name="lychee_palette_lychee_accent_pressed">#A51F33</color>
+    <color name="lychee_palette_lychee_on_accent">#FFFFFF</color>
 </resources>

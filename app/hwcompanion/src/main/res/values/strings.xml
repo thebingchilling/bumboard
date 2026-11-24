@@ -1,4 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Lychee handwriting</string>
+    <string name="tagline">Google\'s handwriting recognition for Lychee\'s handwriting pad</string>
+    <string name="models">Languages</string>
+    <string name="models_note">Each model is about 20 MB, from Google\'s ML Kit. Opening this app checks for newer ones.</string>
+    <string name="checking">Checking…</string>
+    <string name="downloading">Downloading…</string>
+    <string name="ready">Ready</string>
+    <string name="failed">Not downloaded. Check the connection and open this app again</string>
+    <string name="lang_zh_cn">Chinese, Simplified</string>
+    <string name="lang_zh_hk">Chinese, Traditional (Hong Kong)</string>
+    <string name="lang_zh_tw">Chinese, Traditional (Taiwan)</string>
+    <string name="lang_ja">Japanese</string>
+    <string name="lang_ko">Korean</string>
+    <string name="privacy">Privacy</string>
+    <string name="privacy_body">This app goes online only to download Google\'s handwriting models. What you write is read on this phone and never sent anywhere. There is no tracking, no analytics and no ads: ML Kit\'s usage reporting is removed from the app. Lychee itself has no internet access at all.</string>
+    <string name="app_icon">App icon</string>
+    <string name="hide_icon">Hide the app icon</string>
+    <string name="hide_icon_note">Lychee keeps working. Open this screen again from Lychee: Settings › Add-ons › Google Handwriting. Some launchers take a moment to update.</string>
+    <string name="close">Close</string>
 </resources>

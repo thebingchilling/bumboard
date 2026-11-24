@@ -43,6 +43,7 @@
     <string name="lychee_language_settings">Language settings</string>
     <string name="lychee_language_card_title">Keyboards</string>
     <string name="lychee_pref_colors">Colours</string>
+    <string name="lychee_pref_colors_lychee">Lychee</string>
     <string name="lychee_pref_colors_neutral">Neutral</string>
     <string name="lychee_pref_colors_wallpaper">Wallpaper</string>
     <string name="lychee_about_base_title">Built on the Android keyboard</string>
@@ -232,7 +233,9 @@
     <string name="lychee_pref_voice_offline">Voice typing offline</string>
     <string name="lychee_pref_voice_offline_summary">Recognise speech on this phone when it can (Android 12+), so nothing is sent anywhere</string>
     <string name="lychee_voice_no_recogniser">Voice typing needs a speech recogniser, and this phone has none. Speech Services by Google adds one</string>
-    <string name="lychee_voice_no_network">Voice typing needs the internet here: the phone\'s speech recogniser works online</string>
+    <string name="lychee_voice_no_network">Google speech input needs the internet, and this phone can\'t recognise speech offline. The mic stays dimmed until it works again</string>
+    <string name="lychee_voice_offline_language">This phone\'s offline speech recognition doesn\'t have this language. Google speech input needs the internet for it</string>
+    <string name="lychee_voice_offline_mic">Voice input (offline: Google speech input needs the internet)</string>
     <string name="lychee_voice_no_permission">The speech recogniser isn\'t allowed to use the microphone (Android Settings › Apps)</string>
     <string name="lychee_voice_error">Voice typing isn’t available right now</string>
     <string name="lychee_voice_stop_listening">Stop listening and type what was said</string>

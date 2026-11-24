@@ -76,6 +76,8 @@ class ToolbarView @JvmOverloads constructor(
         }
 
     private var title = 0
+    /** A control at the title's right-hand end (the clipboard's on/off switch), if any. */
+    private var titleEnd: View? = null
     private var onBack: () -> Unit = {}
 
     /** Rebuilds the shortcuts for the keyboard now showing (handwriting only on Chinese and Japanese). */
@@ -102,10 +104,11 @@ class ToolbarView @JvmOverloads constructor(
      * [withBack] false: the title alone (the panel has a Back key of its own).
      */
     @JvmOverloads
-    fun showTitle(title: Int, withBack: Boolean = true, back: () -> Unit) {
+    fun showTitle(title: Int, withBack: Boolean = true, end: View? = null, back: () -> Unit) {
         this.title = title
         onBack = back
         titleBack = withBack
+        titleEnd = end
         if (mode == Mode.TITLE) rebuild() else mode = Mode.TITLE
     }
 
@@ -140,6 +143,15 @@ class ToolbarView @JvmOverloads constructor(
                 LinearLayout.LayoutParams(slot(), LinearLayout.LayoutParams.MATCH_PARENT))
             if (titleShown) row.addView(titleText(title).apply { if (!titleBack) setPadding(dp(16), 0, 0, 0) },
                 LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+            titleEnd?.let { end ->
+                (end.parent as? android.view.ViewGroup)?.removeView(end)
+                if (!titleShown) row.addView(View(context), LinearLayout.LayoutParams(0, 1, 1f))
+                row.addView(end, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    gravity = Gravity.CENTER_VERTICAL
+                    marginEnd = dp(12)
+                })
+            }
             return
         }
         when (mode) {

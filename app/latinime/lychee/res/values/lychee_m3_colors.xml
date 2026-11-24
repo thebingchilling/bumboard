@@ -17,12 +17,12 @@
     <color name="lychee_m3_primary">#006A5D</color>
     <color name="lychee_m3_primary_pressed">#005046</color>
     <color name="lychee_m3_on_primary">#FFFFFF</color>
-    <color name="lychee_m3_primary_container">#82D5C3</color>
-    <color name="lychee_m3_primary_container_pressed">#66B9A8</color>
-    <color name="lychee_m3_on_primary_container">#00201B</color>
-    <color name="lychee_m3_surface_high">#DEE4E1</color>
-    <color name="lychee_m3_outline">#6F7976</color>
-    <color name="lychee_m3_outline_variant">#BEC9C5</color>
+    <color name="lychee_m3_primary_container">#FFD9DF</color>
+    <color name="lychee_m3_primary_container_pressed">#F5C2CB</color>
+    <color name="lychee_m3_on_primary_container">#3F0011</color>
+    <color name="lychee_m3_surface_high">#F3E3E5</color>
+    <color name="lychee_m3_outline">#857376</color>
+    <color name="lychee_m3_outline_variant">#D8C2C5</color>
     <!-- Shadow under raised keys; fixed, not part of the wallpaper palette. -->
     <color name="lychee_m3_shadow">#26000000</color>
     <color name="lychee_m3_shadow_soft">#14000000</color>

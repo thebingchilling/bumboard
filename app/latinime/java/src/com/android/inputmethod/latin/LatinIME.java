@@ -940,6 +940,10 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
                 if (mSuggestionStripView != null) mSuggestionStripView.setLycheeVoiceListening(on);
                 return kotlin.Unit.INSTANCE;
             });
+            mLycheeVoice.setOnOffline(offline -> {
+                if (mSuggestionStripView != null) mSuggestionStripView.setLycheeVoiceOffline(offline);
+                return kotlin.Unit.INSTANCE;
+            });
             mLycheeVoice.setOnLevel(level -> {
                 if (mSuggestionStripView != null) mSuggestionStripView.setLycheeVoiceLevel(level);
                 return kotlin.Unit.INSTANCE;

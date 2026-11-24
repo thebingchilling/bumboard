@@ -90,7 +90,18 @@ class HandwritingPanelView @JvmOverloads constructor(
     // before init, which places them
     /** ABC over the keyboard's ?123 key, as the keyboard's own switch key reads: back to the letters. */
     private val backKey: View by lazy {
-        key(null, R.string.lychee_emoji_abc) { this@HandwritingPanelView.visibility = GONE }
+        key(null, R.string.lychee_emoji_abc) { this@HandwritingPanelView.visibility = GONE }.also { frame ->
+            // a back arrow before ABC: writing is a mode, and this leaves it
+            ((frame as FrameLayout).getChildAt(0) as? TextView)?.apply {
+                context.getDrawable(R.drawable.ic_sym_arrow_back)?.mutate()?.let { arrow ->
+                    arrow.setBounds(0, 0, dp(18), dp(18))
+                    setCompoundDrawablesRelative(arrow, null, null, null)
+                }
+                compoundDrawablePadding = dp(2)
+                compoundDrawableTintList = ColorStateList.valueOf(palette.onSecondaryContainer)
+                contentDescription = context.getString(R.string.lychee_hw_back_to_keys)
+            }
+        }
     }
     /** ⌫ exactly where the keyboard's own ⌫ is, and just as big: a functional key, lifted. */
     private val deleteKey: View by lazy {
@@ -151,6 +162,9 @@ class HandwritingPanelView @JvmOverloads constructor(
         // the pad over the keyboard's upper rows; its bottom row (?123, the comma, space, the
         // period, Enter) and the candidate bar above stay the keyboard's own, but for Back laid
         // over ?123 (there is nothing else to switch to while writing). ⌫ floats in the pad's corner
+        // a hairline between the candidate bar and the pad, so the two read apart
+        addView(View(context).apply { setBackgroundColor(palette.outlineVariant) },
+            LayoutParams(LayoutParams.MATCH_PARENT, maxOf(1, dp(1))))
         addView(FrameLayout(context).apply {
             addView(hint, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(pad, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))

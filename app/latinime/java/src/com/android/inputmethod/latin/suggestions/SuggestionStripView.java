@@ -239,6 +239,13 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         }
     }
 
+    /** Google's speech input couldn't go online: the mic dims (still tappable, to try again). */
+    public void setLycheeVoiceOffline(final boolean offline) {
+        mVoiceKey.setAlpha(offline ? 0.38f : 1f);
+        mVoiceKey.setContentDescription(getContext().getString(offline
+                ? R.string.lychee_voice_offline_mic : R.string.spoken_description_mic));
+    }
+
     /** How loud the speech is (0..1): the glow brightens as you speak. */
     public void setLycheeVoiceLevel(final float level) {
         if (!mLycheeVoiceListening || mLycheeVoiceGlow == null) return;

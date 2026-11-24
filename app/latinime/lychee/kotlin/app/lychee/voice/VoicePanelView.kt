@@ -44,6 +44,15 @@ class VoicePanelView @JvmOverloads constructor(
     var onListening: (Boolean) -> Unit = {}
     /** How loud the speech is now, 0..1, for the mic's glow. */
     var onLevel: (Float) -> Unit = {}
+    /**
+     * Google's speech input couldn't reach the internet (true), or worked again (false): the mic
+     * key dims until it does. Lychee has no network permission, so it can't know beforehand.
+     */
+    var onOffline: (Boolean) -> Unit = {}
+
+    /** Whether the recogniser in use runs on this phone (works offline). */
+    private var onDevice = false
+    private var language: String? = null
 
     private var recognizer: SpeechRecognizer? = null
     private val main = Handler(Looper.getMainLooper())
@@ -69,7 +78,9 @@ class VoicePanelView @JvmOverloads constructor(
      * Returns false when voice typing cannot start here (no recogniser, or the microphone
      * permission still has to be granted, in which case the permission screen is opened).
      */
-    fun start(language: String?): Boolean {
+    fun start(language: String?): Boolean = start(language, onDevice = false)
+
+    private fun start(language: String?, onDevice: Boolean): Boolean {
         if (context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             try {
                 context.startActivity(Intent(context, MicPermissionActivity::class.java)
@@ -86,8 +97,14 @@ class VoicePanelView @JvmOverloads constructor(
                 return false
             }
             cancel()
-            val r = googleService()?.let { SpeechRecognizer.createSpeechRecognizer(context, it) }
-                ?: SpeechRecognizer.createSpeechRecognizer(context)
+            this.language = language
+            this.onDevice = onDevice
+            val r = if (onDevice && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
+            } else {
+                googleService()?.let { SpeechRecognizer.createSpeechRecognizer(context, it) }
+                    ?: SpeechRecognizer.createSpeechRecognizer(context)
+            }
             recognizer = r
             r.setRecognitionListener(listener)
             quieten()
@@ -190,9 +207,23 @@ class VoicePanelView @JvmOverloads constructor(
             when (error) {
                 // nothing heard: just stop
                 SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> finish(null)
-                SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> {
+                SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT, ERROR_SERVER_DISCONNECTED -> {
                     cancel()
-                    say(R.string.lychee_voice_no_network)
+                    // offline: the phone's own speech recogniser, when it has one, works without
+                    // the internet; else the mic dims and says why
+                    if (!onDevice && offlineAvailable()) {
+                        start(language, onDevice = true)
+                    } else {
+                        onOffline(true)
+                        say(R.string.lychee_voice_no_network)
+                    }
+                }
+                ERROR_LANGUAGE_NOT_SUPPORTED, ERROR_LANGUAGE_UNAVAILABLE -> {
+                    cancel()
+                    if (onDevice) {
+                        onOffline(true)
+                        say(R.string.lychee_voice_offline_language)
+                    } else say(R.string.lychee_voice_error)
                 }
                 SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> {
                     cancel()
@@ -205,11 +236,17 @@ class VoicePanelView @JvmOverloads constructor(
                 }
             }
         }
-        override fun onResults(results: Bundle?) =
+        override fun onResults(results: Bundle?) {
+            if (!onDevice) onOffline(false)
             finish(results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull())
+        }
         override fun onPartialResults(partialResults: Bundle?) {}
         override fun onEvent(eventType: Int, params: Bundle?) {}
     }
+
+    /** Whether the phone can recognise speech without the internet (Android 12+, when it has a model). */
+    private fun offlineAvailable(): Boolean = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S &&
+        runCatching { SpeechRecognizer.isOnDeviceRecognitionAvailable(context) }.getOrDefault(false)
 
     override fun onDetachedFromWindow() {
         cancel()
@@ -218,6 +255,11 @@ class VoicePanelView @JvmOverloads constructor(
 
     companion object {
         private const val TAG = "LycheeVoice"
+        // SpeechRecognizer's ERROR_SERVER_DISCONNECTED (11), ERROR_LANGUAGE_NOT_SUPPORTED (12)
+        // and ERROR_LANGUAGE_UNAVAILABLE (13), Android 12
+        private const val ERROR_SERVER_DISCONNECTED = 11
+        private const val ERROR_LANGUAGE_NOT_SUPPORTED = 12
+        private const val ERROR_LANGUAGE_UNAVAILABLE = 13
         private const val RECOGNITION_SERVICE = "android.speech.RecognitionService"
         private val GOOGLE_SERVICES = listOf(
             ComponentName("com.google.android.tts",

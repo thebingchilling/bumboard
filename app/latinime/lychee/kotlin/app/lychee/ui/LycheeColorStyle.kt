@@ -6,14 +6,17 @@ import android.view.ContextThemeWrapper
 import com.android.inputmethod.latin.R
 
 /**
- * The keyboard's colours, chosen in Settings > Theme: neutral grey functional keys like
- * Gboard's (the default), keys tinted from the wallpaper, or one of Lychee's palettes, which
+ * The keyboard's colours, chosen in Settings > Theme: the Lychee logo's (the default), neutral
+ * grey functional keys like Gboard's, keys tinted from the wallpaper, or one of Lychee's palettes, which
  * colour the whole keyboard (background, letter and functional keys, Enter), light or dark.
  * Each is a theme overlay (LycheeColors.*) setting the lycheeColor* attributes that every key
  * drawable, the keyboard's styles and the panels read.
  */
 object LycheeColorStyle {
     const val PREF = "lychee_color_style"
+    /** The Lychee logo's own colours: blush keys, the lychee red for Enter. The default. */
+    const val LYCHEE = "lychee"
+    const val DEFAULT = LYCHEE
     const val NEUTRAL = "neutral"
     const val WALLPAPER = "wallpaper"
     const val ROSE = "rose"
@@ -26,12 +29,12 @@ object LycheeColorStyle {
     const val MIDNIGHT = "midnight"
     const val BLACK = "black"
     val DARK_ONLY = setOf(MIDNIGHT, BLACK)
-    val ALL = listOf(NEUTRAL, WALLPAPER, ROSE, OCEAN, FOREST, LAVENDER, SUNSET, MONO, MIDNIGHT, BLACK)
+    val ALL = listOf(LYCHEE, NEUTRAL, WALLPAPER, ROSE, OCEAN, FOREST, LAVENDER, SUNSET, MONO, MIDNIGHT, BLACK)
 
     @Suppress("DEPRECATION")
     @JvmStatic
     fun get(context: Context): String =
-        PreferenceManager.getDefaultSharedPreferences(context).getString(PREF, null) ?: NEUTRAL
+        PreferenceManager.getDefaultSharedPreferences(context).getString(PREF, null) ?: DEFAULT
 
     @JvmStatic
     fun isNeutral(context: Context) = get(context) == NEUTRAL
@@ -50,6 +53,7 @@ object LycheeColorStyle {
         LAVENDER -> R.style.LycheeColors_Lavender
         SUNSET -> R.style.LycheeColors_Sunset
         MONO -> R.style.LycheeColors_Mono
+        LYCHEE -> R.style.LycheeColors_Lychee
         MIDNIGHT -> R.style.LycheeColors_Midnight
         BLACK -> R.style.LycheeColors_Black
         else -> R.style.LycheeColors_Neutral

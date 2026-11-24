@@ -80,6 +80,24 @@ class ClipboardPanelView @JvmOverloads constructor(
         addView(turnOn, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, dp(40)).apply { topMargin = dp(16) })
     }
 
+    /**
+     * The clipboard on or off, at the right of the panel's title: off forgets every copy kept
+     * (nothing copied is kept while it is off).
+     */
+    private val onOff = android.widget.Switch(context).apply {
+        contentDescription = context.getString(R.string.lychee_clipboard_switch)
+        val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
+        thumbTintList = ColorStateList(states, intArrayOf(palette.onPrimary, palette.outline))
+        trackTintList = ColorStateList(states, intArrayOf(palette.primary, palette.surfaceContainerHigh))
+        trackTintMode = android.graphics.PorterDuff.Mode.SRC
+        setOnCheckedChangeListener { _, on ->
+            if (on == ClipboardStore.enabled(context)) return@setOnCheckedChangeListener
+            ClipboardStore.setEnabled(context, on)
+            if (on) ClipboardStore.capture(context)
+            load()
+        }
+    }
+
     // the bottom bar: how many, and Clear
     private val count = TextView(context).apply {
         setTextColor(palette.onSurfaceVariant)
@@ -148,7 +166,7 @@ class ClipboardPanelView @JvmOverloads constructor(
             bottomBar.layoutParams = lp
         }
         visibility = VISIBLE
-        toolbar()?.showTitle(R.string.lychee_sc_clipboard) { visibility = GONE }
+        toolbar()?.showTitle(R.string.lychee_sc_clipboard, end = onOff) { visibility = GONE }
     }
 
     override fun setVisibility(visibility: Int) {
@@ -161,6 +179,7 @@ class ClipboardPanelView @JvmOverloads constructor(
 
     private fun load() {
         val on = ClipboardStore.enabled(context)
+        if (onOff.isChecked != on) onOff.isChecked = on
         items = if (on) ClipboardStore.items(context) else emptyList()
         val pinned = items.filter { it.pinned }
         val recent = items.filter { !it.pinned }
