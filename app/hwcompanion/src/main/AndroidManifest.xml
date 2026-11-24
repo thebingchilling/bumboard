@@ -8,8 +8,7 @@
     may bind the service (the signature permission, which Lychee declares too, so it holds it
     whichever app is installed first).
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- ML Kit downloads its handwriting models (only the companion goes online, never Lychee) -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -48,20 +47,10 @@
         </activity-alias>
 
         <!--
-            No tracking: ML Kit reports how it is used to Google through Google's data transport
-            library (Firelog). Its backend and schedulers are removed here, so nothing is ever
-            sent; ML Kit still downloads and reads its models, which is all this app needs.
+            ML Kit sends Google performance and usage figures (Google's data transport). Google's
+            API terms forbid interfering with that, so it is left as ML Kit ships it, and the
+            app's privacy note says so. What is written is never part of it.
         -->
-        <service
-            android:name="com.google.android.datatransport.runtime.backends.TransportBackendDiscovery"
-            tools:node="remove" />
-        <service
-            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.JobInfoSchedulerService"
-            tools:node="remove" />
-        <receiver
-            android:name="com.google.android.datatransport.runtime.scheduling.jobscheduling.AlarmManagerSchedulerBroadcastReceiver"
-            tools:node="remove" />
-
         <service
             android:name=".RecognitionService"
             android:exported="true"

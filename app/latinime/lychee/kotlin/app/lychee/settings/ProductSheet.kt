@@ -117,8 +117,9 @@ fun ProductSheetHost() {
             Section("Privacy") {
                 Plain(
                     if (p.needsApp) "Your writing is read by Google's ML Kit on this phone, never sent anywhere. The " +
-                        "Lychee handwriting app goes online only to download Google's models; Lychee itself has no " +
-                        "internet permission."
+                        "Lychee handwriting app goes online to download Google's models, and ML Kit sends Google " +
+                        "figures about how it runs (device model, app version, speed), as Google's terms require; " +
+                        "never your handwriting. Lychee itself has no internet permission."
                     else "Lychee has no internet permission: everything works offline, and nothing you type or look " +
                         "up ever leaves your phone."
                 )

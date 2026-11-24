@@ -96,9 +96,10 @@ packs page). Public facing, so be careful:
   it the pad's strokes (`handwriting/GoogleHandwriting`). The companion is a small app with Lychee's icon: its full-screen
   setup (the Lychee logo's colours, no Material library, for size) lists each language's model
   and whether it is ready, a plain privacy note, and a switch to hide its launcher icon (Lychee
-  opens it from Add-ons too, so a hidden icon is never a lost app). No tracking: ML Kit's usage
-  reporting (Google's data transport: its backend and schedulers) is removed in the companion's
-  manifest and `build.yml` fails if it comes back; Lychee itself is closed and commercial. Only the
+  opens it from Add-ons too, so a hidden icon is never a lost app). The companion itself has no
+  tracking, analytics or ads. ML Kit's own performance and usage reporting stays: Google's API
+  terms forbid interfering with it. The app's privacy note says so plainly (never the
+  handwriting). Lychee itself is closed and commercial. Only the
   companion's code will be published, and only as **source-available** (readable to check it
   has no tracking; no copying, changing or redistributing; licence to be confirmed, PolyForm
   Strict 1.0.0 recommended), never called "open source". Nothing is published until the owner

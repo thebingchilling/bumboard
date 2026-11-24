@@ -12,11 +12,18 @@ through a signature permission.
 
 - It downloads Google's handwriting models: Chinese (Simplified, Hong Kong, Taiwan), Japanese
   and Korean. Each is about 20 MB.
-- That's all. Handwriting is recognised on the phone and never sent anywhere.
-- No tracking, analytics or ads. ML Kit normally reports how it is used through Google's data
-  transport library. Its backend and schedulers are removed from the manifest
-  (`src/main/AndroidManifest.xml`), and the build fails if they come back
-  (`.github/workflows/build.yml`).
+- Handwriting is recognised on the phone and never sent anywhere.
+- The app itself has no tracking, analytics or ads.
+- Google's ML Kit sends Google figures about how it runs: the device model, the app's version,
+  and performance such as how long recognition took. Google's API terms forbid interfering with
+  that, so it is left as ML Kit ships it, and the app's privacy note says so. Your handwriting
+  is never part of it.
+
+## Licence
+
+The code is published so anyone can check what the app does. Its licence (to be confirmed)
+allows reading it, not copying, changing or redistributing it. ML Kit is Google's, under
+Google's ML Kit and API terms.
 
 ## What is in it
 

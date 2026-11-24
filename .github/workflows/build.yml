@@ -96,13 +96,6 @@ jobs:
           if [ "$hash" != "$have" ] && [ "$GITHUB_REF" = refs/heads/main ]; then
             ./gradlew --no-daemon :hwcompanion:assembleRelease
             cp hwcompanion/build/outputs/apk/release/*.apk lychee-handwriting.apk
-            # no tracking: ML Kit's usage reporting (Google's data transport) must stay removed
-            aapt2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
-            manifest=$("$aapt2" dump xmltree --file AndroidManifest.xml lychee-handwriting.apk)
-            if echo "$manifest" | grep -q -e TransportBackendDiscovery -e JobInfoSchedulerService -e AlarmManagerSchedulerBroadcastReceiver; then
-              echo "::error::Lychee handwriting would send ML Kit's usage reports (data transport is back in its manifest)"
-              exit 1
-            fi
             if ! gh release view handwriting-google --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
               gh release create handwriting-google --repo "$GITHUB_REPOSITORY" --prerelease --latest=false \
                 --title "Lychee handwriting (Google)" --notes "building"

@@ -303,3 +303,28 @@ font files stay free downloads.
 - **On Google Play**: turn on automatic protection in Play Console (layer 3).
 - **Testing before launch**: Chromebooks running Android apps (they may not give a hardware
   certificate), and decryption speed per entry with StrongBox versus TEE.
+
+## Open issue: share-alike data and encryption (to decide before billing)
+
+Much of the paid data is **CC BY-SA**: CC-CEDICT, JMdict and KANJIDIC2, KRADFILE, Kanjium's
+pitch accent, the Basic Korean Dictionary and Wiktionary. Selling it is allowed, with
+attribution. But CC BY-SA 4.0 (section 2(a)(5)(C), "No downstream restrictions") forbids
+applying *effective technological measures*, such as encryption or DRM, that stop recipients
+using the licensed material as the licence allows. The 2.0 and 3.0 versions have similar
+clauses. So the plan to encrypt paid packs entry by entry can't apply to share-alike data as
+it stands.
+
+Options, for the owner to choose:
+
+1. Sell the paid packs unencrypted, under CC BY-SA, and charge for Lychee's work: the
+   building, the features in the app, the convenience and support. The data is free elsewhere
+   anyway (this file already says so).
+2. Encrypt only what is Lychee's own or permissively licensed: the conjugation and
+   sound-change rules, Lychee's own example selections and notes, MIT/CC BY data (HSK lists,
+   JLPT lists, words.hk's CC BY parts). Ship the share-alike data openly.
+3. Lock the paid features in the app (unlocking turns the feature on), not the data files.
+   The data stays plain under its licence. This is how Pleco handles open dictionaries such as
+   CC-CEDICT.
+
+Option 3 (or 2 with 3) keeps every licence and still sells honestly. The "Security model"
+above should be revised to match once chosen.
