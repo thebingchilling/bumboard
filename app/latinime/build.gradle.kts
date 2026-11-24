@@ -135,4 +135,13 @@ dependencies {
     implementation(libs.compose.foundation)
     implementation(libs.compose.material3)
     implementation(libs.activity.compose)
+    testImplementation(libs.junit)
+}
+
+// Screenshots of the UI, made locally to look at before committing UI changes (Paparazzi draws
+// the real screens on the computer, no emulator or phone): ./gradlew :latinime:recordPaparazziDebug
+// -PlycheeScreens. The snapshot tests live in screens/ and are left out of every other build.
+if (project.hasProperty("lycheeScreens")) {
+    apply(plugin = "app.cash.paparazzi")
+    android.sourceSets.getByName("test").kotlin.srcDir("screens/kotlin")
 }
