@@ -10,7 +10,7 @@ mkdir -p "$OUT"
 # closes Android's "isn't responding" dialog (a slow emulator's launcher), waiting it out
 dismiss_anr() {
   for _ in 1 2 3; do
-    adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+    timeout 30 adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
     adb pull /sdcard/ui.xml /tmp/ui.xml >/dev/null 2>&1
     grep -q "responding" /tmp/ui.xml || return 0
     tap_text Wait
@@ -22,12 +22,12 @@ shot() {
   sleep "${2:-3}"
   dismiss_anr
   adb exec-out screencap -p > "$OUT/$1.png"
-  echo "saved $1 ($(adb shell dumpsys activity activities | grep -m1 -o 'topResumedActivity=[^ ]* [^ ]* [^ }]*'))"
+  echo "saved $1 ($(timeout 20 adb shell dumpsys activity activities | grep -m1 -E 'mResumedActivity|topResumedActivity' | tr -s ' '))"
 }
 
 # taps the first element whose text (or description) is exactly $1
 tap_text() {
-  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+  timeout 30 adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
   adb pull /sdcard/ui.xml /tmp/ui.xml >/dev/null 2>&1
   local xy
   xy=$(python3 - "$1" <<'PY'
@@ -54,31 +54,31 @@ adb shell wm dismiss-keyguard
 dismiss_anr
 
 # --- Settings > Add-ons ---
-adb shell am start -W -n $PKG/app.lychee.settings.SettingsActivity --es app.lychee.settings.PAGE Packs
+timeout 40 adb shell am start -n $PKG/app.lychee.settings.SettingsActivity --es app.lychee.settings.PAGE Packs
 shot addons-1-store 6
 scroll; shot addons-2-store-scrolled
 adb shell input keyevent KEYCODE_MOVE_HOME
 for cat in Dictionaries Handwriting "Learning tools" "Fonts & emoji"; do
-  adb shell am start -W -n $PKG/app.lychee.settings.SettingsActivity --es app.lychee.settings.PAGE Packs >/dev/null
+  timeout 40 adb shell am start -n $PKG/app.lychee.settings.SettingsActivity --es app.lychee.settings.PAGE Packs >/dev/null
   sleep 3
   scroll; sleep 1
   tap_text "$cat"
   shot "addons-3-${cat// /-}"
 done
-adb shell am start -W -n $PKG/app.lychee.settings.SettingsActivity --es app.lychee.settings.PAGE Packs >/dev/null
+timeout 40 adb shell am start -n $PKG/app.lychee.settings.SettingsActivity --es app.lychee.settings.PAGE Packs >/dev/null
 sleep 3; tap_text Installed; shot addons-4-installed
 tap_text Updates; shot addons-5-updates
 # a listing's page
-adb shell am start -W -n $PKG/app.lychee.settings.SettingsActivity --es app.lychee.settings.ADDON card_zh >/dev/null
+timeout 40 adb shell am start -n $PKG/app.lychee.settings.SettingsActivity --es app.lychee.settings.ADDON card_zh >/dev/null
 shot addons-6-listing-card_zh 5
-adb shell am start -W -n $PKG/app.lychee.settings.SettingsActivity --es app.lychee.settings.ADDON pack_zh >/dev/null
+timeout 40 adb shell am start -n $PKG/app.lychee.settings.SettingsActivity --es app.lychee.settings.ADDON pack_zh >/dev/null
 shot addons-7-listing-pack_zh 5
 
 # --- the dictionary card (Look up in Lychee: the same card as the keyboard's) ---
 card() {
   local word=$1 name=$2
   adb shell am force-stop $PKG
-  adb shell am start -W -a android.intent.action.PROCESS_TEXT -t text/plain \
+  timeout 40 adb shell am start -a android.intent.action.PROCESS_TEXT -t text/plain \
     -n $PKG/app.lychee.lookup.LookupActivity --es android.intent.extra.PROCESS_TEXT "$word" >/dev/null
   shot "card-$name-1-summary" 10
   for tab in Readings Definitions Parts Examples; do

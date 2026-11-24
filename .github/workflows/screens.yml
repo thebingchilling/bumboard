@@ -17,7 +17,7 @@ permissions:
 jobs:
   screens:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - name: The release's APK
@@ -46,8 +46,9 @@ jobs:
           ram-size: 6144M
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: bash .github/screens/capture.sh
+          script: timeout 2400 bash .github/screens/capture.sh || true
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: screens
           path: |
