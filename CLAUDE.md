@@ -124,7 +124,9 @@ packs page). Public facing, so be careful:
 - Paid add-ons: everything agreed (offering, USD prices, packs, Full, demos, registration and
   the security model) is in `PAID.md`; follow it, and update it when the owner changes a
   decision. Build only the store UI until billing exists. One-time purchases only; every
-  language the same price; only paid add-ons are ever encrypted or limited.
+  language the same price. Data files are never locked: third-party data (CC BY-SA and the
+  rest) ships unencrypted under its licence, and the paid feature is locked in the app instead.
+  Only Lychee's own work (rules, notes, tables) is encrypted, so nobody can take it.
 - Privacy: the clipboard panel is off until turned on (`clipboard/ClipboardStore`); incognito
   (`typing/Incognito`, automatic in password and no-learning fields) keeps nothing; anything
   that learns or stores what is typed must check `Incognito.active`.

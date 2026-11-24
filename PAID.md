@@ -15,8 +15,12 @@ pirated.
 - **All prices in USD.** (Google Play sets local prices from them.)
 - **Every language is treated the same.** Packs cost the same; the free tier is equal.
 - **Typing is never paid**, in any language (Japanese kana-to-kanji included).
-- **Only paid add-ons are encrypted or limited.** Everything free, every free download and every
-  demo stays open and unlimited, on every phone.
+- **Data files are never locked.** Every pack's third-party data (CC-CEDICT, JMdict, KANJIDIC2,
+  Kanjium, the Basic Korean Dictionary, Wiktionary, Tatoeba...) ships unencrypted under its own
+  licence. What is paid is the feature in Lychee: without the add-on, Lychee doesn't use that
+  data. Only **Lychee's own work** is encrypted (its conjugation and sound-change rules, its own
+  notes, selections and tables), so nobody can lift it to build their own. Everything free and
+  every demo stays open and unlimited, on every phone.
 - **Always be honest with users about why something can't be offered**: say plainly why, and
   what, if anything, they can do. Never fail silently or hide the reason.
 - **No ads, no nags.** The free card shows what a pack adds as quiet, collapsed headings
@@ -194,14 +198,14 @@ the unlock function, and the phone's security chip.
 
 Layers 1 and 2 are the guarantee; 3 and 4 only raise the effort.
 
-**How the content is protected:**
-1. **Paid content is encrypted**, entry by entry (each paid dictionary entry, level, pitch accent,
-   Hanja breakdown, conjugation and sound-change rule, paid example sentence and stroke order),
-   with one key per pack. The headword list stays open (the free card shows it anyway). Free
-   features, free downloads and demos are never encrypted. The encrypted packs can stay on the
-   public release, and a pack's key stays the same across versions.
-2. **Paid features live in the encrypted data, not in code.** Conjugation rules, sound-change
-   rules, levels: all data. A copy with every check removed still has nothing to show.
+**How the content is protected** (owner's decision: the data files are never locked):
+1. **Third-party data is never encrypted.** It ships open under its licence (CC BY-SA forbids
+   technological measures on it anyway), with its LICENSE.txt. The paid feature is locked in
+   Lychee: until the add-on is unlocked, Lychee simply doesn't read that data.
+2. **Only Lychee's own work is encrypted**, entry by entry, one key per pack: the conjugation and
+   sound-change rules, and Lychee's own notes, selections and tables. These are data, not code,
+   so a copy with every check removed still lacks them. A pack's key stays the same across
+   versions, and encrypted packs can stay on the public release.
 3. **The key goes straight into the security chip** (Android's secure key import) and never
    comes out; Lychee's code never sees it. When a card opens, Lychee hands that one entry to the
    chip and gets back only that entry's text (a few milliseconds). Nothing ever decrypts a whole
@@ -237,7 +241,7 @@ Lychee keeps no network permission (to confirm when building, for Billing and Pl
 | Removing the Play Integrity call from a copy | No token, so no key |
 | Faking a Play Integrity token or a chip certificate | Impossible: only Google or the chip's factory key can sign them |
 | Borrowing a token from the genuine Lychee | Fails: each is tied to one request's one-time code, and Google reports the installed app's signature |
-| Patching a copy to skip unlocking | The paid packs stay encrypted, with no key to open them |
+| Patching a copy to skip unlocking | It can read the open data (free elsewhere anyway), but Lychee's own encrypted work stays locked, with no key to open it |
 | Reading Lychee's code (by hand or with AI) | Nothing: the app holds no key or secret |
 | A leaked key, a decrypted dump, copied packs or backups | Useless in Lychee, which only takes keys from its own unlock; the key never leaves the chip anyway |
 | Intercepting the unlock | The key in transit opens only inside that phone's chip; one-time codes stop replays |
@@ -246,8 +250,9 @@ Lychee keeps no network permission (to confirm when building, for Billing and Pl
 **The precise limit:** on a rooted phone with a real purchase, someone could use hooking tools to
 make the genuine Lychee decrypt its own entries one by one, save the text, and ship it inside a
 cracked copy. No app can rule that out, Pleco's included. It needs a real purchase and great
-effort, for data that is mostly openly licensed and free elsewhere; what Lychee sells is the
-dictionary in the keyboard, kept up to date. No watermarking.
+effort, for data that is mostly openly licensed and free elsewhere. The open data itself can be
+read by anyone: that is its licence, and what Lychee sells is the feature in the keyboard and
+its own work, kept up to date. No watermarking.
 
 **Decrypted text never touches storage.** Paid entries exist in plain text only on screen and
 in memory while a card shows: never written to caches, files, logs, crash reports or the
@@ -286,8 +291,8 @@ font files stay free downloads.
   app answer and the chip's certificate (with Google's revocation list), issues wrapped keys, keeps registrations,
   purchases and phones, and never sees anything typed. There is no server today; none is
   needed until billing.
-- **Pack builders**: paid content as entry-by-entry encrypted data, demos as separate open
-  files; free packs unchanged.
+- **Pack builders**: third-party data always open (with its licence); only Lychee's own work
+  as entry-by-entry encrypted data; demos as separate open files; free packs unchanged.
 - **Lychee**: the store (UI first), registration, `lychee://unlock`, its own key and the chip's
   certificate, secure key import, decryption inside the chip, no other way in for keys or paid
   data, its own signature check (layer 4), Play Billing and Play Integrity
@@ -304,27 +309,9 @@ font files stay free downloads.
 - **Testing before launch**: Chromebooks running Android apps (they may not give a hardware
   certificate), and decryption speed per entry with StrongBox versus TEE.
 
-## Open issue: share-alike data and encryption (to decide before billing)
+## Decided: share-alike data stays open
 
-Much of the paid data is **CC BY-SA**: CC-CEDICT, JMdict and KANJIDIC2, KRADFILE, Kanjium's
-pitch accent, the Basic Korean Dictionary and Wiktionary. Selling it is allowed, with
-attribution. But CC BY-SA 4.0 (section 2(a)(5)(C), "No downstream restrictions") forbids
-applying *effective technological measures*, such as encryption or DRM, that stop recipients
-using the licensed material as the licence allows. The 2.0 and 3.0 versions have similar
-clauses. So the plan to encrypt paid packs entry by entry can't apply to share-alike data as
-it stands.
-
-Options, for the owner to choose:
-
-1. Sell the paid packs unencrypted, under CC BY-SA, and charge for Lychee's work: the
-   building, the features in the app, the convenience and support. The data is free elsewhere
-   anyway (this file already says so).
-2. Encrypt only what is Lychee's own or permissively licensed: the conjugation and
-   sound-change rules, Lychee's own example selections and notes, MIT/CC BY data (HSK lists,
-   JLPT lists, words.hk's CC BY parts). Ship the share-alike data openly.
-3. Lock the paid features in the app (unlocking turns the feature on), not the data files.
-   The data stays plain under its licence. This is how Pleco handles open dictionaries such as
-   CC-CEDICT.
-
-Option 3 (or 2 with 3) keeps every licence and still sells honestly. The "Security model"
-above should be revised to match once chosen.
+Much of the paid data is CC BY-SA, and its licence forbids encryption or DRM on it. The owner's
+decision (option 3 with 2): the data files are never locked, Lychee locks the paid features in
+the app, and only Lychee's own work is encrypted. See the principles and the security model
+above.
