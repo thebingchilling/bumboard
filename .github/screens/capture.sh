@@ -45,7 +45,7 @@ PY
 
 scroll() { adb shell input swipe 540 1700 540 700 400; }
 
-adb install -r -g lychee-universal.apk
+adb install -r -g lychee-universal.apk || { echo "::error::Lychee didn't install"; exit 1; }
 adb shell settings put system screen_off_timeout 1800000
 # let the freshly booted phone settle (its launcher is slow to start), then wake it
 sleep 60
