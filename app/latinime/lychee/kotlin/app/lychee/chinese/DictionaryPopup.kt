@@ -34,10 +34,11 @@ import com.android.inputmethod.latin.R
  * the keyboard (in lychee_dictionary_panel), never over the keys or the candidates. Plain Views
  * in Material 3 colours.
  *
- * It opens condensed: a short card (the word, its readings and first meanings) that doesn't
- * scroll, its foot fading out when there is more; the ⌃ button between close and type grows it
- * to the full card (as tall as the entry, up to the room above), which scrolls, and ⌄ shrinks it
- * back. A short entry simply shows whole.
+ * One fixed size, never growing (REDESIGN.md): a header that always shows the word, the reading
+ * of every syllable, the 粵/普 switch and speaker, and ✕; then the tabs (Summary, Readings,
+ * Definitions, Parts, Examples; empty ones left out), swiped sideways or tapped, each page
+ * scrolling on its own. A part (a character, a piece of a phrase) opens as its own card, with
+ * Back.
  */
 class DictionaryPopup(
     private val ctx: Context,
@@ -93,14 +94,29 @@ class DictionaryPopup(
         onSpeakLocal: ((String) -> Unit)? = null,
         onType: () -> Unit,
     ) {
-        present(keyboard, peek, onType) { c, body, compact ->
-            Content(ctx, c, prefs, body, onSpeak).apply {
-                this.compact = compact
-                this.local = local
-                this.showChinese = local == null || showChinese
-                this.onSpeakLocal = onSpeakLocal
-            }.fill(text, Annotator.regional(resolved, prefs))
+        val reshow = { show(keyboard, text, resolved, prefs, peek, onSpeak, local, showChinese, onSpeakLocal, onType) }
+        val r = Annotator.regional(resolved, prefs)
+        // one 粵/普 choice for the whole card: the header's switch sets what every speaker says
+        val language = LangChoice()
+        fun makeContent(c: M3Colors, body: LinearLayout, page: Page?) = Content(ctx, c, prefs, body, onSpeak).apply {
+            this.local = local
+            this.showChinese = local == null || showChinese
+            this.onSpeakLocal = onSpeakLocal
+            flat = true
+            pageTitle = page?.let { ctx.getString(it.label) }
+            choice = language
+            begin(r)
         }
+        presentTabs(keyboard, peek, onType, reshow,
+            header = { c, body -> makeContent(c, body, null).header(text, r) },
+            page = { which, c, body ->
+                makeContent(c, body, which).page(which, text, r) { part ->
+                    // a part opened as its own card: Back comes back here
+                    val pr = Readings.annotator?.resolve(part, "", if (r.lang == Lang.Mandarin) app.lychee.core.InputMode.Mandarin
+                        else app.lychee.core.InputMode.Cantonese) ?: return@page
+                    navigate { show(keyboard, part, pr, prefs, peek = false, onSpeak = onSpeak) {} }
+                }
+            })
     }
 
     /**
@@ -119,7 +135,7 @@ class DictionaryPopup(
      * A piece of a Japanese or Korean phrase the dictionary doesn't have as a whole: a word it
      * has (or a single Kanji or Hanja), its reading and its meaning, so the phrase can be read.
      */
-    class PhrasePart(val form: String, val reading: String?, val meaning: String)
+    class PhrasePart(val form: String, val reading: String?, val meaning: String, val full: String? = null)
 
     /**
      * One kind of a character's Japanese or Korean readings: its label, as shown, and what is
@@ -165,170 +181,324 @@ class DictionaryPopup(
         parts: List<PhrasePart> = emptyList(),
         onType: () -> Unit,
     ) {
-        present(keyboard, peek, onType) { c, body, compact ->
-            val content = Content(ctx, c, chinesePrefs ?: DisplayPrefs(), body, onSpeak)
-            content.compact = compact
-            content.fontLang = lang
-            // each pronunciation has its own speak button; only a word with none keeps the
-            // heading's
-            val anyReading = entries.any { !it.reading.isNullOrBlank() }
-            // (English: each UK and US pronunciation has its own speaker instead; Japanese and
-            // Korean always keep the word's, as their reading rows can be left out)
-            content.heading(text, if (anyReading && onSpeakAs != null && lang == "en") null else text,
-                strokesOf = text.takeIf { lang == "ja" || lang == "ko" })
-            if (translations.isNotEmpty()) content.translations(translations, onTranslation)
-            // the reading under the word, as one quiet line (no label): the kana and romaji, or
-            // the romanisation and the Hanja
-            val hanja = entries.firstOrNull()?.hanja?.takeIf { lang == "ko" && it.isNotBlank() }
-            // (a Korean word's Hanja are in its Hanja section, as a Japanese word's Kanji are)
-            val subtitle = romanisation.orEmpty()
-            if (subtitle.isNotEmpty()) body.addView(content.textView(subtitle, 16f, c.primary).apply {
-                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
-                setPadding(0, 0, 0, dp(4))
-            })
-            // the other way of writing it: a Korean word's Hanja (the alternative to its
-            // Hangul), a Japanese word's old form (traditional kanji)
-            val alternative = when {
-                hanja != null && hanja != text -> ctx.getString(R.string.lychee_card_hanja) to hanja
-                lang == "ja" && oldForm != null && oldForm != text -> ctx.getString(R.string.lychee_card_old_form) to oldForm
-                else -> null
-            }
-            alternative?.let { (label, form) ->
-                body.addView(content.labelled(label, form).apply {
-                    textLocale = if (lang == "ko") java.util.Locale.KOREAN else java.util.Locale.TRADITIONAL_CHINESE
-                    setPadding(0, 0, 0, dp(4))
-                })
-            }
-            // the learner level, then how it is said (pitch accent, sound changes)
-            if (badges.isNotEmpty()) content.badges(badges)
-            pronunciation?.let { body.addView(content.textView(it, 15f, c.onSurface).apply { setPadding(0, dp(2), 0, dp(4)) }) }
-            // the stroke order straight after the reading
-            if (lang == "ja" || lang == "ko") content.strokes(text)
-            // a word written alike but said differently by meaning (lead, wind, tear): each
-            // pronunciation says itself
-            val pronunciations = entries.mapNotNull { e -> e.reading?.takeIf { it.isNotBlank() } }.distinct()
-            val heteronym = lang == "en" && pronunciations.size > 1
-            // condensed: the first entry, its readings and first meanings only
-            (if (compact) entries.take(1) else entries).forEachIndexed { i, e ->
-                if (i > 0 || e.lemma != text) {
-                    if (i > 0) body.addView(content.divider())
-                    body.addView(content.textView(e.lemma, 22f, c.onSurface).apply {
-                        app.lychee.fonts.LycheeFonts.forText(ctx, e.lemma, lang)?.let { typeface = it }
-                    })
-                }
-                // a reading already in the line under the word is not shown again
-                e.reading?.takeIf { it != e.lemma && romanisation?.contains(it) != true }?.let { reading ->
-                    val label = ctx.getString(if (lang == "en") R.string.lychee_card_pronunciation else R.string.lychee_card_reading)
-                    // English UK and US apart, each in its own voice; Japanese says the kana
-                    // reading itself; Korean the word
-                    // (Settings > Pronunciation: both, or only the UK's or the US's)
-                    val parts = if (lang == "en") reading.split(" · ").let { all ->
-                        all.filter { app.lychee.speech.Pronunciation.showsEnglish(ctx, it) }.ifEmpty { all }
-                    } else listOf(reading)
-                    for (part in parts) {
-                        val locale = when {
-                            part.endsWith("(UK)") -> java.util.Locale.UK
-                            part.endsWith("(US)") -> java.util.Locale.US
-                            lang == "en" -> app.lychee.speech.Pronunciation.englishLocale(ctx)
-                            else -> null
-                        }
-                        val button = onSpeakAs?.let { speak ->
-                            content.speakButton {
-                                val say = when {
-                                    lang == "ja" -> reading
-                                    // said as a word that sounds just like this pronunciation
-                                    heteronym -> app.lychee.dict.PackData.homophone(ctx, part, e.lemma) ?: e.lemma
-                                    else -> e.lemma
-                                }
-                                speak(say, locale)
-                            }
-                        }
-                        body.addView(content.readingRow(content.labelled(label, part), button))
-                    }
-                }
-                e.hanja?.takeIf { it != hanja }?.let { body.addView(content.textView(it, 15f, c.onSurfaceVariant)) }
-                // the part of speech small, over the meanings, rather than a labelled row
-                e.partOfSpeech?.takeIf { it.isNotBlank() }?.let { pos ->
-                    body.addView(content.textView(pos, 12f, c.onSurfaceVariant).apply {
-                        setTypeface(typeface, Typeface.ITALIC)
-                        setPadding(0, dp(4), 0, dp(2))
-                    })
-                }
-                e.senses.take(if (compact) Content.SUMMARY_SENSES else Content.MAX_SENSES)
-                    .forEachIndexed { n, s -> content.plainSense(n + 1, s) }
-            }
-            // a phrase the dictionary doesn't have as a whole: what its pieces mean, so it can
-            // still be understood; else the card says so (and still speaks the word)
-            if (entries.isEmpty() && parts.isNotEmpty()) {
-                body.addView(content.textView(parts.joinToString(" + ") { it.meaning }, 16f, c.onSurface).apply {
-                    setPadding(0, dp(6), 0, dp(4))
-                })
-                content.phraseParts(ctx.getString(R.string.lychee_card_parts), parts, if (compact) 3 else parts.size)
-            } else if (entries.isEmpty()) body.addView(content.textView(ctx.getString(R.string.lychee_card_no_definition), 14f, c.onSurfaceVariant).apply {
-                setPadding(0, dp(8), 0, dp(4))
-            })
-            if (compact) return@present
-            // after the meanings: how it conjugates, each Kanji or Hanja with its readings, then
-            // the word in Chinese
-            conjugation?.takeIf { it.size > 1 }?.let { content.conjugation(it) }
-            if (characters.isNotEmpty()) content.characterReadings(charactersTitle ?: "", characters)
-            chinese?.let { content.chineseBox(chineseForm ?: text, it) }
-            content.examples(examples) { sentence ->
-                when (lang) {
-                    "ja" -> app.lychee.core.SentenceRomanizer.japanese(sentence) { form ->
-                        app.lychee.dict.PackData.words(ctx, "ja", form, 1).firstOrNull()?.let { it.reading ?: it.form }
-                    }
-                    "ko" -> app.lychee.core.SentenceRomanizer.korean(sentence)
+        val reshow = {
+            showWord(keyboard, text, romanisation, entries, examples, peek, onSpeak, lang, onSpeakAs, translations,
+                onTranslation, chinese, chinesePrefs, chineseForm, characters, charactersTitle, oldForm, badges,
+                pronunciation, conjugation, parts, onType)
+        }
+        val prefs = chinesePrefs ?: DisplayPrefs()
+        fun makeContent(c: M3Colors, body: LinearLayout, page: Page?) = Content(ctx, c, prefs, body, onSpeak).apply {
+            fontLang = lang
+            flat = true
+            pageTitle = page?.let { ctx.getString(it.label) }
+        }
+        // each pronunciation has its own speak button; only a word with none keeps the heading's
+        val anyReading = entries.any { !it.reading.isNullOrBlank() }
+        val pronunciations = entries.mapNotNull { e -> e.reading?.takeIf { it.isNotBlank() } }.distinct()
+        val heteronym = lang == "en" && pronunciations.size > 1
+        val hanja = entries.firstOrNull()?.hanja?.takeIf { lang == "ko" && it.isNotBlank() }
+
+        /** One entry's readings (each with its speaker; English UK and US apart). */
+        fun readingsOf(content: Content, body: LinearLayout, e: app.lychee.dict.WordEntry, c: M3Colors) {
+            val reading = e.reading?.takeIf { it != e.lemma && it.isNotBlank() } ?: return
+            val label = ctx.getString(if (lang == "en") R.string.lychee_card_pronunciation else R.string.lychee_card_reading)
+            val list = if (lang == "en") reading.split(" · ").let { all ->
+                all.filter { app.lychee.speech.Pronunciation.showsEnglish(ctx, it) }.ifEmpty { all }
+            } else listOf(reading)
+            for (part in list) {
+                val locale = when {
+                    part.endsWith("(UK)") -> java.util.Locale.UK
+                    part.endsWith("(US)") -> java.util.Locale.US
+                    lang == "en" -> app.lychee.speech.Pronunciation.englishLocale(ctx)
                     else -> null
                 }
+                val button = onSpeakAs?.let { speak ->
+                    content.speakButton {
+                        val say = when {
+                            lang == "ja" -> reading
+                            heteronym -> app.lychee.dict.PackData.homophone(ctx, part, e.lemma) ?: e.lemma
+                            else -> e.lemma
+                        }
+                        speak(say, locale)
+                    }
+                }
+                body.addView(content.readingRow(content.labelled(label, part), button))
             }
+        }
+
+        /** An entry's word, when it isn't the word looked up (a form of it, or the next entry). */
+        fun entryWord(content: Content, body: LinearLayout, e: app.lychee.dict.WordEntry, i: Int) {
+            if (i > 0 || e.lemma != text) {
+                if (i > 0) body.addView(content.divider())
+                body.addView(content.entryChip(e.lemma))
+            }
+        }
+
+        presentTabs(keyboard, peek, onType, reshow,
+            header = { c, body ->
+                val content = makeContent(c, body, null)
+                content.heading(text, if (anyReading && onSpeakAs != null && lang == "en") null else text)
+                // the reading under the word, as one quiet line: the kana and romaji, or the romanisation
+                romanisation?.takeIf { it.isNotEmpty() }?.let { r ->
+                    body.addView(content.textView(r, 16f, c.primary).apply {
+                        typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
+                    })
+                }
+                // the other way of writing it: a Korean word's Hanja, a Japanese word's old form
+                val alternative = when {
+                    hanja != null && hanja != text -> ctx.getString(R.string.lychee_card_hanja) to hanja
+                    lang == "ja" && oldForm != null && oldForm != text -> ctx.getString(R.string.lychee_card_old_form) to oldForm
+                    else -> null
+                }
+                alternative?.let { (label, form) ->
+                    body.addView(content.labelled(label, form).apply {
+                        textLocale = if (lang == "ko") java.util.Locale.KOREAN else java.util.Locale.TRADITIONAL_CHINESE
+                    })
+                }
+                if (badges.isNotEmpty()) content.badges(badges)
+            },
+            page = { which, c, body ->
+                val content = makeContent(c, body, which)
+                when (which) {
+                    Page.SUMMARY -> {
+                        if (translations.isNotEmpty()) content.translations(translations, onTranslation)
+                        when {
+                            entries.isNotEmpty() -> entries.take(3).forEachIndexed { i, e ->
+                                entryWord(content, body, e, i)
+                                e.partOfSpeech?.takeIf { it.isNotBlank() }?.let { body.addView(content.partOfSpeech(it)) }
+                                e.senses.take(Content.SUMMARY_SENSES).forEachIndexed { n, s -> content.plainSense(n + 1, s) }
+                            }
+                            parts.isNotEmpty() -> {
+                                // a phrase the dictionary lacks as a whole: what its pieces mean, each in full
+                                body.addView(content.note(ctx.getString(R.string.lychee_card_phrase_note)))
+                                parts.forEach { p -> body.addView(content.pieceLine(p.form, p.full ?: p.meaning)) }
+                            }
+                            else -> body.addView(content.note(ctx.getString(R.string.lychee_card_no_definition)))
+                        }
+                    }
+                    Page.READINGS -> {
+                        entries.forEachIndexed { i, e -> readingsOf(content, body, e, c) }
+                        pronunciation?.let { body.addView(content.textView(it, 15f, c.onSurface).apply { setPadding(0, dp(6), 0, dp(4)) }) }
+                        chinese?.let { content.chineseBox(chineseForm ?: text, it) }
+                    }
+                    Page.DEFINITIONS -> {
+                        entries.forEachIndexed { i, e ->
+                            entryWord(content, body, e, i)
+                            e.hanja?.takeIf { it != hanja && it.isNotBlank() }?.let { body.addView(content.textView(it, 15f, c.onSurfaceVariant)) }
+                            e.partOfSpeech?.takeIf { it.isNotBlank() }?.let { body.addView(content.partOfSpeech(it)) }
+                            e.senses.take(Content.MAX_SENSES).forEachIndexed { n, s -> content.plainSense(n + 1, s) }
+                        }
+                        conjugation?.takeIf { it.size > 1 }?.let { content.conjugation(it) }
+                    }
+                    Page.PARTS -> {
+                        if (lang == "ja" || lang == "ko") content.strokes(text)
+                        if (characters.isNotEmpty()) content.characterReadings(charactersTitle ?: "", characters)
+                        if (entries.isEmpty() && parts.isNotEmpty()) {
+                            content.phraseParts(ctx.getString(R.string.lychee_card_parts), parts, parts.size) { p ->
+                                openWordPart(keyboard, p.form, lang, onSpeak, onSpeakAs)
+                            }
+                        }
+                    }
+                    Page.EXAMPLES -> content.examples(examples) { sentence ->
+                        when (lang) {
+                            "ja" -> app.lychee.core.SentenceRomanizer.japanese(sentence) { form ->
+                                app.lychee.dict.PackData.words(ctx, "ja", form, 1).firstOrNull()?.let { it.reading ?: it.form }
+                            }
+                            "ko" -> app.lychee.core.SentenceRomanizer.korean(sentence)
+                            else -> null
+                        }
+                    }
+                }
+            })
+    }
+
+    /** A Japanese or Korean phrase's piece opened as its own card (Back returns to the phrase). */
+    private fun openWordPart(keyboard: View, form: String, lang: String?, onSpeak: ((String, Lang?) -> Unit)?,
+                             onSpeakAs: ((String, java.util.Locale?) -> Unit)?) {
+        val entries = app.lychee.dict.PackData.words(ctx, lang, form)
+        val examples = if (lang != null) app.lychee.dict.PackData.examples(ctx, lang, listOf(form)) else emptyList()
+        navigate {
+            showWord(keyboard, form, entries.firstOrNull()?.reading?.takeIf { it != form }, entries, examples,
+                peek = false, onSpeak = onSpeak, lang = lang, onSpeakAs = onSpeakAs) {}
         }
     }
 
-    private fun present(keyboard: View, peek: Boolean, onType: () -> Unit, fill: (M3Colors, LinearLayout, Boolean) -> Unit) {
+    /** The card's tabs, in order; a tab with nothing in it is left out. */
+    enum class Page(val label: Int) {
+        SUMMARY(R.string.lychee_card_tab_summary),
+        READINGS(R.string.lychee_card_tab_readings),
+        DEFINITIONS(R.string.lychee_card_tab_definitions),
+        PARTS(R.string.lychee_card_parts),
+        EXAMPLES(R.string.lychee_card_examples),
+    }
+
+    /** The card's one 粵/普 choice: the header's switch, every speaker and reading line follow it. */
+    class LangChoice {
+        var lang: Lang? = null
+        val listeners = ArrayList<() -> Unit>()
+        fun changed() = listeners.forEach { it() }
+    }
+
+    /** The cards a part was opened from, newest last: Back shows the one before. */
+    private val history = ArrayList<() -> Unit>()
+    /** How to show the card now on screen again (for [history]). */
+    private var current: (() -> Unit)? = null
+    /** The next card shown is a part opened from this one (not a new look-up). */
+    private var navigating = false
+
+    /** Opens [next] (a part's card) on top of this one; Back returns. */
+    private fun navigate(next: () -> Unit) {
+        current?.let { history += it }
+        navigating = true
+        next()
+        navigating = false
+    }
+
+    private fun back() {
+        val previous = history.removeLastOrNull() ?: return
+        navigating = true
+        current = null
+        previous()
+        navigating = false
+    }
+
+    /**
+     * The card: one fixed size, never growing. A header (the word, its reading, the 粵/普 switch
+     * and speaker, Back when a part was opened, ✕), then the tabs, then the pages, swiped
+     * sideways or chosen by tab, each scrolling on its own. [reshow] shows this card again
+     * (Back from a part opened on it).
+     */
+    private fun presentTabs(
+        keyboard: View, peek: Boolean, onType: () -> Unit, reshow: () -> Unit,
+        header: (M3Colors, LinearLayout) -> Unit,
+        page: (Page, M3Colors, LinearLayout) -> Unit,
+    ) {
+        if (!navigating) history.clear()
+        current = reshow
         host?.removeAllViews()
         host = null
         val panel = standalone ?: keyboard.rootView.findViewById<FrameLayout>(R.id.lychee_dictionary_panel) ?: return
-        // a card still fading out from before goes at once
         panel.animate().cancel()
         panel.removeAllViews()
         val parent = panel.parent as? View ?: return
-        // the keyboard's top edge in the input view (which spans the screen), and the room
-        // between it and the status bar
         val keyboardTop = if (standalone != null) 0 else IntArray(2).also { keyboard.getLocationInWindow(it) }[1] -
             IntArray(2).also { parent.getLocationInWindow(it) }[1]
         @Suppress("DEPRECATION")
         val statusBar = parent.rootWindowInsets?.stableInsetTop ?: dp(24)
-        // a popup, not a sheet: at most about half the room above the keys (never the whole
-        // screen), within limits that suit a phone
         val space = if (standalone != null) standaloneRoom else keyboardTop - statusBar - dp(12)
-        if (space < dp(96)) return
-        val room = if (standalone != null) space else minOf(space, maxOf(dp(220), (space * 0.6f).toInt()), dp(MAX_CARD_DP))
-        // inside the keyboard it opens as a short summary (Look up in Lychee has the screen to itself)
-        val startCompact = standalone == null
+        if (space < dp(160)) return
+        // one fixed height: about 60% of the room above the keys, within limits that suit a phone
+        val height = if (standalone != null) space else minOf(space, maxOf(dp(260), (space * 0.6f).toInt()), dp(MAX_CARD_DP))
         val c = M3Colors.of(ctx)
-        val body = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(2))
-        }
-        fill(c, body, startCompact)
 
-        // its two buttons along the bottom, where the thumb is: close (X) on the left, type the
-        // word on the right
-        val actions = FrameLayout(ctx).apply { setPadding(dp(10), dp(4), dp(10), dp(10)) }
-        val scroll = ScrollView(ctx).apply {
-            addView(body)
-            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+        // the pages, each built once; empty ones are left out
+        val pages = Page.values().mapNotNull { p ->
+            val body = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(16), dp(8), dp(16), dp(16))
+            }
+            runCatching { page(p, c, body) }.onFailure { app.lychee.DiagLog.log("dictionary card: ${p.name}", it) }
+            if (body.childCount == 0) null else p to body
         }
-        // the summary may take all the room above the keys, so it never scrolls
-        val card = MaxHeightLayout(ctx, if (startCompact) space else room).apply {
+
+        // the header: Back (when a part was opened), the word and its reading, ✕
+        val head = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.TOP
+            setPadding(dp(8), dp(10), dp(8), dp(6))
+        }
+        if (history.isNotEmpty() && !peek) head.addView(cornerButton(R.drawable.ic_sym_arrow_back, ctx.getString(R.string.lychee_card_back), c, filled = false) { back() },
+            LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginEnd = dp(4) })
+        val title = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(if (history.isNotEmpty()) 4 else 8), 0, dp(4), 0)
+        }
+        header(c, title)
+        head.addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+        if (!peek) {
+            // Look up in Lychee keeps its own action (copy) beside ✕; inside the keyboard the
+            // candidate types the word
+            if (standalone != null) head.addView(cornerButton(actionIcon, ctx.getString(actionLabel), c, filled = true) {
+                dismiss()
+                onType()
+            }, LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginEnd = dp(6) })
+            head.addView(cornerButton(R.drawable.ic_sym_close, ctx.getString(R.string.lychee_close), c, filled = false) { dismiss() },
+                LinearLayout.LayoutParams(dp(40), dp(40)))
+        }
+
+        // the tabs: scroll sideways if they don't fit; the current one in the accent colour, underlined
+        val tabRow = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(dp(8), 0, dp(8), 0)
+        }
+        val tabs = android.widget.HorizontalScrollView(ctx).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(tabRow)
+        }
+        val pager = androidx.recyclerview.widget.RecyclerView(ctx)
+        val layout = androidx.recyclerview.widget.LinearLayoutManager(ctx, androidx.recyclerview.widget.LinearLayoutManager.HORIZONTAL, false)
+        pager.layoutManager = layout
+        androidx.recyclerview.widget.PagerSnapHelper().attachToRecyclerView(pager)
+        pager.overScrollMode = View.OVER_SCROLL_NEVER
+        pager.adapter = object : androidx.recyclerview.widget.RecyclerView.Adapter<androidx.recyclerview.widget.RecyclerView.ViewHolder>() {
+            override fun getItemCount() = pages.size
+            override fun getItemViewType(position: Int) = position
+            override fun onCreateViewHolder(group: ViewGroup, viewType: Int): androidx.recyclerview.widget.RecyclerView.ViewHolder {
+                val body = pages[viewType].second
+                (body.parent as? ViewGroup)?.removeView(body)
+                val scroll = ScrollView(ctx).apply {
+                    overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+                    isVerticalScrollBarEnabled = true
+                    addView(body)
+                    layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                }
+                return object : androidx.recyclerview.widget.RecyclerView.ViewHolder(scroll) {}
+            }
+            override fun onBindViewHolder(holder: androidx.recyclerview.widget.RecyclerView.ViewHolder, position: Int) {}
+        }
+        // every page kept, never recycled (each is its own view)
+        pager.setItemViewCacheSize(Page.values().size)
+        val tabViews = pages.mapIndexed { i, (p, _) ->
+            TextView(ctx).apply {
+                text = ctx.getString(p.label)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
+                gravity = Gravity.CENTER
+                setPadding(dp(12), 0, dp(12), 0)
+                background = TypedValue().let { v ->
+                    ctx.theme.resolveAttribute(android.R.attr.selectableItemBackground, v, true)
+                    ctx.getDrawable(v.resourceId)
+                }
+                setOnClickListener { pager.smoothScrollToPosition(i) }
+            }.also { tabRow.addView(it, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(40))) }
+        }
+        fun select(i: Int) {
+            tabViews.forEachIndexed { j, t ->
+                val on = i == j
+                t.setTextColor(if (on) c.primary else c.onSurfaceVariant)
+                t.foreground = if (on) android.graphics.drawable.LayerDrawable(arrayOf(GradientDrawable().apply {
+                    setColor(c.primary)
+                    cornerRadius = dp(2).toFloat()
+                })).apply { setLayerGravity(0, Gravity.BOTTOM or Gravity.FILL_HORIZONTAL); setLayerHeight(0, dp(3)); setLayerInset(0, dp(10), 0, dp(10), 0) } else null
+            }
+            tabViews.getOrNull(i)?.let { t -> tabs.post { tabs.smoothScrollTo((t.left - dp(24)).coerceAtLeast(0), 0) } }
+        }
+        select(0)
+        pager.addOnScrollListener(object : androidx.recyclerview.widget.RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(view: androidx.recyclerview.widget.RecyclerView, state: Int) {
+                if (state != androidx.recyclerview.widget.RecyclerView.SCROLL_STATE_IDLE) return
+                val i = layout.findFirstCompletelyVisibleItemPosition().takeIf { it >= 0 } ?: layout.findFirstVisibleItemPosition()
+                if (i >= 0) select(i)
+            }
+        })
+
+        val card = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             isClickable = true
-            // raised well clear of the app behind it: a deep, dark shadow and a clear outline
             background = GradientDrawable().apply {
                 setColor(c.surfaceContainerHigh)
                 cornerRadius = dp(20).toFloat()
-                setStroke(dp(1), androidx.core.graphics.ColorUtils.setAlphaComponent(c.outline, 0xA0))
+                setStroke(dp(1), androidx.core.graphics.ColorUtils.setAlphaComponent(c.outline, 0x60))
             }
             elevation = dp(18).toFloat()
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
@@ -336,82 +506,13 @@ class DictionaryPopup(
                 outlineAmbientShadowColor = android.graphics.Color.BLACK
             }
             clipToOutline = true
-            addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-            addView(actions)
+            addView(head)
+            if (pages.size > 1) addView(tabs, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40)))
+            addView(View(ctx).apply { setBackgroundColor(c.outlineVariant) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, maxOf(1, dp(1) / 2)))
+            addView(pager, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
         }
-        // the summary or the whole entry: ⌃ rebuilds the card as the full entry, growing up out
-        // of the keyboard; ⌄ goes back to the summary
-        var expanded = !startCompact
-        val expand = cornerButton(R.drawable.ic_sym_keyboard_arrow_up, ctx.getString(R.string.lychee_card_more), c, filled = false) {}
-        fun setExpanded(open: Boolean) {
-            if (expanded == open) return
-            expanded = open
-            val from = card.height
-            val animate = app.lychee.layout.LycheePanels.animate(ctx)
-            // hold the card at its size before the new content lays out, so nothing jumps
-            if (animate) card.fixedHeight = from
-            body.removeAllViews()
-            fill(c, body, !open)
-            scroll.scrollTo(0, 0)
-            // the arrow turns over: up to grow, down to fold back
-            expand.contentDescription = ctx.getString(if (open) R.string.lychee_card_less else R.string.lychee_card_more)
-            // the full entry at least as tall as the summary was; the summary all the room it needs
-            val limit = if (open) maxOf(room, from) else space
-            card.maxHeight = limit
-            if (!animate) {
-                expand.rotation = if (open) 180f else 0f
-                card.requestLayout()
-                return
-            }
-            expand.animate().rotation(if (open) 180f else 0f).setDuration(app.lychee.layout.LycheeMotion.IN)
-                .setInterpolator(app.lychee.layout.LycheeMotion.enterEasing).start()
-            // the height the card will settle at
-            card.fixedHeight = -1
-            card.measure(View.MeasureSpec.makeMeasureSpec(card.width, View.MeasureSpec.EXACTLY),
-                View.MeasureSpec.makeMeasureSpec(limit, View.MeasureSpec.AT_MOST))
-            val to = card.measuredHeight
-            card.fixedHeight = from
-            card.requestLayout()
-            // the card's bottom stays on the keyboard; its top travels up (or back down) while
-            // the new content fades in
-            body.alpha = 0.2f
-            body.animate().alpha(1f).setDuration(app.lychee.layout.LycheeMotion.IN + 80)
-                .setInterpolator(app.lychee.layout.LycheeMotion.enterEasing).start()
-            android.animation.ValueAnimator.ofInt(from, to).apply {
-                duration = app.lychee.layout.LycheeMotion.IN + 80
-                interpolator = app.lychee.layout.LycheeMotion.enterEasing
-                addUpdateListener {
-                    card.fixedHeight = it.animatedValue as Int
-                    card.requestLayout()
-                }
-                addListener(object : android.animation.AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: android.animation.Animator) {
-                        card.fixedHeight = -1
-                        card.requestLayout()
-                    }
-                })
-                start()
-            }
-        }
-        expand.setOnClickListener { setExpanded(!expanded) }
-        if (peek) {
-            actions.visibility = View.GONE
-        } else {
-            actions.addView(cornerButton(R.drawable.ic_sym_close, ctx.getString(R.string.lychee_close), c, filled = false) { dismiss() },
-                FrameLayout.LayoutParams(dp(40), dp(40), Gravity.START or Gravity.BOTTOM))
-            // inside the keyboard the candidate itself types the word: the right-hand button
-            // grows the card instead; Look up in Lychee keeps its own action there
-            if (standalone != null) {
-                actions.addView(cornerButton(actionIcon, ctx.getString(actionLabel), c, filled = true) {
-                dismiss()
-                onType()
-            }, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.END or Gravity.BOTTOM))
-            }
-            if (startCompact) actions.addView(expand, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.END or Gravity.BOTTOM))
-            body.setPadding(body.paddingLeft, dp(12), body.paddingRight, dp(2))
-        }
-        // just above the keyboard, rising out of it
-        // over the keys only: in one-handed mode the card keeps to the narrowed keyboard
+
+        // just above the keyboard, over the keys only (one-handed mode keeps to the narrowed keys)
         val keys = keyboard.rootView.findViewById<View>(R.id.keyboard_view)
         val keysLeft = keys?.let { k ->
             IntArray(2).also { k.getLocationInWindow(it) }[0] - IntArray(2).also { parent.getLocationInWindow(it) }[0]
@@ -424,19 +525,17 @@ class DictionaryPopup(
             lp.bottomMargin = parent.height - keyboardTop
             panel.layoutParams = lp
         }
-        // narrower than the keys, centred, floating a little above them
         val keysWidth = if (standalone != null) standalone.width.takeIf { it > 0 } ?: ctx.resources.displayMetrics.widthPixels
             else keys?.width?.takeIf { it > 0 } ?: parent.width
         val cardWidth = minOf(keysWidth - 2 * dp(16), dp(MAX_CARD_WIDTH_DP))
-        panel.addView(card, FrameLayout.LayoutParams(cardWidth, ViewGroup.LayoutParams.WRAP_CONTENT,
-            Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM).apply {
+        panel.addView(card, FrameLayout.LayoutParams(cardWidth, height, Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM).apply {
             setMargins(0, dp(20), 0, dp(10))
         })
         panel.clipChildren = false
         panel.clipToPadding = false
         panel.visibility = View.VISIBLE
         panel.bringToFront()
-        // grows up out of the keyboard like a popup, fading in (LycheeMotion, like every card)
+        // grows out of the keyboard (a part's card cross-fades in place)
         if (app.lychee.layout.LycheePanels.animate(ctx)) card.alpha = 0f
         card.post { app.lychee.layout.LycheeMotion.cardIn(card, card.width / 2f, card.height.toFloat()) }
         host = panel
@@ -488,19 +587,6 @@ class DictionaryPopup(
                 x += child.measuredWidth + gap
                 line = maxOf(line, child.measuredHeight)
             }
-        }
-    }
-
-    /**
-     * A column that never grows taller than [maxHeight]; while it grows or folds, exactly
-     * [fixedHeight] tall (-1: as tall as its content).
-     */
-    private class MaxHeightLayout(ctx: Context, var maxHeight: Int) : LinearLayout(ctx) {
-        var fixedHeight = -1
-        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-            val spec = if (fixedHeight >= 0) MeasureSpec.makeMeasureSpec(fixedHeight, MeasureSpec.EXACTLY)
-                else MeasureSpec.makeMeasureSpec(maxHeight, MeasureSpec.AT_MOST)
-            super.onMeasure(widthMeasureSpec, spec)
         }
     }
 
@@ -623,72 +709,143 @@ class DictionaryPopup(
          * The language the speak buttons use on a Chinese card: Cantonese or Mandarin, from
          * Settings (the keyboard's language by default), switched with the 粵/普 chip.
          */
-        private var speakLang: Lang? = null
-        private val speakChips = ArrayList<TextView>()
+        /** The card's one 粵/普 choice, shared by the header and every page. */
+        var choice: LangChoice = LangChoice()
+        private var speakLang: Lang?
+            get() = choice.lang
+            set(v) { choice.lang = v }
 
-        fun fill(text: String, r: Resolved) {
-            val main = r.headwords.firstOrNull()
-            speakLang = when (settings.getString(PREF_SPEAK_LANG, "auto")) {
+        /** On tabs: sections are a small label, not a box (the page is the box). */
+        var flat = false
+        /** The tab this content fills: a section of the same name needs no label. */
+        var pageTitle: String? = null
+
+        /** The language choice starts from Settings (the keyboard's language by default). */
+        fun begin(r: Resolved) {
+            if (speakLang == null) speakLang = when (settings.getString(PREF_SPEAK_LANG, "auto")) {
                 "yue" -> Lang.Cantonese
                 "cmn" -> Lang.Mandarin
                 else -> if (r.lang == Lang.Mandarin) Lang.Mandarin else Lang.Cantonese
             }
-            // headword: in the candidates' script, large; the other script smaller under it
+            // the word's main reading in each language, which the summary's meanings follow
+            r.reading?.let { mainReading[r.lang] = norm(it) }
+            r.otherReading?.let { mainReading[if (r.lang == Lang.Mandarin) Lang.Cantonese else Lang.Mandarin] = norm(it) }
+        }
+
+        /**
+         * The card's header: the word large, its other script, the 粵/普 switch and speaker, and
+         * under them the reading of the whole word (every syllable, wrapping) in the chosen language.
+         */
+        fun header(text: String, r: Resolved) {
+            val main = r.headwords.firstOrNull()
             if (main != null && !r.composed && main.traditional != main.simplified) {
                 val first = if (prefs.simplified) main.simplified else main.traditional
                 val second = if (prefs.simplified) main.traditional else main.simplified
-                heading(first, null, otherForm(first, second), strokesOf = text)
+                heading(first, text, otherForm(first, second))
             } else {
-                // a phrase (read piece by piece) still shows its other script under it
-                heading(text, null, (Annotator.otherScript(text, r) ?: charByChar(text))?.let { otherForm(text, it) }, strokesOf = text)
+                heading(text, text, (Annotator.otherScript(text, r) ?: charByChar(text))?.let { otherForm(text, it) })
             }
-            // both languages' readings, always
+            if (!showChinese) return
+            val line = textView("", 16f, c.primary).apply {
+                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
+                setPadding(0, dp(2), 0, 0)
+            }
+            fun refresh() {
+                val lang = speakLang ?: r.lang
+                val reading = if (lang == r.lang) r.reading else r.otherReading
+                line.text = reading?.takeIf { !it.contains('?') }?.let { Annotator.format(it, lang, prefs) }
+                    ?: runCatching { Readings.annotator?.romanise(text, lang, prefs) }.getOrNull().orEmpty()
+                line.visibility = if (line.text.isNullOrBlank()) View.GONE else View.VISIBLE
+            }
+            refresh()
+            choice.listeners += { refresh() }
+            body.addView(line)
+        }
+
+        /**
+         * One tab of a Chinese card. [openPart]: a character or piece opened as its own card.
+         */
+        fun page(p: Page, text: String, r: Resolved, openPart: (String) -> Unit) {
+            val main = r.headwords.firstOrNull()
             spokenWord = text
-            // a Kanji or Hanja: its Japanese or Korean readings first
-            local?.forEach { lr ->
-                val speak = onSpeakLocal
-                if (lr.items.isEmpty() || speak == null) {
-                    body.addView(readingRow(labelled(lr.label, lr.shown), speak?.let { say -> smallSpeaker { say(lr.say) } }))
-                } else {
-                    // each reading a chip that says itself
-                    chipLines(lr.label, lr.items.map { (native, roman, said) -> ReadingChip(roman, native) { speak(said) } }, perLine = 2)
-                        .forEach { body.addView(it) }
-                }
-            }
-            if (showChinese) readingRows(r, main, text)
-            // the stroke order straight after the readings
-            strokes(text)
-            if (compact) {
-                summary(r)
-                return
-            }
-            if (main != null && !r.composed) facts(main)
-            // the definitions first, then example sentences, then the stroke order
-            if (r.composed) {
-                // a candidate the dictionary has nothing for: its pieces, readings and meanings
-                if (r.headwords.isNotEmpty()) {
-                    section(ctx.getString(R.string.lychee_card_parts))
-                    r.headwords.forEach { hw -> part(hw, r.lang) }
-                }
-            } else {
-                r.headwords.forEachIndexed { i, hw ->
-                    if (i > 0) {
-                        endSection()
-                        body.addView(divider())
-                        // each entry's word as large as the first's, its other script under it
-                        val first = if (prefs.simplified) hw.simplified else hw.traditional
-                        heading(first, null, otherForm(first, if (prefs.simplified) hw.traditional else hw.simplified))
-                        if (showChinese) readingRows(Resolved(r.lang, null, null, null, listOf(hw), false), hw, null)
+            when (p) {
+                Page.SUMMARY -> summary(r)
+                Page.READINGS -> {
+                    // a Kanji or Hanja: its Japanese or Korean readings first
+                    local?.forEach { lr ->
+                        val speak = onSpeakLocal
+                        if (lr.items.isEmpty() || speak == null) {
+                            body.addView(readingRow(labelled(lr.label, lr.shown), speak?.let { say -> smallSpeaker { say(lr.say) } }))
+                        } else {
+                            chipLines(lr.label, lr.items.map { (native, roman, said) -> ReadingChip(roman, native) { speak(said) } }, perLine = 2)
+                                .forEach { body.addView(it) }
+                        }
                     }
-                    senses(hw, r)
+                    if (showChinese) readingRows(r, main, text)
+                }
+                Page.DEFINITIONS -> {
+                    if (main != null && !r.composed) facts(main)
+                    r.headwords.forEachIndexed { i, hw ->
+                        if (r.composed || i > 0) {
+                            if (i > 0) body.addView(divider())
+                            body.addView(entryChip(if (prefs.simplified) hw.simplified else hw.traditional))
+                        }
+                        senses(hw, r)
+                    }
+                }
+                Page.PARTS -> {
+                    strokes(text)
+                    val cps = text.codePoints().toArray()
+                    if (r.composed && r.headwords.isNotEmpty()) {
+                        r.headwords.forEach { hw -> part(hw, r.lang) { openPart(if (prefs.simplified) hw.simplified else hw.traditional) } }
+                    } else if (cps.size > 1) {
+                        // each character of the word, to open on its own
+                        val mode = if (r.lang == Lang.Mandarin) app.lychee.core.InputMode.Mandarin else app.lychee.core.InputMode.Cantonese
+                        cps.map { String(Character.toChars(it)) }.filter { Annotator.isHan(it.codePointAt(0)) }.distinct().forEach { ch ->
+                            Readings.annotator?.resolve(ch, "", mode)?.headwords?.firstOrNull()?.let { hw -> part(hw, r.lang) { openPart(ch) } }
+                        }
+                    }
+                }
+                Page.EXAMPLES -> {
+                    if (!showChinese) return
+                    val lang = if (r.lang == Lang.Cantonese) "yue" else "cmn"
+                    val forms = listOfNotNull(text, main?.traditional, main?.simplified)
+                    val romanLang = if (r.lang == Lang.Mandarin) Lang.Mandarin else Lang.Cantonese
+                    examples(app.lychee.dict.PackData.examples(ctx, lang, forms), sayIn = romanLang) { sentence ->
+                        Readings.annotator?.romanise(sentence, romanLang, prefs)
+                    }
                 }
             }
-            val lang = if (r.lang == Lang.Cantonese) "yue" else "cmn"
-            val forms2 = listOfNotNull(text, main?.traditional, main?.simplified)
-            val romanLang = if (r.lang == Lang.Mandarin) Lang.Mandarin else Lang.Cantonese
-            if (showChinese) examples(app.lychee.dict.PackData.examples(ctx, lang, forms2), sayIn = romanLang) { sentence ->
-                Readings.annotator?.romanise(sentence, romanLang, prefs)
+        }
+
+        /** An entry's word in a small tonal chip, setting its meanings apart from the next entry's. */
+        fun entryChip(form: String): View = textView(form, 18f, c.onSecondaryContainer).apply {
+            app.lychee.fonts.LycheeFonts.forText(ctx, form, fontLang)?.let { typeface = it }
+            setPadding(dp(10), dp(3), dp(10), dp(4))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(10).toFloat()
+                setColor(c.secondaryContainer)
             }
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                .apply { topMargin = dp(8); bottomMargin = dp(4) }
+        }
+
+        /** A part of speech, small and italic, over the meanings. */
+        fun partOfSpeech(pos: String): View = textView(pos, 12f, c.onSurfaceVariant).apply {
+            setTypeface(typeface, Typeface.ITALIC)
+            setPadding(0, dp(4), 0, dp(2))
+        }
+
+        /** A piece of a phrase and its whole meaning, the piece set apart on the left. */
+        fun pieceLine(form: String, meaning: String): View = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, dp(4), 0, dp(4))
+            addView(textView(form, 16f, c.onSurface).apply {
+                app.lychee.fonts.LycheeFonts.forText(ctx, form, fontLang)?.let { typeface = it }
+                minWidth = dp(44)
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(12) })
+            addView(textView(meaning, 15f, c.onSurface).apply { setLineSpacing(0f, 1.1f) },
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         }
 
         /**
@@ -697,30 +854,39 @@ class DictionaryPopup(
          */
         private fun summary(r: Resolved) {
             if (r.composed) {
-                // a phrase read piece by piece: each piece's meaning on one line
-                r.headwords.take(SUMMARY_SENSES).forEach { hw ->
+                // a phrase read piece by piece: each piece and its whole meaning
+                body.addView(note(ctx.getString(R.string.lychee_card_phrase_note)))
+                r.headwords.forEach { hw ->
                     val form = if (prefs.simplified) hw.simplified else hw.traditional
-                    val gloss = hw.senses.firstOrNull { it.partOfSpeech != "cl" }?.gloss?.let { Annotator.shorten(it, 40) }.orEmpty()
-                    body.addView(textView("$form  $gloss", 14f, c.onSurface).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END })
+                    val gloss = hw.senses.firstOrNull { it.partOfSpeech != "cl" && it.gloss.isNotBlank() }?.gloss ?: return@forEach
+                    body.addView(pieceLine(form, gloss))
                 }
                 return
             }
-            val hw = r.headwords.firstOrNull() ?: return
             val wanted = if (r.lang == Lang.Mandarin) Lang.Mandarin else Lang.Cantonese
-            // the meanings of its most common reading only (rarer readings are in the full card)
-            val all = hw.senses.filter { it.partOfSpeech != "cl" && !it.gloss.startsWith("variant of") && !it.gloss.startsWith("see ") }
-                .let { list ->
-                    list.filter { s -> s.reading.isNullOrBlank() || s.lang == Lang.Any || mainReading[s.lang]?.let { m -> norm(s.reading!!) == m } != false }
-                        .ifEmpty { list }
-                }
-            val list = (all.filter { it.lang == wanted } + all.filter { it.lang != wanted }).distinctBy { it.gloss.lowercase() }
-            list.take(SUMMARY_SENSES).forEachIndexed { i, s -> plainSense(i + 1, s.gloss, lines = 2) }
+            // the most useful meanings of each entry (at most three entries), each in full; with
+            // more than one entry, each starts with its word in a chip, so words and meanings
+            // never run together
+            val entries = r.headwords.take(3)
+            entries.forEachIndexed { index, hw ->
+                // the meanings of its most common reading first (rarer readings are on Definitions)
+                val all = hw.senses.filter { it.partOfSpeech != "cl" && !it.gloss.startsWith("variant of") && !it.gloss.startsWith("see ") }
+                    .let { list ->
+                        list.filter { s -> s.reading.isNullOrBlank() || s.lang == Lang.Any || mainReading[s.lang]?.let { m -> norm(s.reading!!) == m } != false }
+                            .ifEmpty { list }
+                    }
+                val list = (all.filter { it.lang == wanted } + all.filter { it.lang != wanted }).distinctBy { it.gloss.lowercase() }
+                if (list.isEmpty()) return@forEachIndexed
+                if (entries.size > 1) body.addView(entryChip(if (prefs.simplified) hw.simplified else hw.traditional))
+                list.take(if (index == 0) SUMMARY_SENSES else 2).forEachIndexed { i, s -> plainSense(i + 1, s.gloss) }
+            }
+            val hw = r.headwords.firstOrNull() ?: return
             if (!showChinese) return
             val measure = hw.info.measureWordList()
             if (measure.isNotEmpty()) {
                 val script = { t: String, s: String -> if (prefs.simplified) s else t }
                 body.addView(labelled(ctx.getString(R.string.lychee_card_measure_word).trimEnd(':'),
-                    measure.take(2).joinToString("  ·  ") { (t, s, _) -> script(t, s) }))
+                    measure.take(2).joinToString("  ·  ") { (t, s, _) -> script(t, s) }).apply { setPadding(0, dp(8), 0, 0) })
             }
         }
 
@@ -769,7 +935,9 @@ class DictionaryPopup(
          * dictionary has them, its other readings that carry other meanings (行 hang4 "row"
          * beside haang4 "walk"), each with the first of those meanings.
          */
-        private fun readingRows(r: Resolved, hw: Headword?, spoken: String?) {
+        private fun readingRows(r: Resolved, word: Headword?, spoken: String?) {
+            // a phrase read piece by piece: the whole phrase's readings, never its first piece's
+            val hw = if (r.composed) null else word
             // the word's most common reading (the dictionary lists it first), whichever was typed:
             // its rarer readings come further down, with their own meanings
             val yue = hw?.readings?.get(Lang.Cantonese)?.firstOrNull()
@@ -1144,27 +1312,27 @@ class DictionaryPopup(
         /** 粵 or 普: the language the speak buttons use; a tap switches it. */
         private fun speakChip() = TextView(ctx).apply {
             // the language in English (Cantonese or Mandarin), a tap switches
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
-            typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
-            setTextColor(c.onSecondaryContainer)
+            // outlined, not filled: 粵 or 普, the card's language; a tap switches it everywhere
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            typeface = app.lychee.fonts.LycheeFonts.chinese(ctx) ?: Typeface.DEFAULT
+            setTextColor(c.primary)
             gravity = Gravity.CENTER
-            setPadding(dp(12), 0, dp(12), 0)
             background = GradientDrawable().apply {
-                cornerRadius = dp(16).toFloat()
-                setColor(c.secondaryContainer)
+                shape = GradientDrawable.OVAL
+                setStroke(dp(1), c.primary)
             }
-            contentDescription = ctx.getString(R.string.lychee_card_speak_language)
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(32)).apply { marginEnd = dp(8) }
-            speakChips += this
-            updateChip(this)
+            layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply { marginEnd = dp(4) }
+            fun update() {
+                text = if (speakLang == Lang.Mandarin) "普" else "粵"
+                contentDescription = ctx.getString(R.string.lychee_card_speak_language) + ": " +
+                    ctx.getString(if (speakLang == Lang.Mandarin) R.string.lychee_card_mandarin else R.string.lychee_card_cantonese)
+            }
+            update()
+            choice.listeners += { update() }
             setOnClickListener {
                 speakLang = if (speakLang == Lang.Mandarin) Lang.Cantonese else Lang.Mandarin
-                speakChips.forEach { updateChip(it) }
+                choice.changed()
             }
-        }
-
-        private fun updateChip(chip: TextView) {
-            chip.text = ctx.getString(if (speakLang == Lang.Mandarin) R.string.lychee_card_mandarin else R.string.lychee_card_cantonese)
         }
 
         /**
@@ -1370,7 +1538,7 @@ class DictionaryPopup(
          * A Japanese or Korean phrase's pieces under [title]: each word or character large on the
          * left, its reading in the accent colour and its meaning under it (at most [limit]).
          */
-        fun phraseParts(title: String, parts: List<PhrasePart>, limit: Int) {
+        fun phraseParts(title: String, parts: List<PhrasePart>, limit: Int, onOpen: ((PhrasePart) -> Unit)? = null) {
             section(title)
             parts.take(limit).forEach { p ->
                 val row = LinearLayout(ctx).apply {
@@ -1387,20 +1555,36 @@ class DictionaryPopup(
                 p.reading?.let { col.addView(textView(it, 15f, c.primary).apply {
                     typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
                 }) }
-                col.addView(textView(p.meaning, 14f, c.onSurfaceVariant).apply { setPadding(0, dp(1), 0, 0) })
+                col.addView(textView(p.full ?: p.meaning, 14f, c.onSurfaceVariant).apply { setPadding(0, dp(1), 0, 0) })
                 row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
                 onSpeak?.let { say -> row.addView(smallSpeaker { say(p.form, null) }) }
+                onOpen?.let { open -> opens(row) { open(p) } }
                 body.addView(row)
             }
             endSection()
         }
 
+        /** [row] opens something of its own: it ripples when tapped and ends in a chevron. */
+        private fun opens(row: LinearLayout, onClick: () -> Unit) {
+            row.addView(android.widget.ImageView(ctx).apply {
+                setImageResource(R.drawable.ic_sym_chevron_right)
+                imageTintList = android.content.res.ColorStateList.valueOf(c.onSurfaceVariant)
+                contentDescription = ctx.getString(R.string.lychee_card_open_part)
+            }, LinearLayout.LayoutParams(dp(24), dp(24)).apply { marginStart = dp(4); gravity = Gravity.CENTER_VERTICAL })
+            row.background = TypedValue().let { v ->
+                ctx.theme.resolveAttribute(android.R.attr.selectableItemBackground, v, true)
+                ctx.getDrawable(v.resourceId)
+            }
+            row.setOnClickListener { onClick() }
+        }
+
         /** One character or word of a composed candidate: both languages' readings, and its meaning. */
-        private fun part(hw: Headword, lang: Lang) {
+        private fun part(hw: Headword, lang: Lang, onOpen: (() -> Unit)? = null) {
             val langs = if (lang == Lang.Mandarin) listOf(Lang.Mandarin, Lang.Cantonese) else listOf(Lang.Cantonese, Lang.Mandarin)
             val readings = langs.mapNotNull { l -> hw.readings[l]?.firstOrNull()?.let { Annotator.format(it, l, prefs) } }
                 .joinToString("  ·  ")
-            val gloss = hw.senses.firstOrNull { it.partOfSpeech != "cl" }?.gloss?.let { Annotator.shorten(it, 80) } ?: ""
+            // the meaning in full, never cut
+            val gloss = hw.senses.firstOrNull { it.partOfSpeech != "cl" }?.gloss ?: ""
             val form = if (prefs.simplified) hw.simplified else hw.traditional
             // the part large on the left; its pronunciation in the accent colour, and under it
             // the meaning on a line of its own (no dash between them)
@@ -1424,11 +1608,22 @@ class DictionaryPopup(
             row.addView(col, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
             // each part says itself, in the card's language
             onSpeak?.let { say -> row.addView(smallSpeaker { say(form, speakLang ?: lang) }) }
+            onOpen?.let { opens(row, it) }
             body.addView(row)
         }
 
         private fun section(title: String) {
-            body = sectionCard(title)
+            if (!flat) {
+                body = sectionCard(title)
+                return
+            }
+            // on a tab: a small label in the accent colour (none when it repeats the tab's name)
+            body = root
+            if (title.isBlank() || title == pageTitle) return
+            body.addView(textView(title, 13f, c.primary).apply {
+                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
+                setPadding(0, dp(14), 0, dp(4))
+            })
         }
 
         fun labelled(label: String, value: String): TextView {
@@ -1441,7 +1636,7 @@ class DictionaryPopup(
             return textView(sb, 16f, c.onSurface).apply { setPadding(0, dp(2), 0, 0) }
         }
 
-        private fun note(t: String) = textView(t, 13f, c.onSurfaceVariant).apply {
+        fun note(t: String) = textView(t, 13f, c.onSurfaceVariant).apply {
             setPadding(dp(20), 0, 0, dp(2))
         }
 

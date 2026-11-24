@@ -247,5 +247,13 @@ is outside it.
   file, so it is easy to tell from an older download; choosing an older version than the update
   is refused, naming the right file. The Updates banner just lists "Update found for" with each
   add-on and its new version. "All add-ons" (the page with `all=1`) lists every add-on: updates,
-  installed and not installed. The mini (summary) dictionary card has no stroke order; only the
-  full card does.
+  installed and not installed.
+- The dictionary card (`chinese/DictionaryPopup.kt`, plan in `REDESIGN.md`) has one fixed size
+  and never grows.
+  - Header: the word, the reading of every syllable, one outlined 粵/普 switch for the whole card,
+    the speaker and ✕.
+  - Five tabs, swiped or tapped: Summary, Readings, Definitions, Parts, Examples. Empty ones are
+    left out, and each page scrolls on its own.
+  - Summary has no stroke order (that is in Parts) and shows meanings in full, with each entry's
+    word in a chip.
+  - A part opens as its own card, with Back.

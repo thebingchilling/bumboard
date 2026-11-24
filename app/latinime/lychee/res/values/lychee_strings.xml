@@ -86,6 +86,12 @@
     <string name="lychee_card_less">Show less</string>
     <string name="lychee_type_it">Type it</string>
     <string name="lychee_card_parts">Parts</string>
+    <string name="lychee_card_tab_summary">Summary</string>
+    <string name="lychee_card_tab_readings">Readings</string>
+    <string name="lychee_card_tab_definitions">Definitions</string>
+    <string name="lychee_card_phrase_note">Not in the dictionary as a whole. What its parts mean:</string>
+    <string name="lychee_card_back">Back</string>
+    <string name="lychee_card_open_part">Open its own entry</string>
     <string name="lychee_card_onyomi">On\'yomi</string>
     <string name="lychee_card_kunyomi">Kun\'yomi</string>
     <string name="lychee_card_kanji_grade">School grade %d</string>

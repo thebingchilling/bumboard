@@ -309,7 +309,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                 val e = app.lychee.dict.PackData.words(ime, engine, sub, 1).firstOrNull() ?: continue
                 val gloss = e.senses.firstOrNull() ?: continue
                 val reading = e.reading?.takeIf { engine == "ja" && it != sub && it.isNotBlank() }
-                out += DictionaryPopup.PhrasePart(sub, reading, app.lychee.core.Annotator.shorten(gloss, 20))
+                out += DictionaryPopup.PhrasePart(sub, reading, app.lychee.core.Annotator.shorten(gloss, 20), full = gloss)
                 i += len
                 matched = true
                 break
@@ -322,7 +322,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
                     ?: Readings.annotator?.resolve(ch, "", InputMode.Cantonese)?.meaning
                 val reading = if (engine == "ko") Readings.db?.charReadings(ch, "ko")?.firstOrNull()
                     else kanji?.onyomi?.split('、')?.firstOrNull()?.takeIf { it.isNotBlank() }
-                meaning?.let { out += DictionaryPopup.PhrasePart(ch, reading, app.lychee.core.Annotator.shorten(it, 20)) }
+                meaning?.let { out += DictionaryPopup.PhrasePart(ch, reading, app.lychee.core.Annotator.shorten(it, 20), full = it) }
             }
             i++
         }

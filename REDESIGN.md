@@ -1,7 +1,15 @@
 # Redesign plan: the dictionary card and Add-ons
 
-A plan for the owner to review before anything is built. Decisions the owner makes go back
-into this file (as with `PAID.md`), and the open questions at the end need answers first.
+The plan, with the owner's decisions recorded here (as with `PAID.md`).
+
+**Decided (dictionary card):** five tabs only: **Summary, Readings, Definitions, Parts,
+Examples**. Stroke order goes in Parts, conjugation in Definitions, pitch accent, sound changes
+and the Chinese readings of Kanji and Hanja in Readings. The tabs sit under the header. There is
+one outlined 粵/普 switch in the header for the whole card. Parts open as their own cards, with
+Back. Phase 1 (shell, header, five tabs, drill-down) is built.
+
+**Waiting:** Pleco's screenshots for Add-ons. The public repository for Lychee handwriting is
+not to be made until the owner has checked it.
 
 ## 1. The dictionary card
 
@@ -65,6 +73,8 @@ into this file (as with `PAID.md`), and the open questions at the end need answe
     and Korean have no switch.
   - ✕ to close, and ← when a part has been opened.
 - **Tabs.** Only tabs with something in them appear:
+
+*(The table below was the first proposal; the decided five tabs are above.)*
 
 | Tab | What it holds |
 | --- | --- |
