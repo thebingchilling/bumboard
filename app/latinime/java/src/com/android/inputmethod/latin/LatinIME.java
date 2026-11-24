@@ -1101,6 +1101,12 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         super.onStartInput(editorInfo, restarting);
         // LYCHEE: number, password, email and web address fields get a plain English keyboard
         app.lychee.typing.FieldKind.update(editorInfo);
+        // LYCHEE: what kind of field this is, for Diagnostics (never what is in it): which app,
+        // its input type and options, so a field that doesn't correct can be looked into
+        if (!restarting && editorInfo != null) {
+            app.lychee.DiagLog.log(String.format(java.util.Locale.ROOT, "field: %s type=0x%08x options=0x%08x",
+                    editorInfo.packageName, editorInfo.inputType, editorInfo.imeOptions));
+        }
         // LYCHEE: incognito by itself in password fields and apps that ask for no learning
         app.lychee.typing.Incognito.update(editorInfo);
 

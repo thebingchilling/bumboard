@@ -29,6 +29,14 @@ object AutoCorrectPolicy {
         "u", "ur", "r", "y", "w", "b4", "gr8", "luv", "cya", "ttyl", "sis", "bestie", "bae", "slay",
     )
 
+    /**
+     * Words as they stand that are also a contraction without its apostrophe: left alone, as
+     * Gboard does ("its" is a word; "it's" would often be wrong).
+     */
+    val REAL_WITHOUT_APOSTROPHE: Set<String> = setOf(
+        "its", "were", "well", "ill", "id", "wed", "shell", "hell", "shed", "lets", "whos",
+    )
+
     /** Common misspellings, always put right (the dictionary's own suggestion must agree). */
     val MISSPELLINGS: Map<String, String> = mapOf(
         "recieve" to "receive", "recieved" to "received", "beleive" to "believe", "belive" to "believe",
@@ -58,9 +66,21 @@ object AutoCorrectPolicy {
         if (word.isEmpty() || word == target) return Decision.DEFAULT
         if (MISSPELLINGS[word] == target) return Decision.CORRECT
         if (word in INFORMAL) return Decision.KEEP
+        // a capital inside the word (iPhone, eBay, McDonald): typed that way on purpose
+        if (typed.drop(1).any { it.isUpperCase() } && typed.any { it.isLowerCase() }) return Decision.KEEP
+        // only the apostrophe missing (dont, im, theyre): corrected, unless it is a word as it
+        // stands (its, were, well, ill: "it's" and "we're" would often be wrong)
+        if (word.replace("'", "") == target.replace("'", "") && target.contains('\'')) {
+            return if (word in REAL_WITHOUT_APOSTROPHE) Decision.KEEP else Decision.CORRECT
+        }
+        // stretched for feeling (sooo, noooo, yesss): kept, unless squeezing the run gives the
+        // suggestion (helllo is hello with a slip)
+        if (Regex("(.)\\1\\1").containsMatchIn(word)) {
+            val once = word.replace(Regex("(.)\\1+"), "$1")
+            val twice = word.replace(Regex("(.)\\1{2,}"), "$1$1")
+            return if (target == once || target == twice) Decision.CORRECT else Decision.KEEP
+        }
         if (word.length < 3 || !word.all { it.isLetter() || it == '\'' }) return Decision.DEFAULT
-        // only the apostrophe missing (dont, doesnt, theyre): corrected
-        if (word.replace("'", "") == target.replace("'", "") && target.contains('\'')) return Decision.CORRECT
         // the same letters in another order: a jumble, corrected
         if (word.toCharArray().sorted() == target.toCharArray().sorted()) return Decision.CORRECT
         // nothing like a word: corrected

@@ -157,9 +157,21 @@ packs page). Public facing, so be careful:
 - Enter always keeps its accent colour and an icon for the field's action (✓ done, search,
   send, go, next): an app's own action label (Pleco's "Done") never turns it into a grey text
   key (`KeyboardId.imeAction`); the key still does the app's action.
-- Every ordinary text field corrects and suggests, as Gboard does, whatever flags the app set;
-  only passwords, email and web addresses, filters and fields asking for no suggestions don't
+- Every ordinary text field corrects and suggests, as Gboard does, whatever flags the app set
   (`InputAttributes`).
+  - A box for writing (several lines, a message, or capitalising sentences or words) corrects
+    even if the app marks it "no suggestions": Instagram's chat box does.
+  - Passwords, email and web addresses, filters, and single-line boxes marked no-suggestions
+    don't correct.
+  - Name fields suggest but never correct.
+  - Diagnostics logs each field's app, input type and options, never its text.
+- Autocorrect's own rules (`core/typing/AutoCorrectPolicy`, with unit tests) sit on LatinIME's
+  threshold.
+  - Corrected: jumbles, slips onto neighbouring keys, common misspellings, missing apostrophes.
+  - Left alone: informal words, names typed with a capital, capitals inside a word (iPhone),
+    words stretched for feeling (sooo), and contractions that are words as they stand (its,
+    were, well).
+  - A word put back is never corrected again (`CorrectionMemory`).
 - Every candidate has a meaning: a Chinese word or phrase the dictionary lacks (or has without
   a usable meaning) shows its pieces' meanings ("I + walk"), and its card lists the parts; a
   Japanese or Korean phrase is broken into the words and Kanji/Hanja the dictionary has, its

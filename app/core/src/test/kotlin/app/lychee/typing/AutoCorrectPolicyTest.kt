@@ -84,4 +84,28 @@ class AutoCorrectPolicyTest {
         // still one slip from a word: corrected
         assertEquals(Decision.CORRECT, AutoCorrectPolicy.decide("Hellp", "Hello", capitalised = true))
     }
+
+    @org.junit.Test
+    fun stretchedWordsStay() {
+        assertEquals(Decision.KEEP, AutoCorrectPolicy.decide("sooo", "soon"))
+        assertEquals(Decision.KEEP, AutoCorrectPolicy.decide("noooo", "none"))
+        assertEquals(Decision.KEEP, AutoCorrectPolicy.decide("yesss", "yes's"))
+        // a slip that only looks stretched is still put right
+        assertEquals(Decision.CORRECT, AutoCorrectPolicy.decide("helllo", "hello"))
+    }
+
+    @org.junit.Test
+    fun contractionsThatAreWordsStay() {
+        assertEquals(Decision.KEEP, AutoCorrectPolicy.decide("its", "it's"))
+        assertEquals(Decision.KEEP, AutoCorrectPolicy.decide("were", "we're"))
+        assertEquals(Decision.KEEP, AutoCorrectPolicy.decide("well", "we'll"))
+        assertEquals(Decision.CORRECT, AutoCorrectPolicy.decide("im", "I'm"))
+        assertEquals(Decision.CORRECT, AutoCorrectPolicy.decide("cant", "can't"))
+    }
+
+    @org.junit.Test
+    fun capitalsInsideAWordStay() {
+        assertEquals(Decision.KEEP, AutoCorrectPolicy.decide("iPhone", "phone"))
+        assertEquals(Decision.KEEP, AutoCorrectPolicy.decide("eBay", "bay"))
+    }
 }

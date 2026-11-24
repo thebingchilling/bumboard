@@ -101,11 +101,20 @@ public final class InputAttributes {
 
         // TODO: Have a helper method in InputTypeUtils
         // Make sure that passwords are not displayed in {@link SuggestionStripView}.
+        // LYCHEE: many chat apps (Instagram's messages among them) mark their message box "no
+        // suggestions" while Gboard still corrects there. A box for writing (several lines, a
+        // message, or capitalising sentences or words) corrects and suggests whatever that flag
+        // says; only single-line boxes without capitals (codes, usernames) keep to it.
+        final boolean lycheeWriting = flagMultiLine
+                || variation == InputType.TYPE_TEXT_VARIATION_SHORT_MESSAGE
+                || variation == InputType.TYPE_TEXT_VARIATION_LONG_MESSAGE
+                || variation == InputType.TYPE_TEXT_VARIATION_EMAIL_SUBJECT
+                || 0 != (inputType & (InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_CAP_WORDS));
         final boolean shouldSuppressSuggestions = mIsPasswordField
                 || InputTypeUtils.isEmailVariation(variation)
                 || InputType.TYPE_TEXT_VARIATION_URI == variation
                 || InputType.TYPE_TEXT_VARIATION_FILTER == variation
-                || flagNoSuggestions;
+                || (flagNoSuggestions && !lycheeWriting);
         // LYCHEE: suggestions in fields that also complete for themselves (search boxes and
         // many apps' text boxes are AutoCompleteTextViews), as Gboard does: an app's own
         // completions only ever showed in full-screen mode, which Lychee never uses
@@ -130,7 +139,9 @@ public final class InputAttributes {
         // for it (most single-line fields, web pages' boxes and chat boxes don't set the flag);
         // only fields with no suggestions at all (passwords, email and web addresses, filters,
         // and fields that ask for none) don't
-        mInputTypeNoAutoCorrect = shouldSuppressSuggestions;
+        // (names are suggested but never corrected: a name is rarely a dictionary word)
+        mInputTypeNoAutoCorrect = shouldSuppressSuggestions
+                || variation == InputType.TYPE_TEXT_VARIATION_PERSON_NAME;
 
         mApplicationSpecifiedCompletionOn = flagAutoComplete && isFullscreenMode;
 
