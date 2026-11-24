@@ -98,7 +98,7 @@ fun AddonsPage() {
         }
     }
     PackMessage(actions)
-    val remove = { pack: Pack -> PackStorage.remove(context, pack); version++ }
+    val remove: (Pack) -> Unit = { pack -> PackStorage.remove(context, pack); version++ }
     when (tab) {
         StoreTab.STORE -> {
             val open = browse
