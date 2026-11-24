@@ -31,6 +31,10 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
   - Fix a red build quickly; CI is the only compiler, so review the diff before pushing.
 - Don't compile locally: GitHub Actions builds and tests (`build.yml`, `packs.yml`). Check
   the runs on `main` after pushing and fix any red build.
+  - The one exception (the owner allowed it): building locally **for screenshots** of UI
+    changes, with Paparazzi's snapshot tests (no emulator or phone needed). Render the changed
+    screens, look at them, and show them to the owner in the chat before committing UI work.
+    CI still builds and publishes every release; local builds are never published.
 - Every build on `main` is published by `build.yml` as a debug release (a full release, not a
   pre-release) of this private repository (`lychee-0.1.0-dev.N`, notes from the commit), like Quartz's releases,
   with three APKs named by ABI (`lychee-universal.apk`, `lychee-arm64-v8a.apk` and `lychee-armeabi-v7a.apk`)
