@@ -86,7 +86,14 @@ fun ProductSheetHost() {
                 Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
                     Text(if (Store.FREE_FOR_NOW) "Free while Lychee is in testing" else "Buy ${Store.price(p.cents)}")
                 }
+                // like Pleco's: a demo beside Buy (with billing)
+                if (p.demo.isNotEmpty()) OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
+                    Text("Try the free demo")
+                }
             }
+            Text("One-time purchase, not a subscription", style = MaterialTheme.typography.bodyMedium,
+                color = colors.onSurfaceVariant, modifier = Modifier.fillMaxWidth(),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             p.about.takeIf { it.isNotEmpty() }?.let {
                 Text(it, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
             }

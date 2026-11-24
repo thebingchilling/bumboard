@@ -8,7 +8,16 @@ and the Chinese readings of Kanji and Hanja in Readings. The tabs sit under the 
 one outlined 粵/普 switch in the header for the whole card. Parts open as their own cards, with
 Back. Phase 1 (shell, header, five tabs, drill-down) is built.
 
-**Waiting:** Pleco's screenshots for Add-ons.
+**Add-ons (built from Pleco's screenshots):**
+- Three tabs: Store, Installed, Updates.
+- The store opens with one line about Lychee, then Featured (Complete and the three packs),
+  Browse (Dictionaries, Handwriting, Learning tools, Fonts & emoji, All free downloads), and the
+  registration at the bottom.
+- Rows are short, like Pleco's: name, one line, price, and the price in a tinted tile at the
+  right.
+- Each category is a page of its own, with Back.
+- The product page: name, price, Buy, a demo button when there is a demo, "one-time purchase,
+  not a subscription", then the example and the details.
 
 **Decided (Lychee handwriting's code):** Lychee stays closed and commercial. Only the
 handwriting companion's code is published, as source-available: anyone may read it, but not

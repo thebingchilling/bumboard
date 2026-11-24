@@ -178,11 +178,16 @@ packs page). Public facing, so be careful:
   fonts, pronunciation, the key by the comma, the voice key) show a live preview where they are
   changed. The packs page (`packs/site`) is the same: Material 2's components in Material 3's
   tonal colours.
-  Add-ons (`settings/AddonsPage.kt`) is a store, opened from a banner at the top of Settings:
-  an honest introduction (a student developer, one-time purchases, no ads or tracking, offline),
-  the bundles and every paid add-on (`settings/StoreSection.kt`; Google Handwriting is a listing
-  like the others, noting it needs the free Lychee handwriting app), then the free downloads by
-  language, and the registration at the very bottom. Every listing opens its own page like
+  Add-ons (`settings/AddonsPage.kt`) is a store laid out like Pleco's, opened from a banner at
+  the top of Settings.
+  - Three tabs: Store, Installed, Updates.
+  - The store: one honest line (a student developer, one-time purchases, no ads or tracking,
+    offline), then Featured (the bundles), then Browse categories, each a page of its own
+    (Dictionaries, Handwriting, Learning tools, Fonts & emoji, All free downloads).
+  - Short rows: name, one line, price, and an action tile at the right.
+  - Google Handwriting is a listing like the others, noting it needs the free Lychee
+    handwriting app.
+  - The registration is at the very bottom. Every listing opens its own page like
   Pleco's (`settings/ProductSheet.kt`, the downloads' sheet): price, size, version, a worked
   example, what it gives, its free trial, sources and licences, privacy. Rows show their text in
   full and act by icon only (delete, download; no "Restore"). Wording sells honestly: no "Pro" or
