@@ -3,9 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-/** An x86_64 build for screenshots on an emulator (build.yml's "screens" option); never published. */
-val lycheeEmulator = project.hasProperty("lycheeEmulator")
-
 android {
     // LatinIME keeps its Java package (the native code registers JNI methods by
     // class name); only the installed application id is Lychee's.
@@ -69,8 +66,8 @@ android {
         jniLibs {
             useLegacyPackaging = true
             // phones only: the emulators' x86 libraries some dependencies bring (ONNX Runtime's
-            // were 30 MB of the universal APK) are left out, except in the emulator build
-            excludes += if (lycheeEmulator) listOf("lib/x86/**") else listOf("lib/x86/**", "lib/x86_64/**")
+            // were 30 MB of the universal APK) are left out
+            excludes += listOf("lib/x86/**", "lib/x86_64/**")
         }
     }
 
@@ -81,8 +78,7 @@ android {
         abi {
             isEnable = true
             reset()
-            // (-PlycheeEmulator: x86_64 only, for screenshots on an emulator; never published)
-            if (lycheeEmulator) include("x86_64") else include("arm64-v8a", "armeabi-v7a")
+            include("arm64-v8a", "armeabi-v7a")
             isUniversalApk = true
         }
     }

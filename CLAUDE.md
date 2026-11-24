@@ -20,10 +20,7 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
   - Never hold a build back: every push that changes `app/` builds, and no commit carries
     `[skip ci]`. Starting or re-running `build.yml` by hand is fine too.
   - The only manual workflow is `packs.yml`: it never runs on a schedule or on pushes, only
-    when the owner or an agent starts it. (`build.yml` started by hand with "screens" ticked also
-    makes an x86_64 build, never published, puts it on an emulator and screenshots Settings >
-    Add-ons and the dictionary card: `.github/screens/capture.sh`, a one-day artifact, so UI
-    changes can be seen before they are shown.) When the pack builders (`packs/`) changed, run the
+    when the owner or an agent starts it. When the pack builders (`packs/`) changed, run the
     packs first and the app build after them (so the build bundles the new packs).
   - `cleanup.yml` keeps one run per workflow: after a successful run every other run of that
     workflow (older, failed, cancelled), with its artifacts and logs, is deleted, and only the
