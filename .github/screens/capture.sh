@@ -7,7 +7,23 @@ PKG=app.lychee
 OUT=screens
 mkdir -p "$OUT"
 
-shot() { sleep "${2:-3}"; adb exec-out screencap -p > "$OUT/$1.png"; echo "saved $1"; }
+# closes Android's "isn't responding" dialog (a slow emulator's launcher), waiting it out
+dismiss_anr() {
+  for _ in 1 2 3; do
+    adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+    adb pull /sdcard/ui.xml /tmp/ui.xml >/dev/null 2>&1
+    grep -q "responding" /tmp/ui.xml || return 0
+    tap_text Wait
+    sleep 2
+  done
+}
+
+shot() {
+  sleep "${2:-3}"
+  dismiss_anr
+  adb exec-out screencap -p > "$OUT/$1.png"
+  echo "saved $1 ($(adb shell dumpsys activity activities | grep -m1 -o 'topResumedActivity=[^ ]* [^ ]* [^ }]*'))"
+}
 
 # taps the first element whose text (or description) is exactly $1
 tap_text() {
@@ -31,6 +47,11 @@ scroll() { adb shell input swipe 540 1700 540 700 400; }
 
 adb install -r -g lychee-universal.apk
 adb shell settings put system screen_off_timeout 1800000
+# let the freshly booted phone settle (its launcher is slow to start), then wake it
+sleep 60
+adb shell input keyevent KEYCODE_WAKEUP
+adb shell wm dismiss-keyguard
+dismiss_anr
 
 # --- Settings > Add-ons ---
 adb shell am start -W -n $PKG/app.lychee.settings.SettingsActivity --es app.lychee.settings.PAGE Packs
@@ -69,4 +90,6 @@ card 學校 xuexiao
 card 行 hang
 card 我今日去學校 phrase
 
+adb logcat -d -b crash > "$OUT/crash.txt" 2>&1
+adb logcat -d -s Lychee:* AndroidRuntime:E > "$OUT/lychee-log.txt" 2>&1
 ls -la "$OUT"
