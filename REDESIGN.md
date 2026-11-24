@@ -8,8 +8,13 @@ and the Chinese readings of Kanji and Hanja in Readings. The tabs sit under the 
 one outlined 粵/普 switch in the header for the whole card. Parts open as their own cards, with
 Back. Phase 1 (shell, header, five tabs, drill-down) is built.
 
-**Waiting:** Pleco's screenshots for Add-ons. The public repository for Lychee handwriting is
-not to be made until the owner has checked it.
+**Waiting:** Pleco's screenshots for Add-ons.
+
+**Decided (Lychee handwriting's code):** Lychee stays closed and commercial. Only the
+handwriting companion's code is published, as source-available: anyone may read it, but not
+copy, change or redistribute it. It is never called "open source". The licence is to be
+confirmed (PolyForm Strict 1.0.0 is recommended; the alternative is an all-rights-reserved
+notice). No public repository is made until the owner has checked it.
 
 ## 1. The dictionary card
 
@@ -158,7 +163,5 @@ structure can be matched in Lychee's own style.
 1. Tabs under the header (recommended) or along the bottom?
 2. First tab called "Summary" (recommended), or something else?
 3. One 粵/普 switch in the header (recommended), or one by every speaker?
-4. Lychee handwriting as open source:
-   - Which licence? Apache-2.0 matches ML Kit and PP-OCR.
-   - Which public repository? For example `lychee-keyboard/lychee-handwriting`, published
-     through this repository's workflow as lychee-keyboard, never from a session.
+4. Lychee handwriting's published code: PolyForm Strict 1.0.0, or an all-rights-reserved
+   notice? And which repository (later, once checked)?

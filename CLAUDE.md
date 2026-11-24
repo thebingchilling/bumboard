@@ -98,8 +98,11 @@ packs page). Public facing, so be careful:
   and whether it is ready, a plain privacy note, and a switch to hide its launcher icon (Lychee
   opens it from Add-ons too, so a hidden icon is never a lost app). No tracking: ML Kit's usage
   reporting (Google's data transport: its backend and schedulers) is removed in the companion's
-  manifest and `build.yml` fails if it comes back; the companion is meant to be open source
-  (`app/hwcompanion/README.md`), published only when the owner says where. It also fetches the models by itself when
+  manifest and `build.yml` fails if it comes back; Lychee itself is closed and commercial. Only the
+  companion's code will be published, and only as **source-available** (readable to check it
+  has no tracking; no copying, changing or redistributing; licence to be confirmed, PolyForm
+  Strict 1.0.0 recommended), never called "open source". Nothing is published until the owner
+  has checked it (`app/hwcompanion/README.md`). It also fetches the models by itself when
   Lychee first binds it (PP-OCR reads the pad meanwhile). This is how the first companion, which
   worked, was made; the icon-less, R8-shrunk build that followed did not work. With it installed only ML Kit reads the pad. Settings > Add-ons offers it (saying ML Kit's licence needs the
   companion, and its size), and so does a chip on the pad. It is built once, and rebuilt only
