@@ -31,10 +31,15 @@ class CardScreens {
     )
 
     private fun card(text: String, r: Resolved) {
+        // the card goes in a host that sits in a screen (as in Look up in Lychee)
+        val screen = FrameLayout(paparazzi.context)
         val host = FrameLayout(paparazzi.context)
+        screen.addView(host, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
         val popup = DictionaryPopup(paparazzi.context, standalone = host, standaloneRoom = 1600)
         popup.show(host, text, r, DisplayPrefs(), peek = false, onSpeak = { _, _ -> }) {}
-        paparazzi.snapshot(host)
+        // a snapshot doesn't play the fade-in: the card as it settles
+        for (i in 0 until host.childCount) host.getChildAt(i).apply { alpha = 1f; scaleX = 1f; scaleY = 1f; translationY = 0f }
+        paparazzi.snapshot(screen)
     }
 
     @Test
