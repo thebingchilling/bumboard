@@ -35,6 +35,13 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
     changes, with Paparazzi's snapshot tests (no emulator or phone needed). Render the changed
     screens, look at them, and show them to the owner in the chat before committing UI work.
     CI still builds and publishes every release; local builds are never published.
+  - In a fresh session, run `tools/screens-setup.sh` once (it installs the Android SDK into
+    /opt/android-sdk, writes `app/local.properties` and points Gradle at Google's mirror of
+    Maven Central, which otherwise rate-limits cloud machines; about 5 minutes). Then
+    `tools/screens.sh` (optionally a test filter such as `'*CardScreens*'`) draws the screens
+    into `screens/` (git-ignored). The snapshot tests are in `app/latinime/screens/` and only
+    run with `-PlycheeScreens`; the card uses a small sample entry (the real dictionary is
+    built in CI).
 - Every build on `main` is published by `build.yml` as a debug release (a full release, not a
   pre-release) of this private repository (`lychee-0.1.0-dev.N`, notes from the commit), like Quartz's releases,
   with three APKs named by ABI (`lychee-universal.apk`, `lychee-arm64-v8a.apk` and `lychee-armeabi-v7a.apk`)
@@ -243,6 +250,7 @@ is outside it.
     dictionaries, readings, emoji, Korean word list).
   - `app/scripts/` — fetching prebuilt librime, fonts, the handwriting models and the packs
     bundled in the APK.
+- `tools/` — `screens-setup.sh` and `screens.sh`: drawing the UI locally with Paparazzi.
 - `packs/` — the pack builders and the packs page (Japanese, Korean, English dictionaries,
   stroke order, examples, font mirrors; `packs/site`), run by `packs.yml`.
 - `.github/workflows/` — `build.yml` (the app), `packs.yml` (the packs, by hand) and
