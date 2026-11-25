@@ -14,4 +14,4 @@ __pycache__/
 
 # local Paparazzi screenshots (never committed)
 app/latinime/src/test/snapshots/
-screens/
+/screens/
