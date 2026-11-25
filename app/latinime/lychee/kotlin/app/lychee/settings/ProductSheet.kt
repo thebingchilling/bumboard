@@ -36,13 +36,8 @@ import androidx.compose.ui.unit.sp
 import app.lychee.store.Store
 import com.android.inputmethod.latin.R
 
-/** Design options for the store, compared in screenshots before one is chosen (REDESIGN.md). */
+/** Screenshots only: the Add-ons tab (0 Store, 1 Installed, 2 Updates) and category page to open on. */
 object StoreLook {
-    /** Store rows with a small tile for the language or kind (B), or plain like Pleco's (A). */
-    var tiles = false
-    /** The listing with a tile and its value at the top, the price on the button (B), or Pleco's order (A). */
-    var listingB = false
-    /** Screenshots: the tab (0 Store, 1 Installed, 2 Updates) and the category page to open on. */
     var startTab = 0
     var startCategory = -1
 }
@@ -54,54 +49,29 @@ object StoreLook {
  * Back (the phone's or the arrow) returns to the store.
  */
 @Composable
-fun ProductPage(p: Store.Product, onBack: () -> Unit) {
-    val context = LocalContext.current
+fun ProductPage(p: Store.Product) {
     val colors = MaterialTheme.colorScheme
-    androidx.activity.compose.BackHandler { onBack() }
     @Suppress("UNUSED_VARIABLE") val refresh = PackRefresh.tick
-    Column(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 4.dp)) {
-        androidx.compose.material3.IconButton(onClick = onBack) {
-            Icon(painterResource(R.drawable.ic_sym_arrow_back), context.getString(R.string.lychee_card_back))
-        }
-    }
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 24.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        val value = Store.value(p)
-        if (StoreLook.listingB) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ProductTile(p, 64)
-                Spacer(Modifier.size(16.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(p.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, color = colors.onSurface)
-                    Text(if (p.includes.isNotEmpty()) "${p.includes.size} add-ons · ${Store.price(value)} value · save ${Store.price(value - p.cents)}"
-                        else p.tagline, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
-                }
-            }
-        } else {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(p.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = colors.onSurface)
-                Text(Store.price(p.cents), style = MaterialTheme.typography.titleLarge, color = colors.onSurface)
-            }
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(p.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = colors.onSurface)
+            Text(Store.price(p.cents), style = MaterialTheme.typography.titleLarge, color = colors.onSurface)
         }
         // what to press
         if (p.needsApp) {
             HandwritingActions()
         } else {
             Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
-                Text(when {
-                    Store.FREE_FOR_NOW -> "Free while Lychee is in testing"
-                    StoreLook.listingB -> "Buy ${Store.price(p.cents)}"
-                    else -> "Buy + download"
-                })
+                Text(if (Store.FREE_FOR_NOW) "Free while Lychee is in testing" else "Buy + download")
             }
             if (p.demo.isNotEmpty()) {
-                if (StoreLook.listingB) FilledTonalButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("Try the free demo") }
-                else OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("Download the free demo") }
+                OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("Download the free demo") }
             }
         }
-        Text(if (StoreLook.listingB) "One-time purchase · works offline" else "One-time purchase (not a subscription)",
+        Text("One-time purchase (not a subscription)",
             style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, modifier = Modifier.fillMaxWidth(),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         Section("Example") { Sample(p.sample) }
@@ -120,7 +90,6 @@ fun ProductPage(p: Store.Product, onBack: () -> Unit) {
                             .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        if (StoreLook.listingB) { ProductTile(inc, 36); Spacer(Modifier.size(12.dp)) }
                         Text(inc.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         Text(Store.price(inc.cents), style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
                     }

@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityOptionsCompat
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
@@ -39,6 +40,9 @@ class AddonsScreens {
     @get:Rule
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_6, theme = "android:Theme.Material.Light.NoActionBar")
 
+    private fun page(name: String, title: String, scroll: Int = 0, setUp: () -> Unit) = draw(paparazzi, name, title, scroll, setUp)
+
+    companion object {
     /** Stands in for the activity's result registry (the file picker), which a snapshot hasn't. */
     private val registryOwner = object : ActivityResultRegistryOwner {
         override val activityResultRegistry = object : ActivityResultRegistry() {
@@ -47,8 +51,8 @@ class AddonsScreens {
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
-    private fun page(name: String, title: String, scroll: Int = 0, setUp: () -> Unit) {
-        StoreLook.tiles = false; StoreLook.listingB = false; StoreLook.startTab = 0; StoreLook.startCategory = -1
+    fun draw(paparazzi: Paparazzi, name: String, title: String, scroll: Int = 0, setUp: () -> Unit) {
+        StoreLook.startTab = 0; StoreLook.startCategory = -1
         ProductSheet.open = null
         setUp()
         paparazzi.snapshot(name) {
@@ -59,7 +63,7 @@ class AddonsScreens {
                         topBar = {
                             TopAppBar(
                                 title = { Text(title, style = MaterialTheme.typography.titleLarge) },
-                                navigationIcon = { Icon(painterResource(R.drawable.ic_sym_arrow_back), null, Modifier.padding(start = 12.dp())) },
+                                navigationIcon = { Icon(painterResource(R.drawable.ic_sym_arrow_back), null, Modifier.padding(start = 12.dp)) },
                                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface),
                             )
                         },
@@ -73,14 +77,25 @@ class AddonsScreens {
         }
     }
 
-    private fun Int.dp() = androidx.compose.ui.unit.Dp(this.toFloat())
+    }
 
-    @Test fun storeA() = page("1-store-A-plain", "Add-ons") {}
-    @Test fun storeB() = page("2-store-B-tiles", "Add-ons") { StoreLook.tiles = true }
-    @Test fun categoryA() = page("3-category-dictionaries-A", "Add-ons") { StoreLook.startCategory = 0 }
-    @Test fun categoryB() = page("4-category-dictionaries-B", "Add-ons") { StoreLook.startCategory = 0; StoreLook.tiles = true }
-    @Test fun listingA() = page("5-listing-A", "Add-ons") { ProductSheet.open = Store.byId("pack_ja") }
-    @Test fun listingB() = page("6-listing-B", "Add-ons") { StoreLook.listingB = true; ProductSheet.open = Store.byId("pack_ja") }
-    @Test fun listingAScrolled() = page("7-listing-A-further", "Add-ons", scroll = 1400) { ProductSheet.open = Store.byId("pack_ja") }
-    @Test fun installed() = page("8-installed", "Add-ons") { StoreLook.startTab = 1 }
+    @Test fun store() = page("1-store", "Add-ons") {}
+    @Test fun storeFurther() = page("2-store-further", "Add-ons", scroll = 1200) {}
+    @Test fun dictionaries() = page("3-category-dictionaries", "Dictionaries") { StoreLook.startCategory = 0 }
+    @Test fun handwriting() = page("4-category-handwriting", "Handwriting") { StoreLook.startCategory = 1 }
+    @Test fun fonts() = page("5-category-fonts", "Fonts & emoji") { StoreLook.startCategory = 3 }
+    @Test fun listingPack() = page("6-listing-japanese-pack", "Japanese Pack") { ProductSheet.open = Store.byId("pack_ja") }
+    @Test fun listingAddon() = page("7-listing-chinese-in-depth", "Chinese In Depth") { ProductSheet.open = Store.byId("card_zh") }
+    @Test fun listingHandwriting() = page("8-listing-google-handwriting", "Google Handwriting") { ProductSheet.open = Store.byId("handwriting") }
+    @Test fun updates() = page("9-updates", "Add-ons") { StoreLook.startTab = 2 }
+}
+
+/** Add-ons in dark mode. */
+class AddonsScreensDark {
+    @get:Rule
+    val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_6.copy(nightMode = com.android.resources.NightMode.NIGHT),
+        theme = "android:Theme.Material.NoActionBar")
+
+    @Test fun store() = AddonsScreens.draw(paparazzi, "d1-store-dark", "Add-ons") {}
+    @Test fun listing() = AddonsScreens.draw(paparazzi, "d2-listing-dark", "Japanese Pack") { ProductSheet.open = Store.byId("pack_ja") }
 }

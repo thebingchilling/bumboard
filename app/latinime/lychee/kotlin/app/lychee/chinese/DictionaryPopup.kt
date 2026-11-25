@@ -53,23 +53,8 @@ class DictionaryPopup(
     /** Drawn as inside the keyboard even when [standalone] (screenshots): no action button. */
     private val asKeyboard: Boolean = false,
 ) {
-    /** How the card's header is laid out (REDESIGN.md's options). */
-    enum class HeaderStyle {
-        /** The word large, its other script under it, the reading under that; speaker by ✕. */
-        TALL,
-        /** A: the word and its other script on one line; the reading with 🔊 and 粵/普 beside it. */
-        COMPACT,
-        /** B: the word and the reading only; ✕, 粵/普, 🔊 in a bar along the card's bottom. */
-        BOTTOM_BAR,
-        /** C: everything on one line (the word small), the most room for the pages. */
-        ONE_LINE,
-    }
-
-    var headerStyle = HeaderStyle.TALL
     /** The tab the next card opens on (screenshots); null: the first. */
     var startPage: Page? = null
-    /** Where the header's controls go in [HeaderStyle.BOTTOM_BAR] (set while the card is built). */
-    private var controlsBar: LinearLayout? = null
 
     companion object {
         /** What the card's speak buttons say Chinese in: "auto" (the keyboard's), "yue" or "cmn". */
@@ -125,8 +110,6 @@ class DictionaryPopup(
             flat = true
             pageTitle = page?.let { ctx.getString(it.label) }
             choice = language
-            style = headerStyle
-            controls = controlsBar
             begin(r)
         }
         presentTabs(keyboard, peek, onType, reshow,
@@ -259,13 +242,19 @@ class DictionaryPopup(
         presentTabs(keyboard, peek, onType, reshow,
             header = { c, body ->
                 val content = makeContent(c, body, null)
-                content.heading(text, if (anyReading && onSpeakAs != null && lang == "en") null else text)
-                // the reading under the word, as one quiet line: the kana and romaji, or the romanisation
-                romanisation?.takeIf { it.isNotEmpty() }?.let { r ->
-                    body.addView(content.textView(r, 16f, c.primary).apply {
-                        typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
-                    })
-                }
+                // as on every card: the word, then its reading with the speaker beside it (✕ alone in the corner)
+                content.heading(text, null, size = 30f)
+                val sayWord = !(anyReading && onSpeakAs != null && lang == "en")
+                body.addView(LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    romanisation?.takeIf { it.isNotEmpty() }?.let { r ->
+                        addView(content.textView(r, 16f, c.primary).apply {
+                            typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
+                        }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
+                    }
+                    if (sayWord) onSpeak?.let { speak -> addView(content.speakButton { speak(text, null) }) }
+                })
                 // the other way of writing it: a Korean word's Hanja, a Japanese word's old form
                 val alternative = when {
                     hanja != null && hanja != text -> ctx.getString(R.string.lychee_card_hanja) to hanja
@@ -435,26 +424,9 @@ class DictionaryPopup(
             orientation = LinearLayout.VERTICAL
             setPadding(dp(if (history.isNotEmpty()) 4 else 8), 0, dp(4), 0)
         }
-        val bar = if (headerStyle == HeaderStyle.BOTTOM_BAR && !peek) LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(10), dp(6), dp(10), dp(8))
-            setBackgroundColor(c.surfaceContainerHigh)
-        } else null
-        controlsBar = bar
         header(c, title)
-        controlsBar = null
         head.addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        if (bar != null) {
-            // B: ✕ at the bar's start, then the language and speaker (added by the header), at its end
-            bar.addView(cornerButton(R.drawable.ic_sym_close, ctx.getString(R.string.lychee_close), c, filled = false) { dismiss() },
-                0, LinearLayout.LayoutParams(dp(40), dp(40)))
-            bar.addView(View(ctx), 1, LinearLayout.LayoutParams(0, 1, 1f))
-            if (standalone != null && !asKeyboard) bar.addView(cornerButton(actionIcon, ctx.getString(actionLabel), c, filled = true) {
-                dismiss()
-                onType()
-            }, LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginStart = dp(6) })
-        } else if (!peek) {
+        if (!peek) {
             // Look up in Lychee keeps its own action (copy) beside ✕; inside the keyboard the
             // candidate types the word
             if (standalone != null && !asKeyboard) head.addView(cornerButton(actionIcon, ctx.getString(actionLabel), c, filled = true) {
@@ -503,7 +475,7 @@ class DictionaryPopup(
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
                 typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
                 gravity = Gravity.CENTER
-                setPadding(dp(12), 0, dp(12), 0)
+                setPadding(dp(9), 0, dp(9), 0)
                 background = TypedValue().let { v ->
                     ctx.theme.resolveAttribute(android.R.attr.selectableItemBackground, v, true)
                     ctx.getDrawable(v.resourceId)
@@ -549,10 +521,6 @@ class DictionaryPopup(
             if (pages.size > 1) addView(tabs, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40)))
             addView(View(ctx).apply { setBackgroundColor(c.outlineVariant) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, maxOf(1, dp(1) / 2)))
             addView(pager, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-            bar?.let {
-                addView(View(ctx).apply { setBackgroundColor(c.outlineVariant) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, maxOf(1, dp(1) / 2)))
-                addView(it)
-            }
         }
         // the tab asked for (screenshots), else the first
         startPage?.let { want -> pages.indexOfFirst { it.first == want }.takeIf { it > 0 }?.let { i -> layout.scrollToPosition(i); select(i) } }
@@ -756,9 +724,6 @@ class DictionaryPopup(
          */
         /** The card's one 粵/普 choice, shared by the header and every page. */
         var choice: LangChoice = LangChoice()
-        /** How the header is laid out, and (for the bottom bar) where its controls go. */
-        var style: HeaderStyle = HeaderStyle.TALL
-        var controls: LinearLayout? = null
         private var speakLang: Lang?
             get() = choice.lang
             set(v) { choice.lang = v }
@@ -786,10 +751,12 @@ class DictionaryPopup(
          */
         fun header(text: String, r: Resolved) {
             val main = r.headwords.firstOrNull()
+            // the other script beside the word in full (small, so it never crowds): hyphens for the
+            // characters that stay the same read badly on one line
             val (first, other) = if (main != null && !r.composed && main.traditional != main.simplified) {
                 val f = if (prefs.simplified) main.simplified else main.traditional
-                f to otherForm(f, if (prefs.simplified) main.traditional else main.simplified)
-            } else text to (Annotator.otherScript(text, r) ?: charByChar(text))?.let { otherForm(text, it) }
+                f to (if (prefs.simplified) main.traditional else main.simplified)
+            } else text to (Annotator.otherScript(text, r) ?: charByChar(text))?.takeIf { it != text }
             val line = textView("", 16f, c.primary).apply { typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500) }
             fun refresh() {
                 val lang = speakLang ?: r.lang
@@ -822,38 +789,15 @@ class DictionaryPopup(
                     })
                 }
             }
-            when (style) {
-                HeaderStyle.TALL -> {
-                    heading(first, text, other)
-                    line.setPadding(0, dp(2), 0, 0)
-                    body.addView(line)
-                }
-                HeaderStyle.COMPACT -> {
-                    body.addView(wordRow(30f))
-                    body.addView(LinearLayout(ctx).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        addView(line)
-                        controlsInto(this, 10)
-                    })
-                }
-                HeaderStyle.BOTTOM_BAR -> {
-                    body.addView(wordRow(30f))
-                    body.addView(line)
-                    controls?.let { bar -> controlsInto(bar, 0) }
-                }
-                HeaderStyle.ONE_LINE -> {
-                    body.addView(LinearLayout(ctx).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
-                        addView(textView(first, 22f, c.onSurface).apply {
-                            app.lychee.fonts.LycheeFonts.forText(ctx, first, fontLang)?.let { typeface = it }
-                        })
-                        addView(line.apply { setPadding(dp(10), 0, 0, 0) }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                        controlsInto(this, 6)
-                    })
-                }
-            }
+            // the word and its other script on one line; the reading with 粵/普 and 🔊 beside it,
+            // where the eye already is (✕ alone in the card's corner)
+            body.addView(wordRow(30f))
+            body.addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(line)
+                controlsInto(this, 10)
+            })
         }
 
         /**
@@ -1435,13 +1379,13 @@ class DictionaryPopup(
             }
         }
 
-        fun heading(shown: String, spoken: String?, other: String? = null, strokesOf: String? = null) {
+        fun heading(shown: String, spoken: String?, other: String? = null, strokesOf: String? = null, size: Float = 38f) {
             val head = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
             val words = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-            words.addView(textView(shown, 38f, c.onSurface).apply {
+            words.addView(textView(shown, size, c.onSurface).apply {
                 app.lychee.fonts.LycheeFonts.forText(ctx, shown, fontLang)?.let { typeface = it }
             })
             if (other != null) {

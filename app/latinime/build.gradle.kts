@@ -144,4 +144,6 @@ dependencies {
 if (project.hasProperty("lycheeScreens")) {
     apply(plugin = "app.cash.paparazzi")
     android.sourceSets.getByName("test").kotlin.srcDir("screens/kotlin")
+    // each snapshot test in a fresh process: Lychee's helpers keep the first context they're given
+    tasks.withType<Test>().configureEach { forkEvery = 1 }
 }

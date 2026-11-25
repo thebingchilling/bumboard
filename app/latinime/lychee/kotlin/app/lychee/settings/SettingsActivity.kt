@@ -184,14 +184,16 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
     var submenu by remember { mutableStateOf<Submenu?>(null) }
     LaunchedEffect(page) { submenu = null }
     val back = {
-        if (submenu != null) submenu = null
+        val inner = InnerPage.onBack
+        if (inner != null) inner()
+        else if (submenu != null) submenu = null
         else page = when (page) {
             Page.Licences, Page.Diagnostics -> Page.About
             Page.Storage -> Page.Packs
             else -> Page.Home
         }
     }
-    BackHandler(enabled = page != Page.Home || submenu != null) { back() }
+    BackHandler(enabled = page != Page.Home || submenu != null || InnerPage.onBack != null) { back() }
     val dark = androidx.compose.foundation.isSystemInDarkTheme()
 
     Scaffold(
@@ -201,7 +203,7 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
             run {
                 androidx.compose.material3.TopAppBar(
                     title = {
-                        Text(submenu?.title ?: stringResource(page.title), style = MaterialTheme.typography.titleLarge,
+                        Text(InnerPage.title ?: submenu?.title ?: stringResource(page.title), style = MaterialTheme.typography.titleLarge,
                             maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     },
                     colors = TopAppBarDefaults.topAppBarColors(

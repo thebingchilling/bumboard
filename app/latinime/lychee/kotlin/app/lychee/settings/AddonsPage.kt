@@ -88,14 +88,15 @@ fun AddonsPage() {
     val catalog = remember { Packs.catalog(context) }
     var tab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(StoreTab.entries[StoreLook.startTab]) }
     var browse by remember { mutableStateOf(Browse.entries.getOrNull(StoreLook.startCategory)) }
-    androidx.activity.compose.BackHandler(enabled = browse != null) { browse = null }
     val colors = MaterialTheme.colorScheme
-    // a listing opens as a page of its own, in place of the store (Back returns)
+    // a listing opens as a page of its own, in place of the store; the app bar's ← (or Back) returns
     ProductSheet.open?.let { product ->
-        ProductPage(product) { ProductSheet.open = null }
+        InnerPageOf(product.name) { ProductSheet.open = null }
+        ProductPage(product)
         AddonSheetHost(actions)
         return
     }
+    browse?.let { b -> InnerPageOf(b.title) { browse = null } }
 
     androidx.compose.material3.PrimaryTabRow(selectedTabIndex = tab.ordinal, containerColor = colors.surface) {
         StoreTab.entries.forEach { t ->
@@ -109,7 +110,7 @@ fun AddonsPage() {
         StoreTab.STORE -> {
             val open = browse
             if (open == null) StoreHome { browse = it }
-            else BrowsePage(open, catalog, tick, actions, onBack = { browse = null }, onRemove = remove) { version++ }
+            else BrowsePage(open, catalog, tick, actions, onRemove = remove) { version++ }
         }
         StoreTab.INSTALLED -> {
             val total = remember(tick) { Packs.totalSize(context) }
@@ -178,13 +179,8 @@ private fun StoreHome(onBrowse: (Browse) -> Unit) {
 @Composable
 private fun BrowsePage(
     browse: Browse, catalog: List<Pack>, tick: Int, actions: PackActions,
-    onBack: () -> Unit, onRemove: (Pack) -> Unit, onChanged: () -> Unit,
+    onRemove: (Pack) -> Unit, onChanged: () -> Unit,
 ) {
-    val colors = MaterialTheme.colorScheme
-    Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 16.dp, top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_sym_arrow_back), stringResource(R.string.lychee_card_back)) }
-        Text(browse.title, style = MaterialTheme.typography.titleLarge, color = colors.onSurface)
-    }
     val S = app.lychee.store.Store
     val paid = when (browse) {
         Browse.DICTIONARIES -> S.addons.filter { it.category == app.lychee.store.Store.Category.DICTIONARIES }
@@ -243,14 +239,7 @@ private fun StoreRow(title: String, line: String?, meta: String?, action: StoreA
         Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min).clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // (option B: a small tile for the language or kind)
-        if (StoreLook.tiles && tile != null) {
-            Box(Modifier.padding(start = 16.dp).size(44.dp).clip(RoundedCornerShape(12.dp)).background(colors.secondaryContainer),
-                contentAlignment = Alignment.Center) {
-                Text(tile, style = if (tile.length > 2) MaterialTheme.typography.labelMedium else MaterialTheme.typography.titleLarge,
-                    color = colors.onSecondaryContainer)
-            }
-        }
+
         Column(Modifier.weight(1f).padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)

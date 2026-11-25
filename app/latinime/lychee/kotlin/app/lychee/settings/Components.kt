@@ -288,6 +288,30 @@ class Submenu(
     val onSelect: (Int) -> Unit,
 )
 
+/**
+ * A page within a page (an Add-ons category, a listing): its title goes in the app bar and the
+ * app bar's ← (and the phone's Back) closes it, so there is never a second arrow on the page.
+ */
+object InnerPage {
+    var title by androidx.compose.runtime.mutableStateOf<String?>(null)
+    var onBack by androidx.compose.runtime.mutableStateOf<(() -> Unit)?>(null)
+}
+
+/** Opens [title] as an inner page while it is shown; [onBack] closes it. */
+@androidx.compose.runtime.Composable
+fun InnerPageOf(title: String, onBack: () -> Unit) {
+    androidx.compose.runtime.DisposableEffect(title) {
+        InnerPage.title = title
+        InnerPage.onBack = onBack
+        onDispose {
+            if (InnerPage.title == title) {
+                InnerPage.title = null
+                InnerPage.onBack = null
+            }
+        }
+    }
+}
+
 /** Opens a [Submenu] over the current page (provided by the settings screen). */
 val LocalSubmenu = androidx.compose.runtime.staticCompositionLocalOf<(Submenu) -> Unit> { {} }
 
