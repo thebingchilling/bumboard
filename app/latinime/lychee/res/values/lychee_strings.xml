@@ -87,6 +87,12 @@
     <string name="lychee_type_it">Type it</string>
     <string name="lychee_card_parts">Parts</string>
     <string name="lychee_card_tab_summary">Summary</string>
+    <string name="lychee_card_romanisations">Other romanisations</string>
+    <string name="lychee_card_every_reading">Every reading</string>
+    <string name="lychee_card_words_with">Words with these characters</string>
+    <string name="lychee_card_yale">Yale</string>
+    <string name="lychee_card_zhuyin">Zhuyin</string>
+    <string name="lychee_card_taiwan">Taiwan</string>
     <string name="lychee_card_tab_readings">Readings</string>
     <string name="lychee_card_tab_definitions">Definitions</string>
     <string name="lychee_card_phrase_note">Not in the dictionary as a whole. What its parts mean:</string>

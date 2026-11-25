@@ -34,6 +34,11 @@ object Readings {
         private set
     private var opening = false
 
+    /** Screenshots only (the snapshot tests): a sample dictionary in place of the real one. */
+    fun useForScreens(sample: Annotator) {
+        annotator = sample
+    }
+
     /** Opens the database in the background; [then] runs on the main thread once it is ready. */
     fun open(context: Context, then: () -> Unit = {}) {
         if (annotator != null || opening) return

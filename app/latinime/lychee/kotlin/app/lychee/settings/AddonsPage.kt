@@ -64,12 +64,12 @@ object AddonSheet {
 private enum class StoreTab(val title: String) { STORE("Store"), INSTALLED("Installed"), UPDATES("Updates") }
 
 /** The store's categories, each a page of its own. */
-private enum class Browse(val title: String, val about: String) {
-    DICTIONARIES("Dictionaries", "In-depth word cards, and the free dictionaries"),
-    HANDWRITING("Handwriting", "Google's ML Kit recognition for the handwriting pad"),
-    LEARNING("Learning tools", "Stroke order and example sentences"),
-    FONTS("Fonts & emoji", "Chinese, Japanese and Korean fonts, and emoji styles"),
-    FREE("All free downloads", "Everything free, by language"),
+private enum class Browse(val title: String, val about: String, val tile: String) {
+    DICTIONARIES("Dictionaries", "In-depth word cards, and the free dictionaries", "詞"),
+    HANDWRITING("Handwriting", "Google's ML Kit recognition for the handwriting pad", "寫"),
+    LEARNING("Learning tools", "Stroke order and example sentences", "筆"),
+    FONTS("Fonts & emoji", "Chinese, Japanese and Korean fonts, and emoji styles", "字"),
+    FREE("All free downloads", "Everything free, by language", "free"),
 }
 
 /**
@@ -86,10 +86,16 @@ fun AddonsPage() {
     val tick = version + actions.version + PackRefresh.tick
     remember { Packs.removeUnlisted(context) }
     val catalog = remember { Packs.catalog(context) }
-    var tab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(StoreTab.STORE) }
-    var browse by remember { mutableStateOf<Browse?>(null) }
+    var tab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(StoreTab.entries[StoreLook.startTab]) }
+    var browse by remember { mutableStateOf(Browse.entries.getOrNull(StoreLook.startCategory)) }
     androidx.activity.compose.BackHandler(enabled = browse != null) { browse = null }
     val colors = MaterialTheme.colorScheme
+    // a listing opens as a page of its own, in place of the store (Back returns)
+    ProductSheet.open?.let { product ->
+        ProductPage(product) { ProductSheet.open = null }
+        AddonSheetHost(actions)
+        return
+    }
 
     androidx.compose.material3.PrimaryTabRow(selectedTabIndex = tab.ordinal, containerColor = colors.surface) {
         StoreTab.entries.forEach { t ->
@@ -146,33 +152,25 @@ fun AddonsPage() {
     }
     Spacer(Modifier.height(16.dp))
     AddonSheetHost(actions)
-    ProductSheetHost()
 }
 
-/** The store's first page: one line about Lychee, the bundles, the categories, the registration. */
+/** The store's first page: the packs, the categories, the registration. */
 @Composable
 private fun StoreHome(onBrowse: (Browse) -> Unit) {
     val context = LocalContext.current
     val colors = MaterialTheme.colorScheme
     val unavailable = remember { app.lychee.store.Store.unavailableReason(context) }
-    Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Made by one student developer. One-time purchases, no subscriptions, no ads, no tracking; " +
-            "Lychee never goes online.", style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
-        if (app.lychee.store.Store.FREE_FOR_NOW) {
-            Note("Everything is free while Lychee is in testing. Prices show what each will cost.",
-                colors.tertiaryContainer, colors.onTertiaryContainer)
-        }
-        unavailable?.let { Note(it, colors.errorContainer, colors.onErrorContainer) }
-    }
-    StoreHeader("Featured")
-    (listOf(app.lychee.store.Store.FULL) + app.lychee.store.Store.packs).forEach { p ->
+    // only when paid add-ons can't be had on this phone, and why
+    unavailable?.let { Column(Modifier.padding(16.dp)) { Note(it, colors.errorContainer, colors.onErrorContainer) } }
+    StoreHeader("Packs")
+    (app.lychee.store.Store.packs + app.lychee.store.Store.FULL).forEach { p ->
         val value = app.lychee.store.Store.value(p)
         StoreRow(p.name, p.tagline,
             "${app.lychee.store.Store.price(p.cents)} · ${p.includes.size} add-ons, save ${app.lychee.store.Store.price(value - p.cents)}",
-            StoreAction.Price(app.lychee.store.Store.price(p.cents))) { ProductSheet.open = p }
+            StoreAction.Price(app.lychee.store.Store.price(p.cents)), tile = p.tile) { ProductSheet.open = p }
     }
     StoreHeader("Browse")
-    Browse.entries.forEach { b -> StoreRow(b.title, b.about, null, StoreAction.Open) { onBrowse(b) } }
+    Browse.entries.forEach { b -> StoreRow(b.title, b.about, null, StoreAction.Open, tile = b.tile) { onBrowse(b) } }
     RegistrationSection()
 }
 
@@ -199,7 +197,7 @@ private fun BrowsePage(
         StoreHeader("Add-ons")
         paid.forEach { p ->
             val packs = S.includedIn(p.id).joinToString(", ") { it.name.removeSuffix(" Pack") }
-            StoreRow(p.name, p.tagline, "${S.price(p.cents)} · in $packs", StoreAction.Price(S.price(p.cents))) { ProductSheet.open = p }
+            StoreRow(p.name, p.tagline, "${S.price(p.cents)} · in $packs", StoreAction.Price(S.price(p.cents)), tile = p.tile) { ProductSheet.open = p }
         }
     }
     val kinds = when (browse) {
@@ -239,12 +237,20 @@ private fun StoreHeader(title: String) {
  * a single action in a tinted tile at the right. The whole row opens the listing.
  */
 @Composable
-private fun StoreRow(title: String, line: String?, meta: String?, action: StoreAction, onClick: () -> Unit) {
+private fun StoreRow(title: String, line: String?, meta: String?, action: StoreAction, tile: String? = null, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Row(
         Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min).clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // (option B: a small tile for the language or kind)
+        if (StoreLook.tiles && tile != null) {
+            Box(Modifier.padding(start = 16.dp).size(44.dp).clip(RoundedCornerShape(12.dp)).background(colors.secondaryContainer),
+                contentAlignment = Alignment.Center) {
+                Text(tile, style = if (tile.length > 2) MaterialTheme.typography.labelMedium else MaterialTheme.typography.titleLarge,
+                    color = colors.onSecondaryContainer)
+            }
+        }
         Column(Modifier.weight(1f).padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
