@@ -119,17 +119,23 @@ encrypted pack data (they are code for now), per the security model.
 ## The store (UI first, no billing)
 
 **Built:** `store/Store.kt` (every add-on, pack and Full with its price, contents, what is still to
-come, and the honest reasons paid add-ons won't be available) and `settings/StoreSection.kt` (the
-store in Settings > Add-ons).
+come, and the honest reasons paid add-ons won't be available) and `settings/AddonsPage.kt` /
+`settings/ProductSheet.kt` (the store in Settings > Add-ons).
 
-- Opens with "Pick a bundle, or buy add-ons individually".
-- Bundle cards first, Full at the top as the best value; each states its price, its item count
-  and its value ("5 items, $23.96 value") and lists its contents and bonus fonts.
-- Then categories with a one-line explanation each: Features, Dictionaries, Fonts.
-- Each add-on shows its own price and the packs that include it ("$3.99 · in Chinese,
-  Japanese, Korean, Full").
-- Until billing exists every button says "Free for now" and everything stays unlocked
-  (`Features.isEnabled` is always true).
+The owner's decisions on wording and look (professional, Lychee's own, never Pleco's copy):
+- It reads as the real store: no "free while in testing" anywhere, and no savings or value
+  sums ("save $8.97" sounds cheap). Bundles say how many add-ons they hold.
+- Only two promises, plainly: "Always offline, like the rest of Lychee" and "Yours for life,
+  with every future update". A listing's Updates section adds that updates to open data
+  follow its new releases for as long as they stay free to use. No "no ads" or "yours to keep".
+- Simple layout: a short intro card, the bundles (Full large, the three packs in one card),
+  categories as plain list rows, one large "All add-ons" card, the registration at the bottom.
+  No grids of tiles. Prices are rounded pill buttons.
+- A listing: its tile, name and line; a buying card (price, the two promises, Try the demo
+  beside Buy); then In Lychee (a worked example), What you get, Included, Try it free, About,
+  Sources and licences, Updates, Privacy.
+- Until billing exists everything stays unlocked (`Features.isEnabled` is always true); a tap
+  on Buy or Try the demo says plainly that purchases aren't available yet.
 - Where paid add-ons can't be offered (see below), they are shown with an honest note saying
   why.
 

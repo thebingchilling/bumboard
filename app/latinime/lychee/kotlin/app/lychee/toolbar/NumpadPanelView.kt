@@ -104,7 +104,8 @@ class NumpadPanelView @JvmOverloads constructor(
      */
     private fun plainPad() = LinearLayout(context).apply {
         orientation = HORIZONTAL
-        val side = (COLUMN_SYMBOLS + COLUMN_SIDE) / 2
+        // a little room at each side (narrower than the full pad's columns): the digits a touch wider
+        val side = 0.6f
         addView(View(context), LayoutParams(0, LayoutParams.MATCH_PARENT, side))
         val block = LinearLayout(context).apply { orientation = VERTICAL }
         block.addView(digitRows(), LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))

@@ -109,6 +109,9 @@
     <string name="lychee_pref_chinese_on_kanji_summary">On the Japanese and Korean keyboards, characters show their Japanese or Korean readings; this adds the Cantonese and Mandarin ones to their cards</string>
     <string name="lychee_card_cantonese">Cantonese</string>
     <string name="lychee_card_mandarin">Mandarin</string>
+    <string name="lychee_card_characters">Characters</string>
+    <string name="lychee_card_say_it">Pronunciation</string>
+    <string name="lychee_card_also_read">Also read</string>
     <string name="lychee_card_character">Character</string>
     <string name="lychee_card_measure_word">Measure word:</string>
     <string name="lychee_card_written">Written:</string>

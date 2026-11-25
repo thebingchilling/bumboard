@@ -22,6 +22,7 @@
     <string name="lychee_clipboard_off_title">The clipboard is off</string>
     <string name="lychee_clipboard_empty_title">Nothing copied yet</string>
     <string name="lychee_clipboard_pinned">Pinned</string>
+    <string name="lychee_clipboard_just_now">Just now</string>
     <string name="lychee_clipboard_recent">Recent</string>
     <string name="lychee_clipboard_link">Link</string>
     <string name="lychee_clipboard_email">Email</string>

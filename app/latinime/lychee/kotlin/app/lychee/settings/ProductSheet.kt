@@ -43,41 +43,30 @@ object StoreLook {
 }
 
 /**
- * A listing's own page, a full page like Pleco's (not a sheet): its name and price, Buy and the
- * demo, "one-time purchase", a worked example, what it is and gives, what is included, the free
- * trial, sources and licences, privacy. Honest throughout: what isn't built yet says "coming".
- * Back (the phone's or the arrow) returns to the store.
+ * A listing's own page, in Lychee's layout: the add-on's tile, name and line; a buying card with
+ * the price, three plain promises and the buttons (Try the demo beside Buy); then "In Lychee" (a
+ * worked example as the card draws it), what it gives, what is included, the free trial, about,
+ * sources and licences, privacy. Honest throughout: what isn't built yet says "coming", and while
+ * billing doesn't exist the buttons say why they can't buy anything. Back returns to the store.
  */
 @Composable
 fun ProductPage(p: Store.Product) {
     val colors = MaterialTheme.colorScheme
     @Suppress("UNUSED_VARIABLE") val refresh = PackRefresh.tick
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 8.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 16.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(p.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = colors.onSurface)
-            Text(Store.price(p.cents), style = MaterialTheme.typography.titleLarge, color = colors.onSurface)
-        }
-        // what to press
-        if (p.needsApp) {
-            HandwritingActions()
-        } else {
-            Button(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) {
-                Text(if (Store.FREE_FOR_NOW) "Free while Lychee is in testing" else "Buy + download")
-            }
-            if (p.demo.isNotEmpty()) {
-                OutlinedButton(onClick = {}, enabled = false, modifier = Modifier.fillMaxWidth()) { Text("Download the free demo") }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ProductTile(p, 56)
+            Spacer(Modifier.size(16.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(p.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                Text(p.tagline, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
             }
         }
-        Text("One-time purchase (not a subscription)",
-            style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant, modifier = Modifier.fillMaxWidth(),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-        Section("Example") { Sample(p.sample) }
-        Section("Description") {
-            Plain(p.about.ifEmpty { p.tagline })
-        }
+        if (p.needsApp) HandwritingActions() else BuyCard(p)
+        Section("In Lychee") { Sample(p.sample) }
         Section("What you get") {
             p.lines.forEach { Bullet(it) }
             p.bonus?.let { Bullet(Store.Line("Bonus: $it, only in this pack or Lychee Complete")) }
@@ -90,6 +79,8 @@ fun ProductPage(p: Store.Product) {
                             .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        ProductTile(inc, 32)
+                        Spacer(Modifier.size(12.dp))
                         Text(inc.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         Text(Store.price(inc.cents), style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
                     }
@@ -97,7 +88,12 @@ fun ProductPage(p: Store.Product) {
             }
         }
         if (p.demo.isNotEmpty()) Section("Try it free") { Plain(p.demo) }
+        if (p.about.isNotEmpty()) Section("About") { Plain(p.about) }
         if (p.sources.isNotEmpty()) Section("Sources and licences") { Plain(p.sources) }
+        Section("Updates") {
+            Plain("Every update to this add-on is included. Where it is built on open data, updates follow that " +
+                "data's new releases for as long as they stay free to use.")
+        }
         Section("Privacy") {
             Plain(
                 if (p.needsApp) "Your writing is read by Google's ML Kit on this phone, never sent anywhere. The " +
@@ -108,11 +104,37 @@ fun ProductPage(p: Store.Product) {
                     "up ever leaves your phone."
             )
         }
-        Text(
-            "Lychee is made by one student developer. A purchase pays for the time it takes to build and " +
-                "keep improving it. Thank you.",
-            style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
-        )
+    }
+}
+
+/**
+ * The buying card: the price (and a bundle's saving), three promises, then the buttons. While
+ * billing doesn't exist, a tap says so plainly instead of doing nothing.
+ */
+@Composable
+private fun BuyCard(p: Store.Product) {
+    val colors = MaterialTheme.colorScheme
+    val context = LocalContext.current
+    // honest when tapped: no purchase can be made yet (no billing), so say so rather than doing nothing
+    val why = "Purchases aren't available yet. They'll open in a later version of Lychee."
+    fun explain() = android.widget.Toast.makeText(context, why, android.widget.Toast.LENGTH_LONG).show()
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(colors.surfaceContainerLow).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(Store.price(p.cents), style = MaterialTheme.typography.headlineSmall, color = colors.onSurface)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Promise(R.drawable.ic_sym_check, "Always offline, like the rest of Lychee")
+            Promise(R.drawable.ic_sym_check, "Yours for life, with every future update")
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (p.demo.isNotEmpty()) {
+                OutlinedButton(onClick = ::explain, modifier = Modifier.weight(1f)) { Text("Try the demo", maxLines = 1) }
+            }
+            Button(onClick = ::explain, modifier = Modifier.weight(1f)) { Text("Buy", maxLines = 1) }
+        }
     }
 }
 
@@ -122,7 +144,12 @@ private fun HandwritingActions() {
     val context = LocalContext.current
     val colors = MaterialTheme.colorScheme
     val installed = app.lychee.handwriting.GoogleHandwriting.installed(context)
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(colors.surfaceContainerLow).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(Store.price(Store.HANDWRITING.cents),
+            style = MaterialTheme.typography.titleLarge, color = colors.onSurface)
         Text(
             if (installed) "The Lychee handwriting app is installed: Lychee's handwriting pad uses Google's ML Kit."
             else "Google's ML Kit runs in the free Lychee handwriting app (${context.getString(R.string.lychee_companion_size)}): " +
@@ -272,7 +299,5 @@ private fun Sample(sample: Store.Sample) {
                 small("Every add-on, every language, every font, and whatever Lychee makes next.")
             }
         }
-        Text("Example", style = MaterialTheme.typography.labelSmall, color = colors.outline,
-            fontWeight = FontWeight.Medium)
     }
 }

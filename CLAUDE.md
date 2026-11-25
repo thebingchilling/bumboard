@@ -41,7 +41,9 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
     `tools/screens.sh` (optionally a test filter such as `'*CardScreens*'`) draws the screens
     into `screens/` (git-ignored). The snapshot tests are in `app/latinime/screens/` and only
     run with `-PlycheeScreens`; the card uses a small sample entry (the real dictionary is
-    built in CI).
+    built in CI). Every screen is drawn as a whole phone (`Phone.kt`: a Galaxy S23's size, the
+    status bar, an app, the keyboard's top bar in full, the keys, panels over them, the gesture
+    bar), so it looks real.
 - Every build on `main` is published by `build.yml` as a debug release (a full release, not a
   pre-release) of this private repository (`lychee-0.1.0-dev.N`, notes from the commit), like Quartz's releases,
   with three APKs named by ABI (`lychee-universal.apk`, `lychee-arm64-v8a.apk` and `lychee-armeabi-v7a.apk`)
@@ -203,8 +205,9 @@ packs page). Public facing, so be careful:
   fonts, pronunciation, the key by the comma, the voice key) show a live preview where they are
   changed. The packs page (`packs/site`) is the same: Material 2's components in Material 3's
   tonal colours.
-  Add-ons (`settings/AddonsPage.kt`) is a store laid out like Pleco's, opened from a banner at
-  the top of Settings.
+  Add-ons (`settings/AddonsPage.kt`) is Lychee's own store (never a copy of Pleco's: professional,
+  no savings sums, no "free while testing"; wording in `PAID.md`), opened from a banner at the
+  top of Settings.
   - Three tabs: Store, Installed, Updates.
   - The store: one honest line (a student developer, one-time purchases, no ads or tracking,
     offline), then Featured (the bundles), then Browse categories, each a page of its own

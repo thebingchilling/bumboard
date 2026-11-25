@@ -6,10 +6,13 @@ import android.view.View
 import android.widget.FrameLayout
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import app.lychee.chinese.CandidateBarView
 import app.lychee.chinese.DictionaryPopup
+import app.lychee.rime.Candidate
 import app.lychee.chinese.DictionaryPopup.Page
 import app.lychee.chinese.Readings
 import app.lychee.core.Annotator
+import app.lychee.core.CantoneseRomanization
 import app.lychee.core.Dictionary
 import app.lychee.core.DisplayPrefs
 import app.lychee.core.Headword
@@ -43,47 +46,98 @@ private val words = listOf(
     hw(5, "我", "我", listOf("ngo5"), listOf("wo3"), Sense(Lang.Mandarin, "wo3", "I; me; my")),
     hw(6, "今日", "今日", listOf("gam1 jat6"), listOf("jin1 ri4"), Sense(Lang.Cantonese, "gam1 jat6", "today")),
     hw(7, "去", "去", listOf("heoi3"), listOf("qu4"), Sense(Lang.Cantonese, "heoi3", "to go; to leave")),
+    hw(8, "嘢", "嘢", listOf("je5"), listOf("ye3")),
+    hw(9, "打", "打", listOf("daa2", "daa1"), listOf("da3", "da2"),
+        Sense(Lang.Cantonese, "daa2", "to hit; to strike; to beat"), Sense(Lang.Cantonese, "daa2", "to fight; to attack"),
+        Sense(Lang.Cantonese, "daa2", "to make a phone call; to send a telegram"), Sense(Lang.Cantonese, "daa2", "to play (a ball game, cards, mahjong)"),
+        Sense(Lang.Cantonese, "daa2", "to type; to print; to draw up (a plan)"), Sense(Lang.Cantonese, "daa2", "to work at (a job), e.g. 打工 to work for someone"),
+        Sense(Lang.Cantonese, "daa2", "to break; to smash (dishes, eggs)"), Sense(Lang.Cantonese, "daa2", "to open; to dig (a well); to build"),
+        Sense(Lang.Cantonese, "daa1", "dozen (loanword from English)"),
+        Sense(Lang.Mandarin, "da3", "to beat; to strike; to hit; to break; to type; to mix up; to build; to fight; to fetch; to make; to tie up; to issue; to shoot; to calculate; to play (a game); since; from"),
+        Sense(Lang.Mandarin, "da2", "dozen (loanword)")),
 )
 private val annotator = Annotator(Dictionary { form -> words.filter { it.traditional == form || it.simplified == form } })
 
-/**
- * Draws a card above the keyboard as the phone shows it: the real keyboard (with its bar) at
- * the bottom, at its real height, and the card in the room the keyboard gives it.
- */
-private fun drawCard(paparazzi: Paparazzi, name: String, show: (DictionaryPopup, FrameLayout) -> Unit) {
-    Readings.useForScreens(annotator)
-    val ctx = paparazzi.context
-    val dm = ctx.resources.displayMetrics
-    fun dp(v: Int) = (v * dm.density).toInt()
-    val night = (ctx.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-        android.content.res.Configuration.UI_MODE_NIGHT_YES
-    val screen = FrameLayout(ctx).apply { setBackgroundColor(Color.parseColor(if (night) "#1C1416" else "#ECE3E5")) }
-    val keyboard = KeyboardPreviewView(ctx)
-    keyboard.measure(View.MeasureSpec.makeMeasureSpec(dm.widthPixels, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
-    val kbHeight = keyboard.measuredHeight
-    screen.addView(keyboard, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, kbHeight, Gravity.BOTTOM))
-    val room = dm.heightPixels - kbHeight - dp(24) - dp(12)
-    val height = minOf(room, maxOf(dp(260), (room * 0.6f).toInt()), dp(420))
-    val host = FrameLayout(ctx)
-    screen.addView(host, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, height + dp(30), Gravity.BOTTOM).apply {
-        bottomMargin = kbHeight
-    })
-    val popup = DictionaryPopup(ctx, standalone = host, standaloneRoom = height, asKeyboard = true)
-    show(popup, host)
-    for (i in 0 until host.childCount) host.getChildAt(i).apply { alpha = 1f; scaleX = 1f; scaleY = 1f; translationY = 0f }
-    paparazzi.snapshot(screen, name)
+/** A Galaxy S23: 1080 × 2340 px at 425 dpi (about 411 × 891 dp), a regular phone. */
+val S23 = DeviceConfig.PIXEL_6.copy(screenWidth = 1080, screenHeight = 2340, xdpi = 425, ydpi = 425,
+    density = com.android.resources.Density.create(420))
+
+/** What the candidate bar shows while the card is open: the letters typed, the candidates and their lines. */
+class BarSample(val typed: String, val candidates: List<String>, val lines: CandidateBarView.Lines,
+                val fontLang: String, val script: Boolean, val annotate: (Candidate) -> app.lychee.core.Annotation?)
+
+private val chineseBar by lazy {
+    BarSample("hokhaau", listOf("學校", "學", "鶴", "學好", "學效", "殼", "确"), CandidateBarView.Lines(2, true), "yue", script = true) { c ->
+        annotator.annotate(c.text, "", InputMode.Cantonese, prefs)
+    }
 }
 
-private fun chinese(paparazzi: Paparazzi, name: String, text: String, page: Page? = null) = drawCard(paparazzi, name) { popup, host ->
-    popup.startPage = page
-    val r = annotator.resolve(text, "", InputMode.Cantonese)!!
-    popup.show(host, text, r, DisplayPrefs(), peek = false, onSpeak = { _, _ -> }) {}
+/**
+ * Draws a card above the keyboard as the phone shows it (the whole phone: status bar, the app, the
+ * candidate bar in full, the keys); the card gets the room the real code gives it.
+ */
+private fun drawCard(paparazzi: Paparazzi, name: String, tall: Boolean = false, bar: BarSample? = chineseBar,
+                     show: (DictionaryPopup, FrameLayout) -> Unit) {
+    Readings.useForScreens(annotator)
+    drawPhone(paparazzi, name, if (bar != null) TopBar.Candidates(bar) else TopBar.Shortcuts) { phone ->
+        val ctx = paparazzi.context
+        val dm = ctx.resources.displayMetrics
+        fun dp(v: Int) = (v * dm.density).toInt()
+        val space = phone.keyboardTop - phone.statusBar - dp(12)
+        val height = if (tall) space else DictionaryPopup.cardHeight(space, dm.density)
+        val host = FrameLayout(ctx)
+        phone.screen.addView(host, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, height + dp(30), Gravity.BOTTOM).apply {
+            bottomMargin = dm.heightPixels - phone.keyboardTop
+        })
+        val popup = DictionaryPopup(ctx, standalone = host, standaloneRoom = height, asKeyboard = true)
+        show(popup, host)
+    }
 }
+
+/** Every card is drawn with Yale for Cantonese and the Mandarin reading shown too (the owner's choice for screens). */
+private val prefs = DisplayPrefs(cantonese = CantoneseRomanization.Yale, showOtherLanguage = true)
+
+private fun chinese(paparazzi: Paparazzi, name: String, text: String, page: Page? = null, mode: InputMode = InputMode.Cantonese, tall: Boolean = false) =
+    drawCard(paparazzi, name, tall) { popup, host ->
+        popup.startPage = page
+        val r = annotator.resolve(text, "", mode)!!
+        popup.show(host, text, r, prefs, peek = false, onSpeak = { _, _ -> }) {}
+    }
+
+private val japaneseBar = BarSample("taberu", listOf("食べる", "たべる", "食べ", "食", "タベル"), CandidateBarView.Lines(1, true), "ja", script = false) { c ->
+    mapOf("食べる" to ("taberu" to "to eat"), "たべる" to ("taberu" to "to eat"), "食べ" to ("tabe" to "eating"), "食" to ("shoku" to "food"),
+        "タベル" to ("taberu" to null)
+    )[c.text]?.let { (r, m) -> app.lychee.core.Annotation(listOf(r), m, null) }
+}
+private val koreanBar = BarSample("hakgyo", listOf("학교", "學校", "학교에", "학교의", "학구"), CandidateBarView.Lines(1, true), "ko", script = false) { c ->
+    mapOf("학교" to ("hakgyo" to "school"), "學校" to ("hakgyo" to "school"), "학교에" to ("hakgyoe" to "to school"),
+        "학교의" to ("hakgyoui" to "school's"), "학구" to ("hakgu" to "study"))[c.text]?.let { (r, m) -> app.lychee.core.Annotation(listOf(r), m, null) }
+}
+
+private fun japaneseCard(paparazzi: Paparazzi, name: String, tall: Boolean = false) = drawCard(paparazzi, name, tall, japaneseBar) { popup, host ->
+    popup.showWord(host, "食べる", "たべる  taberu",
+        listOf(WordEntry("食べる", "食べる", "たべる", null, "Ichidan verb, transitive", listOf("to eat", "to live on (e.g. a salary); to live off; to subsist on"))),
+        listOf("毎朝パンを食べる。" to "I eat bread every morning."), peek = false, onSpeak = { _, _ -> }, lang = "ja",
+        onSpeakAs = { _, _ -> }, badges = listOf("JLPT N5"), pronunciation = "Pitch  たべ̅ꜜる  ·  Nakadaka (falls in the middle)",
+        characters = listOf(DictionaryPopup.CharReading("食", listOf("On" to listOf("ショク" to "shoku"), "Kun" to listOf("た(べる)" to "ta(beru)")), "たべる", "eat; food")),
+        charactersTitle = "Kanji") {}
+}
+
+private fun koreanCard(paparazzi: Paparazzi, name: String, tall: Boolean = false) = drawCard(paparazzi, name, tall, koreanBar) { popup, host ->
+    popup.showWord(host, "학교", "hakgyo",
+        listOf(WordEntry("학교", "학교", "hakgyo", "學校", "noun", listOf("school", "an institution where students are taught"))),
+        listOf("저는 학교에 가요." to "I go to school."), peek = false, onSpeak = { _, _ -> }, lang = "ko", onSpeakAs = { _, _ -> },
+        badges = listOf("Beginner level"), pronunciation = "Said  [학꾜] hakkyo",
+        characters = listOf(DictionaryPopup.CharReading("學", listOf("Korean" to listOf("학" to "hak")), "학", "learn"),
+            DictionaryPopup.CharReading("校", listOf("Korean" to listOf("교" to "gyo")), "교", "school")),
+        charactersTitle = "Hanja") {}
+}
+
 
 /** The dictionary card in light mode, Chinese, Japanese, Korean and English, on each tab. */
 class CardScreens {
     @get:Rule
-    val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_6, theme = "android:Theme.Material.Light.NoActionBar")
+    val paparazzi = Paparazzi(deviceConfig = S23, theme = "android:Theme.Material.Light.NoActionBar")
 
     @Test fun summary() = chinese(paparazzi, "1-summary", "學校")
     @Test fun readings() = chinese(paparazzi, "2-readings-hang", "行", Page.READINGS)
@@ -92,26 +146,21 @@ class CardScreens {
     @Test fun phrase() = chinese(paparazzi, "5-phrase-not-in-dictionary", "我今日去學校")
     @Test fun phraseParts() = chinese(paparazzi, "6-phrase-parts", "我今日去學校", Page.PARTS)
 
-    @Test fun japanese() = drawCard(paparazzi, "7-japanese-taberu") { popup, host ->
-        popup.showWord(host, "食べる", "たべる  taberu",
-            listOf(WordEntry("食べる", "食べる", "たべる", null, "Ichidan verb, transitive", listOf("to eat", "to live on (e.g. a salary); to live off; to subsist on"))),
-            listOf("毎朝パンを食べる。" to "I eat bread every morning."), peek = false, onSpeak = { _, _ -> }, lang = "ja",
-            onSpeakAs = { _, _ -> }, badges = listOf("JLPT N5"), pronunciation = "Pitch  たべ̅ꜜる  ·  Nakadaka (falls in the middle)",
-            characters = listOf(DictionaryPopup.CharReading("食", listOf("On" to listOf("ショク" to "shoku"), "Kun" to listOf("た(べる)" to "ta(beru)")), "たべる", "eat; food")),
-            charactersTitle = "Kanji") {}
+    @Test fun summaryHang() = chinese(paparazzi, "10-summary-hang-many-readings", "行")
+    @Test fun longEntry() = chinese(paparazzi, "11-definitions-da-long", "打", Page.DEFINITIONS)
+    @Test fun noDefinition() = chinese(paparazzi, "12-no-definition-je", "嘢")
+    @Test fun mandarin() = chinese(paparazzi, "13-summary-mandarin-keyboard", "學校", mode = InputMode.Mandarin)
+    @Test fun backFromPart() = drawCard(paparazzi, "14-part-opened-with-back") { popup, host ->
+        popup.show(host, "學校", annotator.resolve("學校", "", InputMode.Cantonese)!!, prefs, peek = false, onSpeak = { _, _ -> }) {}
+        popup.openForScreens {
+            popup.show(host, "學", annotator.resolve("學", "", InputMode.Cantonese)!!, prefs, peek = false, onSpeak = { _, _ -> }) {}
+        }
     }
 
-    @Test fun korean() = drawCard(paparazzi, "8-korean-hakgyo") { popup, host ->
-        popup.showWord(host, "학교", "hakgyo",
-            listOf(WordEntry("학교", "학교", "hakgyo", "學校", "noun", listOf("school", "an institution where students are taught"))),
-            emptyList(), peek = false, onSpeak = { _, _ -> }, lang = "ko", onSpeakAs = { _, _ -> },
-            badges = listOf("Beginner level"), pronunciation = "Said  [학꾜] hakkyo",
-            characters = listOf(DictionaryPopup.CharReading("學", listOf("Korean" to listOf("학" to "hak")), "학", "learn"),
-                DictionaryPopup.CharReading("校", listOf("Korean" to listOf("교" to "gyo")), "교", "school")),
-            charactersTitle = "Hanja") {}
-    }
+    @Test fun japanese() = japaneseCard(paparazzi, "7-japanese-taberu")
+    @Test fun korean() = koreanCard(paparazzi, "8-korean-hakgyo")
 
-    @Test fun english() = drawCard(paparazzi, "9-english-school") { popup, host ->
+    @Test fun english() = drawCard(paparazzi, "9-english-school", bar = null) { popup, host ->
         popup.showWord(host, "school", null,
             listOf(WordEntry("school", "school", "/skuːl/ (UK) · /skul/ (US)", null, "noun",
                 listOf("An institution dedicated to teaching and learning", "A group of fish swimming together"))),
@@ -119,10 +168,22 @@ class CardScreens {
     }
 }
 
+/** A phone tall enough to show a whole page at once, to check everything on it. */
+class CardScreensTall {
+    @get:Rule
+    val paparazzi = Paparazzi(deviceConfig = S23.copy(screenHeight = 4200), theme = "android:Theme.Material.Light.NoActionBar")
+
+    @Test fun summary() = chinese(paparazzi, "t1-summary-xuexiao-whole", "學校", tall = true)
+    @Test fun summaryHang() = chinese(paparazzi, "t2-summary-hang-whole", "行", tall = true)
+    @Test fun phrase() = chinese(paparazzi, "t3-summary-phrase-whole", "我今日去學校", tall = true)
+    @Test fun japanese() = japaneseCard(paparazzi, "t4-summary-japanese-whole", tall = true)
+    @Test fun korean() = koreanCard(paparazzi, "t5-summary-korean-whole", tall = true)
+}
+
 /** The same card in dark mode. */
 class CardScreensDark {
     @get:Rule
-    val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_6.copy(nightMode = NightMode.NIGHT), theme = "android:Theme.Material.NoActionBar")
+    val paparazzi = Paparazzi(deviceConfig = S23.copy(nightMode = NightMode.NIGHT), theme = "android:Theme.Material.NoActionBar")
 
     @Test fun summary() = chinese(paparazzi, "d1-summary-dark", "學校")
     @Test fun readings() = chinese(paparazzi, "d2-readings-dark", "行", Page.READINGS)

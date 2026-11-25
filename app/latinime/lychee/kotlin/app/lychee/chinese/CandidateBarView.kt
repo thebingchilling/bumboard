@@ -129,6 +129,13 @@ class CandidateBarView @JvmOverloads constructor(
         }
     }
 
+    /** Screenshots only: [candidates] with their readings, built at once (no background thread). */
+    fun setForScreens(candidates: List<Candidate>, annotate: (Candidate) -> Annotation?) {
+        ++generation
+        val items = candidates.withIndex().filter { renderable(it.value.text) }.take(MAX_SHOWN)
+        build(items, items.mapNotNull { item -> annotate(item.value)?.let { item.index to it } }.toMap())
+    }
+
     /** Builds the row from [items], each cell with its [notes] filled in before it is measured. */
     private fun build(items: List<IndexedValue<Candidate>>, notes: Map<Int, Annotation>) {
         row.removeAllViews()

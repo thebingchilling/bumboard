@@ -1223,10 +1223,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             val tallest = bar.heightFor(linesFor(engine))
             maxOf(standard, tallest + if (rime) line else 0)
         }
-        // the line for the letters typed is above the candidates, the same while handwriting
-        // (the bar is exactly the keyboard's own then too)
+        // the line for the letters typed is above the candidates; while handwriting nothing is
+        // typed there, so the candidates move up into it (the bar keeps its height: the
+        // keyboard never jumps) and sit centred in the whole bar, with no empty strip
         lastBarCandidates = candidates
-        val top = if (rime) line else 0
+        val writing = stripView?.rootView?.findViewById<View>(R.id.lychee_handwriting_panel)?.visibility == View.VISIBLE
+        val top = if (rime && !writing) line else 0
         bar?.let { if (it.paddingTop != top || it.paddingBottom != 0) it.setPadding(0, top, 0, 0) }
         // voice typing takes the bar's place, so it is as tall as the bar
         val voice = stripView?.rootView?.findViewById<View>(R.id.lychee_voice_panel)

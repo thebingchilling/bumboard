@@ -162,12 +162,16 @@ class HandwritingPanelView @JvmOverloads constructor(
         // the pad over the keyboard's upper rows; its bottom row (?123, the comma, space, the
         // period, Enter) and the candidate bar above stay the keyboard's own, but for Back laid
         // over ?123 (there is nothing else to switch to while writing). ⌫ floats in the pad's corner
-        // a hairline between the candidate bar and the pad, so the two read apart
-        addView(View(context).apply { setBackgroundColor(palette.outlineVariant) },
-            LayoutParams(LayoutParams.MATCH_PARENT, maxOf(1, dp(1))))
+        // the bar and the pad read apart by a soft shade falling from the bar (not a hard line)
         addView(FrameLayout(context).apply {
             addView(hint, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(pad, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+            addView(View(context).apply {
+                background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                    intArrayOf((palette.outlineVariant and 0x00FFFFFF) or 0x66000000, palette.outlineVariant and 0x00FFFFFF))
+                isClickable = false
+                importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+            }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(14), Gravity.TOP))
             addView(message, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(upgrade, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(6) })
@@ -667,6 +671,9 @@ class HandwritingPanelView @JvmOverloads constructor(
     }
 
     /** The recogniser's guesses for the ink on the pad, in the candidate bar. */
+    /** Screenshots only: the candidates as if [found] had just been read from the pad. */
+    fun guessesForScreens(found: List<String>) = showGuesses(found)
+
     private fun showGuesses(found: List<String>) {
         // every written form of each character (為 then 爲), whichever script the candidates are in
         val list = if (lycheeHost()?.lycheeEngine().let { it == "ja" || it == "ko" }) found

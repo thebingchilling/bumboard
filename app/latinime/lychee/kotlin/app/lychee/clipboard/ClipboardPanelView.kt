@@ -141,18 +141,28 @@ class ClipboardPanelView @JvmOverloads constructor(
         list.setPadding(dp(8), dp(4), dp(8), dp(8))
         list.overScrollMode = OVER_SCROLL_IF_CONTENT_SCROLLS
         val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        list.setPadding(dp(8), dp(8), dp(8), dp(16))
         column.addView(FrameLayout(context).apply {
             addView(list, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
             addView(emptyState, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            // no hard lines: the cards fade out softly under the bar above and into Clear all below
+            addView(fade(GradientDrawable.Orientation.TOP_BOTTOM), LayoutParams(LayoutParams.MATCH_PARENT, dp(12), Gravity.TOP))
+            addView(fade(GradientDrawable.Orientation.BOTTOM_TOP), LayoutParams(LayoutParams.MATCH_PARENT, dp(16), Gravity.BOTTOM))
         }, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-        column.addView(View(context).apply { setBackgroundColor(palette.outlineVariant); alpha = 0.5f },
-            LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 1))
         column.addView(bottomBar, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(48)))
         addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         visibility = GONE
     }
 
     private fun toolbar(): ToolbarView? = rootView.findViewById(R.id.lychee_toolbar)
+
+    /** The panel's colour fading to clear, from the [from] edge: list content softly disappears under it. */
+    private fun fade(from: GradientDrawable.Orientation) = View(context).apply {
+        background = GradientDrawable(from, intArrayOf(palette.surface, palette.surface and 0x00FFFFFF))
+        isClickable = false
+        isFocusable = false
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
 
     fun show() {
         actionsFor = null
@@ -235,6 +245,8 @@ class ClipboardPanelView @JvmOverloads constructor(
         // what it is and when it was copied, small, over the text
         column.addView(TextView(context).apply {
             val age = if (item.pinned) context.getString(R.string.lychee_clipboard_pinned)
+                // under a minute: "Just now", never "0 min. ago"
+                else if (System.currentTimeMillis() - item.time < DateUtils.MINUTE_IN_MILLIS) context.getString(R.string.lychee_clipboard_just_now)
                 else DateUtils.getRelativeTimeSpanString(item.time, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS,
                     DateUtils.FORMAT_ABBREV_RELATIVE).toString()
             text = context.getString(label) + "  ·  " + age

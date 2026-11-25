@@ -29,8 +29,11 @@ object ClipboardStore {
 
     private var listener: ClipboardManager.OnPrimaryClipChangedListener? = null
 
+    /** Screenshots only (their settings can't be saved): whether the panel is on, and its copies. */
+    var forScreens: Pair<Boolean, List<Item>>? = null
+
     @Suppress("DEPRECATION")
-    fun enabled(context: Context): Boolean =
+    fun enabled(context: Context): Boolean = forScreens?.first ?:
         PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREF_ENABLED, false)
 
     @Suppress("DEPRECATION")
@@ -90,6 +93,7 @@ object ClipboardStore {
     /** The copies, newest first: pinned ones, then the unpinned ones less than an hour old. */
     @Synchronized
     fun items(context: Context): List<Item> {
+        forScreens?.let { return it.second }
         val now = System.currentTimeMillis()
         val raw = runCatching { JSONArray(prefs(context).getString(KEY, "[]")) }.getOrDefault(JSONArray())
         val all = (0 until raw.length()).mapNotNull { i ->

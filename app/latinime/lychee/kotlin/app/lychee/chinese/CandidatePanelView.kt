@@ -1,8 +1,6 @@
 package app.lychee.chinese
 
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Paint
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
@@ -39,10 +37,6 @@ class CandidatePanelView @JvmOverloads constructor(
     private val grid = RecyclerView(context)
     private val adapter = Adapter()
     private val layoutManager = GridLayoutManager(context, COLUMNS)
-    private val divider = Paint().apply {
-        color = androidx.core.graphics.ColorUtils.setAlphaComponent(palette.outlineVariant, 0x80)
-        strokeWidth = resources.displayMetrics.density
-    }
     /** The list fades out at the bottom, above the navigation buttons, instead of being cut. */
     private val fade = android.view.View(context).apply {
         background = android.graphics.drawable.GradientDrawable(
@@ -59,22 +53,8 @@ class CandidatePanelView @JvmOverloads constructor(
         }
         grid.layoutManager = layoutManager
         grid.adapter = adapter
-        // slight dividers keep the candidates apart: a short line between neighbours, a faint
-        // one under each row
-        grid.addItemDecoration(object : RecyclerView.ItemDecoration() {
-            override fun onDraw(c: Canvas, parent: RecyclerView, state: RecyclerView.State) {
-                val inset = dp(10).toFloat()
-                for (i in 0 until parent.childCount) {
-                    val v = parent.getChildAt(i)
-                    val l = v.left + v.translationX
-                    val r = v.right + v.translationX
-                    val t = v.top + v.translationY
-                    val b = v.bottom + v.translationY
-                    if (r < parent.width - parent.paddingRight - dp(4)) c.drawLine(r, t + inset, r, b - inset, divider)
-                    c.drawLine(l + inset / 2, b, r - inset / 2, b, divider)
-                }
-            }
-        })
+        // each candidate on a soft rounded tile with a little room around it (no lines between)
+        grid.setPadding(dp(6), dp(6), dp(6), dp(FADE_DP))
         grid.clipToPadding = false
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(fade, LayoutParams(LayoutParams.MATCH_PARENT, dp(FADE_DP), Gravity.BOTTOM))
@@ -113,7 +93,7 @@ class CandidatePanelView @JvmOverloads constructor(
         grid.scrollToPosition(0)
         // room under the last row: it scrolls clear of the fade and the navigation buttons
         val nav = app.lychee.KeyboardInsets.bottomPadding(rootView)
-        grid.setPadding(0, 0, 0, nav + dp(FADE_DP))
+        grid.setPadding(dp(6), dp(6), dp(6), nav + dp(FADE_DP))
         fade.layoutParams = (fade.layoutParams as LayoutParams).apply { height = nav + dp(FADE_DP) }
         visibility = VISIBLE
         if (annotate == null) return
@@ -130,6 +110,19 @@ class CandidatePanelView @JvmOverloads constructor(
                 }
             }
         }
+    }
+
+    /** A candidate's tile: rounded, inset so tiles stand apart, tinted for the first, rippling when pressed. */
+    private fun tile(first: Boolean): android.graphics.drawable.Drawable {
+        val radius = dp(12).toFloat()
+        val shape = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = radius
+            setColor(if (first) palette.primaryContainer else palette.surfaceContainer)
+        }
+        val mask = android.graphics.drawable.GradientDrawable().apply { cornerRadius = radius; setColor(0xFFFFFFFF.toInt()) }
+        val ripple = android.graphics.drawable.RippleDrawable(
+            android.content.res.ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(palette.onSurface, 0x1F)), shape, mask)
+        return android.graphics.drawable.InsetDrawable(ripple, dp(3))
     }
 
     private fun spanFor(text: String): Int {
@@ -161,11 +154,7 @@ class CandidatePanelView @JvmOverloads constructor(
                 gravity = Gravity.CENTER
                 setPadding(0, dp(2), 0, dp(2))
                 layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(54))
-                // exactly the bar's cell: a plain ripple, the word, its readings and meaning under it
-                background = TypedValue().let { v ->
-                    context.theme.resolveAttribute(android.R.attr.selectableItemBackground, v, true)
-                    context.getDrawable(v.resourceId)
-                }
+                // the word, its readings and meaning under it, on a tile (set when bound)
                 repeat(3) { i ->
                     addView(TextView(context).apply {
                         gravity = Gravity.CENTER
@@ -196,6 +185,7 @@ class CandidatePanelView @JvmOverloads constructor(
             val reading = cell.getChildAt(1) as TextView
             val meaning = cell.getChildAt(2) as TextView
             val color = if (index == 0 && style.fontLang != "en") palette.primary else palette.onSurface
+            cell.background = tile(index == 0 && !english)
             word.text = candidate.text
             word.typeface = app.lychee.fonts.LycheeFonts.forText(cell.context, candidate.text, style.fontLang)
                 ?: android.graphics.Typeface.DEFAULT
@@ -245,7 +235,8 @@ class CandidatePanelView @JvmOverloads constructor(
             readings * CandidateBarView.READING_SP * adapter.scale * sp * 1.3f +
             (if (meaning) CandidateBarView.MEANING_SP * adapter.scale * sp * 1.3f else 0f)
         // the bar's own room round each cell, no more
-        return (h + dp(6)).toInt()
+        // the bar's room round each cell, and the tile's inset
+        return (h + dp(12)).toInt()
     }
 
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
