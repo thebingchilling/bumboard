@@ -25,8 +25,10 @@ import com.android.inputmethod.latin.R
  * The clipboard over the keys, like Gboard's: what was copied as cards in two columns, the
  * pinned ones under "Pinned", the rest under "Recent", newest first. Each card shows what it
  * is (a link, a number, an email address, text) and how long ago it was copied; tap one to
- * paste it, hold one for Pin and Delete. The bar along the bottom says how many there are and
- * clears the unpinned ones. Empty or off, a picture, a title and a line about it (and, while
+ * paste it, hold one for Pin and Delete. The title bar has, at its right, ✎ and the on/off
+ * switch, as Gboard's: ✎ is edit mode, where a tap ticks copies and the bottom bar acts on the
+ * ticked ones (Pin, Delete) or adds what is in the text field as a new copy (Add); ✓ leaves it.
+ * Out of edit mode the bottom bar says how many there are and clears the unpinned ones. Empty or off, a picture, a title and a line about it (and, while
  * off, Turn on) fill the panel instead.
  */
 class ClipboardPanelView @JvmOverloads constructor(
@@ -40,6 +42,9 @@ class ClipboardPanelView @JvmOverloads constructor(
     private var items: List<ClipboardStore.Item> = emptyList()
     /** The card showing its Pin and Delete buttons, if any. */
     private var actionsFor: String? = null
+    /** Edit mode (✎): taps tick copies instead of pasting them. */
+    private var editing = false
+    private val ticked = LinkedHashSet<String>()
     private val list = RecyclerView(context)
     private val adapter = CardAdapter()
 
@@ -98,6 +103,94 @@ class ClipboardPanelView @JvmOverloads constructor(
         }
     }
 
+    /** ✎ (or ✓ in edit mode), left of the switch. */
+    private val editButton = ImageView(context).apply {
+        setImageResource(R.drawable.ic_sym_edit)
+        imageTintList = ColorStateList.valueOf(palette.onSurface)
+        scaleType = ImageView.ScaleType.CENTER
+        contentDescription = context.getString(R.string.lychee_clipboard_edit)
+        background = TypedValue().let { v ->
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v, true)
+            context.getDrawable(v.resourceId)
+        }
+        app.lychee.layout.LycheeMotion.springy(this)
+        setOnClickListener { setEditing(!editing) }
+    }
+    /** ✎ and the switch together, at the title bar's right. */
+    private val titleEnd = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        addView(editButton, LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginEnd = dp(4) })
+        addView(onOff)
+    }
+
+    /** Screenshots only: edit mode with the first copies ticked. */
+    internal fun editForScreens(tick: Int) {
+        setEditing(true)
+        items.take(tick).forEach { ticked += it.text }
+        load()
+    }
+
+    private fun setEditing(on: Boolean) {
+        editing = on && ClipboardStore.enabled(context)
+        ticked.clear()
+        actionsFor = null
+        editButton.setImageResource(if (editing) R.drawable.ic_sym_check else R.drawable.ic_sym_edit)
+        editButton.contentDescription = context.getString(if (editing) R.string.lychee_clipboard_done else R.string.lychee_clipboard_edit)
+        load()
+    }
+
+    // edit mode's bottom bar: Add, Pin and Delete (the last two for the ticked copies)
+    private val addAction = barAction(R.drawable.ic_sym_add, R.string.lychee_clipboard_add) {
+        // what is selected in the text field, or else all of it, as a new copy
+        val ic = lycheeHost()?.lycheeInputConnection()
+        val text = runCatching { ic?.getSelectedText(0)?.toString() }.getOrNull()?.takeIf { it.isNotBlank() }
+            ?: runCatching { ic?.getExtractedText(android.view.inputmethod.ExtractedTextRequest(), 0)?.text?.toString() }.getOrNull()
+        if (!text.isNullOrBlank()) {
+            ClipboardStore.add(context, text.take(5000))
+            load()
+        } else android.widget.Toast.makeText(context, R.string.lychee_clipboard_add_nothing, android.widget.Toast.LENGTH_SHORT).show()
+    }
+    private val pinAction = barAction(R.drawable.lychee_ic_pin, R.string.lychee_clipboard_pin) {
+        // all ticked pinned, unless they all were already (then unpinned)
+        val all = items.filter { it.text in ticked }
+        val pin = !all.all { it.pinned }
+        all.forEach { ClipboardStore.setPinned(context, it.text, pin) }
+        ticked.clear()
+        load()
+    }
+    private val deleteAction = barAction(R.drawable.lychee_ic_delete, R.string.lychee_clipboard_delete) {
+        ticked.toList().forEach { ClipboardStore.delete(context, it) }
+        ticked.clear()
+        load()
+    }
+    private val editBar = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER
+        visibility = GONE
+        addView(addAction, LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        addView(pinAction, LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        addView(deleteAction, LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+    }
+
+    /** One of edit mode's actions: its icon over its name, filling a third of the bar. */
+    private fun barAction(icon: Int, label: Int, onClick: () -> Unit) = TextView(context).apply {
+        setText(label)
+        setTextColor(palette.onSurface)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+        typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
+        gravity = Gravity.CENTER
+        setCompoundDrawablesRelativeWithIntrinsicBounds(0, icon, 0, 0)
+        compoundDrawableTintList = ColorStateList.valueOf(palette.onSurface)
+        compoundDrawablePadding = dp(2)
+        background = TypedValue().let { v ->
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackground, v, true)
+            context.getDrawable(v.resourceId)
+        }
+        app.lychee.layout.LycheeMotion.springy(this)
+        setOnClickListener { onClick() }
+    }
+
     // the bottom bar: how many, and Clear
     private val count = TextView(context).apply {
         setTextColor(palette.onSurfaceVariant)
@@ -130,6 +223,11 @@ class ClipboardPanelView @JvmOverloads constructor(
         addView(count, LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
         addView(clear, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, dp(40)))
     }
+    /** The bottom bar's two faces: how many and Clear, or edit mode's actions. */
+    private val bottom = FrameLayout(context).apply {
+        addView(bottomBar, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        addView(editBar, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+    }
 
     init {
         isClickable = true
@@ -149,7 +247,7 @@ class ClipboardPanelView @JvmOverloads constructor(
             addView(fade(GradientDrawable.Orientation.TOP_BOTTOM), LayoutParams(LayoutParams.MATCH_PARENT, dp(12), Gravity.TOP))
             addView(fade(GradientDrawable.Orientation.BOTTOM_TOP), LayoutParams(LayoutParams.MATCH_PARENT, dp(16), Gravity.BOTTOM))
         }, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-        column.addView(bottomBar, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(48)))
+        column.addView(bottom, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(48)))
         addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         visibility = GONE
     }
@@ -166,17 +264,20 @@ class ClipboardPanelView @JvmOverloads constructor(
 
     fun show() {
         actionsFor = null
+        editing = false
+        ticked.clear()
+        editButton.setImageResource(R.drawable.ic_sym_edit)
         ClipboardStore.capture(context)
         load()
         // the bottom bar a key row of the keyboard's height, where its bottom row is
         val row = app.lychee.layout.LycheePanels.keyRow(this)
-        (bottomBar.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
+        (bottom.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
             lp.height = row.height
             lp.bottomMargin = row.bottomPadding
-            bottomBar.layoutParams = lp
+            bottom.layoutParams = lp
         }
         visibility = VISIBLE
-        toolbar()?.showTitle(R.string.lychee_sc_clipboard, end = onOff) { visibility = GONE }
+        toolbar()?.showTitle(R.string.lychee_sc_clipboard, end = titleEnd) { visibility = GONE }
     }
 
     override fun setVisibility(visibility: Int) {
@@ -210,7 +311,16 @@ class ClipboardPanelView @JvmOverloads constructor(
         emptyBody.setText(if (on) R.string.lychee_clipboard_empty else R.string.lychee_clipboard_off)
         emptyIcon.alpha = if (on) 1f else 0.6f
         turnOn.visibility = if (on) GONE else VISIBLE
-        bottomBar.visibility = if (on && items.isNotEmpty()) VISIBLE else GONE
+        if (!on) editing = false
+        editButton.visibility = if (on) VISIBLE else GONE
+        bottomBar.visibility = if (on && items.isNotEmpty() && !editing) VISIBLE else GONE
+        editBar.visibility = if (editing) VISIBLE else GONE
+        // Pin and Delete act on ticked copies: dimmed until one is ticked
+        for (a in listOf(pinAction, deleteAction)) {
+            a.isEnabled = ticked.isNotEmpty()
+            a.alpha = if (ticked.isNotEmpty()) 1f else 0.38f
+        }
+        if (on && editing && items.isEmpty()) emptyState.visibility = VISIBLE
         count.text = resources.getQuantityString(R.plurals.lychee_clipboard_count, items.size, items.size)
         clear.visibility = if (recent.isNotEmpty()) VISIBLE else GONE
     }
@@ -288,7 +398,23 @@ class ClipboardPanelView @JvmOverloads constructor(
                 }, LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginStart = dp(16) })
             }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         }
+        if (editing) {
+            val on = item.text in ticked
+            box.addView(ImageView(context).apply {
+                setImageResource(if (on) R.drawable.ic_sym_check_circle else R.drawable.ic_sym_radio_button_unchecked)
+                imageTintList = ColorStateList.valueOf(if (on) palette.primary else palette.onSurfaceVariant)
+            }, LayoutParams(dp(22), dp(22), Gravity.TOP or Gravity.END).apply { setMargins(0, dp(8), dp(8), 0) })
+            if (on) box.foreground = GradientDrawable().apply {
+                cornerRadius = dp(16).toFloat()
+                setStroke(dp(2), palette.primary)
+            }
+        }
         box.setOnClickListener {
+            if (editing) {
+                if (!ticked.remove(item.text)) ticked += item.text
+                load()
+                return@setOnClickListener
+            }
             if (actionsFor != null) {
                 actionsFor = null
                 adapter.notifyDataSetChanged()
@@ -297,6 +423,7 @@ class ClipboardPanelView @JvmOverloads constructor(
             }
         }
         box.setOnLongClickListener {
+            if (editing) return@setOnLongClickListener false
             actionsFor = item.text
             adapter.notifyDataSetChanged()
             true

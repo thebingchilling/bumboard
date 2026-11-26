@@ -78,8 +78,14 @@ public class ProximityInfo {
             return;
         }
         computeNearestNeighbors();
+        // LYCHEE: the screenshot tests draw the real keyboard on a computer, where the native
+        // library isn't there; drawing never needs it (only typing does)
+        if (sLycheeWithoutNative) return;
         mNativeProximityInfo = createNativeProximityInfo(touchPositionCorrection);
     }
+
+    /** LYCHEE: screenshots only: the keyboard built without its native touch model. */
+    public static boolean sLycheeWithoutNative = false;
 
     private long mNativeProximityInfo;
     static {

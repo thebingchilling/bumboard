@@ -378,6 +378,64 @@ class DictionaryPopup(
             })
     }
 
+    /**
+     * A word no dictionary has (a name, an address, a number typed in English): a smaller card
+     * with the word, a speaker, and ☆, which saves it to the personal dictionary (★ when saved:
+     * a tap takes it out again). A saved word is suggested, never put in for you.
+     */
+    fun showUnknownWord(keyboard: View, word: String, onSpeak: ((String) -> Unit)?, peek: Boolean, onType: () -> Unit) {
+        val reshow = { showUnknownWord(keyboard, word, onSpeak, peek, onType) }
+        presentTabs(keyboard, peek, onType, reshow,
+            header = { c, body ->
+                body.addView(LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    addView(TextView(ctx).apply {
+                        text = word
+                        setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
+                        setTextColor(c.onSurface)
+                        maxLines = 1
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                    }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                    onSpeak?.let { speak ->
+                        addView(cornerButton(R.drawable.lychee_ic_volume, ctx.getString(R.string.lychee_card_listen), c, filled = false) { speak(word) },
+                            LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginStart = dp(4) })
+                    }
+                    var saved = app.lychee.typing.EnglishWords.saved(ctx, word)
+                    val star = android.widget.ImageView(ctx)
+                    fun paint() {
+                        star.setImageResource(if (saved) R.drawable.lychee_ic_star else R.drawable.lychee_ic_star_outline)
+                        star.imageTintList = android.content.res.ColorStateList.valueOf(if (saved) c.primary else c.onSurfaceVariant)
+                        star.contentDescription = ctx.getString(if (saved) R.string.lychee_card_unsave else R.string.lychee_card_save)
+                    }
+                    star.apply {
+                        scaleType = android.widget.ImageView.ScaleType.CENTER
+                        background = TypedValue().let { v ->
+                            ctx.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, v, true)
+                            ctx.getDrawable(v.resourceId)
+                        }
+                        app.lychee.layout.LycheeMotion.springy(this)
+                        paint()
+                        setOnClickListener {
+                            saved = if (saved) { app.lychee.typing.EnglishWords.remove(ctx, word); false }
+                                else app.lychee.typing.EnglishWords.save(ctx, word)
+                            paint()
+                            app.lychee.layout.LycheeMotion.pop(this)
+                        }
+                    }
+                    addView(star, LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginStart = dp(4) })
+                })
+            },
+            page = { which, c, body ->
+                if (which == Page.SUMMARY) body.addView(TextView(ctx).apply {
+                    setText(R.string.lychee_card_unknown_word)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                    setTextColor(c.onSurfaceVariant)
+                })
+            },
+            compactDp = 150)
+    }
+
     /** A Japanese or Korean phrase's piece opened as its own card (Back returns to the phrase). */
     private fun openWordPart(keyboard: View, form: String, lang: String?, onSpeak: ((String, Lang?) -> Unit)?,
                              onSpeakAs: ((String, java.util.Locale?) -> Unit)?) {
@@ -445,6 +503,8 @@ class DictionaryPopup(
         keyboard: View, peekAsked: Boolean, onType: () -> Unit, reshow: () -> Unit,
         header: (M3Colors, LinearLayout) -> Unit,
         page: (Page, M3Colors, LinearLayout) -> Unit,
+        /** A smaller card's height in dp (a word no dictionary knows), or null for the usual. */
+        compactDp: Int? = null,
     ) {
         // a peek locked open (slid onto its lock bar) is shown again as a card that stays
         val peek = peekAsked && !forcePin
@@ -464,7 +524,8 @@ class DictionaryPopup(
         val statusBar = parent.rootWindowInsets?.stableInsetTop ?: dp(24)
         val space = if (standalone != null) standaloneRoom else keyboardTop - statusBar - dp(12)
         if (space < dp(160)) return
-        val height = if (standalone != null) space else cardHeight(space, ctx.resources.displayMetrics.density)
+        val height = compactDp?.let { minOf(dp(it), space) }
+            ?: if (standalone != null) space else cardHeight(space, ctx.resources.displayMetrics.density)
         val c = M3Colors.of(ctx)
 
         // the pages, each built once; empty ones are left out

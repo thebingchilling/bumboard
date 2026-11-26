@@ -76,7 +76,12 @@ class GoogleHandwriting private constructor(
             waited += 50
             s = service
         }
-        s ?: return emptyList()
+        // not connected yet (the companion starting cold): Lychee's own engine reads this one,
+        // so the first strokes are never left without guesses
+        if (s == null) {
+            val b = backup ?: fallback()?.also { backup = it }
+            return b?.recognise(strokes, limit, allowed).orEmpty()
+        }
         val id = ids.incrementAndGet()
         val data = Bundle().apply {
             putString("lang", lang)
@@ -163,8 +168,10 @@ class GoogleHandwriting private constructor(
         /** Opens the companion when it is installed; null when it isn't. */
         fun open(context: Context, engine: String?, simplified: Boolean, before: () -> String,
                  fallback: () -> Recognizer? = { null }): GoogleHandwriting? =
-            if (installed(context)) GoogleHandwriting(context.applicationContext, languageFor(engine, simplified),
-                alsoFor(engine, simplified), before, fallback) else null
+            // connecting failing (never on a phone that has it) is the same as not having it
+            if (installed(context)) runCatching {
+                GoogleHandwriting(context.applicationContext, languageFor(engine, simplified), alsoFor(engine, simplified), before, fallback)
+            }.getOrNull() else null
 
         /** The companion's setup screen (downloads the models; also checks for newer ones). */
         fun openSetup(context: Context) {

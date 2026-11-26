@@ -148,6 +148,14 @@ object LycheeMotion {
 
         fun step(f: Float) {
             val v = view ?: return
+            // the candidates' dropdown rolls down from the bar, and back up: the keys stay in
+            // view below it the whole time (no blink)
+            if (rollsDown(v)) {
+                v.alpha = 1f; v.scaleX = 1f; v.scaleY = 1f
+                val shown = if (entering) f else 1f - f
+                v.clipBounds = if (entering && f >= 1f) null else android.graphics.Rect(0, 0, v.width, (v.height * shown).toInt())
+                return
+            }
             if (entering) {
                 if (replacesKeys(v)) {
                     v.alpha = 1f; v.scaleX = 1f; v.scaleY = 1f
@@ -162,6 +170,32 @@ object LycheeMotion {
         }
 
         override fun clone(): PanelAnimator = (super.clone() as PanelAnimator).also { it.view = null }
+    }
+
+    /** The candidates' dropdown: it rolls down over the keys rather than fading in. */
+    private fun rollsDown(v: View) = v.id == com.android.inputmethod.latin.R.id.lychee_candidate_panel
+
+    /**
+     * [view] (the candidates' dropdown) rolls down from its top edge over what is under it, when
+     * no layout transition does it already.
+     */
+    @JvmStatic
+    fun dropDown(view: View) {
+        if (!LycheePanels.animate(view.context)) return
+        if ((view.parent as? ViewGroup)?.layoutTransition != null) return
+        view.alpha = 1f
+        view.post {
+            val h = view.height
+            ValueAnimator.ofInt(0, h).apply {
+                duration = IN + 40
+                interpolator = enterEasing
+                addUpdateListener { a -> view.clipBounds = android.graphics.Rect(0, 0, view.width, a.animatedValue as Int) }
+                addListener(object : android.animation.AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: android.animation.Animator) { view.clipBounds = null }
+                })
+                start()
+            }
+        }
     }
 
     /** The keys and the emoji panel: each takes the whole keyboard's place. */
@@ -290,6 +324,7 @@ object LycheeMotion {
     }
 
     private fun reset(v: View) {
+        v.clipBounds = null
         v.alpha = 1f
         v.scaleX = 1f
         v.scaleY = 1f

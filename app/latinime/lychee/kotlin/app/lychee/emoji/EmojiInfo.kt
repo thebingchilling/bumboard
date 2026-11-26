@@ -58,7 +58,7 @@ class EmojiInfo(private val ctx: Context) {
         val screen = ctx.resources.displayMetrics.widthPixels
         val widest = (screen - dp(32)).coerceAtMost(dp(320))
         val textWidth = widest - dp(36)
-        name?.takeIf { it.isNotBlank() }?.let { n ->
+        (if (emoji) fullName(name, text) else name)?.takeIf { it.isNotBlank() }?.let { n ->
             card.addView(TextView(ctx).apply {
                 this.text = n.replaceFirstChar { it.uppercase() }
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
@@ -102,6 +102,19 @@ class EmojiInfo(private val ctx: Context) {
     private fun dp(v: Int) = (ctx.resources.displayMetrics.density * v).toInt()
 
     companion object {
+        private val TONES = listOf("light", "medium-light", "medium", "medium-dark", "dark")
+
+        /**
+         * [name] in full for [text]: Unicode's name with its skin tones, as Unicode writes them
+         * ("waving hand: medium skin tone"; two people's "light skin tone, dark skin tone").
+         */
+        fun fullName(name: String?, text: String): String? {
+            val base = name?.takeIf { it.isNotBlank() } ?: return null
+            val tones = text.codePoints().toArray().filter { it in 0x1F3FB..0x1F3FF }.map { TONES[it - 0x1F3FB] + " skin tone" }
+            val shown = if (tones.isEmpty() || base.contains("skin tone")) base else base + ": " + tones.distinct().joinToString(", ")
+            return shown.replaceFirstChar { it.uppercase() }
+        }
+
         /** "U+1F44B U+1F3FD" for the code points of [text] (variation selectors left out). */
         fun codePoints(text: String): String = text.codePoints().toArray()
             .filter { it != 0xFE0F && it != 0xFE0E }

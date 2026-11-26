@@ -57,7 +57,7 @@ class AddonsScreens {
         ProductSheet.open = null
         AddonSheet.open = null
         // the real word card in the listings' examples, from the sample dictionary
-        app.lychee.chinese.Readings.useForScreens(annotator)
+        if (RealData.available) RealData.install() else app.lychee.chinese.Readings.useForScreens(annotator)
         setUp()
         paparazzi.snapshot(name) {
             CompositionLocalProvider(LocalActivityResultRegistryOwner provides registryOwner, LocalGroupCounter provides GroupCounter()) {

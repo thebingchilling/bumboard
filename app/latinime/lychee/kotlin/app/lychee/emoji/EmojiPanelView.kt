@@ -437,6 +437,23 @@ class EmojiPanelView @JvmOverloads constructor(
         addView(tabs, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f).apply { marginStart = dp(2); marginEnd = dp(2) })
     }
 
+    /**
+     * Shows [text]'s full name and code points in the search bar's pill for a few seconds (an
+     * emoji held), then the pill reads "Search emoji" again.
+     */
+    private fun describeInBar(text: String, name: String?) {
+        val pill = (search as? android.view.ViewGroup)?.let { it.getChildAt(it.childCount - 1) as? TextView } ?: return
+        val full = EmojiInfo.fullName(name, text) ?: return
+        pill.text = full + "  ·  " + EmojiInfo.codePoints(text)
+        pill.removeCallbacks(restorePill)
+        pill.postDelayed(restorePill, 4000)
+    }
+
+    private val restorePill = Runnable {
+        ((search as? android.view.ViewGroup)?.let { it.getChildAt(it.childCount - 1) as? TextView })
+            ?.setText(R.string.lychee_emoji_search)
+    }
+
     private fun showFloatingDelete(show: Boolean) {
         val target = if (show) 1f else 0f
         if (floatingDelete.alpha == target && floatingDelete.isEnabled == show) return
@@ -560,6 +577,8 @@ class EmojiPanelView @JvmOverloads constructor(
                     view.emoji = !row.kaomoji
                     view.setOnClickListener { type(shown) }
                     view.setOnLongClickListener {
+                        // its full name and code points in the search bar too, always in view
+                        if (!row.kaomoji) describeInBar(shown, row.emoji.name)
                         // no skin tones, or a recent one already in its tone (nothing more to
                         // pick): what the emoji is (large, its name and code points)
                         if (row.emoji.tones == null || (row.form != null && row.form != row.emoji.base)) {

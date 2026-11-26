@@ -39,6 +39,12 @@ object Readings {
         annotator = sample
     }
 
+    /** Screenshots only: the real readings.db, read through the desktop's SQLite. */
+    fun useForScreens(real: ReadingsDb) {
+        db = real
+        annotator = Annotator(real)
+    }
+
     /** Opens the database in the background; [then] runs on the main thread once it is ready. */
     fun open(context: Context, then: () -> Unit = {}) {
         if (annotator != null || opening) return

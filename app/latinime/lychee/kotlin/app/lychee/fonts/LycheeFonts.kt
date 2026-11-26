@@ -130,7 +130,8 @@ object LycheeFonts {
 
     @Synchronized
     private fun choice(context: Context, pref: String): String =
-        choices.getOrPut(pref) { prefs(app(context)).getString(pref, null).orEmpty() }
+        // no preferences (a screenshot run's stale context): the default font
+        choices.getOrPut(pref) { (prefs(app(context)) as android.content.SharedPreferences?)?.getString(pref, null).orEmpty() }
 
     /** A pack's font file, when [id] is a font pack in the catalogue and installed. */
     private fun packFile(context: Context, id: String): File? =

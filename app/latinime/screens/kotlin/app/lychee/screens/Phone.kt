@@ -11,7 +11,6 @@ import android.widget.TextView
 import app.cash.paparazzi.Paparazzi
 import app.lychee.chinese.CandidateBarView
 import app.lychee.rime.Candidate
-import app.lychee.settings.KeyboardPreviewView
 import app.lychee.toolbar.ToolbarView
 import com.android.inputmethod.latin.R
 
@@ -29,14 +28,37 @@ sealed class TopBar {
 class PhoneFrame(val screen: FrameLayout, val keyboardTop: Int, val statusBar: Int, val keysTop: Int, val keysHeight: Int,
                  val keyRow: Int, val night: Boolean)
 
+/** The real input view, for a screenshot to open its own panels in, as the keyboard service does. */
+class RealInput(val input: View, val keys: com.android.inputmethod.keyboard.MainKeyboardView) {
+    /**
+     * The input view's own panel [id], placed over the keys by LycheePanels.cover and brought to
+     * the front, exactly as LatinIME.showLycheePanel opens one (the test then calls its show).
+     */
+    fun <T : View> panel(id: Int): T {
+        val p = input.findViewById<T>(id)
+        app.lychee.layout.LycheePanels.cover(p, input)
+        // views aren't in a window yet here, so their window positions read 0: the keys' place
+        // measured inside the input view instead (the same result as on the phone)
+        val r = android.graphics.Rect(0, 0, keys.width, keys.height)
+        (input as ViewGroup).offsetDescendantRectToMyCoords(keys, r)
+        (p.layoutParams as FrameLayout.LayoutParams).let { lp ->
+            lp.leftMargin = r.left
+            lp.bottomMargin = input.height - r.bottom
+            p.layoutParams = lp
+        }
+        p.bringToFront()
+        return p
+    }
+}
+
 /**
  * A whole phone as a screenshot shows it, at the device's real sizes: the status bar, an app (a
  * chat, with its message field just above the keyboard), the keyboard's top bar ([bar]), the keys
- * and the gesture bar. [overKeys] lays a panel over the keys (all of them, or all but the bottom
- * row with [keepBottomRow], as handwriting does); [extra] adds anything else (the word card).
+ * and the gesture bar. [open] opens the input view's own panels (the number pad, handwriting, the
+ * dropdown ...) the way the keyboard service does; [extra] adds anything else (the word card).
  */
-fun drawPhone(paparazzi: Paparazzi, name: String, bar: TopBar = TopBar.Shortcuts, keepBottomRow: Boolean = false,
-              overKeys: ((FrameLayout) -> View)? = null, extra: ((PhoneFrame) -> Unit)? = null) {
+fun drawPhone(paparazzi: Paparazzi, name: String, bar: TopBar = TopBar.Shortcuts,
+              open: ((RealInput) -> Unit)? = null, extra: ((PhoneFrame) -> Unit)? = null) {
     val ctx = paparazzi.context
     val dm = ctx.resources.displayMetrics
     fun dp(v: Int) = (v * dm.density).toInt()
@@ -46,10 +68,11 @@ fun drawPhone(paparazzi: Paparazzi, name: String, bar: TopBar = TopBar.Shortcuts
     val screen = FrameLayout(ctx).apply { setBackgroundColor(if (night) Color.parseColor("#1A1214") else Color.parseColor("#FFF8F8")) }
     val statusBar = dp(32)
     val gesture = dp(20)
-    val keyboard = KeyboardPreviewView(ctx)
-    keyboard.measure(View.MeasureSpec.makeMeasureSpec(dm.widthPixels, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
-    val kbHeight = keyboard.measuredHeight
-    val strip = ctx.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+    // the real data (dictionaries, packs) for every look-up the screens make
+    if (RealData.available) RealData.install()
+    // the real input view: the top bar, the candidate bar and the real keyboard for this language
+    val engine = (bar as? TopBar.Candidates)?.sample?.fontLang?.takeIf { it != "en" }
+    val (input, keysView) = RealKeyboard.inputView(ctx, engine, dm.widthPixels)
     // the gesture bar's room under the keys, in the keyboard's colour, with its handle
     screen.addView(FrameLayout(ctx).apply {
         setBackgroundColor(c.surface)
@@ -58,47 +81,29 @@ fun drawPhone(paparazzi: Paparazzi, name: String, bar: TopBar = TopBar.Shortcuts
             alpha = 0.6f
         }, FrameLayout.LayoutParams(dp(108), dp(4), Gravity.CENTER))
     }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, gesture, Gravity.BOTTOM))
-    screen.addView(keyboard, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, kbHeight, Gravity.BOTTOM).apply { bottomMargin = gesture })
-    val keysHeight = kbHeight - strip
-    val keysBottom = dm.heightPixels - gesture
-    // the top bar, over the preview's own (which shows the shortcuts)
-    var barHeight = strip
-    when (bar) {
-        TopBar.Shortcuts -> Unit
-        is TopBar.Candidates -> {
-            val (view, h) = candidateBar(ctx, bar.sample, bar.typed)
-            barHeight = maxOf(strip, h)
-            screen.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, barHeight, Gravity.BOTTOM).apply {
-                bottomMargin = gesture + keysHeight
-            })
-        }
-        is TopBar.Title -> {
-            val toolbar = ToolbarView(ctx).apply { id = R.id.lychee_toolbar; setBackgroundColor(c.surface) }
-            screen.addView(toolbar, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, strip, Gravity.BOTTOM).apply {
-                bottomMargin = gesture + keysHeight
-            })
-            bar.setUp(toolbar)
-        }
+    if (bar is TopBar.Title) input.findViewById<ToolbarView>(R.id.lychee_toolbar)?.let { bar.setUp(it) }
+    screen.addView(input, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM).apply { bottomMargin = gesture })
+    fun layOut() {
+        screen.measure(View.MeasureSpec.makeMeasureSpec(dm.widthPixels, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(dm.heightPixels, View.MeasureSpec.EXACTLY))
+        screen.layout(0, 0, dm.widthPixels, dm.heightPixels)
     }
-    val keyboardTop = keysBottom - keysHeight - barHeight
+    // laid out first, so a panel is placed over the keys where they really are
+    layOut()
+    open?.invoke(RealInput(input, keysView))
+    // the candidates after the panel (the pad's own title gives way to its guesses, as on the phone)
+    if (bar is TopBar.Candidates) showCandidates(ctx, input, bar.sample, bar.typed)
+    layOut()
+    val kbHeight = input.height
+    val keysHeight = keysView.height.takeIf { it > 0 } ?: keysView.measuredHeight
+    val keysBottom = dm.heightPixels - gesture
+    val keyboardTop = keysBottom - kbHeight
     // the app above the keyboard: a chat's title bar, and its message field just above the keys
-    screen.addView(chatApp(ctx, night), FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, keyboardTop - statusBar, Gravity.TOP).apply {
+    screen.addView(chatApp(ctx, night), 0, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, keyboardTop - statusBar, Gravity.TOP).apply {
         topMargin = statusBar
     })
-    // a panel over the keys (the keyboard's bottom row left uncovered when asked)
-    val keyRow = keysHeight / 4
-    overKeys?.let { make ->
-        val host = FrameLayout(ctx)
-        // handwriting's pad reaches up into the bar's empty typed-letters line
-        val lift = if (bar is TopBar.Candidates && !bar.typed) ctx.resources.getDimensionPixelSize(R.dimen.lychee_preedit_height) else 0
-        val h = (if (keepBottomRow) keysHeight - keyRow else keysHeight) + lift
-        screen.addView(host, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h, Gravity.BOTTOM).apply {
-            bottomMargin = gesture + (keysHeight - h + lift)
-        })
-        val view = make(host)
-        if (view.parent == null) host.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
-        view.visibility = View.VISIBLE
-    }
+    // a key row as the real keyboard has it (its rows share the keys' height)
+    val keyRow = keysView.keyboard?.let { kb -> kb.mMostCommonKeyHeight } ?: (keysHeight / 4)
     // the status bar: the time on the left, signal and battery on the right
     screen.addView(LinearLayout(ctx).apply {
         orientation = LinearLayout.HORIZONTAL
@@ -108,7 +113,10 @@ fun drawPhone(paparazzi: Paparazzi, name: String, bar: TopBar = TopBar.Shortcuts
             LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
         addView(TextView(ctx).apply { text = "▲ ▮ 82%"; textSize = 12f; setTextColor(c.onSurface) })
     }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, statusBar, Gravity.TOP))
+    val before = screen.childCount
     extra?.invoke(PhoneFrame(screen, keyboardTop, statusBar, keysBottom - keysHeight, keysHeight, keyRow, night))
+    // what a screenshot adds sits above the input view (which has an elevation of its own), as it does on the phone
+    for (i in before until screen.childCount) screen.getChildAt(i).let { if (it.z < input.z + 1) it.translationZ = input.z + dp(8) }
     settle(screen)
     paparazzi.snapshot(screen, name)
 }
@@ -155,39 +163,64 @@ private fun chatApp(ctx: android.content.Context, night: Boolean): View {
 }
 
 /**
- * The candidate bar as tall as the real one: the line for the letters typed (when [typed]), the
- * candidates with their readings and meanings, and 繁 at the right on the Chinese keyboards.
+ * The real candidate bar in [input] (the real input view), set up the way ChineseInput.show sets
+ * it: its style and lines, its height (the readings' lines, and the line for the letters typed
+ * when [typed]), the letters typed in that line, the candidates with their real readings and
+ * meanings from the real dictionary (Japanese and Korean: the sample's, as Rime's own spelling
+ * hints aren't on a computer), ⌄, and 繁 on the Chinese keyboards; the shortcuts make way.
  */
-fun candidateBar(ctx: android.content.Context, sample: BarSample, typed: Boolean): Pair<View, Int> {
+fun showCandidates(ctx: android.content.Context, input: View, sample: BarSample, typed: Boolean) {
     val dm = ctx.resources.displayMetrics
-    fun dp(v: Int) = (v * dm.density).toInt()
-    val c = app.lychee.ui.M3Colors.of(ctx)
-    val strip = ctx.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
-    val candidates = CandidateBarView(ctx).apply {
-        style = CandidateBarView.Style(lang = null, fontLang = sample.fontLang)
-        lines = sample.lines
+    val bar = input.findViewById<CandidateBarView>(R.id.lychee_candidate_bar) ?: return
+    val strip = input.findViewById<com.android.inputmethod.latin.suggestions.SuggestionStripView>(R.id.suggestion_strip_view)
+    val standard = ctx.resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_height)
+    val line = ctx.resources.getDimensionPixelSize(R.dimen.lychee_preedit_height)
+    val chinese = sample.fontLang == "yue" || sample.fontLang == "cmn"
+    bar.style = CandidateBarView.Style(lang = null, fontLang = sample.fontLang)
+    bar.lines = sample.lines
+    val height = maxOf(standard, bar.heightFor(sample.lines) + line)
+    for (v in listOfNotNull(strip, bar)) v.layoutParams = v.layoutParams.apply { this.height = height }
+    // the letters typed on their own line above; while writing none, and the guesses at the top
+    if (typed) bar.setPadding(0, line, 0, 0) else bar.setPadding(0, 0, 0, line)
+    input.findViewById<TextView>(R.id.lychee_preedit)?.let { p ->
+        p.text = sample.typed
+        p.visibility = if (typed && sample.typed.isNotEmpty()) View.VISIBLE else View.GONE
+        p.setTextColor(app.lychee.ui.M3Colors.of(ctx).primary)
     }
-    val preedit = ctx.resources.getDimensionPixelSize(R.dimen.lychee_preedit_height)
-    val height = maxOf(strip, candidates.heightFor(sample.lines) + preedit)
-    val top = if (typed) preedit else 0
-    val box = FrameLayout(ctx).apply { setBackgroundColor(c.surface) }
-    if (typed) box.addView(TextView(ctx).apply {
-        text = sample.typed
-        setTextColor(c.primary)
-        textSize = 12f
-        includeFontPadding = false
-        setPadding(dp(14), dp(2), 0, 0)
-    }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, preedit, Gravity.TOP))
-    val keyW = if (sample.script) dp(44) else 0
-    // while handwriting (no typed line) the candidates sit at the top, the pad below takes the line
-    val candH = if (typed) height - top else height - preedit
-    box.addView(candidates, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, candH, if (typed) Gravity.BOTTOM else Gravity.TOP).apply { rightMargin = keyW })
-    if (sample.script) box.addView(TextView(ctx).apply {
-        text = "繁"; gravity = Gravity.CENTER; textSize = 16f; setTextColor(c.onSurfaceVariant)
-    }, FrameLayout.LayoutParams(keyW, strip, Gravity.BOTTOM or Gravity.END))
-    candidates.measure(View.MeasureSpec.makeMeasureSpec(dm.widthPixels - keyW, View.MeasureSpec.EXACTLY),
-        View.MeasureSpec.makeMeasureSpec(candH, View.MeasureSpec.EXACTLY))
-    candidates.layout(0, 0, dm.widthPixels - keyW, candH)
-    candidates.setForScreens(sample.candidates.map { Candidate(it, "") }, sample.annotate)
-    return box to height
+    if (!typed) {
+        // as ChineseInput sets the bar while writing: the guesses at its top, the pad lifted into
+        // the line below them, ⌄ centred in the guesses' room, the title raised clear of the pad
+        (input.findViewById<View>(R.id.lychee_candidate_more)?.layoutParams as? FrameLayout.LayoutParams)?.let { lp ->
+            lp.gravity = Gravity.END or Gravity.TOP
+            lp.height = maxOf(standard, height - line)
+        }
+        strip?.lycheeToolbar?.let { t ->
+            (t.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp -> lp.bottomMargin = line; lp.height = maxOf(standard, height - line); t.layoutParams = lp }
+        }
+        (input.findViewById<View>(R.id.lychee_handwriting_panel) as? app.lychee.handwriting.HandwritingPanelView)?.lift = line
+    }
+    bar.visibility = View.VISIBLE
+    input.findViewById<View>(R.id.lychee_candidate_more)?.visibility = View.VISIBLE
+    strip?.setLycheeCandidatesShowing(true)
+    if (sample.script && typed) strip?.setLycheeScriptKey(false) {}
+    // as the keyboard formats them (Settings' romanisation, tone colours)
+    @Suppress("DEPRECATION")
+    val display = app.lychee.chinese.Readings.barPrefs(android.preference.PreferenceManager.getDefaultSharedPreferences(ctx))
+    val mode = if (sample.fontLang == "cmn") app.lychee.core.InputMode.Mandarin else app.lychee.core.InputMode.Cantonese
+    val annotate: (Candidate) -> app.lychee.core.Annotation? = { c ->
+        if (chinese) app.lychee.chinese.Readings.annotator?.annotate(c.text, "", mode, display) ?: sample.annotate(c)
+        else sample.annotate(c)
+    }
+    // clear of the bar's pinned keys, as ChineseInput.updateEdges keeps it: a panel's Back on the
+    // left, 繁/简 and ⌄ on the right
+    val start = strip?.lycheeStartWidth ?: 0
+    val edge = strip?.lycheeEdgeWidth ?: 0
+    val more = ctx.resources.getDimensionPixelSize(R.dimen.lychee_candidate_more_width)
+    (bar.layoutParams as? ViewGroup.MarginLayoutParams)?.let { lp -> lp.marginStart = start; lp.marginEnd = edge + more; bar.layoutParams = lp }
+    (input.findViewById<View>(R.id.lychee_candidate_more)?.layoutParams as? ViewGroup.MarginLayoutParams)?.let { it.marginEnd = edge }
+    input.findViewById<View>(R.id.lychee_preedit)?.let { p -> (p.layoutParams as? ViewGroup.MarginLayoutParams)?.marginStart = start + (12 * dm.density).toInt(); p.setPadding(0, 0, 0, 0) }
+    val w = dm.widthPixels - start - edge - more
+    bar.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+    bar.layout(0, 0, w, height)
+    bar.setForScreens(sample.candidates.map { Candidate(it, "") }, annotate)
 }

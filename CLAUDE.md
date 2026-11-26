@@ -46,10 +46,19 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
     Maven Central, which otherwise rate-limits cloud machines; about 5 minutes). Then
     `tools/screens.sh` (optionally a test filter such as `'*CardScreens*'`) draws the screens
     into `screens/` (git-ignored). The snapshot tests are in `app/latinime/screens/` and only
-    run with `-PlycheeScreens`; the card uses a small sample entry (the real dictionary is
-    built in CI). Every screen is drawn as a whole phone (`Phone.kt`: a Galaxy S23's size, the
-    status bar, an app, the keyboard's top bar in full, the keys, panels over them, the gesture
-    bar), so it looks real.
+    run with `-PlycheeScreens`. The screens are 1:1 with the app:
+    - The real data, built as CI builds it (`tools/screens-data.sh`; `screens.sh` runs it once
+      per session): the readings dictionary, the packs that come with Lychee, and the Japanese and
+      Korean dictionaries from the public packs release. The tests read them through JDBC
+      (`RealData.kt`: layoutlib has no Android SQLite).
+    - The real input view (`RealKeyboard.kt`): KeyboardLayoutSet's keyboard for each language's
+      subtype, the real top bar and candidate bar.
+    - Panels are the input view's own, opened as LatinIME opens them (`RealInput.panel`:
+      LycheePanels.cover, then their show).
+    - Every screen is a whole phone (`Phone.kt`: a Galaxy S23's size, the status bar, an app, the
+      keyboard, the gesture bar).
+    - Only the bar's arrangement copies ChineseInput's (it needs the keyboard service), so a change
+      to ChineseInput's bar layout needs the same change in `Phone.kt`'s `showCandidates`.
 - Every build on `main` is published by `build.yml` as a debug release (a full release, not a
   pre-release) of this private repository (`lychee-0.1.0-dev.N`, notes from the commit), like Quartz's releases,
   with three APKs named by ABI (`lychee-universal.apk`, `lychee-arm64-v8a.apk` and `lychee-armeabi-v7a.apk`)
@@ -167,7 +176,13 @@ packs page). Public facing, so be careful:
   (Lychee can't check the network: no permission), Google's recogniser fails and Lychee tries the
   phone's own offline recogniser (Android 12+) if it has one; else the mic flashes at once and
   keeps an offline badge (a crossed-out cloud, no toast) until it works again.
-- The clipboard panel has its on/off switch at the right of its title (off forgets every copy).
+- The clipboard panel has ✎ and its on/off switch at the right of its title, as Gboard's (off
+  forgets every copy): ✎ is edit mode, where taps tick copies and the bottom bar has Add (the
+  text field's selection, or all of it, as a new copy), Pin and Delete; ✓ leaves it.
+- Holding an emoji shows its full name with any skin tone ("waving hand: medium skin tone") and
+  its code points, in its card or tone picker and in the panel's search bar for a few seconds.
+- The key bubble is the long-press popup's panel with one key in it (the same shape, colour,
+  soft shadow and letter size); letters are never squeezed sideways.
 - The keyboard's default colours are the Lychee logo's (`LycheeColorStyle.LYCHEE`: blush keys,
   the logo's red on Enter); panels, cards and outlines are Lychee's rose on every phone, never
   the wallpaper's (only the Wallpaper colour style uses those).
@@ -178,10 +193,21 @@ packs page). Public facing, so be careful:
   kanji (Unihan's Japanese readings, the kanji dictionary, kokuji); Korean, Hangul and every Hanja
   (Unihan's Korean readings, gukja). Word cards name kokuji and gukja. The pad's ⌫ and ABC step
   aside while the candidates' dropdown is open; the dropdown has slight dividers and fades out
-  at the bottom, above the navigation buttons. While writing there is no 英 or 繁/简, ABC is a
-  plain key over ?123, a firm line parts the bar from the pad, and the pad reaches up into the
-  bar's typed-letters line (the guesses sit at the bar's top).
+  at the bottom, above the navigation buttons. While writing there is no 英 or 繁/简; the bar
+  has Back and "Handwriting" like every mode (raised clear of the pad), ⌫ is a key over ?123 in
+  the bottom row, the pad is a tinted surface of its own with rounded top corners (no line), and
+  it reaches up into the bar's typed-letters line (the guesses and a centred ⌄ sit at the bar's
+  top; the dropdown opens right under them). What follows a character picked is in that
+  character's own script. A companion slow to connect never leaves strokes without guesses
+  (Lychee's own engine reads them meanwhile).
 - Candidates have no boxes: small faint dividers between them, in the bar and the dropdown.
+  The bar shows six one- or two-character candidates at most, five with a three- or
+  four-character word, four with a longer one, sharing its width (never shrunk); the dropdown's
+  rows follow the same counts. The dropdown rolls down from the bar over the keys (no blink),
+  with its own bottom row exactly where the keyboard's is (?123, emoji, space, ⌫ deleting the
+  letters typed, Enter) and a single-character switch at its top (單字 / 单字, 単漢字, 한 글자)
+  showing one character at a time in the bar and the dropdown. Each time the keyboard opens,
+  Rime is started and the schema chosen if they aren't yet, so candidates come at once.
 - Number, phone and date fields have one number pad (`toolbar/NumpadPanelView`, forced): the
   digits centred with no keys at the sides, over three equal keys (⌫ 0 Enter); 0 held shows
   symbols (the field's own first). It is the only number pad: the symbols page has no number
@@ -195,8 +221,12 @@ packs page). Public facing, so be careful:
 - Enter always keeps its accent colour and an icon for the field's action (✓ done, search,
   send, go, next): an app's own action label (Pleco's "Done") never turns it into a grey text
   key (`KeyboardId.imeAction`); the key still does the app's action.
-- Every ordinary text field corrects and suggests, as Gboard does, whatever flags the app set
-  (`InputAttributes`).
+- Every text field but passwords suggests (email and web addresses, filters and fields marked
+  no-suggestions included, uncorrected), and every ordinary text field corrects, as Gboard does,
+  whatever flags the app set (`InputAttributes`). Personal dictionary words are suggested,
+  never autocorrected to (`Suggest`). Holding an English word no dictionary knows opens a small
+  card (the word, a speaker, ☆): ☆ saves it to Android's personal dictionary
+  (`typing/EnglishWords`).
   - A box for writing (several lines, a message, or capitalising sentences or words) corrects
     even if the app marks it "no suggestions": Instagram's chat box does.
   - Passwords, email and web addresses, filters, and single-line boxes marked no-suggestions

@@ -21,7 +21,11 @@ import com.android.inputmethod.latin.R
  * all their readings and meanings, as on the row, each candidate as wide
  * as it needs and spaced as tightly as on the row. Opened and closed with the ⌄ / ⌃ at the
  * end of the candidate row, or a swipe down on the row (the notch); tap one to type it.
- * Candidates the phone cannot draw are left out.
+ * Candidates the phone cannot draw are left out. Six to a row, five when one is a longer word
+ * (fewer for longer still), each at the bar's size. Along its bottom, exactly where the
+ * keyboard's bottom row is: ?123, emoji, space, ⌫ (deleting the letters typed, the list
+ * following) and Enter; at its top, a single-character switch ([danzi]: 單字, 单字, 単漢字,
+ * 한 글자) shows one character at a time.
  */
 class CandidatePanelView @JvmOverloads constructor(
     context: Context,
@@ -32,6 +36,23 @@ class CandidatePanelView @JvmOverloads constructor(
     var onPick: (Int) -> Unit = {}
     /** A candidate was held: its dictionary entry. */
     var onLongPick: (Int, android.view.View) -> Unit = { _, _ -> }
+    /** A key of the bottom row was tapped (?123, emoji, space, ⌫, Enter): its code. */
+    var onKey: (Int) -> Unit = {}
+    /** The single-character switch's label for this keyboard (null: no switch). */
+    var danzi: String? = null
+        set(value) {
+            field = value
+            danziChip.text = value.orEmpty()
+            header.visibility = if (value != null) VISIBLE else GONE
+        }
+    /** Whether only single characters show (the switch on). */
+    var singleOnly = false
+        set(value) {
+            field = value
+            paintDanzi()
+        }
+    /** The switch was turned on or off. */
+    var onSingleOnly: (Boolean) -> Unit = {}
 
     private val palette = M3Colors.of(context)
     private val grid = RecyclerView(context)
@@ -45,9 +66,114 @@ class CandidatePanelView @JvmOverloads constructor(
         )
     }
 
+    private val danziChip = android.widget.TextView(context).apply {
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        typeface = app.lychee.fonts.LycheeFonts.ui(context, 600)
+        gravity = Gravity.CENTER
+        setPadding(dp(14), 0, dp(14), 0)
+        app.lychee.layout.LycheeMotion.springy(this)
+        setOnClickListener {
+            singleOnly = !singleOnly
+            onSingleOnly(singleOnly)
+        }
+    }
+    private val header = FrameLayout(context).apply {
+        addView(danziChip, LayoutParams(LayoutParams.WRAP_CONTENT, dp(30), Gravity.END or Gravity.CENTER_VERTICAL).apply { marginEnd = dp(10) })
+        visibility = GONE
+    }
+
+    private fun paintDanzi() {
+        danziChip.setTextColor(if (singleOnly) palette.onPrimary else palette.onSurfaceVariant)
+        danziChip.background = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = dp(15).toFloat()
+            if (singleOnly) setColor(palette.primary) else { setColor(0); setStroke(dp(1), palette.outline) }
+        }
+    }
+
+    /** ?123, emoji, space, ⌫ and Enter, where the keyboard's bottom row is and as tall. */
+    private val keyBar = LinearLayout(context).apply {
+        orientation = LinearLayout.HORIZONTAL
+        fun key(view: android.view.View, weight: Float) = addView(view, LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, weight))
+        key(textKey(context.getString(R.string.lychee_symbols_key)) { onKey(com.android.inputmethod.latin.common.Constants.CODE_SWITCH_ALPHA_SYMBOL) }, 15f)
+        key(iconKey(R.drawable.ic_sym_mood, R.string.lychee_emoji) { onKey(com.android.inputmethod.latin.common.Constants.CODE_EMOJI) }, 10f)
+        key(iconKey(R.drawable.ic_sym_space_bar, R.string.lychee_numpad_space, letter = true) { onKey(com.android.inputmethod.latin.common.Constants.CODE_SPACE) }, 50f)
+        key(iconKey(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete, repeats = true) { onKey(com.android.inputmethod.latin.common.Constants.CODE_DELETE) }, 10f)
+        key(android.widget.ImageView(context).apply {
+            setImageResource(R.drawable.ic_sym_keyboard_return)
+            imageTintList = android.content.res.ColorStateList.valueOf(palette.onPrimary)
+            scaleType = android.widget.ImageView.ScaleType.CENTER
+            contentDescription = context.getString(R.string.lychee_numpad_enter)
+            background = app.lychee.layout.LycheePanels.accentKey(context)
+            setOnClickListener { onKey(com.android.inputmethod.latin.common.Constants.CODE_ENTER) }
+        }, 15f)
+    }
+
+    private val repeater = android.os.Handler(android.os.Looper.getMainLooper())
+
+    private fun textKey(label: String, onClick: () -> Unit) = android.widget.TextView(context).apply {
+        text = label
+        setTextColor(palette.onSecondaryContainer)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
+        gravity = Gravity.CENTER
+        background = app.lychee.layout.LycheePanels.functionalKey(context)
+        setOnClickListener { onClick() }
+    }
+
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    private fun iconKey(icon: Int, label: Int, letter: Boolean = false, repeats: Boolean = false, onClick: () -> Unit) =
+        android.widget.ImageView(context).apply {
+            setImageResource(icon)
+            imageTintList = android.content.res.ColorStateList.valueOf(if (letter) palette.onSurface else palette.onSecondaryContainer)
+            scaleType = android.widget.ImageView.ScaleType.CENTER
+            contentDescription = context.getString(label)
+            background = if (letter) app.lychee.layout.LycheePanels.letterKey(context) else app.lychee.layout.LycheePanels.functionalKey(context)
+            if (!repeats) setOnClickListener { onClick() }
+            else setOnTouchListener { v, e ->
+                when (e.actionMasked) {
+                    android.view.MotionEvent.ACTION_DOWN -> {
+                        v.isPressed = true
+                        onClick()
+                        repeater.postDelayed(object : Runnable {
+                            override fun run() { onClick(); repeater.postDelayed(this, 50) }
+                        }, 400)
+                    }
+                    android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> {
+                        v.isPressed = false
+                        repeater.removeCallbacksAndMessages(null)
+                    }
+                }
+                true
+            }
+        }
+
+    /** The key bar lined up with the keyboard's bottom row: as tall, as high above the bottom, keys inset by half a gap. */
+    private fun alignKeys() {
+        val row = app.lychee.layout.LycheePanels.keyRow(this)
+        (keyBar.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
+            if (lp.height != row.height || lp.bottomMargin != row.bottomPadding) {
+                lp.height = row.height
+                lp.bottomMargin = row.bottomPadding
+                keyBar.layoutParams = lp
+            }
+        }
+        val half = row.gap / 2
+        keyBar.setPadding(half, 0, half, 0)
+        for (i in 0 until keyBar.childCount) {
+            val c = keyBar.getChildAt(i)
+            (c.layoutParams as LinearLayout.LayoutParams).let { if (it.topMargin != half) { it.setMargins(half, half, half, half); c.layoutParams = it } }
+        }
+    }
+
+    override fun setVisibility(visibility: Int) {
+        if (visibility != VISIBLE) repeater.removeCallbacksAndMessages(null)
+        super.setVisibility(visibility)
+    }
+
     init {
         isClickable = true
         setBackgroundColor(palette.surface)
+        paintDanzi()
         layoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
             override fun getSpanSize(position: Int) = adapter.items.getOrNull(position)?.let { spanFor(it.value.text) } ?: 1
         }
@@ -57,8 +183,15 @@ class CandidatePanelView @JvmOverloads constructor(
         grid.addItemDecoration(Dividers())
         grid.setPadding(dp(6), dp(2), dp(6), dp(FADE_DP))
         grid.clipToPadding = false
-        addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-        addView(fade, LayoutParams(LayoutParams.MATCH_PARENT, dp(FADE_DP), Gravity.BOTTOM))
+        addView(LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(header, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(36)))
+            addView(FrameLayout(context).apply {
+                addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+                addView(fade, LayoutParams(LayoutParams.MATCH_PARENT, dp(FADE_DP), Gravity.BOTTOM))
+            }, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+            addView(keyBar, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(56)))
+        }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         visibility = GONE
     }
 
@@ -85,18 +218,22 @@ class CandidatePanelView @JvmOverloads constructor(
         pickOverride = onPicked
         longPickOverride = onLongPicked
         val gen = ++generation
+        val english = style.fontLang == "en"
         adapter.items = candidates.withIndex().filter { it.index > after &&
-            (if (style.fontLang == "en") CandidateBarView.renderable(it.value.text) else CandidateBarView.shown(it.value.text)) }
+            (if (english) CandidateBarView.renderable(it.value.text) else CandidateBarView.shown(it.value.text)) &&
+            // the single-character switch: one character at a time
+            (english || !singleOnly || it.value.text.codePointCount(0, it.value.text.length) == 1) }
+        header.visibility = if (danzi != null && !english) VISIBLE else GONE
+        alignKeys()
         adapter.scale = scale
         adapter.style = style
         adapter.annotations.clear()
         adapter.annotated = annotate != null
         adapter.notifyDataSetChanged()
         grid.scrollToPosition(0)
-        // room under the last row: it scrolls clear of the fade and the navigation buttons
-        val nav = app.lychee.KeyboardInsets.bottomPadding(rootView)
-        grid.setPadding(dp(6), dp(6), dp(6), nav + dp(FADE_DP))
-        fade.layoutParams = (fade.layoutParams as LayoutParams).apply { height = nav + dp(FADE_DP) }
+        // room under the last row: it scrolls clear of the fade above the key row
+        grid.setPadding(dp(6), dp(2), dp(6), dp(FADE_DP))
+        fade.layoutParams = (fade.layoutParams as LayoutParams).apply { height = dp(FADE_DP) }
         visibility = VISIBLE
         if (annotate == null) return
         val items = adapter.items
@@ -154,18 +291,20 @@ class CandidatePanelView @JvmOverloads constructor(
         }
     }
 
+    /**
+     * A candidate's share of a row, as on the bar: six to a row for one or two characters, five
+     * for three or four, three for up to six, two or one for longer; English three to a row.
+     * Each candidate stays at the bar's size (never shrunk to fit more).
+     */
     private fun spanFor(text: String): Int {
-        // English: three words a row, each the same width, like the suggestion bar's
         if (adapter.style.fontLang == "en") return COLUMNS / 3
-        // as the bar spaces them: each candidate as wide as its characters and their small side
-        // room (the readings and meaning under them fit that width), on a fine grid so short
-        // words sit close together
-        val chars = text.codePointCount(0, text.length)
-        val width = grid.width - grid.paddingLeft - grid.paddingRight
-        if (width <= 0) return when { chars <= 1 -> 2; chars <= 3 -> 4; chars <= 6 -> 6; else -> COLUMNS }
-        val column = width / COLUMNS.toFloat()
-        val need = chars * CandidateBarView.CHAR_SP * adapter.scale * resources.displayMetrics.scaledDensity + dp(20)
-        return kotlin.math.ceil(maxOf(need, dp(44).toFloat()) / column).toInt().coerceIn(1, COLUMNS)
+        return when (text.codePointCount(0, text.length)) {
+            in 0..2 -> COLUMNS / 6
+            in 3..4 -> COLUMNS / 5
+            in 5..6 -> COLUMNS / 3
+            in 7..10 -> COLUMNS / 2
+            else -> COLUMNS
+        }
     }
 
     private inner class Adapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -273,7 +412,7 @@ class CandidatePanelView @JvmOverloads constructor(
 
     private companion object {
         /** A fine grid: candidates take as many columns as their width needs. */
-        const val COLUMNS = 12
+        const val COLUMNS = 60
         /** How tall the fade at the bottom is (above any navigation buttons). */
         const val FADE_DP = 32
         val worker: java.util.concurrent.ExecutorService = java.util.concurrent.Executors.newSingleThreadExecutor()

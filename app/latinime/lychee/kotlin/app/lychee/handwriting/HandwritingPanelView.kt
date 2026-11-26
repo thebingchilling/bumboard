@@ -88,16 +88,12 @@ class HandwritingPanelView @JvmOverloads constructor(
     private var unpicked: String? = null
 
     // before init, which places them
-    /** ABC over the keyboard's ?123 key, exactly like the keyboard's own ABC key: back to the letters. */
-    private val backKey: View by lazy {
-        key(null, R.string.lychee_emoji_abc) { this@HandwritingPanelView.visibility = GONE }.also { frame ->
-            ((frame as FrameLayout).getChildAt(0) as? TextView)?.contentDescription = context.getString(R.string.lychee_hw_back_to_keys)
-        }
-    }
-    /** ⌫ exactly where the keyboard's own ⌫ is, and just as big: a functional key, lifted. */
+    /**
+     * ⌫ in the keyboard's bottom row, over its ?123 key (there is nothing to switch to while
+     * writing; Back in the bar above leaves the pad): a functional key like the keyboard's.
+     */
     private val deleteKey: View by lazy {
         key(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete) {}.also {
-            it.elevation = dp(3).toFloat()
             repeatOnHold(it, ::backspace)
         }
     }
@@ -153,26 +149,25 @@ class HandwritingPanelView @JvmOverloads constructor(
         // the pad over the keyboard's upper rows; its bottom row (?123, the comma, space, the
         // period, Enter) and the candidate bar above stay the keyboard's own, but for Back laid
         // over ?123 (there is nothing else to switch to while writing). ⌫ floats in the pad's corner
-        // the bar and the pad read apart by a firm line
+        // the bar and the pad read apart by the pad being a surface of its own: a tint, its top
+        // corners rounded, a little in from the sides (no line)
         addView(FrameLayout(context).apply {
+            background = android.graphics.drawable.GradientDrawable().apply {
+                val r = dp(18).toFloat()
+                cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+                setColor(palette.surfaceContainer)
+            }
             addView(hint, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(pad, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-            // a firm line between the candidates and the pad
-            addView(View(context).apply {
-                setBackgroundColor(palette.outline)
-                alpha = 0.55f
-                isClickable = false
-                importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
-            }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(2), Gravity.TOP))
             addView(message, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(upgrade, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(6) })
-        }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
+        }, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f).apply { setMargins(dp(6), dp(4), dp(6), 0) })
         visibility = GONE
     }
 
     /**
-     * Over the keys but their bottom row (the keyboard's own stays usable), with Back over its
+     * Over the keys but their bottom row (the keyboard's own stays usable), with ⌫ over its
      * ?123 key.
      */
     private fun fitToKeys() {
@@ -187,8 +182,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         // the candidate bar above stays exactly the keyboard's own (its lines, the candidates,
         // ⌄ and the dropdown), so the pad covers only the keys
         layoutParams = lp
-        placeBack()
-        placeOverKey(deleteKey, Constants.CODE_DELETE)
+        placeOverKey(deleteKey, Constants.CODE_SWITCH_ALPHA_SYMBOL)
     }
 
     /**
@@ -216,7 +210,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         if (this.visibility != VISIBLE) return@OnGlobalLayoutListener
         val open = rootView.findViewById<View>(R.id.lychee_candidate_panel)?.visibility == VISIBLE
         val want = if (open) GONE else VISIBLE
-        for (k in listOf(deleteKey, backKey)) if (k.parent != null && k.visibility != want) k.visibility = want
+        if (deleteKey.parent != null && deleteKey.visibility != want) deleteKey.visibility = want
     }
 
     override fun onAttachedToWindow() {
@@ -228,9 +222,6 @@ class HandwritingPanelView @JvmOverloads constructor(
         viewTreeObserver.removeOnGlobalLayoutListener(dropdownWatcher)
         super.onDetachedFromWindow()
     }
-
-    /** Back, laid exactly over the keyboard's ?123 key (beside the pad, in the panel's parent). */
-    private fun placeBack() = placeOverKey(backKey, Constants.CODE_SWITCH_ALPHA_SYMBOL)
 
     /** [view] laid exactly over the keyboard's key [code], as big as it (in the panel's parent). */
     private fun placeOverKey(view: View, code: Int) {
@@ -316,8 +307,8 @@ class HandwritingPanelView @JvmOverloads constructor(
 
     fun show() {
         visibility = VISIBLE
-        // the bar above shows "Handwriting" (Back is the key bottom left)
-        toolbar()?.showTitle(R.string.lychee_sc_handwriting, withBack = false) { visibility = GONE }
+        // the bar above shows Back and "Handwriting", like every other mode
+        toolbar()?.showTitle(R.string.lychee_sc_handwriting, withBack = true) { visibility = GONE }
         fitToKeys()
         pad.clear()
         updateHint()
@@ -379,10 +370,7 @@ class HandwritingPanelView @JvmOverloads constructor(
             }
         }
         super.setVisibility(visibility)
-        if (visibility != VISIBLE) {
-            backKey.visibility = GONE
-            deleteKey.visibility = GONE
-        }
+        if (visibility != VISIBLE) deleteKey.visibility = GONE
         // after the pad has gone, so the bar's 英 comes back (it is hidden while writing)
         if (closing) lycheeHost()?.lycheeShowGuesses(emptyList()) {}
     }
@@ -696,16 +684,33 @@ class HandwritingPanelView @JvmOverloads constructor(
     /** What usually follows [typed]: tapping one types it and suggests what follows that. */
     private fun showNext(typed: String) {
         val last = typed.codePointBefore(typed.length).let { String(Character.toChars(it)) }
-        @Suppress("DEPRECATION")
-        val simplified = app.lychee.chinese.ChineseScript.candidatesSimplified(
-            android.preference.PreferenceManager.getDefaultSharedPreferences(context))
-        val next = runCatching { app.lychee.chinese.Readings.db?.continuations(last, simplified) }.getOrNull().orEmpty()
+        // no 繁/简 while writing: what follows is in the script of the character picked
+        val next = runCatching { app.lychee.chinese.Readings.db?.continuations(last, simplifiedFor(last)) }.getOrNull().orEmpty()
         lycheeHost()?.lycheeShowGuesses(next) { i ->
             next.getOrNull(i)?.let { text ->
                 lycheeHost()?.lycheeType(text)
                 lastTyped = null
                 showNext(text)
             }
+        }
+    }
+
+    /**
+     * Whether [ch] is a Simplified character (written only that way), a Traditional one (false),
+     * or the same in both (then the 繁/简 setting): the pad has no 繁/简, so what follows a
+     * character picked is in that character's own script.
+     */
+    private fun simplifiedFor(ch: String): Boolean {
+        @Suppress("DEPRECATION")
+        val setting = app.lychee.chinese.ChineseScript.candidatesSimplified(
+            android.preference.PreferenceManager.getDefaultSharedPreferences(context))
+        val hws = runCatching { app.lychee.chinese.Readings.db?.lookup(ch) }.getOrNull().orEmpty()
+        val simplified = hws.any { it.simplified == ch && it.traditional != ch }
+        val traditional = hws.any { it.traditional == ch && it.simplified != ch }
+        return when {
+            simplified && !traditional -> true
+            traditional && !simplified -> false
+            else -> setting
         }
     }
 

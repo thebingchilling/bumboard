@@ -20,7 +20,6 @@ import app.lychee.core.InputMode
 import app.lychee.core.Lang
 import app.lychee.core.Sense
 import app.lychee.dict.WordEntry
-import app.lychee.settings.KeyboardPreviewView
 import com.android.resources.NightMode
 import org.junit.Rule
 import org.junit.Test
@@ -118,7 +117,8 @@ private fun chinese(paparazzi: Paparazzi, name: String, text: String, page: Page
                     tall: Boolean = false, peek: Boolean = false) =
     drawCard(paparazzi, name, tall) { popup, host ->
         popup.startPage = page
-        val r = annotator.resolve(text, "", mode)!!
+        // the real dictionary (RealData), else the small sample
+        val r = (Readings.annotator ?: annotator).resolve(text, "", mode)!!
         popup.show(host, text, r, prefs, peek = peek, onSpeak = { _, _ -> }) {}
     }
 
@@ -170,9 +170,10 @@ class CardScreens {
     @Test fun noDefinition() = chinese(paparazzi, "12-no-definition-je", "嘢")
     @Test fun mandarin() = chinese(paparazzi, "13-summary-mandarin-keyboard", "學校", mode = InputMode.Mandarin)
     @Test fun backFromPart() = drawCard(paparazzi, "14-part-opened-with-back") { popup, host ->
-        popup.show(host, "學校", annotator.resolve("學校", "", InputMode.Cantonese)!!, prefs, peek = false, onSpeak = { _, _ -> }) {}
+        val a = Readings.annotator ?: annotator
+        popup.show(host, "學校", a.resolve("學校", "", InputMode.Cantonese)!!, prefs, peek = false, onSpeak = { _, _ -> }) {}
         popup.openForScreens {
-            popup.show(host, "學", annotator.resolve("學", "", InputMode.Cantonese)!!, prefs, peek = false, onSpeak = { _, _ -> }) {}
+            popup.show(host, "學", a.resolve("學", "", InputMode.Cantonese)!!, prefs, peek = false, onSpeak = { _, _ -> }) {}
         }
     }
 
@@ -181,6 +182,9 @@ class CardScreens {
     @Test fun strokes() = chinese(paparazzi, "15-strokes-xuexiao", "學校", Page.STROKES)
     @Test fun partsChar() = chinese(paparazzi, "16-parts-xue-made-of-used-in", "學", Page.PARTS)
     @Test fun peek() = chinese(paparazzi, "18-peek-with-lock-bar", "學校", peek = true)
+    @Test fun unknownWord() = drawCard(paparazzi, "19-unknown-english-word", bar = null) { popup, host ->
+        popup.showUnknownWord(host, "Moanalua", onSpeak = { }, peek = false) {}
+    }
     @Test fun korean() = koreanCard(paparazzi, "8-korean-hakgyo")
 
     @Test fun english() = drawCard(paparazzi, "9-english-school", bar = null) { popup, host ->

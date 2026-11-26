@@ -54,6 +54,11 @@ class CandidateBarView @JvmOverloads constructor(
 
     var style = Style()
 
+    /** Only one-character candidates (the dropdown's single-character switch). */
+    var singleOnly = false
+
+    private fun wanted(text: String) = shown(text) && (!singleOnly || text.codePointCount(0, text.length) == 1)
+
     /**
      * The lines under every candidate (readings, meaning), or null for none: each candidate
      * keeps a slot for each, empty when it has nothing to show there, so they all match (the
@@ -129,7 +134,7 @@ class CandidateBarView @JvmOverloads constructor(
     fun setCandidates(candidates: List<Candidate>, annotate: ((Candidate) -> Annotation?)?) {
         val gen = ++generation
         if (annotate == null) {
-            build(candidates.withIndex().filter { shown(it.value.text) }, emptyMap())
+            build(candidates.withIndex().filter { wanted(it.value.text) }, emptyMap())
             return
         }
         val list = candidates.toList()
@@ -138,7 +143,7 @@ class CandidateBarView @JvmOverloads constructor(
             // enough candidates to fill the bar (the rest are in the dropdown)
             val drawable = ArrayList<IndexedValue<Candidate>>()
             for ((i, c) in list.withIndex()) {
-                if (shown(c.text)) drawable += IndexedValue(i, c)
+                if (wanted(c.text)) drawable += IndexedValue(i, c)
                 if (drawable.size >= MAX_SHOWN) break
             }
             val notes = HashMap<Int, Annotation>()
@@ -157,7 +162,7 @@ class CandidateBarView @JvmOverloads constructor(
     /** Screenshots only: [candidates] with their readings, built at once (no background thread). */
     fun setForScreens(candidates: List<Candidate>, annotate: (Candidate) -> Annotation?) {
         ++generation
-        val items = candidates.withIndex().filter { shown(it.value.text) }.take(MAX_SHOWN)
+        val items = candidates.withIndex().filter { wanted(it.value.text) }.take(MAX_SHOWN)
         build(items, items.mapNotNull { item -> annotate(item.value)?.let { item.index to it } }.toMap())
     }
 
@@ -169,6 +174,12 @@ class CandidateBarView @JvmOverloads constructor(
         val shown = ArrayList<IndexedValue<Candidate>>()
         var used = 0
         for (item in items) {
+            // six one- or two-character candidates at most, five with a three- or four-character
+            // word among them, four with a longer one: each at its full size, never squeezed
+            val len = item.value.text.codePointCount(0, item.value.text.length)
+            val longest = maxOf(len, shown.maxOfOrNull { it.value.text.codePointCount(0, it.value.text.length) } ?: 0)
+            val most = when { longest <= 2 -> 6; longest <= 4 -> 5; else -> 4 }
+            if (shown.size >= most) break
             val cell = cell(item.index, item.value, first = cells.isEmpty())
             notes[item.index]?.let { fill(cell, it) }
             if (available > 0) {
@@ -186,6 +197,15 @@ class CandidateBarView @JvmOverloads constructor(
             ))
         }
         lastShown = shown.lastOrNull()?.index ?: -1
+        // the candidates share the bar's width, each in proportion to its own: the room left over
+        // goes to them all (their readings and meanings get it), none is squeezed
+        if (available > 0 && used in 1 until available) {
+            for (i in 0 until row.childCount) {
+                val c = row.getChildAt(i)
+                c.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, c.measuredWidth.toFloat().coerceAtLeast(1f))
+            }
+            row.layoutParams = row.layoutParams.apply { width = available }
+        } else row.layoutParams = row.layoutParams.apply { width = ViewGroup.LayoutParams.WRAP_CONTENT }
         scrollTo(0, 0)
     }
 

@@ -37,6 +37,13 @@ class TonePicker(private val ctx: Context) {
         val tones = emoji.tones ?: return
         dismiss()
         val c = M3Colors.of(ctx)
+        // its full name (with the skin tone) and code points, following the tone chosen
+        val nameLabel = TextView(ctx)
+        val codeLabel = TextView(ctx)
+        fun describe(text: String) {
+            nameLabel.text = EmojiInfo.fullName(emoji.name, text) ?: emoji.name
+            codeLabel.text = EmojiInfo.codePoints(text)
+        }
         val content = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             // only as much room as the emoji need
@@ -77,6 +84,7 @@ class TonePicker(private val ctx: Context) {
                     preview.text = pair
                     if (animate) bounce(preview)
                 }
+                describe(pair)
                 for (person in 0..1) {
                     val tone = if (person == 0) first else second
                     for (t in 0 until 5) {
@@ -135,8 +143,8 @@ class TonePicker(private val ctx: Context) {
         // as wide as the emoji rows
         content.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         val textWidth = (content.measuredWidth - dp(16)).coerceAtLeast(dp(120))
-        content.addView(TextView(ctx).apply {
-            text = emoji.name.replaceFirstChar { it.uppercase() }
+        content.addView(nameLabel.apply {
+            text = EmojiInfo.fullName(emoji.name, selected) ?: emoji.name.replaceFirstChar { it.uppercase() }
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             setTextColor(c.onSurface)
             typeface = app.lychee.fonts.LycheeFonts.ui(ctx, 500)
@@ -145,8 +153,8 @@ class TonePicker(private val ctx: Context) {
             setPadding(dp(4), dp(8), dp(4), 0)
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
             .apply { gravity = Gravity.CENTER_HORIZONTAL })
-        content.addView(TextView(ctx).apply {
-            text = EmojiInfo.codePoints(emoji.base)
+        content.addView(codeLabel.apply {
+            text = EmojiInfo.codePoints(selected)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setTextColor(c.onSurfaceVariant)
             typeface = app.lychee.fonts.LycheeFonts.ui(ctx)

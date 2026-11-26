@@ -183,8 +183,14 @@ public final class KeyboardRow {
             final int keyboardRightEdge = mParams.mOccupiedWidth - mParams.mRightPadding;
             return keyboardRightEdge - keyXPos;
         default: // KEYWIDTH_NOT_ENUM
-            return keyAttr.getFraction(R.styleable.Keyboard_Key_keyWidth,
+            final float width = keyAttr.getFraction(R.styleable.Keyboard_Key_keyWidth,
                     mParams.mBaseWidth, mParams.mBaseWidth, getDefaultKeyWidth());
+            // LYCHEE: the screenshot tests' renderer reads "fillRight" as no number at all
+            // (on a phone it is the enum above): such a key fills the row too
+            if (Float.isNaN(width) || Float.isInfinite(width) || width < 0) {
+                return mParams.mOccupiedWidth - mParams.mRightPadding - keyXPos;
+            }
+            return width;
         }
     }
 }

@@ -83,7 +83,8 @@ public final class ImportantNoticeUtils {
     public static boolean shouldShowImportantNotice(final Context context,
             final SettingsValues settingsValues) {
         // Check to see whether "Use Contacts" is enabled by the user.
-        if (!settingsValues.mUseContactsDict) {
+        // LYCHEE: no settings yet (the strip laid out before they load): nothing to show
+        if (settingsValues == null || !settingsValues.mUseContactsDict) {
             return false;
         }
 

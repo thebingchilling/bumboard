@@ -33,7 +33,8 @@ object LycheePanels {
         panel.post { springButtons(panel, panel) }
         // the input view's own transition already brings it in
         if ((panel.parent as? android.view.ViewGroup)?.layoutTransition != null) return
-        LycheeMotion.enter(panel)
+        // the candidates' dropdown rolls down; the other panels cross-fade in
+        if (panel.id == R.id.lychee_candidate_panel) LycheeMotion.dropDown(panel) else LycheeMotion.enter(panel)
     }
 
     /**

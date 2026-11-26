@@ -90,6 +90,9 @@
     <string name="lychee_type_it">Type it</string>
     <string name="lychee_card_parts">Parts</string>
     <string name="lychee_card_phrases">Phrases</string>
+    <string name="lychee_card_save">Save to your personal dictionary</string>
+    <string name="lychee_card_unsave">Remove from your personal dictionary</string>
+    <string name="lychee_card_unknown_word">Not in Lychee\'s dictionaries. ☆ saves it to your personal dictionary: it will be suggested as you type, never put in for you.</string>
     <string name="lychee_card_traditional">Traditional</string>
     <string name="lychee_card_simplified">Simplified</string>
     <string name="lychee_card_made_of">Made of</string>

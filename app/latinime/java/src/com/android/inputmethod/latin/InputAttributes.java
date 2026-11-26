@@ -115,10 +115,11 @@ public final class InputAttributes {
                 || InputType.TYPE_TEXT_VARIATION_URI == variation
                 || InputType.TYPE_TEXT_VARIATION_FILTER == variation
                 || (flagNoSuggestions && !lycheeWriting);
-        // LYCHEE: suggestions in fields that also complete for themselves (search boxes and
-        // many apps' text boxes are AutoCompleteTextViews), as Gboard does: an app's own
-        // completions only ever showed in full-screen mode, which Lychee never uses
-        mShouldShowSuggestions = !shouldSuppressSuggestions;
+        // LYCHEE: suggestions in every text field but passwords, as Gboard does (fields that
+        // complete for themselves too: an app's own completions only ever showed in full-screen
+        // mode, which Lychee never uses). Email and web addresses, filters and fields that ask
+        // for no suggestions still get them, but are never corrected (mInputTypeNoAutoCorrect).
+        mShouldShowSuggestions = !mIsPasswordField;
 
         mShouldInsertSpacesAutomatically = InputTypeUtils.isAutoSpaceFriendlyType(inputType);
 

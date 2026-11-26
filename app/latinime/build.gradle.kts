@@ -146,4 +146,6 @@ if (project.hasProperty("lycheeScreens")) {
     android.sourceSets.getByName("test").kotlin.srcDir("screens/kotlin")
     // each snapshot test in a fresh process: Lychee's helpers keep the first context they're given
     tasks.withType<Test>().configureEach { forkEvery = 1 }
+    // the real dictionaries and packs (tools/screens-data.sh), read through the desktop's SQLite
+    dependencies { add("testImplementation", libs.sqlite.jdbc) }
 }

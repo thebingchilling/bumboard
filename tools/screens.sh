@@ -6,12 +6,17 @@
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
 export ANDROID_HOME="${ANDROID_HOME:-/opt/android-sdk}"
+# the real data the screens read (dictionaries, packs), built once per session
+[ -f "$REPO/app/latinime/build/screens-data/readings.db" ] || "$REPO/tools/screens-data.sh"
 cd "$REPO/app"
+# only this run's screens
+rm -f latinime/src/test/snapshots/images/*.png
 if [ $# -gt 0 ]; then
   ./gradlew --no-daemon -q :latinime:recordPaparazziDebug -PlycheeScreens --tests "$1"
 else
   ./gradlew --no-daemon -q :latinime:recordPaparazziDebug -PlycheeScreens
 fi
 mkdir -p "$REPO/screens"
+[ $# -gt 0 ] || rm -f "$REPO/screens/"*.png
 cp latinime/src/test/snapshots/images/*.png "$REPO/screens/"
 ls -1 "$REPO/screens"

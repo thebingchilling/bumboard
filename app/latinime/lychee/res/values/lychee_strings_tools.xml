@@ -36,6 +36,10 @@
     <string name="lychee_clipboard_empty">Copy text in any app and it shows up here. Hold a copy to pin it.</string>
     <string name="lychee_clipboard_clear">Clear all</string>
     <string name="lychee_clipboard_pin">Pin</string>
+    <string name="lychee_clipboard_edit">Edit copies</string>
+    <string name="lychee_clipboard_done">Done editing</string>
+    <string name="lychee_clipboard_add">Add</string>
+    <string name="lychee_clipboard_add_nothing">The text field is empty: nothing to add</string>
     <string name="lychee_clipboard_unpin">Unpin</string>
     <string name="lychee_clipboard_delete">Delete</string>
     <string name="lychee_pref_clipboard">Clipboard</string>
@@ -81,6 +85,8 @@
     <!-- Number pad -->
     <string name="lychee_numpad_space">Space</string>
     <string name="lychee_numpad_enter">Enter</string>
+    <string name="lychee_symbols_key">\?123</string>
+    <string name="lychee_emoji">Emoji</string>
 
     <!-- Emoji skin tones -->
     <string name="lychee_tone_person1">Left</string>

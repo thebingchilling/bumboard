@@ -81,6 +81,19 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         panel = inputView.findViewById<CandidatePanelView>(R.id.lychee_candidate_panel)?.also { p ->
             p.onPick = { index -> pick(index); updateMoreButton() }
             p.onLongPick = { index, anchor -> showDictionary(index, anchor) }
+            // the dropdown's own bottom row: ?123 and emoji close it first; space, ⌫ and Enter
+            // act as the keyboard's (⌫ deletes the letters typed, the list following)
+            p.onKey = { code ->
+                val leaves = code == com.android.inputmethod.latin.common.Constants.CODE_SWITCH_ALPHA_SYMBOL ||
+                    code == com.android.inputmethod.latin.common.Constants.CODE_EMOJI
+                if (leaves) { p.visibility = View.GONE; updateMoreButton() }
+                (ime as? app.lychee.LycheeHost)?.lycheeSendCode(code)
+            }
+            // one character at a time: the bar and the dropdown both
+            p.onSingleOnly = { on ->
+                singleOnly = on
+                show(shown)
+            }
         }
         moreButton = inputView.findViewById<android.widget.ImageView>(R.id.lychee_candidate_more)?.also { b ->
             b.imageTintList = android.content.res.ColorStateList.valueOf(app.lychee.ui.LycheeColorStyle.color(inputView.context, R.attr.lycheeColorOnKeyVariant))
@@ -138,6 +151,17 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
     }
 
     private fun peekCards() = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
+
+    /** The single-character switch (單字): only one-character candidates show, until the keyboard closes. */
+    private var singleOnly = false
+
+    /** The single-character switch's label on this keyboard: 單字 or 单字, 単漢字, 한 글자. */
+    private fun danziLabel(): String? = when (engine) {
+        "yue", "cmn" -> if (ChineseScript.candidatesSimplified(prefs)) "单字" else "單字"
+        "ja" -> "単漢字"
+        "ko" -> "한 글자"
+        else -> null
+    }
 
     /** Handwriting guesses or next characters, shown in the bar while nothing is composed. */
     private var guesses: List<String> = emptyList()
@@ -218,6 +242,11 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val frame = keyboardFrame?.takeIf { it.height > 0 } ?: return false
         val peek = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
         val locales = listOf(java.util.Locale.UK, java.util.Locale.US)
+        // a word no dictionary knows: a smaller card, with ☆ to save it as the user's own
+        if (entries.isEmpty()) {
+            popup?.showUnknownWord(frame, word, { text -> app.lychee.speech.Speech.speak(ime, text, locales) }, peek, onType)
+            return true
+        }
         popup?.showWord(frame, word, null, entries, emptyList(), peek,
             onSpeak = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }, lang = "en",
             // UK and US each in their own voice
@@ -598,6 +627,7 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val newEngine = subtype?.getExtraValueOf(EXTRA_ENGINE)
         if (newEngine == engine) return
         reset()
+        singleOnly = false
         engine = newEngine
         schemaMissing = false
         if (newEngine != null) {
@@ -698,6 +728,17 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         // typed, and costs time just as typing starts (this runs every time the keyboard opens)
         val signature = schemaSettings()
         if (isActive && RimeService.ready && !selecting && (signature != appliedSettings || selectedEngine != engine)) selectSchema(async = true)
+        // the keyboard opening (a new language, or back from another keyboard app) with Rime not
+        // running yet, or no session: start it and choose the schema once it is up, so the
+        // candidates come without having to switch languages first
+        if (isActive && (!RimeService.ready || session == 0L)) {
+            val wanted = engine
+            RimeService.start(ime) {
+                if (engine != wanted) return@start
+                if ((selectedEngine != engine || session == 0L) && !selecting) selectSchema(async = true)
+                replayPending()
+            }
+        }
         if (!isComposing) show(null)
     }
 
@@ -1028,6 +1069,12 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             // handwriting guesses: all of them over the pad (which stays open under them)
             val list = guesses.map { Candidate(it, "") }
             app.lychee.layout.LycheePanels.cover(panel, view)
+            // right under the guesses: over the pad's reach into the bar too, no gap
+            val lift = (view.findViewById<View>(R.id.lychee_handwriting_panel) as? app.lychee.handwriting.HandwritingPanelView)?.lift ?: 0
+            if (lift > 0) (panel.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let { lp ->
+                lp.height += lift
+                panel.layoutParams = lp
+            }
             panel.bringToFront()
             panel.lines = annotationLines()
             panel.show(list, candidateScale(), guessAnnotation(), bar?.style ?: Readings.barStyle(prefs, guessMode().lang),
@@ -1164,6 +1211,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         }
         bar.setScale(candidateScale())
         bar.style = Readings.barStyle(prefs, barMode().lang).copy(fontLang = engine)
+        // the single-character switch, for typed candidates (handwriting guesses are characters already)
+        bar.singleOnly = singleOnly && !guessing
+        panel?.danzi = if (guessing) null else danziLabel()
+        panel?.singleOnly = singleOnly && !guessing
         val annotate = if (guessing) guessAnnotation() else annotation()
         // every candidate keeps the same lines, filled or not, so they all line up
         bar.lines = if (annotate != null) annotationLines() else null
@@ -1238,13 +1289,20 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         // (no letters are typed): the pad is taller, the keyboard as tall as ever
         val lift = if (rime && writing) line else 0
         bar?.let { if (it.paddingTop != top || it.paddingBottom != lift) it.setPadding(0, top, 0, lift) }
+        // ⌄ in the middle of the guesses' room (above the pad) while writing; else at the bottom
         (moreButton?.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let { lp ->
             val g = android.view.Gravity.END or (if (lift > 0) android.view.Gravity.TOP else android.view.Gravity.BOTTOM)
-            if (lp.gravity != g) {
+            val h = if (lift > 0) (height - lift).coerceAtLeast(standard) else standard
+            if (lp.gravity != g || lp.height != h) {
                 lp.gravity = g
+                lp.height = h
                 moreButton?.layoutParams = lp
             }
         }
+        // the bar's title ("Handwriting", with Back) in the room above the pad, not half under it
+        // (the toolbar is a strip's height on the bar's bottom edge: while writing it fills the
+        // guesses' room instead, so Back sits beside the guesses, clear of the pad)
+        stripView?.lycheeToolbar?.let { t -> raiseToolbar(t, lift, if (lift > 0) (height - lift).coerceAtLeast(standard) else standard) }
         (stripView?.rootView?.findViewById<View>(R.id.lychee_handwriting_panel) as? app.lychee.handwriting.HandwritingPanelView)?.lift = lift
         // voice typing takes the bar's place, so it is as tall as the bar
         val voice = stripView?.rootView?.findViewById<View>(R.id.lychee_voice_panel)
@@ -1253,6 +1311,18 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             if (lp.height != height) {
                 lp.height = height
                 view.layoutParams = lp
+            }
+        }
+    }
+
+    /** The bar's toolbar [lift] px above the bar's bottom edge, [height] px tall. */
+    internal fun raiseToolbar(t: View, lift: Int, height: Int) {
+        if (t.paddingBottom != 0) t.setPadding(t.paddingLeft, t.paddingTop, t.paddingRight, 0)
+        (t.layoutParams as? android.view.ViewGroup.MarginLayoutParams)?.let { lp ->
+            if (lp.bottomMargin != lift || lp.height != height) {
+                lp.bottomMargin = lift
+                lp.height = height
+                t.layoutParams = lp
             }
         }
     }

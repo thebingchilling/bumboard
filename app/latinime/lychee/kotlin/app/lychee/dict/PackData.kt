@@ -44,8 +44,29 @@ object PackData {
     private const val TAG = "LycheePackData"
     private val open = HashMap<String, Pair<String, SQLiteDatabase>>()
 
+    /**
+     * A pack's database, as the look-ups use it: Android's SQLite on the phone; the screenshot
+     * tests give their own over the desktop's SQLite (the real pack files), [forScreensDb].
+     */
+    interface PackDb {
+        fun rawQuery(sql: String, args: Array<out String>?): android.database.Cursor
+    }
+
+    private class AndroidPackDb(val db: SQLiteDatabase) : PackDb {
+        override fun rawQuery(sql: String, args: Array<out String>?): android.database.Cursor = db.rawQuery(sql, args?.map { it }?.toTypedArray())
+    }
+
+    /** Screenshots only: the real packs' databases (pack id, file name) through the desktop's SQLite. */
+    @JvmStatic var forScreensDb: ((String, String) -> PackDb?)? = null
+
     @Synchronized
-    private fun db(context: Context, packId: String, name: String): SQLiteDatabase? {
+    private fun db(context: Context, packId: String, name: String): PackDb? {
+        forScreensDb?.let { return it(packId, name) }
+        return androidDb(context, packId, name)?.let { AndroidPackDb(it) }
+    }
+
+    @Synchronized
+    private fun androidDb(context: Context, packId: String, name: String): SQLiteDatabase? {
         val file = File(Packs.dir(context, packId), "data/$name")
         val key = file.path
         if (!file.exists()) {

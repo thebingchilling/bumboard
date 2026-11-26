@@ -271,6 +271,13 @@ public final class Suggest {
                         suggestionResults.first());
             }
         }
+        // LYCHEE: a word from the personal dictionary (a name, an email address, a number saved
+        // with ☆) is offered, never put in by itself in place of what was typed
+        if (hasAutoCorrection && !suggestionResults.isEmpty()
+                && suggestionResults.first().mSourceDict != null
+                && Dictionary.TYPE_USER.equals(suggestionResults.first().mSourceDict.mDictType)) {
+            hasAutoCorrection = false;
+        }
 
         final SuggestedWordInfo typedWordInfo = new SuggestedWordInfo(typedWordString,
                 "" /* prevWordsContext */, SuggestedWordInfo.MAX_SCORE,
