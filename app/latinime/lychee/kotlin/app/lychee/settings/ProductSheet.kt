@@ -54,7 +54,7 @@ fun ProductPage(p: Store.Product) {
     @Suppress("UNUSED_VARIABLE") val refresh = PackRefresh.tick
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 16.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             ProductTile(p, 56)
@@ -65,43 +65,61 @@ fun ProductPage(p: Store.Product) {
             }
         }
         if (p.needsApp) HandwritingActions() else BuyCard(p)
-        Section("In Lychee") { Sample(p.sample) }
+        Section("In Lychee") {
+            if (KeyboardSample.drawable(p.sample)) KeyboardSampleView(p.sample) else Sample(p.sample)
+        }
         Section("What you get") {
             p.lines.forEach { Bullet(it) }
             p.bonus?.let { Bullet(Store.Line("Bonus: $it, only in this pack or Lychee Complete")) }
         }
         if (p.includes.isNotEmpty()) {
             Section("Included") {
-                p.includes.mapNotNull { Store.byId(it) }.forEach { inc ->
+                p.includes.mapNotNull { Store.byId(it) }.forEachIndexed { i, inc ->
+                    if (i > 0) androidx.compose.material3.HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f))
                     Row(
                         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { ProductSheet.open = inc }
-                            .padding(vertical = 6.dp),
+                            .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         ProductTile(inc, 32)
                         Spacer(Modifier.size(12.dp))
                         Text(inc.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         Text(Store.price(inc.cents), style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
+                        Icon(painterResource(R.drawable.ic_sym_chevron_right), null, tint = colors.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 4.dp).size(20.dp))
                     }
                 }
             }
         }
-        if (p.demo.isNotEmpty()) Section("Try it free") { Plain(p.demo) }
-        if (p.about.isNotEmpty()) Section("About") { Plain(p.about) }
-        if (p.sources.isNotEmpty()) Section("Sources and licences") { Plain(p.sources) }
-        Section("Updates") {
-            Plain("Every update to this add-on is included. Where it is built on open data, updates follow that " +
-                "data's new releases for as long as they stay free to use.")
-        }
-        Section("Privacy") {
-            Plain(
-                if (p.needsApp) "Your writing is read by Google's ML Kit on this phone, never sent anywhere. The " +
-                    "Lychee handwriting app goes online to download Google's models, and ML Kit sends Google " +
-                    "figures about how it runs (device model, app version, speed), as Google's terms require; " +
-                    "never your handwriting. Lychee itself has no internet permission."
-                else "Lychee has no internet permission: everything works offline, and nothing you type or look " +
-                    "up ever leaves your phone."
-            )
+        // the plain words, each under its own heading, in one card with lines between them
+        Details(listOfNotNull(
+            p.demo.takeIf { it.isNotEmpty() }?.let { "Try it free" to it },
+            p.about.takeIf { it.isNotEmpty() }?.let { "About" to it },
+            p.sources.takeIf { it.isNotEmpty() }?.let { "Sources and licences" to it },
+            "Updates" to "Every update to this add-on is included. Where it is built on open data, updates follow that " +
+                "data's new releases for as long as they stay free to use.",
+            "Privacy" to (if (p.needsApp) "Your writing is read by Google's ML Kit on this phone, never sent anywhere. The " +
+                "Lychee handwriting app goes online to download Google's models, and ML Kit sends Google " +
+                "figures about how it runs (device model, app version, speed), as Google's terms require; " +
+                "never your handwriting. Lychee itself has no internet permission."
+            else "Lychee has no internet permission: everything works offline, and nothing you type or look " +
+                "up ever leaves your phone."),
+        ))
+    }
+}
+
+/** Several short texts, each under its heading, in one card with a thin line between them. */
+@Composable
+fun Details(items: List<Pair<String, String>>) {
+    val colors = MaterialTheme.colorScheme
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(colors.surfaceContainerLow).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        items.forEachIndexed { i, (title, body) ->
+            if (i > 0) androidx.compose.material3.HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f))
+            Text(title, style = MaterialTheme.typography.titleSmall, color = colors.primary)
+            Text(body, style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
         }
     }
 }
@@ -190,10 +208,14 @@ private fun Fact(text: String, strong: Boolean = false) {
     )
 }
 
+/** A part of a listing's page: its own card, the heading inside it. */
 @Composable
-private fun Section(title: String, content: @Composable () -> Unit) {
+fun Section(title: String, content: @Composable () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(colors.surfaceContainerLow).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Text(title, style = MaterialTheme.typography.titleSmall, color = colors.primary)
         content()
     }
@@ -226,7 +248,7 @@ private fun Sample(sample: Store.Sample) {
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(colors.surfaceContainer)
+            .background(colors.surfaceContainerHigh)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {

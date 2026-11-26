@@ -71,7 +71,7 @@ private fun sampleStrokes(ch: String): app.lychee.dict.CharStrokes {
     val n = 5 + (ch.codePointAt(0) % 5)
     return app.lychee.dict.CharStrokes(ch, emptyList(), all.take(n), mapOf("學" to "⿳爻冖子")[ch], null, null, null)
 }
-private val annotator = Annotator(Dictionary { form -> words.filter { it.traditional == form || it.simplified == form } })
+internal val annotator = Annotator(Dictionary { form -> words.filter { it.traditional == form || it.simplified == form } })
 
 /** A Galaxy S23: 1080 × 2340 px at 425 dpi (about 411 × 891 dp), a regular phone. */
 val S23 = DeviceConfig.PIXEL_6.copy(screenWidth = 1080, screenHeight = 2340, xdpi = 425, ydpi = 425,

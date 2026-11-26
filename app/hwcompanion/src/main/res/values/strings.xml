@@ -3,10 +3,14 @@
     <string name="app_name">Lychee handwriting</string>
     <string name="tagline">Google\'s handwriting recognition for Lychee\'s handwriting pad</string>
     <string name="models">Languages</string>
-    <string name="models_note">Each model is about 20 MB, from Google\'s ML Kit. Opening this app checks for newer ones.</string>
+    <string name="models_note">Only the languages of your Lychee keyboards download by themselves (about %1$d MB each, from Google\'s ML Kit). Download the others here, or remove any you don\'t need. Opening this app checks for newer ones.</string>
     <string name="checking">Checking…</string>
     <string name="downloading">Downloading…</string>
-    <string name="ready">Ready</string>
+    <string name="ready_used">Ready, used by your keyboards</string>
+    <string name="ready_unused">Downloaded, not used by your keyboards</string>
+    <string name="not_downloaded">Not on this phone</string>
+    <string name="download">Download</string>
+    <string name="remove">Remove</string>
     <string name="failed">Not downloaded. Check the connection and open this app again</string>
     <string name="lang_zh_cn">Chinese, Simplified</string>
     <string name="lang_zh_hk">Chinese, Traditional (Hong Kong)</string>

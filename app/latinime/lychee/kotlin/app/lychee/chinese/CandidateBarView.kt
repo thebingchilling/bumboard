@@ -129,7 +129,7 @@ class CandidateBarView @JvmOverloads constructor(
     fun setCandidates(candidates: List<Candidate>, annotate: ((Candidate) -> Annotation?)?) {
         val gen = ++generation
         if (annotate == null) {
-            build(candidates.withIndex().filter { renderable(it.value.text) }, emptyMap())
+            build(candidates.withIndex().filter { shown(it.value.text) }, emptyMap())
             return
         }
         val list = candidates.toList()
@@ -138,7 +138,7 @@ class CandidateBarView @JvmOverloads constructor(
             // enough candidates to fill the bar (the rest are in the dropdown)
             val drawable = ArrayList<IndexedValue<Candidate>>()
             for ((i, c) in list.withIndex()) {
-                if (renderable(c.text)) drawable += IndexedValue(i, c)
+                if (shown(c.text)) drawable += IndexedValue(i, c)
                 if (drawable.size >= MAX_SHOWN) break
             }
             val notes = HashMap<Int, Annotation>()
@@ -157,7 +157,7 @@ class CandidateBarView @JvmOverloads constructor(
     /** Screenshots only: [candidates] with their readings, built at once (no background thread). */
     fun setForScreens(candidates: List<Candidate>, annotate: (Candidate) -> Annotation?) {
         ++generation
-        val items = candidates.withIndex().filter { renderable(it.value.text) }.take(MAX_SHOWN)
+        val items = candidates.withIndex().filter { shown(it.value.text) }.take(MAX_SHOWN)
         build(items, items.mapNotNull { item -> annotate(item.value)?.let { item.index to it } }.toMap())
     }
 
@@ -285,10 +285,29 @@ class CandidateBarView @JvmOverloads constructor(
         app.lychee.layout.LycheeMotion.springy(this)
         setOnClickListener { onPick(index) }
         setOnLongClickListener { view -> onLongPick(index, view); true }
-        setOnTouchListener { _, event ->
+        // a swipe up on a candidate opens its card at once (as holding it does): pull the card up
+        var startX = 0f
+        var startY = 0f
+        var pulled = false
+        setOnTouchListener { v, event ->
             when (event.actionMasked) {
-                android.view.MotionEvent.ACTION_MOVE -> onDrag(event.rawX, event.rawY)
-                android.view.MotionEvent.ACTION_UP -> onRelease(event.rawX, event.rawY, true)
+                android.view.MotionEvent.ACTION_DOWN -> { startX = event.rawX; startY = event.rawY; pulled = false }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    val dy = event.rawY - startY
+                    if (!pulled && dy < -dp(24) && -dy > 2 * kotlin.math.abs(event.rawX - startX)) {
+                        pulled = true
+                        v.cancelLongPress()
+                        v.isPressed = false
+                        v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
+                        onLongPick(index, v)
+                    }
+                    onDrag(event.rawX, event.rawY)
+                }
+                android.view.MotionEvent.ACTION_UP -> {
+                    onRelease(event.rawX, event.rawY, true)
+                    // the pull opened the card: no tap as well
+                    if (pulled) return@setOnTouchListener true
+                }
                 android.view.MotionEvent.ACTION_CANCEL -> onRelease(event.rawX, event.rawY, false)
             }
             false
@@ -476,6 +495,15 @@ class CandidateBarView @JvmOverloads constructor(
          * grapheme at a time (a whole word is always "missing"), so each character is checked.
          */
         @Synchronized
+        /**
+         * Whether a candidate of the Chinese, Japanese and Korean keyboards shows: never one in
+         * Latin letters only (the letters typed, a romanisation), and only what the phone can draw.
+         */
+        fun shown(text: String): Boolean = !latinOnly(text) && renderable(text)
+
+        /** Text with no letter outside the Latin alphabet (hok, OK, abc). */
+        fun latinOnly(text: String): Boolean = text.isNotEmpty() && text.all { it.code < 0x250 }
+
         fun renderable(text: String): Boolean {
             if (text.isEmpty()) return false
             var i = 0

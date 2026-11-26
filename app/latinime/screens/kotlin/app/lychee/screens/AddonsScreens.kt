@@ -25,6 +25,7 @@ import androidx.core.app.ActivityOptionsCompat
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import app.lychee.settings.AddonsPage
+import app.lychee.settings.AddonSheet
 import app.lychee.settings.GroupCounter
 import app.lychee.settings.LocalGroupCounter
 import app.lychee.settings.LycheeTheme
@@ -54,6 +55,9 @@ class AddonsScreens {
     fun draw(paparazzi: Paparazzi, name: String, title: String, scroll: Int = 0, setUp: () -> Unit) {
         StoreLook.startTab = 0
         ProductSheet.open = null
+        AddonSheet.open = null
+        // the real word card in the listings' examples, from the sample dictionary
+        app.lychee.chinese.Readings.useForScreens(annotator)
         setUp()
         paparazzi.snapshot(name) {
             CompositionLocalProvider(LocalActivityResultRegistryOwner provides registryOwner, LocalGroupCounter provides GroupCounter()) {
@@ -87,6 +91,10 @@ class AddonsScreens {
     @Test fun listingAddon() = page("7-listing-chinese-in-depth", "Chinese In Depth") { ProductSheet.open = Store.byId("card_zh") }
     @Test fun listingHandwriting() = page("8-listing-google-handwriting", "Google Handwriting") { ProductSheet.open = Store.byId("handwriting") }
     @Test fun updates() = page("9-updates", "Add-ons") { StoreLook.startTab = 2 }
+    @Test fun listingChineseFurther() = page("7b-listing-chinese-further", "Chinese In Depth", scroll = 1100) { ProductSheet.open = Store.byId("card_zh") }
+    @Test fun listingFree() = page("12-listing-free-japanese-dictionary", "Japanese dictionary") {
+        AddonSheet.open = app.lychee.packs.Packs.catalog(paparazzi.context).firstOrNull { it.id == "rime_ja" }
+    }
 }
 
 /** Add-ons in dark mode. */

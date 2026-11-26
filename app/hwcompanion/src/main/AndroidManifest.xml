@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Lychee's Google handwriting companion, a small app of its own (ML Kit's licence needs that).
-    Its screen downloads ML Kit's handwriting models and shows their status; its icon is on the
-    launcher (the alias below) unless hidden from that screen. It also fetches them by itself
-    the first time Lychee binds RecognitionService (Lychee's pad uses its own engine until they
-    are in). Lychee opens the screen from Settings > Add-ons. Only apps signed with Lychee's key
+    Its screen shows each language's ML Kit handwriting model, downloads or removes it; its icon
+    is on the launcher (the alias below) unless hidden from that screen. When Lychee binds
+    RecognitionService it says which languages its keyboards use, and only those models are
+    fetched by themselves (Lychee's pad uses its own engine until they are in). Lychee opens the screen from Settings > Add-ons. Only apps signed with Lychee's key
     may bind the service (the signature permission, which Lychee declares too, so it holds it
     whichever app is installed first).
 -->
@@ -34,12 +34,18 @@
             </intent-filter>
         </activity>
 
-        <!-- on the launcher unless hidden (SetupActivity): opening it shows the models' status -->
+        <!--
+            The launcher icon: off in the manifest and switched on at runtime (Icon.apply) unless
+            hidden. Since Android 10 an app that uses permissions and has a launcher entry that is
+            on in its manifest gets an "App info" stand-in icon on every launcher (Kvaesitso, Pixel
+            Launcher, Nova ...) when that entry is turned off; one that is off in the manifest gets
+            none, so hiding really hides it.
+        -->
         <activity-alias
             android:name=".Launcher"
             android:targetActivity=".SetupActivity"
             android:exported="true"
-            android:enabled="true">
+            android:enabled="false">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

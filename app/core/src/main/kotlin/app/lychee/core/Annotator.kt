@@ -164,7 +164,12 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
         val hint = if (mode.englishLookup) null else parseHint(comment, lang, chars.size)
         val hws = lookup(text)
         if (hws.isNotEmpty()) {
-            val word = resolveWord(hws, hint, lang)
+            val found = resolveWord(hws, hint, lang)
+            // both languages always: a word without a reading in one is read character by character
+            val word = found.copy(
+                reading = found.reading ?: charByChar(text, lang),
+                otherReading = found.otherReading ?: charByChar(text, other(lang)),
+            )
             // a word the dictionary has without a usable meaning: its characters' meanings,
             // so every candidate means something
             if (word.meaning == null && chars.size > 1) {
@@ -215,15 +220,17 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
                 len--
             }
             if (found.isEmpty()) {
-                readings += hint?.getOrNull(i)
-                others += null
+                val ch = String(chars, i, 1)
+                readings += hint?.getOrNull(i) ?: charByChar(ch, lang)
+                others += charByChar(ch, other(lang))
                 i++
                 continue
             }
             val sub = hint?.subList(i, i + len)
             val r = resolveWord(found, sub, lang)
-            readings += r.reading ?: sub?.joinToString(" ")
-            others += r.otherReading
+            val piece = String(chars, i, len)
+            readings += r.reading ?: sub?.joinToString(" ") ?: charByChar(piece, lang)
+            others += r.otherReading ?: charByChar(piece, other(lang))
             headwords += r.headwords.first()
             // the piece's meaning as read here (行 hang4 walks, hong4 is a row)
             (r.meaning?.let { shorten(it, 16) } ?: pieceMeaning(r.headwords.first(), lang))?.let { meanings += it }
@@ -260,6 +267,22 @@ class Annotator(private val dictionary: Dictionary, cacheSize: Int = 1024) {
             if (hasTones) reading == hint else Romanization.toneless(reading) == hint
         }
         else -> Romanization.pinyinKey(reading) == Romanization.pinyinKey(hint)
+    }
+
+    private fun other(lang: Lang) = if (lang == Lang.Cantonese) Lang.Mandarin else Lang.Cantonese
+
+    /**
+     * [text]'s reading in [lang] character by character (each character's most common reading),
+     * for a word the dictionary has without a reading in that language; null when no character
+     * has one. A character with none shows as "?".
+     */
+    private fun charByChar(text: String, lang: Lang): String? {
+        val parts = text.codePoints().toArray().map { cp ->
+            if (!isHan(cp)) null
+            else lookup(String(Character.toChars(cp))).firstNotNullOfOrNull { hw -> hw.readings[lang]?.firstOrNull() }
+        }
+        if (parts.none { it != null }) return null
+        return parts.joinToString(" ") { it ?: "?" }
     }
 
     private fun otherReading(hw: Headword, lang: Lang, reading: String?): String? {

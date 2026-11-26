@@ -25,6 +25,7 @@ import com.google.mlkit.vision.digitalink.recognition.WritingArea
  *              reply RESULT  data: "texts" (best first), or "notReady" while the model is
  *              still downloading (Lychee's own engine reads the pad meanwhile)
  *   STATUS     reply STATUS_RESULT  data: "ready" (the tags whose models are downloaded)
+ *   USE        data: "tags" (the models Lychee's keyboards use): only those come by themselves
  *
  * Recognition runs on the phone, with ML Kit's downloaded models; nothing written leaves it.
  */
@@ -34,6 +35,10 @@ class RecognitionService : Service() {
 
     private val messenger = Messenger(object : Handler(thread.looper) {
         override fun handleMessage(msg: Message) {
+            if (msg.what == USE) {
+                runCatching { Models.setUsed(this@RecognitionService, msg.data.getStringArrayList("tags").orEmpty()) }
+                return
+            }
             val reply = msg.replyTo ?: return
             when (msg.what) {
                 STATUS -> Models.ready { tags ->
@@ -48,8 +53,10 @@ class RecognitionService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        // the models come by themselves: nothing to open after installing
-        runCatching { Models.fetchMissing() }
+        // the models Lychee's keyboards use come by themselves: nothing to open after installing
+        runCatching { Models.fetchMissing(this) }
+        // the launcher icon comes on with the first use (its entry is off in the manifest)
+        Icon.apply(this)
     }
 
     private fun recognise(data: Bundle, reply: Messenger, id: Int) {
@@ -69,7 +76,8 @@ class RecognitionService : Service() {
                 }
             } else {
                 send(reply, RESULT, id, Bundle().apply { putBoolean("notReady", true) })
-                Models.fetchMissing()
+                // the language being written is wanted whatever was said before
+                if (!Models.isFetching(lang)) Models.fetch(lang)
             }
         }
     }
@@ -136,5 +144,6 @@ class RecognitionService : Service() {
         const val RESULT = 2
         const val STATUS = 3
         const val STATUS_RESULT = 4
+        const val USE = 5
     }
 }

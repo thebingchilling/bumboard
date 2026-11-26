@@ -46,6 +46,11 @@ class GoogleHandwriting private constructor(
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
             service = binder?.let { Messenger(it) }
+            // which models Lychee's keyboards use: only those are kept on the phone
+            val tags = usedModels(context)
+            runCatching {
+                service?.send(Message.obtain(null, USE).apply { data = Bundle().apply { putStringArrayList("tags", ArrayList(tags)) } })
+            }
         }
         override fun onServiceDisconnected(name: ComponentName?) {
             service = null
@@ -111,6 +116,22 @@ class GoogleHandwriting private constructor(
         val SERVICE = ComponentName(PACKAGE, "$PACKAGE.RecognitionService")
         private const val RECOGNISE = 1
         private const val STATUS = 3
+        private const val USE = 5
+
+        /**
+         * The ML Kit models the enabled keyboards use: Cantonese reads Hong Kong's and the
+         * mainland's, Mandarin the mainland's and Taiwan's (Chinese reads both scripts),
+         * Japanese and Korean their own. English keyboards use none.
+         */
+        fun usedModels(context: Context): List<String> {
+            val engines = runCatching {
+                val imm = context.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                val me = imm.enabledInputMethodList.firstOrNull { it.packageName == context.packageName } ?: return emptyList()
+                imm.getEnabledInputMethodSubtypeList(me, true)
+                    .mapNotNull { it.getExtraValueOf(app.lychee.chinese.ChineseInput.EXTRA_ENGINE) }
+            }.getOrDefault(emptyList())
+            return engines.flatMap { e -> listOfNotNull(languageFor(e, true), languageFor(e, false), alsoFor(e, true), alsoFor(e, false)) }.distinct()
+        }
 
         /**
          * Where the companion is downloaded (a release of Lychee's: the browser saves it, then

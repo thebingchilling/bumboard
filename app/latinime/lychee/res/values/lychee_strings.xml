@@ -93,6 +93,7 @@
     <string name="lychee_card_traditional">Traditional</string>
     <string name="lychee_card_simplified">Simplified</string>
     <string name="lychee_card_made_of">Made of</string>
+    <string name="lychee_card_part_form">A part of characters</string>
     <string name="lychee_card_used_in">Characters using it</string>
     <string name="lychee_card_stroke_of">Stroke %1$d of %2$d</string>
     <string name="lychee_card_stroke_play">Play</string>
@@ -112,6 +113,9 @@
     <string name="lychee_card_taiwan">Taiwan</string>
     <string name="lychee_card_tab_readings">Readings</string>
     <string name="lychee_card_tab_definitions">Definitions</string>
+    <string name="lychee_card_tab_meanings">Meanings</string>
+    <string name="lychee_card_tab_reading">Reading</string>
+    <string name="lychee_card_tab_strokes">Strokes</string>
     <string name="lychee_card_phrase_note">Not in the dictionary as a whole. What its parts mean:</string>
     <string name="lychee_card_back">Back</string>
     <string name="lychee_card_open_part">Open its own entry</string>

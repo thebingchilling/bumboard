@@ -15,10 +15,12 @@
   own download. No tracking, no cookies, nothing loaded from anywhere else.
 -->
 <style>
-  /* Material 3: a tonal palette from the accent (Lychee's, or the phone's when opened from it) */
+  /* Material 3: a tonal palette from the accent (Lychee's rose, or the phone's when opened from
+     it), laid out like Lychee's own Add-ons page: each add-on a compact card (tile, name, chips,
+     one action), grouped under headings in the accent colour */
   @font-face { font-family: "Google Sans Flex"; src: url("GoogleSansFlex.ttf") format("truetype"); font-weight: 100 1000; }
   :root {
-    --accent: #006a5d;
+    --accent: #a8344f;
     --primary: var(--accent);
     --on-primary: #ffffff;
     --background: color-mix(in srgb, var(--accent) 5%, #fbfdfb);
@@ -45,22 +47,30 @@
   body {
     font-family: "Google Sans Flex", system-ui, sans-serif;
     background: var(--background); color: var(--on-surface);
-    display: grid; place-items: center; min-height: 100vh; padding: 24px 16px;
+    min-height: 100vh; padding: 24px 16px;
   }
-  .card {
-    width: 100%; max-width: 480px; padding: 28px 24px 20px;
-    background: var(--container); border-radius: 28px;
-  }
+  .card { width: 100%; max-width: 480px; margin: 0 auto; animation: in .35s cubic-bezier(.05,.7,.1,1); }
+  @keyframes in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
   h1 { margin: 0 0 6px; font-size: 24px; font-weight: 500; }
   h2 { margin: 20px 0 4px; font-size: 14px; font-weight: 600; color: var(--primary); }
   p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--on-surface-variant); }
-  ul { list-style: none; padding: 0; margin: 8px 0 0; }
-  li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--outline); }
-  li:first-child { border-top: 0; }
+  ul { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 8px; }
+  /* every add-on is the same compact card, as in Lychee's store */
+  li {
+    display: flex; align-items: center; gap: 12px; padding: 10px 8px 10px 12px;
+    background: var(--container); border-radius: 16px;
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  li:active { transform: scale(.97); }
+  .tile {
+    width: 40px; height: 40px; flex: none; border-radius: 10px; background: var(--tonal);
+    display: grid; place-items: center; font-size: 19px; color: var(--on-surface);
+  }
   .what { flex: 1; min-width: 0; }
-  .name { font-size: 16px; }
-  .meta { font-size: 13px; color: var(--on-surface-variant); margin-top: 2px; }
-  .meta.new { color: var(--primary); font-weight: 500; }
+  .name { font-size: 15px; font-weight: 500; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .chip { font-size: 11px; font-weight: 500; padding: 2px 6px; border-radius: 6px; background: var(--tonal); color: var(--on-surface-variant); }
+  .chip.new { background: var(--primary); color: var(--on-primary); }
   .button {
     font: inherit; font-size: 14px; font-weight: 500; letter-spacing: .1px; white-space: nowrap;
     background: var(--primary); color: var(--on-primary); border: 0; border-radius: 20px;
@@ -138,18 +148,48 @@
     ids.forEach((id) => ul.append(row(id, packs[id])));
     $('lists').append(h, ul);
   };
-  const item = (p, meta, isNew, link) => {
+  // an add-on's tile: a character for what it is, as in Lychee
+  const tileOf = (id, p) => {
+    const t = (id + ' ' + p.name).toLowerCase();
+    if (/emoji/.test(t)) return '😀';
+    if (/japan|_ja\b|rime_ja/.test(t)) return 'あ';
+    if (/korea|_ko\b/.test(t)) return '한';
+    if (/english|_en\b/.test(t)) return 'Aa';
+    if (/stroke/.test(t)) return '永';
+    if (/example/.test(t)) return '“”';
+    return '字';
+  };
+  // its heading on "All add-ons": by language, then every language
+  const areaOf = (id, p) => {
+    const t = (id + ' ' + p.name).toLowerCase();
+    // stroke order, examples and emoji serve every language
+    if (/stroke|example|emoji/.test(t)) return 'Every language';
+    if (/japan|_ja\b|rime_ja/.test(t)) return 'Japanese';
+    if (/korea|_ko\b/.test(t)) return 'Korean';
+    if (/chinese|_zh\b|cantonese|mandarin/.test(t)) return 'Chinese';
+    if (/english|_en\b/.test(t)) return 'English';
+    return 'Every language';
+  };
+  const item = (id, p, chips, link) => {
     const li = document.createElement('li');
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.textContent = tileOf(id, p);
     const what = document.createElement('div');
     what.className = 'what';
     const n = document.createElement('div');
     n.className = 'name';
     n.textContent = p.name;
     const m = document.createElement('div');
-    m.className = 'meta' + (isNew ? ' new' : '');
-    m.textContent = meta;
+    m.className = 'chips';
+    chips.forEach(([text, isNew]) => {
+      const c = document.createElement('span');
+      c.className = 'chip' + (isNew ? ' new' : '');
+      c.textContent = text;
+      m.append(c);
+    });
     what.append(n, m);
-    li.append(what);
+    li.append(tile, what);
     if (link) {
       const a = document.createElement('a');
       a.className = 'button tonal';
@@ -175,9 +215,14 @@
       const url = back(latest, files);
       if (all) {
         say('Lychee add-ons', 'Every add-on, with what is on your phone. Downloaded files install when you choose them in Lychee.');
-        list('Updates', updates, packs, (id, p) => item(p, 'Update: ' + have.get(id) + ' → ' + p.version, true, 'Download'));
-        list('Installed', installed.filter((id) => !updates.includes(id)), packs, (id, p) => item(p, 'Installed · ' + current(id), false, null));
-        list('Not installed', ids.filter((id) => !have.has(id)), packs, (id, p) => item(p, size(p.size) + ' · ' + p.version, false, 'Download'));
+        list('Updates', updates, packs, (id, p) => item(id, p, [['Update ' + have.get(id) + ' → ' + p.version, true], [size(p.size), false]], 'Download'));
+        // the rest by language, installed or not, each saying which
+        const rest = ids.filter((id) => !updates.includes(id));
+        ['Chinese', 'Japanese', 'Korean', 'English', 'Every language'].forEach((area) => {
+          list(area, rest.filter((id) => areaOf(id, packs[id]) === area), packs, (id, p) => have.has(id)
+            ? item(id, p, [['Installed', true], ['v' + current(id), false]], null)
+            : item(id, p, [['Free', false], [size(p.size), false], ['v' + p.version, false]], 'Download'));
+        });
         showBack(url);
         return;
       }
@@ -185,7 +230,7 @@
         say('All up to date', 'Your add-ons are the newest versions. Taking you back to Lychee…');
       } else {
         say('Update found', 'Taking you back to Lychee to download it.');
-        list('Updates', updates, packs, (id, p) => item(p, p.version, true, null));
+        list('Updates', updates, packs, (id, p) => item(id, p, [['v' + p.version, true]], null));
       }
       showBack(url);
       setTimeout(() => { location.href = url; }, 1200);

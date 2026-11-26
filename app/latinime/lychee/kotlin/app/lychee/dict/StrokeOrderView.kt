@@ -79,7 +79,7 @@ class StrokeOrderView @JvmOverloads constructor(
     /** How fast it writes: 1 is the usual pace, 2 twice as fast, 0.5 half. */
     var speed = 1f
         set(value) {
-            field = value.coerceIn(0.25f, 4f)
+            field = value.coerceIn(0.1f, 4f)
             // carries on from where it is, at the new pace
             if (playing) resume()
         }

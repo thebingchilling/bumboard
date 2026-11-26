@@ -258,7 +258,8 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                     Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .verticalScroll(rememberScrollState())
+                        // a page opened inside this one (an add-on's listing) starts at its top
+                        .verticalScroll(remember(shown, menu, InnerPage.title) { androidx.compose.foundation.ScrollState(0) })
                         .navigationBarsPadding()
                         .padding(bottom = 24.dp),
                 ) {
@@ -602,7 +603,6 @@ private fun ChinesePage() {
         prefs.getString(ChineseInput.PREF_CANTONESE_INPUT, null) ?: "jyutping"
     }
     val mandarin = prefs.stringPref(Readings.PREF_MANDARIN_SCRIPT) { Readings.mandarinScript(prefs) }
-    val otherLanguage = prefs.boolPref(Readings.PREF_OTHER_LANGUAGE) { prefs.getBoolean(Readings.PREF_OTHER_LANGUAGE, false) }
     val meaning = prefs.boolPref(Readings.PREF_MEANING) { prefs.getBoolean(Readings.PREF_MEANING, true) }
     val toneColours = prefs.boolPref(Readings.PREF_TONE_COLOURS) { prefs.getBoolean(Readings.PREF_TONE_COLOURS, true) }
     val jyutpingTones = prefs.stringPref(Readings.PREF_JYUTPING_TONES) { prefs.getString(Readings.PREF_JYUTPING_TONES, null) ?: "Numbers" }
@@ -614,7 +614,7 @@ private fun ChinesePage() {
     val display = app.lychee.core.DisplayPrefs(
         cantonese = if (cantonese.value == "yale") app.lychee.core.CantoneseRomanization.Yale else app.lychee.core.CantoneseRomanization.Jyutping,
         jyutpingTones = tone(jyutpingTones.value), yaleTones = tone(yaleTones.value), pinyinTones = tone(pinyinTones.value),
-        showOtherLanguage = otherLanguage.value, showMeaning = meaning.value, simplified = script.value == "simplified",
+        showOtherLanguage = true, showMeaning = meaning.value, simplified = script.value == "simplified",
         // the bars read in pinyin whatever the cards use
         zhuyin = false, pinyin = true,
     )
@@ -673,10 +673,6 @@ private fun ChinesePage() {
         }
     }
     Group(stringResource(R.string.lychee_readings_group_shown)) {
-        row {
-            SwitchRow(it, stringResource(R.string.lychee_readings_other), stringResource(R.string.lychee_readings_other_summary),
-                otherLanguage.value, otherLanguage::set)
-        }
         row {
             SwitchRow(it, stringResource(R.string.lychee_show_meaning), stringResource(R.string.lychee_readings_meaning_summary),
                 meaning.value, meaning::set)

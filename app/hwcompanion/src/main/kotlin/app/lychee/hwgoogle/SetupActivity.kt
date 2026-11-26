@@ -1,8 +1,6 @@
 package app.lychee.hwgoogle
 
 import android.app.Activity
-import android.content.ComponentName
-import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Color
@@ -21,9 +19,9 @@ import android.widget.Switch
 import android.widget.TextView
 
 /**
- * Lychee handwriting's one screen, plain and short: what the app is, each language's model and
- * whether it is ready (downloading any that aren't, and checking for newer ones), what the app
- * does and doesn't do with the internet, and a switch to hide its icon. Lychee's colours (the
+ * Lychee handwriting's one screen, plain and short: what the app is, each language's model (ready,
+ * downloading or not on the phone; whether Lychee's keyboards use it; Download or Remove), what
+ * the app does and doesn't do with the internet, and a switch to hide its icon. Lychee's colours (the
  * logo's red), no Material library, for size. Lychee opens it from Settings > Add-ons too, so a
  * hidden icon is never a lost app.
  */
@@ -38,7 +36,8 @@ class SetupActivity : Activity() {
     private val onVariant get() = if (dark) 0xFFD2B9BD.toInt() else 0xFF6B4E53.toInt()
     private val ok get() = if (dark) 0xFF7BD796.toInt() else 0xFF2A8546.toInt()
 
-    private val rows = HashMap<String, TextView>()
+    /** Each language's status line and its button. */
+    private val rows = HashMap<String, Pair<TextView, TextView>>()
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
@@ -68,20 +67,27 @@ class SetupActivity : Activity() {
             })
         })
 
-        // the languages and their models
+        // the languages and their models: only those your keyboards use are kept
         root.addView(heading(getString(R.string.models)))
         root.addView(card {
             Models.TAGS.forEachIndexed { i, tag ->
                 if (i > 0) addView(divider())
                 addView(LinearLayout(this@SetupActivity).apply {
                     gravity = Gravity.CENTER_VERTICAL
-                    setPadding(dp(16), dp(12), dp(16), dp(12))
-                    addView(text(languageName(tag), 15f, onSurface), LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-                    addView(text(getString(R.string.checking), 13f, onVariant).also { rows[tag] = it })
+                    setPadding(dp(16), dp(10), dp(8), dp(10))
+                    val status = text(getString(R.string.checking), 13f, onVariant)
+                    addView(LinearLayout(this@SetupActivity).apply {
+                        orientation = LinearLayout.VERTICAL
+                        addView(text(languageName(tag), 15f, onSurface))
+                        addView(status)
+                    }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                    val button = pill("").apply { visibility = View.INVISIBLE }
+                    addView(button)
+                    rows[tag] = status to button
                 })
             }
         })
-        root.addView(text(getString(R.string.models_note), 13f, onVariant).apply { setPadding(dp(4), dp(8), dp(4), 0) })
+        root.addView(text(getString(R.string.models_note, Models.SIZE_MB), 13f, onVariant).apply { setPadding(dp(4), dp(8), dp(4), 0) })
 
         // privacy, plainly
         root.addView(heading(getString(R.string.privacy)))
@@ -104,11 +110,11 @@ class SetupActivity : Activity() {
                     addView(text(getString(R.string.hide_icon_note), 13f, onVariant).apply { setPadding(0, dp(2), dp(8), 0) })
                 }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
                 addView(Switch(this@SetupActivity).apply {
-                    isChecked = iconHidden()
+                    isChecked = Icon.hidden(this@SetupActivity)
                     val states = arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf())
                     thumbTintList = ColorStateList(states, intArrayOf(primary, onVariant))
                     trackTintList = ColorStateList(states, intArrayOf(primary and 0x00FFFFFF or 0x66000000, onVariant and 0x00FFFFFF or 0x33000000))
-                    setOnCheckedChangeListener { _, hide -> setIconHidden(hide) }
+                    setOnCheckedChangeListener { _, hide -> Icon.setHidden(this@SetupActivity, hide) }
                 })
             })
         })
@@ -132,8 +138,8 @@ class SetupActivity : Activity() {
         }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
 
         setContentView(ScrollView(this).apply { addView(root) })
-        applyIconSetting()
-        download()
+        Icon.apply(this)
+        refresh(checkForNewer = true)
     }
 
     private fun languageName(tag: String): String = getString(when (tag) {
@@ -144,41 +150,62 @@ class SetupActivity : Activity() {
         else -> R.string.lang_ko
     })
 
-    /** Fetches each model not here yet (and a newer one where Google has it); each row says how it went. */
-    private fun download() {
-        Models.TAGS.forEach { tag ->
-            rows[tag]?.text = getString(R.string.downloading)
-            Models.fetch(tag) { ready ->
-                runOnUiThread {
-                    rows[tag]?.apply {
-                        text = getString(if (ready) R.string.ready else R.string.failed)
-                        setTextColor(if (ready) ok else onVariant)
+    /**
+     * Each language's line: ready (and used or not by your keyboards), downloading, or not on the
+     * phone, with Remove or Download beside it. [checkForNewer]: the models your keyboards use are
+     * fetched again too (ML Kit gets Google's newest), as opening the app always did.
+     */
+    private fun refresh(checkForNewer: Boolean = false) {
+        val used = Models.used(this)
+        if (checkForNewer) used.forEach { tag -> if (!Models.isFetching(tag)) Models.fetch(tag) { runOnUiThread { refresh() } } }
+        Models.ready { ready ->
+            runOnUiThread {
+                Models.TAGS.forEach { tag ->
+                    val (status, button) = rows[tag] ?: return@forEach
+                    val inUse = tag in used
+                    when {
+                        Models.isFetching(tag) -> {
+                            status.text = getString(R.string.downloading)
+                            status.setTextColor(onVariant)
+                            button.visibility = View.INVISIBLE
+                        }
+                        tag in ready -> {
+                            status.text = getString(if (inUse) R.string.ready_used else R.string.ready_unused)
+                            status.setTextColor(if (inUse) ok else onVariant)
+                            button.text = getString(R.string.remove)
+                            button.visibility = View.VISIBLE
+                            button.setOnClickListener {
+                                button.visibility = View.INVISIBLE
+                                Models.remove(tag) { runOnUiThread { refresh() } }
+                            }
+                        }
+                        else -> {
+                            status.text = getString(if (inUse) R.string.failed else R.string.not_downloaded)
+                            status.setTextColor(onVariant)
+                            button.text = getString(R.string.download)
+                            button.visibility = View.VISIBLE
+                            button.setOnClickListener {
+                                Models.fetch(tag) { runOnUiThread { refresh() } }
+                                refresh()
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    // ------------------------------------------------------------------ the icon
-
-    private val prefs get() = getSharedPreferences("lychee_handwriting", MODE_PRIVATE)
-
-    private fun iconHidden() = prefs.getBoolean(PREF_HIDE_ICON, false)
-
-    private fun setIconHidden(hide: Boolean) {
-        prefs.edit().putBoolean(PREF_HIDE_ICON, hide).apply()
-        applyIconSetting()
-    }
-
-    /** The launcher icon as chosen: shown (the default) or hidden. */
-    private fun applyIconSetting() {
-        runCatching {
-            packageManager.setComponentEnabledSetting(
-                ComponentName(this, "$packageName.Launcher"),
-                if (iconHidden()) PackageManager.COMPONENT_ENABLED_STATE_DISABLED else PackageManager.COMPONENT_ENABLED_STATE_DEFAULT,
-                PackageManager.DONT_KILL_APP,
-            )
-        }
+    /** A small rounded text button in the accent colour. */
+    private fun pill(label: String) = TextView(this).apply {
+        text = label
+        setTextColor(primary)
+        textSize = 14f
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        gravity = Gravity.CENTER
+        setPadding(dp(14), 0, dp(14), 0)
+        minHeight = dp(40)
+        background = RippleDrawable(ColorStateList.valueOf(Color.argb(0x1F, Color.red(primary), Color.green(primary), Color.blue(primary))),
+            null, GradientDrawable().apply { cornerRadius = dp(20).toFloat(); setColor(Color.WHITE) })
     }
 
     // ------------------------------------------------------------------ views
@@ -201,9 +228,5 @@ class SetupActivity : Activity() {
     private fun divider() = View(this).apply {
         setBackgroundColor(onVariant and 0x00FFFFFF or 0x22000000)
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1).apply { marginStart = dp(16) }
-    }
-
-    private companion object {
-        const val PREF_HIDE_ICON = "hide_icon"
     }
 }

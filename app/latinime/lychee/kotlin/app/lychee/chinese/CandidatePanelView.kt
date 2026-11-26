@@ -85,7 +85,8 @@ class CandidatePanelView @JvmOverloads constructor(
         pickOverride = onPicked
         longPickOverride = onLongPicked
         val gen = ++generation
-        adapter.items = candidates.withIndex().filter { it.index > after && CandidateBarView.renderable(it.value.text) }
+        adapter.items = candidates.withIndex().filter { it.index > after &&
+            (if (style.fontLang == "en") CandidateBarView.renderable(it.value.text) else CandidateBarView.shown(it.value.text)) }
         adapter.scale = scale
         adapter.style = style
         adapter.annotations.clear()

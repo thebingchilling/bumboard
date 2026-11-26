@@ -114,15 +114,22 @@ packs page). Public facing, so be careful:
   offline and binds its service (a signature permission: only apps signed like Lychee), handing
   it the pad's strokes (`handwriting/GoogleHandwriting`). The companion is a small app with Lychee's icon: its full-screen
   setup (the Lychee logo's colours, no Material library, for size) lists each language's model
-  and whether it is ready, a plain privacy note, and a switch to hide its launcher icon (Lychee
-  opens it from Add-ons too, so a hidden icon is never a lost app). The companion itself has no
+  (ready, downloading or not on the phone; whether Lychee's keyboards use it; Download or
+  Remove), a plain privacy note, and a switch to hide its launcher icon (Lychee opens it from
+  Add-ons too, so a hidden icon is never a lost app). Only the models of the enabled keyboards
+  download by themselves: Lychee says which on each bind (`GoogleHandwriting.usedModels`, the
+  USE message; Cantonese uses Hong Kong's and the mainland's, Mandarin the mainland's and
+  Taiwan's). Its launcher entry is off in the manifest and switched on at runtime (`Icon`):
+  since Android 10 an app with permissions whose manifest entry is on gets an "App info"
+  stand-in icon on launchers such as Kvaesitso when it is turned off; off in the manifest, it
+  really hides. The companion itself has no
   tracking, analytics or ads. ML Kit's own performance and usage reporting stays: Google's API
   terms forbid interfering with it. The app's privacy note says so plainly (never the
   handwriting). Lychee itself is closed and commercial. Only the
   companion's code will be published, and only as **source-available** (readable to check it
   has no tracking; no copying, changing or redistributing; licence to be confirmed, PolyForm
   Strict 1.0.0 recommended), never called "open source". Nothing is published until the owner
-  has checked it (`app/hwcompanion/README.md`). It also fetches the models by itself when
+  has checked it (`app/hwcompanion/README.md`). It also fetches the used models by itself when
   Lychee first binds it (PP-OCR reads the pad meanwhile). This is how the first companion, which
   worked, was made; the icon-less, R8-shrunk build that followed did not work. With it installed only ML Kit reads the pad. Settings > Add-ons offers it (saying ML Kit's licence needs the
   companion, and its size), and so does a chip on the pad. It is built once, and rebuilt only
@@ -133,7 +140,10 @@ packs page). Public facing, so be careful:
   Hangul layouts). Candidates show readings and meanings. Korean candidates offer a word's Hanja
   right after it in Hangul, as Japanese offers Kanji; the bar's reading lines never show Kanji
   or Hanja. Lychee's own labels are English (Cantonese/Mandarin), except the 繁/简 key, and 英 shows only
-  on the main (letters) keyboard.
+  on the main (letters) keyboard. Candidates in Latin letters only never show on the Chinese,
+  Japanese and Korean keyboards (`CandidateBarView.shown`). Cantonese and Mandarin readings
+  always show together, on the bar and everywhere (no setting); a word the dictionary lacks a
+  reading for in one of them is read character by character (`Annotator.charByChar`).
 - Freemium later; no billing or unlocking yet (`Features.isEnabled` is always true). Data in
   packs must allow commercial use (no NC or ND licences; CC BY / BY-SA / BSD are fine).
 - Always be honest with users about why something can't be offered: whenever a feature,
@@ -236,8 +246,12 @@ packs page). Public facing, so be careful:
   - Google Handwriting is a listing like the others, noting it needs the free Lychee
     handwriting app.
   - The registration is at the very bottom. Every listing opens its own page like
-  Pleco's (`settings/ProductSheet.kt`, the downloads' sheet): price, size, version, a worked
-  example, what it gives, its free trial, sources and licences, privacy. Rows show their text in
+  Pleco's (`settings/ProductSheet.kt`; a free download's `AddonPage` is laid out the same):
+  each part its own card (the price or Free with the actions, In Lychee, What you get, Included,
+  then one Details card for the plain words). In Lychee is the real keyboard
+  (`settings/KeyboardSample.kt`: the keys, the candidate bar and the word card open on the
+  add-on's tab, shrunk to the page). A listing opens at its top; the store's pages and tabs move
+  with the settings' page transition. Rows show their text in
   full and act by icon only (delete, download; no "Restore"). Wording sells honestly: no "Pro" or
   hype; ML Kit, open data, licences, open source and privacy named plainly
   (free and, later, paid add-ons: `price` and `featured` in packs.json; everything is free until
@@ -275,7 +289,8 @@ is outside it.
     bundled in the APK.
 - `tools/` — `screens-setup.sh` and `screens.sh`: drawing the UI locally with Paparazzi.
 - `packs/` — the pack builders and the packs page (Japanese, Korean, English dictionaries,
-  stroke order, examples, font mirrors; `packs/site`), run by `packs.yml`.
+  stroke order, examples, font mirrors; `packs/site`, laid out like the in-app Add-ons page:
+  each add-on a compact card under language headings, Lychee's rose), run by `packs.yml`.
 - `.github/workflows/` — `build.yml` (the app), `packs.yml` (the packs, by hand) and
   `cleanup.yml` (Actions storage is limited: after a successful build or packs run it deletes
   every other run of that workflow with its artifacts and logs, and stale caches; run by hand
@@ -307,18 +322,27 @@ is outside it.
   add-on and its new version. "All add-ons" (the page with `all=1`) lists every add-on: updates,
   installed and not installed.
 - The dictionary card (`chinese/DictionaryPopup.kt`, plan in `REDESIGN.md`) has one fixed size
-  and never grows.
+  and never grows. In the keyboard it is a sheet as wide as the keys, rising from the candidate
+  bar; dragging its handle or header down closes it, and swiping up on a candidate opens it.
+  With Back, Back and ✕ have a row of their own above the headword.
   - Header: the word, the reading of every syllable, one outlined 粵/普 switch for the whole card,
     the speaker and ✕.
-  - Tabs as Pleco has them, swiped or tapped: Summary (a pin icon), Definitions, Readings,
-    Examples, Stroke order, Parts. Empty ones are left out, and each page scrolls on its own.
-  - Summary is one page of what decides whether to type it: the meanings (and measure word).
+  - Tabs as Pleco has them, swiped or tapped, all on screen at once: Summary (a pin icon),
+    Meanings, Reading, Examples, Strokes, Parts. Empty ones are left out, and each page scrolls
+    on its own, except the Summary.
+  - Summary never scrolls: everything useful, most useful first (meanings, other readings,
+    measure word, characters, an example, phrases), and what doesn't fit is left off (`FitPage`).
+  - English has no Reading tab: each pronunciation, with its speaker, sits over its meanings.
+  - Speakers say exactly the reading shown: a single character or a rarer reading is spelt in
+    characters only read that way (`spell`).
   - Readings doesn't repeat the header's readings or its 粵/普 switch: other romanisations and
     every reading with its meaning.
   - Examples ends with Phrases: the words the word builds (each opens its card).
   - Stroke order: one character large; ‹ ›, swipe or dots go through the word's characters;
-    Traditional | Simplified (Hangul | Hanja, old kanji); back, play/pause, on, again; ½× 1× 2×.
-  - Parts: the word's characters; a character's parts (Made of) and the characters using it,
-    in either script.
+    Traditional | Simplified (Hangul | Hanja, old kanji); centred under it back, play/pause, on,
+    again; at its side a speed bar to drag (0.1× to 2×). Strokes are never numbered.
+  - Parts: a list like Phrases (each character with both readings, its meaning and a chevron):
+    the word's characters; a character's parts (Made of) and the characters using it, in
+    either script.
   - Held to peek (Settings), the card goes when the finger lifts unless slid onto its lock bar.
   - A part opens as its own card, with Back.

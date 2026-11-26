@@ -232,6 +232,31 @@ object LycheeMotion {
         }
     }
 
+    /** A sheet coming in (the word card in the keyboard): it rises from below with a soft spring. */
+    @JvmStatic
+    fun sheetIn(sheet: View) {
+        if (!LycheePanels.animate(sheet.context)) return
+        sheet.animate().cancel()
+        sheet.alpha = 0f
+        sheet.post {
+            sheet.translationY = sheet.height * 0.35f
+            sheet.animate().alpha(1f).translationY(0f).setStartDelay(0).setDuration(CARD_IN)
+                .setInterpolator(android.view.animation.OvershootInterpolator(0.8f)).start()
+        }
+    }
+
+    /** A sheet going: it slides back down from where it is as it fades, then [end] runs. */
+    @JvmStatic
+    fun sheetOut(sheet: View, end: Runnable) {
+        if (!LycheePanels.animate(sheet.context)) {
+            end.run()
+            return
+        }
+        sheet.animate().cancel()
+        sheet.animate().translationY(sheet.height.toFloat()).alpha(0f).setStartDelay(0).setDuration(OUT + 60)
+            .setInterpolator(exitEasing).withEndAction(end).start()
+    }
+
     /** A card going: it shrinks back a little as it fades, then [end] runs. */
     @JvmStatic
     fun cardOut(card: View, end: Runnable) {

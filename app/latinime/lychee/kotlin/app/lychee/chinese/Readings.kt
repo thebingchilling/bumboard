@@ -83,7 +83,8 @@ object Readings {
         } else {
             CantoneseRomanization.Jyutping
         },
-        showOtherLanguage = prefs.getBoolean(PREF_OTHER_LANGUAGE, false),
+        // Cantonese and Mandarin always both, on the bar and everywhere (the owner's choice)
+        showOtherLanguage = true,
         showMeaning = prefs.getBoolean(PREF_MEANING, true),
         simplified = ChineseScript.candidatesSimplified(prefs),
         jyutpingTones = tones(prefs, PREF_JYUTPING_TONES, app.lychee.core.ToneStyle.Numbers),

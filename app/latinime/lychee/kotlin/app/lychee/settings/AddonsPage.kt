@@ -3,6 +3,7 @@
 package app.lychee.settings
 
 import android.graphics.BitmapFactory
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -81,24 +82,61 @@ fun AddonsPage() {
     remember { Packs.removeUnlisted(context) }
     val catalog = remember { Packs.catalog(context) }
     var tab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(StoreTab.entries[StoreLook.startTab]) }
-    val colors = MaterialTheme.colorScheme
-    // a listing opens as a page of its own, in place of the store; the app bar's ← (or Back) returns
-    ProductSheet.open?.let { product ->
-        InnerPageOf(product.name) { ProductSheet.open = null }
-        ProductPage(product)
-        AddonSheetHost(actions)
-        return
+    // a listing opens as a page of its own, in place of the store (cross-fading and settling in);
+    // the app bar's ← (or Back) returns
+    val listing: Any? = ProductSheet.open ?: AddonSheet.open
+    listing?.let { l ->
+        InnerPageOf(if (l is Pack) addonName(l) else (l as app.lychee.store.Store.Product).name) {
+            ProductSheet.open = null; AddonSheet.open = null
+        }
     }
+    androidx.compose.animation.AnimatedContent(targetState = listing, label = "listing", transitionSpec = { pageTransition(targetState != null) }) { l ->
+        Column {
+            when (l) {
+                is app.lychee.store.Store.Product -> ProductPage(l)
+                is Pack -> AddonPage(l, actions)
+                else -> AddonsHome(tab, { tab = it }, catalog, tick, actions, { version++ }, context)
+            }
+        }
+    }
+}
+
+/**
+ * Pages of the store moving: forward (a listing opening) slides a little in from the right as it
+ * fades and springs to size; back comes from the left. Gentle, like the settings' pages.
+ */
+fun pageTransition(forward: Boolean): androidx.compose.animation.ContentTransform {
+    val sign = if (forward) 1 else -1
+    val ease = androidx.compose.animation.core.CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+    return (androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(350, easing = ease)) { sign * it / 10 } +
+        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(210, delayMillis = 60)) +
+        androidx.compose.animation.scaleIn(androidx.compose.animation.core.spring(dampingRatio = 0.7f,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow), initialScale = 0.97f))
+        .togetherWith(
+            androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(350, easing = ease)) { -sign * it / 10 } +
+                androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(90)),
+        )
+}
+
+/** The store's tabs and what each shows (Store, Installed, Updates). */
+@Composable
+private fun AddonsHome(tab: StoreTab, setTab: (StoreTab) -> Unit, catalog: List<Pack>, tick: Int, actions: PackActions,
+                       changed: () -> Unit, context: android.content.Context) {
+    val colors = MaterialTheme.colorScheme
     androidx.compose.material3.PrimaryTabRow(selectedTabIndex = tab.ordinal, containerColor = colors.surface) {
         StoreTab.entries.forEach { t ->
-            androidx.compose.material3.Tab(selected = tab == t, onClick = { tab = t },
+            androidx.compose.material3.Tab(selected = tab == t, onClick = { setTab(t) },
                 text = { Text(t.title, maxLines = 1) })
         }
     }
     PackMessage(actions)
-    val remove: (Pack) -> Unit = { pack -> PackStorage.remove(context, pack); version++ }
-    when (tab) {
-        StoreTab.STORE -> StoreHome(catalog, tick, actions, onRemove = remove) { version++ }
+    val remove: (Pack) -> Unit = { pack -> PackStorage.remove(context, pack); changed() }
+    // the tabs cross-fade, settling in
+    androidx.compose.animation.AnimatedContent(targetState = tab, label = "tab",
+        transitionSpec = { pageTransition(targetState.ordinal > initialState.ordinal) }) { shownTab ->
+    Column {
+    when (shownTab) {
+        StoreTab.STORE -> StoreHome(catalog, tick, actions, onRemove = remove) { changed() }
         StoreTab.INSTALLED -> {
             val total = remember(tick) { Packs.totalSize(context) }
             Text(stringResource(R.string.lychee_addons_used, Packs.formatSize(total)), style = MaterialTheme.typography.bodyMedium,
@@ -112,7 +150,7 @@ fun AddonsPage() {
                 val packs = installed.filter { PackStorage.section(it) == section }
                 if (packs.isEmpty()) continue
                 Listings(stringResource(sectionName(section))) {
-                    packs.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { remove(pack) }) { version++ } }
+                    packs.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { remove(pack) }) { changed() } }
                 }
             }
         }
@@ -139,8 +177,9 @@ fun AddonsPage() {
             }
         }
     }
+    }
+    }
     Spacer(Modifier.height(16.dp))
-    AddonSheetHost(actions)
 }
 
 /** The store's sections: each language, then what works in every language. */
@@ -552,63 +591,73 @@ private fun sectionName(section: PackStorage.Section) = when (section) {
 }
 
 /**
- * The sheet for [AddonSheet.open]: what the add-on is (a picture of it when there is one), and
- * the steps to get it. 1 Download: the browser saves the file. 2 Install: open the file from the
- * browser's notice, or choose it here. Once it is installed the sheet says so (the page re-reads
- * the packs when Lychee comes back from the browser). Your own fonts have one step: choose it.
+ * [AddonSheet.open] outside Add-ons (Settings > Fonts): its page in a sheet. Inside Add-ons it is
+ * a page of its own ([AddonPage]), like a paid listing's.
  */
 @Composable
 fun AddonSheetHost(actions: PackActions) {
     val pack = AddonSheet.open ?: return
+    val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = { AddonSheet.open = null }, sheetState = state) {
+        Column(Modifier.fillMaxWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).navigationBarsPadding()) {
+            AddonPage(pack, actions)
+        }
+    }
+}
+
+/**
+ * A free download's page, laid out exactly like a paid listing's (ProductPage): its tile, name
+ * and line; a card where the price would be (Free, its size and version, and where it stands:
+ * installed with Remove, an update, or the steps to get it: 1 download the file, 2 choose it);
+ * then its own cards: the picture of it, the paid add-on it is part of, and its details (source
+ * and licence, privacy).
+ */
+@Composable
+fun AddonPage(pack: Pack, actions: PackActions) {
     val context = LocalContext.current
     @Suppress("UNUSED_VARIABLE") val refresh = actions.version + PackRefresh.tick
     val installed = Packs.isInstalled(context, pack.id)
+    val bundled = remember(pack.id) { app.lychee.packs.BundledPacks.isBundled(context, pack.id) }
     var downloaded by remember(pack.id) { mutableStateOf(Packs.pending(context)?.id == pack.id) }
-    val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val colors = MaterialTheme.colorScheme
-    ModalBottomSheet(onDismissRequest = { AddonSheet.open = null }, sheetState = state) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 16.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AddonTile(pack, 56.dp, androidx.compose.ui.unit.TextUnit(26f, androidx.compose.ui.unit.TextUnitType.Sp))
+            Spacer(Modifier.size(16.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(addonName(pack), style = MaterialTheme.typography.headlineSmall, color = colors.onSurface)
+                if (pack.summary.isNotEmpty()) Text(pack.summary, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+            }
+        }
+        // where the price would be: Free, the facts, and what can be done
         Column(
-            Modifier
-                .fillMaxWidth()
-                .verticalScroll(androidx.compose.foundation.rememberScrollState())
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp)
-                .navigationBarsPadding(),
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(colors.surfaceContainerLow).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(addonName(pack), style = MaterialTheme.typography.titleLarge)
-            if (pack.summary.isNotEmpty()) Text(pack.summary, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
-            val picture = remember(pack.preview) {
-                pack.preview?.let { path ->
-                    runCatching { context.assets.open(path).use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
-                }
-            }
-            if (picture != null) {
-                Image(picture, null, contentScale = ContentScale.Fit, alignment = Alignment.CenterStart,
-                    modifier = Modifier.fillMaxWidth().height(48.dp))
-            }
-            // the facts, as on a store page: free, its size, the version installed or to download
             val shownVersion = Packs.installedVersion(context, pack.id) ?: app.lychee.packs.Updates.latestOf(context, pack)
-            val facts = listOfNotNull("Free", pack.size.takeIf { it.isNotEmpty() }, shownVersion?.let { "Version $it" },
-                "Works offline").joinToString("  ·  ")
-            Text(facts, style = MaterialTheme.typography.labelLarge, color = colors.primary)
-            // the paid add-on it is part of, when it is one
-            app.lychee.store.Store.forPack(pack.id)?.let { product ->
-                Text("Part of ${product.name}. Tap for its page.",
-                    style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
-                    modifier = Modifier.clickable { AddonSheet.open = null; ProductSheet.open = product })
+            Text(if (pack.custom) "Your own" else (pack.price ?: stringResource(R.string.lychee_store_free)),
+                style = MaterialTheme.typography.headlineSmall, color = colors.onSurface)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                when {
+                    installed && bundled -> ListingChip(stringResource(R.string.lychee_addons_bundled), accent = true)
+                    installed -> ListingChip(stringResource(R.string.lychee_addons_installed), accent = true)
+                }
+                pack.size.takeIf { it.isNotEmpty() }?.let { ListingChip(it) }
+                shownVersion?.let { ListingChip("v$it") }
+                ListingChip("Works offline")
             }
             if (actions.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-            // an installed add-on with a newer version gets the download steps again
             if (installed && !app.lychee.packs.Updates.hasUpdate(context, pack)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(painterResource(R.drawable.ic_sym_check_circle), null, tint = colors.primary, modifier = Modifier.size(28.dp))
-                    Text(stringResource(R.string.lychee_addons_installed), style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(start = 12.dp))
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { AddonSheet.open = null }) { Text(stringResource(R.string.lychee_addons_done)) }
-                    OutlinedButton(onClick = { actions.remove(pack) }) { Text(stringResource(R.string.lychee_packs_remove)) }
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(onClick = { actions.remove(pack) }, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.lychee_packs_remove), maxLines = 1)
+                    }
+                    Button(onClick = { AddonSheet.open = null }, modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.lychee_addons_done), maxLines = 1)
+                    }
                 }
             } else if (pack.custom) {
                 Step(1, stringResource(R.string.lychee_addons_step_choose), active = true) {
@@ -638,18 +687,38 @@ fun AddonSheetHost(actions: PackActions) {
                 }
             }
             actions.message?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.primary) }
-            // where it comes from, under which licence, and what stays on the phone
-            if (!pack.custom) {
-                Text("Source and licence", style = MaterialTheme.typography.titleSmall, color = colors.primary)
-                Text(listOf(pack.credit, pack.license).filter { it.isNotEmpty() }.joinToString(". ")
-                    .ifEmpty { "Its licence is in the downloaded file." },
-                    style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
-                Text("Privacy", style = MaterialTheme.typography.titleSmall, color = colors.primary)
-                Text("The browser downloads it; Lychee itself has no internet permission. Once installed it works " +
-                    "offline, and nothing you type ever leaves your phone.",
-                    style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
+        }
+        // a picture of it (a font's letters), in its own card
+        val picture = remember(pack.preview) {
+            pack.preview?.let { path ->
+                runCatching { context.assets.open(path).use { BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull()
             }
         }
+        if (picture != null) Section("In Lychee") {
+            Image(picture, null, contentScale = ContentScale.Fit, alignment = Alignment.CenterStart,
+                modifier = Modifier.fillMaxWidth().height(56.dp))
+        }
+        // the paid add-on it is part of, as a row to open
+        app.lychee.store.Store.forPack(pack.id)?.let { product ->
+            Section("Part of") {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { AddonSheet.open = null; ProductSheet.open = product }
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ProductTile(product, 32)
+                    Spacer(Modifier.size(12.dp))
+                    Text(product.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Icon(painterResource(R.drawable.ic_sym_chevron_right), null, tint = colors.onSurfaceVariant)
+                }
+            }
+        }
+        if (!pack.custom) Details(listOf(
+            "Source and licence" to listOf(pack.credit, pack.license).filter { it.isNotEmpty() }.joinToString(". ")
+                .ifEmpty { "Its licence is in the downloaded file." },
+            "Privacy" to "The browser downloads it; Lychee itself has no internet permission. Once installed it works " +
+                "offline, and nothing you type ever leaves your phone.",
+        ))
     }
 }
 
