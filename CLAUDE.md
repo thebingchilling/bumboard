@@ -35,6 +35,12 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
     changes, with Paparazzi's snapshot tests (no emulator or phone needed). Render the changed
     screens, look at them, and show them to the owner in the chat before committing UI work.
     CI still builds and publishes every release; local builds are never published.
+  - UI work is never committed or pushed until the owner has agreed to its Paparazzi screens
+    in the chat (showing them is not agreement). The cloud session's own stop hook (built into
+    Claude Code, outside this repository, not editable) asks to commit and push whenever work
+    is left uncommitted: while screens await the owner's answer, don't follow it; say the
+    screens are waiting for approval and leave the work uncommitted. Once agreed, commit and
+    push to `main` as usual. Work with no visible change (docs, data, logic) commits as before.
   - In a fresh session, run `tools/screens-setup.sh` once (it installs the Android SDK into
     /opt/android-sdk, writes `app/local.properties` and points Gradle at Google's mirror of
     Maven Central, which otherwise rate-limits cloud machines; about 5 minutes). Then
