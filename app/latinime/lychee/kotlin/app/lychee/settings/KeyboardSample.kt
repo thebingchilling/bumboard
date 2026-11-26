@@ -11,6 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +40,8 @@ import app.lychee.store.Store
 object KeyboardSample {
     /** The card's height in the example, in dp (the keyboard under it is its real height). */
     private const val CARD_DP = 320
+    /** Room above the card for the page's light/dark toggle, in dp. */
+    const val TOGGLE_ROOM_DP = 36
 
     /** Whether [sample] can be drawn as a keyboard (the others keep their written example). */
     fun drawable(sample: Store.Sample): Boolean = when (sample) {
@@ -53,66 +59,42 @@ object KeyboardSample {
         else -> Bar("hokhaau", listOf("學校", "學", "鶴", "學好"), "yue")
     }
 
-    /** The keys' height, the preview's own top bar's, and the candidate bar's, in px, at the phone's width. */
-    private fun sizes(context: Context, font: String): Triple<Int, Int, Int> {
-        val width = context.resources.displayMetrics.widthPixels
-        val keys = KeyboardPreviewView(context)
-        keys.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.UNSPECIFIED)
-        val strip = context.resources.getDimensionPixelSize(com.android.inputmethod.latin.R.dimen.config_suggestions_strip_height)
-        val lines = CandidateBarView.Lines(if (font == "yue") 2 else 1, true)
-        val bar = maxOf(strip, CandidateBarView(context).apply { style = CandidateBarView.Style(lang = null, fontLang = font) }.heightFor(lines))
-        return Triple(keys.measuredHeight, strip, bar)
-    }
-
-    /** The example's whole height (card, bar and keys) at the phone's width, in px. */
-    fun heightPx(context: Context, sample: Store.Sample): Int {
-        val (keys, strip, bar) = sizes(context, barFor(sample).font)
-        return (CARD_DP * context.resources.displayMetrics.density).toInt() + bar + keys - strip
-    }
-
-    /** The keyboard with the card open on [sample]'s tab, at the phone's own width. */
-    fun build(context: Context, sample: Store.Sample): View {
+    /**
+     * The keyboard with the card open on [sample]'s tab, at the phone's own width, light or
+     * [dark] whatever Settings and the phone say (the page has its own switch): the real input
+     * view (RealKeyboard) with its real candidate bar, and the real card above it.
+     */
+    fun build(context: Context, sample: Store.Sample, dark: Boolean): View {
         val d = context.resources.displayMetrics.density
         fun dp(v: Int) = (v * d).toInt()
-        val c = app.lychee.ui.M3Colors.of(context)
         val width = context.resources.displayMetrics.widthPixels
-        // the app's background above the keyboard, as on the phone
-        val root = android.widget.LinearLayout(context).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setBackgroundColor(androidx.core.graphics.ColorUtils.blendARGB(c.surface, android.graphics.Color.WHITE, 0.5f))
-        }
+        val settings = app.lychee.layout.RealKeyboard.withSettings(context, mapOf(
+            app.lychee.ui.KeyStyle.PREF_THEME_MODE to if (dark) app.lychee.ui.KeyStyle.MODE_DARK else app.lychee.ui.KeyStyle.MODE_LIGHT))
         val bar = barFor(sample)
-        val (keysHeight, strip, barHeight) = sizes(context, bar.font)
-        val candidates = CandidateBarView(context).apply {
-            style = CandidateBarView.Style(lang = null, fontLang = bar.font)
-            lines = CandidateBarView.Lines(if (bar.font == "yue") 2 else 1, true)
-            setBackgroundColor(c.surface)
+        val (input, _) = app.lychee.layout.RealKeyboard.inputView(settings, bar.font, width)
+        // the keyboard's own context: its theme, light or dark as chosen here
+        val themed = input.context
+        val c = app.lychee.ui.M3Colors.of(themed)
+        input.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+        input.layout(0, 0, width, input.measuredHeight)
+        val chinese = bar.font == "yue" || bar.font == "cmn"
+        app.lychee.layout.RealKeyboard.showCandidates(input, bar.words, bar.typed, bar.font,
+            CandidateBarView.Lines(if (chinese) 2 else 1, true), script = chinese) { cand -> annotate(bar.font, cand) }
+        // the app's background above the keyboard, as on the phone
+        val root = android.widget.LinearLayout(themed).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(androidx.core.graphics.ColorUtils.blendARGB(c.surface,
+                if (dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE, 0.5f))
+            // a strip of the app above the card, where the page's light/dark toggle sits
+            setPadding(0, dp(TOGGLE_ROOM_DP), 0, 0)
         }
-        val annotate: (Candidate) -> app.lychee.core.Annotation? = { cand ->
-            when (bar.font) {
-                "ja" -> mapOf("食べる" to ("taberu" to "to eat"), "たべる" to ("taberu" to "to eat"), "食べ" to ("tabe" to "eating"),
-                    "食" to ("shoku" to "food"))[cand.text]?.let { (r, m) -> app.lychee.core.Annotation(listOf(r), m, null) }
-                "ko" -> mapOf("학교" to ("hakgyo" to "school"), "學校" to ("hakgyo" to "school"), "학교에" to ("hakgyoe" to "to school"),
-                    "학구" to ("hakgu" to "study"))[cand.text]?.let { (r, m) -> app.lychee.core.Annotation(listOf(r), m, null) }
-                else -> Readings.annotator?.annotate(cand.text, "", InputMode.Cantonese, app.lychee.core.DisplayPrefs(showOtherLanguage = true))
-            }
-        }
-        // laid out at once, so the candidates are there from the start
-        candidates.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(barHeight, View.MeasureSpec.EXACTLY))
-        candidates.layout(0, 0, width, barHeight)
-        candidates.setForScreens(bar.words.map { Candidate(it, "") }, annotate)
-        // the card on top, then the bar, then the keys (the preview's own top bar under the candidates)
-        // in a frame of its own: the card brings itself to the front, which would move it below
-        // the keyboard in a column
-        val host = FrameLayout(context)
-        root.addView(FrameLayout(context).apply { addView(host, FrameLayout.LayoutParams(width, dp(CARD_DP))) },
+        // the card in a frame of its own: it brings itself to the front, which in a column
+        // would move it below the keyboard
+        val host = FrameLayout(themed)
+        root.addView(FrameLayout(themed).apply { addView(host, FrameLayout.LayoutParams(width, dp(CARD_DP))) },
             android.widget.LinearLayout.LayoutParams(width, dp(CARD_DP)))
-        root.addView(FrameLayout(context).apply {
-            addView(KeyboardPreviewView(context), FrameLayout.LayoutParams(width, keysHeight, Gravity.BOTTOM))
-            addView(candidates, FrameLayout.LayoutParams(width, barHeight, Gravity.TOP))
-        }, android.widget.LinearLayout.LayoutParams(width, barHeight + keysHeight - strip))
-        val popup = DictionaryPopup(context, standalone = host, standaloneRoom = dp(CARD_DP - 20), asKeyboard = true)
+        root.addView(input, android.widget.LinearLayout.LayoutParams(width, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT))
+        val popup = DictionaryPopup(themed, standalone = host, standaloneRoom = dp(CARD_DP - 20), asKeyboard = true)
         // drawn at once: it sits in a page, not opening over the keyboard
         popup.animateIn = false
         runCatching {
@@ -135,7 +117,7 @@ object KeyboardSample {
                     }
                     val r = Readings.annotator?.resolve(word, "", InputMode.Cantonese)
                     if (r != null) popup.show(host, word, r, Readings.displayPrefs(
-                        @Suppress("DEPRECATION") android.preference.PreferenceManager.getDefaultSharedPreferences(context)),
+                        @Suppress("DEPRECATION") android.preference.PreferenceManager.getDefaultSharedPreferences(themed)),
                         peek = false, onSpeak = null) {}
                 }
             }
@@ -143,29 +125,34 @@ object KeyboardSample {
         return root
     }
 
+    /** Japanese and Korean readings and meanings as the keyboard shows them (Chinese ones come from the dictionary). */
+    private fun annotate(font: String, cand: Candidate): app.lychee.core.Annotation? = when (font) {
+        "ja" -> mapOf("食べる" to ("taberu" to "to eat"), "たべる" to ("taberu" to "to eat"), "食べ" to ("tabe" to "eating"),
+            "食" to ("shoku" to "food"))[cand.text]?.let { (r, m) -> app.lychee.core.Annotation(listOf(r), m, null) }
+        "ko" -> mapOf("학교" to ("hakgyo" to "school"), "學校" to ("hakgyo" to "school"), "학교에" to ("hakgyoe" to "to school"),
+            "학구" to ("hakgu" to "study"))[cand.text]?.let { (r, m) -> app.lychee.core.Annotation(listOf(r), m, null) }
+        else -> null
+    }
 }
 
-/** [KeyboardSample] in a page: the real views at the phone's width, shrunk to the page's. */
+/**
+ * [KeyboardSample] in a page: the real views at the phone's width, shrunk to the page's, light
+ * to start with (not following the page), with a Light | Dark switch over it.
+ */
 @Composable
 fun KeyboardSampleView(sample: Store.Sample) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val fullWidthPx = context.resources.displayMetrics.widthPixels
-    val fullHeightPx = androidx.compose.runtime.remember(sample) { KeyboardSample.heightPx(context, sample) }
-    BoxWithConstraints(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))) {
-        val fullWidth = with(density) { fullWidthPx.toDp() }
-        val fullHeight = with(density) { fullHeightPx.toDp() }
-        val scale = maxWidth / fullWidth
-        Box(Modifier.fillMaxWidth().height(fullHeight * scale)) {
-            AndroidView(
-                factory = { c -> KeyboardSample.build(c, sample) },
-                modifier = Modifier
-                    .wrapContentSize(Alignment.TopCenter, unbounded = true)
-                    .requiredSize(fullWidth, fullHeight)
-                    .graphicsLayer {
-                        scaleX = scale; scaleY = scale
-                        transformOrigin = TransformOrigin(0.5f, 0f)
-                    },
+    var dark by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    // one small toggle in the example's corner: light, or dark while it is on
+    Box(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))) {
+        PhoneWidth(sample to dark) { c -> KeyboardSample.build(c, sample, dark) }
+        androidx.compose.material3.FilledTonalIconToggleButton(
+            checked = dark, onCheckedChange = { dark = it },
+            modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(32.dp),
+        ) {
+            androidx.compose.material3.Icon(
+                androidx.compose.ui.res.painterResource(com.android.inputmethod.latin.R.drawable.lychee_ic_dark_mode),
+                androidx.compose.ui.res.stringResource(com.android.inputmethod.latin.R.string.lychee_sample_dark),
+                Modifier.size(18.dp),
             )
         }
     }

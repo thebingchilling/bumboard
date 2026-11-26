@@ -155,7 +155,9 @@ class HandwritingPanelView @JvmOverloads constructor(
             background = android.graphics.drawable.GradientDrawable().apply {
                 val r = dp(18).toFloat()
                 cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
-                setColor(palette.surfaceContainer)
+                // a tint of the functional keys' colour, not the letter keys' (the space bar
+                // under it is a letter key, and must stand apart from the pad)
+                setColor(androidx.core.graphics.ColorUtils.blendARGB(palette.surface, palette.secondaryContainer, 0.55f))
             }
             addView(hint, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(pad, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
@@ -228,20 +230,36 @@ class HandwritingPanelView @JvmOverloads constructor(
         val parent = parent as? FrameLayout ?: return
         val keys = rootView.findViewById<com.android.inputmethod.keyboard.MainKeyboardView>(R.id.keyboard_view) ?: return
         val key = keys.keyboard?.getKey(code) ?: return
-        val at = IntArray(2).also { keys.getLocationInWindow(it) }
-        val origin = IntArray(2).also { parent.getLocationInWindow(it) }
+        // where the keys are inside the input view (laid-out places, not the window's)
+        val at = LycheePanels.placeIn(keys, parent) ?: return
         if (view.parent !== parent) {
             (view.parent as? android.view.ViewGroup)?.removeView(view)
             parent.addView(view)
         }
         val half = LycheePanels.keyRow(this).gap / 2
-        view.layoutParams = FrameLayout.LayoutParams(key.width + half * 2, key.height + half * 2, Gravity.TOP or Gravity.START).apply {
-            leftMargin = at[0] - origin[0] + keys.paddingLeft + key.x - half
-            topMargin = at[1] - origin[1] + keys.paddingTop + key.y - half
+        val left = at.left + keys.paddingLeft + key.x - half
+        val top = at.top + keys.paddingTop + key.y - half
+        val old = view.layoutParams as? FrameLayout.LayoutParams
+        if (old == null || old.leftMargin != left || old.topMargin != top || old.width != key.width + half * 2) {
+            view.layoutParams = FrameLayout.LayoutParams(key.width + half * 2, key.height + half * 2, Gravity.TOP or Gravity.START).apply {
+                leftMargin = left
+                topMargin = top
+            }
         }
         view.setPadding(half, half, half, half)
         view.visibility = VISIBLE
-        view.bringToFront()
+        if (parent.indexOfChild(view) != parent.childCount - 1) view.bringToFront()
+    }
+
+    /** The keys moved (the bar above grew or shrank): ⌫ stays exactly on ?123. */
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        super.onLayout(changed, l, t, r, b)
+        if (changed && visibility == VISIBLE && deleteKey.parent != null) {
+            // where it is now (moved only if it has to), shown or stepped aside (the dropdown) as it was
+            val was = deleteKey.visibility
+            placeOverKey(deleteKey, Constants.CODE_SWITCH_ALPHA_SYMBOL)
+            deleteKey.visibility = was
+        }
     }
 
     /**

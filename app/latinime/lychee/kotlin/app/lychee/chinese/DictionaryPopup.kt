@@ -559,10 +559,12 @@ class DictionaryPopup(
         }
         header(c, title)
         head.addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        if (!peek) {
+        // ✕ on every card, a peeking one too (it goes when the finger lifts, but never stays
+        // without a way to close it)
+        run {
             // Look up in Lychee keeps its own action (copy) beside ✕; inside the keyboard the
             // candidate types the word
-            if (standalone != null && !asKeyboard) head.addView(cornerButton(actionIcon, ctx.getString(actionLabel), c, filled = true) {
+            if (!peek && standalone != null && !asKeyboard) head.addView(cornerButton(actionIcon, ctx.getString(actionLabel), c, filled = true) {
                 dismiss()
                 onType()
             }, LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginEnd = dp(6) })
@@ -593,6 +595,9 @@ class DictionaryPopup(
                 val body = pages[viewType].second
                 (body.parent as? ViewGroup)?.removeView(body)
                 // the summary is one page: what doesn't fit is left off (never scrolled to)
+                // stroke order fits the page: its square takes the room the controls leave
+                if (pages[viewType].first == Page.STROKES) return object : androidx.recyclerview.widget.RecyclerView.ViewHolder(
+                    body.apply { layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT) }) {}
                 if (pages[viewType].first == Page.SUMMARY) return object : androidx.recyclerview.widget.RecyclerView.ViewHolder(
                     FitPage(ctx, body).apply { layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT) }) {}
                 val scroll = ScrollView(ctx).apply {
@@ -1254,6 +1259,36 @@ class DictionaryPopup(
             })
         }
 
+        /**
+         * One small toggle for a word's two forms (Traditional | Simplified, Hangul | Hanja, the
+         * old kanji): it shows the form on screen (繁, 简, 한, 漢) and a tap switches to the other.
+         */
+        private fun scriptToggle(forms: List<Pair<String, String>>, onPick: (Int) -> Unit): View? {
+            if (forms.size < 2) return null
+            fun mark(i: Int): String = when (forms[i].first) {
+                ctx.getString(R.string.lychee_card_simplified) -> "简"
+                ctx.getString(R.string.lychee_card_hangul) -> "한"
+                ctx.getString(R.string.lychee_card_hanja) -> "漢"
+                ctx.getString(R.string.lychee_card_traditional) -> "繁"
+                else -> forms[i].second.take(1)
+            }
+            var at = 0
+            return textView(mark(0), 15f, c.primary).apply {
+                gravity = Gravity.CENTER
+                typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
+                background = GradientDrawable().apply { cornerRadius = dp(16).toFloat(); setStroke(dp(1), c.outline) }
+                fun describe() { contentDescription = "${forms[at].first}, ${forms[(at + 1) % forms.size].first}" }
+                describe()
+                app.lychee.layout.LycheeMotion.springy(this)
+                setOnClickListener {
+                    at = (at + 1) % forms.size
+                    text = mark(at)
+                    describe()
+                    onPick(at)
+                }
+            }
+        }
+
         private fun scriptSwitchView(forms: List<Pair<String, String>>, chosen: Int, onPick: (Int) -> Unit): View? {
             if (forms.size < 2) return null
             val row = LinearLayout(ctx).apply {
@@ -1312,8 +1347,16 @@ class DictionaryPopup(
                     return true
                 }
             })
-            // the square takes sideways swipes for itself (not the card's tabs)
+            // the square takes sideways swipes for itself (not the card's tabs); as large as the
+            // page leaves room for, so everything fits in the card without scrolling
             val square = object : FrameLayout(ctx) {
+                override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                    val most = dp(STROKE_BOX_DP)
+                    val w = if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.UNSPECIFIED) most else MeasureSpec.getSize(widthMeasureSpec)
+                    val h = if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.UNSPECIFIED) most else MeasureSpec.getSize(heightMeasureSpec)
+                    val side = minOf(most, w, h).coerceAtLeast(dp(48))
+                    super.onMeasure(MeasureSpec.makeMeasureSpec(side, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(side, MeasureSpec.EXACTLY))
+                }
                 override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
                     if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) parent?.requestDisallowInterceptTouchEvent(true)
                     detector.onTouchEvent(ev)
@@ -1353,7 +1396,7 @@ class DictionaryPopup(
                     view = v
                     val first = square.childCount == 0
                     square.removeAllViews()
-                    square.addView(v, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    square.addView(v, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
                     // another character cross-fades in (the first comes in with the card)
                     if (!first) app.lychee.layout.LycheeMotion.enter(v)
                     // a dot for each character, the one shown filled
@@ -1374,13 +1417,6 @@ class DictionaryPopup(
                     refresh()
                 }
             }
-            // the stroke count on the left, the script switch on the right, on one line
-            body.addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                addView(caption.apply { gravity = Gravity.START or Gravity.CENTER_VERTICAL }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-                scriptSwitchView(forms, 0) { i -> script = i; show(0) }?.let { addView(it) }
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(34)).apply { bottomMargin = dp(4) })
             body.addView(LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER
@@ -1389,13 +1425,21 @@ class DictionaryPopup(
                     c.onSurfaceVariant).apply {
                     select(speed)
                     onChange = { v -> speed = v; view?.speed = v }
-                }, LinearLayout.LayoutParams(dp(52), dp(STROKE_BOX_DP)))
+                }, LinearLayout.LayoutParams(dp(52), ViewGroup.LayoutParams.MATCH_PARENT))
                 addView(left, LinearLayout.LayoutParams(dp(36), dp(40)))
-                addView(square, LinearLayout.LayoutParams(dp(STROKE_BOX_DP), ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(6), 0, dp(6), 0) })
+                addView(square, LinearLayout.LayoutParams(dp(STROKE_BOX_DP), ViewGroup.LayoutParams.MATCH_PARENT).apply { setMargins(dp(6), 0, dp(6), 0) })
                 addView(right, LinearLayout.LayoutParams(dp(36), dp(40)))
-                addView(View(ctx), LinearLayout.LayoutParams(dp(52), 1))
-            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-            body.addView(dots, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(14)).apply { topMargin = dp(2) })
+                // the script toggle in the corner, as wide as the speed bar, so the character
+                // stays in the middle between them
+                addView(FrameLayout(ctx).apply {
+                    scriptToggle(forms) { i -> script = i; show(0) }?.let {
+                        addView(it, FrameLayout.LayoutParams(dp(40), dp(32), Gravity.TOP or Gravity.END))
+                    }
+                }, LinearLayout.LayoutParams(dp(52), ViewGroup.LayoutParams.MATCH_PARENT))
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+            // the stroke count, and a dot for each of the word's characters
+            body.addView(caption.apply { gravity = Gravity.CENTER }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
+            body.addView(dots, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(14)))
             // the controls: back, play/pause, on, again; then the speed
             fun control(icon: Int, label: Int, action: () -> Unit) = android.widget.ImageView(ctx).apply {
                 setImageResource(icon)
@@ -1413,13 +1457,18 @@ class DictionaryPopup(
                 app.lychee.layout.LycheeMotion.springy(this)
                 setOnClickListener { view?.let { v -> if (v.playing) v.pause() else v.resume() } }
             }
-            val controls = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL or Gravity.CENTER_HORIZONTAL
-                addView(control(R.drawable.lychee_ic_step_back, R.string.lychee_card_stroke_back) { view?.step(-1) }, LinearLayout.LayoutParams(dp(40), dp(40)))
-                addView(playButton, LinearLayout.LayoutParams(dp(44), dp(44)).apply { setMargins(dp(6), 0, dp(6), 0) })
-                addView(control(R.drawable.lychee_ic_step_next, R.string.lychee_card_stroke_next) { view?.step(1) }, LinearLayout.LayoutParams(dp(40), dp(40)))
-                addView(control(R.drawable.lychee_ic_replay, R.string.lychee_card_stroke_again) { view?.play() }, LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginStart = dp(4) })
+            // back, play/pause, on: play/pause exactly in the middle (under the character); again
+            // beside them, out of the middle
+            val controls = FrameLayout(ctx).apply {
+                addView(LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    addView(control(R.drawable.lychee_ic_step_back, R.string.lychee_card_stroke_back) { view?.step(-1) }, LinearLayout.LayoutParams(dp(40), dp(40)))
+                    addView(playButton, LinearLayout.LayoutParams(dp(44), dp(44)).apply { setMargins(dp(10), 0, dp(10), 0) })
+                    addView(control(R.drawable.lychee_ic_step_next, R.string.lychee_card_stroke_next) { view?.step(1) }, LinearLayout.LayoutParams(dp(40), dp(40)))
+                }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+                addView(control(R.drawable.lychee_ic_replay, R.string.lychee_card_stroke_again) { view?.play() },
+                    FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER_VERTICAL or Gravity.CENTER_HORIZONTAL).apply { leftMargin = dp(150) })
             }
             body.addView(controls, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(2) })
             show(0)

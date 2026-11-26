@@ -36,6 +36,14 @@ interface LycheeHost {
     fun lycheeShowEnglishWord(word: String, onType: () -> Unit): Boolean
 
     /**
+     * The finger holding a suggestion whose card is peeking moved, or lifted ([lifted]; false:
+     * the touch was cancelled), in screen coordinates: onto the card's lock bar it stays open,
+     * anywhere else it goes.
+     */
+    fun lycheePeekDrag(rawX: Float, rawY: Float)
+    fun lycheePeekRelease(rawX: Float, rawY: Float, lifted: Boolean)
+
+    /**
      * The English suggestions that don't fit on the bar ([words], empty for none): the ⌄ at
      * its end opens them; [onPick] gets the index of the one tapped.
      */

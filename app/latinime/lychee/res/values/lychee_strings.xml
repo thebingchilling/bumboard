@@ -425,4 +425,7 @@
     <string name="lychee_addons_page_summary">Open the packs page to get add-ons that aren\'t on this phone</string>
     <string name="lychee_addons_misc">Others</string>
     <string name="lychee_dictionary_needed">Japanese dictionary needed · tap to get it</string>
+    <!-- An add-on page's keyboard example: shown light or dark (whatever the phone says) -->
+    <string name="lychee_sample_light">Light</string>
+    <string name="lychee_sample_dark">Dark</string>
 </resources>

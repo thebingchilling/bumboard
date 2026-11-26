@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -52,38 +55,78 @@ private fun PreviewFrame(content: @Composable () -> Unit) {
 }
 
 /**
- * The keyboard as it will look, drawn as the keyboard itself draws it ([KeyboardPreviewView]:
- * the same key drawables, colours, proportions and icons, edge to edge, with its bar): the
- * chosen [palette], corners at [roundness] %, key borders, raised or flat keys, [height]; and,
- * where a page changes them, the number row, one-handed mode, the spacebar's label and the
- * comma key's neighbour ([comma]). [themeMode] only redraws it when light or dark changes.
+ * The keyboard as it will look: the real keyboard (RealKeyboard: the keyboard's own views and
+ * keys, its bar and shortcuts), with the choices on the page given over the saved settings so it
+ * changes while a slider moves: the [palette], corners at [roundness] %, key borders, raised or
+ * flat keys, [height]; and, where a page changes them, the number row, one-handed mode, the
+ * spacebar's label ([spacebar], its setting), the key by the comma ([comma], its setting) and the
+ * voice key. [themeMode] rebuilds it when light or dark changes.
  */
 @Composable
 fun KeyboardPreview(
     palette: String, roundness: Int, borders: Boolean, raised: Boolean, height: Float,
-    numberRow: Boolean = false, oneHanded: Boolean = false, spacebar: String? = null, comma: String = "combined",
-    voice: Boolean = true, themeMode: String? = null,
+    numberRow: Boolean? = null, oneHanded: Boolean = false, spacebar: String? = null, comma: String? = null,
+    voice: Boolean? = null, themeMode: String? = null,
 ) {
-    androidx.compose.ui.viewinterop.AndroidView(
-        factory = { KeyboardPreviewView(it) },
-        update = { v ->
-            v.palette = palette
-            v.roundness = roundness
-            v.borders = borders
-            v.raised = raised
-            v.heightScale = height
-            v.numberRow = numberRow
-            v.oneHanded = oneHanded
-            v.spacebar = spacebar
-            v.comma = comma
-            v.voice = voice
-            v.tag = themeMode
-            v.refresh()
-        },
-        // in a rounded card with room round it: the theme shows in the preview, not across the page
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)),
-    )
+    val context = LocalContext.current
+    val ids = context.resources.getIntArray(com.android.inputmethod.latin.R.array.keyboard_theme_ids)
+    val overrides = buildMap<String, Any?> {
+        put(app.lychee.ui.LycheeColorStyle.PREF, palette)
+        put(app.lychee.ui.KeyStyle.PREF_ROUNDNESS, roundness)
+        put(app.lychee.ui.KeyStyle.PREF_BORDERS, borders)
+        put(com.android.inputmethod.keyboard.KeyboardTheme.lycheePreferenceKey(),
+            (if (raised) ids.first() else ids.getOrElse(1) { ids.first() }).toString())
+        put(app.lychee.layout.LycheeLayout.PREF_HEIGHT_SCALE, height)
+        put(app.lychee.layout.LycheeLayout.PREF_MODE, if (oneHanded) "one_handed" else "normal")
+        numberRow?.let { put(app.lychee.layout.LycheeLayout.PREF_NUMBER_ROW, it) }
+        spacebar?.let { put(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR, it) }
+        comma?.let { put(app.lychee.layout.LycheeLayout.PREF_COMMA_KEY, it) }
+        voice?.let { put(com.android.inputmethod.latin.settings.Settings.PREF_VOICE_INPUT_KEY, it) }
+        themeMode?.let { put(app.lychee.ui.KeyStyle.PREF_THEME_MODE, it) }
+    }
+    // in a rounded card with room round it: the theme shows in the preview, not across the page
+    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).clip(RoundedCornerShape(16.dp))) {
+        PhoneWidth(overrides) { c ->
+            app.lychee.layout.RealKeyboard.inputView(app.lychee.layout.RealKeyboard.withSettings(c, overrides), null,
+                c.resources.displayMetrics.widthPixels).first
+        }
+    }
+}
+
+/**
+ * A view built at the phone's own width ([build]), as it is on the phone, shrunk to the page's
+ * width; built again when [key] changes.
+ */
+@Composable
+fun PhoneWidth(key: Any?, build: (android.content.Context) -> android.view.View) {
+    val context = LocalContext.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val fullWidthPx = context.resources.displayMetrics.widthPixels
+    val view = remember(key) {
+        build(context).also {
+            it.measure(android.view.View.MeasureSpec.makeMeasureSpec(fullWidthPx, android.view.View.MeasureSpec.EXACTLY),
+                android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED))
+        }
+    }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val fullWidth = with(density) { fullWidthPx.toDp() }
+        val fullHeight = with(density) { view.measuredHeight.toDp() }
+        val scale = maxWidth / fullWidth
+        Box(Modifier.fillMaxWidth().height(fullHeight * scale)) {
+            androidx.compose.runtime.key(view) {
+                androidx.compose.ui.viewinterop.AndroidView(
+                    factory = { (view.parent as? android.view.ViewGroup)?.removeView(view); view },
+                    modifier = Modifier
+                        .wrapContentSize(Alignment.TopCenter, unbounded = true)
+                        .requiredSize(fullWidth, fullHeight)
+                        .graphicsLayer {
+                            scaleX = scale; scaleY = scale
+                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
+                        },
+                )
+            }
+        }
+    }
 }
 
 /**

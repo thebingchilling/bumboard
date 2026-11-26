@@ -191,6 +191,19 @@ public class KeyboardView extends View {
     }
 
     @Nullable
+    // LYCHEE: key borders for this view alone (Settings' previews show a choice before it is
+    // saved); null follows Settings > Theme (KeyStyle)
+    private Boolean mLycheeBorders;
+
+    public void setLycheeBorders(final Boolean borders) {
+        mLycheeBorders = borders;
+        invalidateAllKeys();
+    }
+
+    private boolean lycheeBorders() {
+        return mLycheeBorders != null ? mLycheeBorders : app.lychee.ui.KeyStyle.getBorders();
+    }
+
     public KeyVisualAttributes getKeyVisualAttribute() {
         return mKeyVisualAttributes;
     }
@@ -405,7 +418,7 @@ public class KeyboardView extends View {
             // LYCHEE: ?123, ABC and Enter are rounded squares like every other key
             // LYCHEE: with key borders off, every key (letters, ?123, emoji, backspace, space,
             // Enter, a locked shift) shows a background only while pressed
-            final boolean hidden = !app.lychee.ui.KeyStyle.getBorders() && !key.isPressed();
+            final boolean hidden = !lycheeBorders() && !key.isPressed();
             if (background != null && !hidden) {
                 if (lycheeFading) background.setAlpha(mLycheeFadeAlpha);
                 onDrawKeyBackground(key, canvas, background);
@@ -692,8 +705,8 @@ public class KeyboardView extends View {
     }
 
     /** LYCHEE: whether [key] is drawn on its fill (key borders on, or pressed). */
-    private static boolean lycheeFilled(@Nonnull final Key key) {
-        return app.lychee.ui.KeyStyle.getBorders() || key.isPressed();
+    private boolean lycheeFilled(@Nonnull final Key key) {
+        return lycheeBorders() || key.isPressed();
     }
 
     private int lycheeIconTint(@Nonnull final Key key) {

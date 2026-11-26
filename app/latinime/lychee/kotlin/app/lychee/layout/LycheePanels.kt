@@ -15,15 +15,23 @@ object LycheePanels {
     @JvmStatic
     fun cover(panel: View, inputView: View) {
         val keys = inputView.findViewById<View>(R.id.keyboard_view) ?: return
-        val panelLoc = IntArray(2).also { inputView.getLocationInWindow(it) }
-        val keysLoc = IntArray(2).also { keys.getLocationInWindow(it) }
+        val at = placeIn(keys, inputView as? android.view.ViewGroup ?: return) ?: return
         val lp = panel.layoutParams as FrameLayout.LayoutParams
         lp.gravity = Gravity.BOTTOM or Gravity.START
         lp.width = keys.width
         lp.height = keys.height
-        lp.leftMargin = keysLoc[0] - panelLoc[0]
-        lp.bottomMargin = (panelLoc[1] + inputView.height) - (keysLoc[1] + keys.height)
+        lp.leftMargin = at.left
+        lp.bottomMargin = inputView.height - at.bottom
         panel.layoutParams = lp
+    }
+
+    /**
+     * Where [view] is laid out inside [ancestor] (null if it isn't inside it): from the layout
+     * itself, so a fade or spring under way doesn't move what is placed by it.
+     */
+    fun placeIn(view: View, ancestor: android.view.ViewGroup): android.graphics.Rect? {
+        val r = android.graphics.Rect(0, 0, view.width, view.height)
+        return runCatching { ancestor.offsetDescendantRectToMyCoords(view, r); r }.getOrNull()
     }
 
     /** A panel opening over the keys: it cross-fades in place, like the keys changing (LycheeMotion). */

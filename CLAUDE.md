@@ -51,14 +51,17 @@ private and is the testing ground; its name stays `bumboard`, everything inside 
       per session): the readings dictionary, the packs that come with Lychee, and the Japanese and
       Korean dictionaries from the public packs release. The tests read them through JDBC
       (`RealData.kt`: layoutlib has no Android SQLite).
-    - The real input view (`RealKeyboard.kt`): KeyboardLayoutSet's keyboard for each language's
-      subtype, the real top bar and candidate bar.
+    - The real input view (the app's `layout/RealKeyboard`, which Settings' previews and the
+      add-on examples use too): KeyboardLayoutSet's keyboard for each language's subtype, the
+      real top bar and candidate bar.
     - Panels are the input view's own, opened as LatinIME opens them (`RealInput.panel`:
       LycheePanels.cover, then their show).
     - Every screen is a whole phone (`Phone.kt`: a Galaxy S23's size, the status bar, an app, the
       keyboard, the gesture bar).
     - Only the bar's arrangement copies ChineseInput's (it needs the keyboard service), so a change
-      to ChineseInput's bar layout needs the same change in `Phone.kt`'s `showCandidates`.
+      to ChineseInput's bar layout needs the same change in `RealKeyboard.showCandidates`.
+    - Paparazzi draws every view in the device's light or dark (a context's own override is
+      ignored there), so a forced Light or Dark shows on a phone of that kind (`*Dark` classes).
 - Every build on `main` is published by `build.yml` as a debug release (a full release, not a
   pre-release) of this private repository (`lychee-0.1.0-dev.N`, notes from the commit), like Quartz's releases,
   with three APKs named by ABI (`lychee-universal.apk`, `lychee-arm64-v8a.apk` and `lychee-armeabi-v7a.apk`)
@@ -176,9 +179,10 @@ packs page). Public facing, so be careful:
   (Lychee can't check the network: no permission), Google's recogniser fails and Lychee tries the
   phone's own offline recogniser (Android 12+) if it has one; else the mic flashes at once and
   keeps an offline badge (a crossed-out cloud, no toast) until it works again.
-- The clipboard panel has ✎ and its on/off switch at the right of its title, as Gboard's (off
-  forgets every copy): ✎ is edit mode, where taps tick copies and the bottom bar has Add (the
-  text field's selection, or all of it, as a new copy), Pin and Delete; ✓ leaves it.
+- The clipboard panel has ✎ and its on/off switch (Material 3's, `ui/M3Switch`) at the right of its title, as Gboard's (off
+  forgets every copy): ✎ is edit mode, where taps tick copies and Add (the text field's
+  selection, or all of it, as a new copy), Pin and Delete take the switch's place in the title
+  bar (no bar of their own at the bottom); ✓ leaves it.
 - Holding an emoji shows its full name with any skin tone ("waving hand: medium skin tone") and
   its code points, in its card or tone picker and in the panel's search bar for a few seconds.
 - The key bubble is the long-press popup's panel with one key in it (the same shape, colour,
@@ -195,7 +199,8 @@ packs page). Public facing, so be careful:
   aside while the candidates' dropdown is open; the dropdown has slight dividers and fades out
   at the bottom, above the navigation buttons. While writing there is no 英 or 繁/简; the bar
   has Back and "Handwriting" like every mode (raised clear of the pad), ⌫ is a key over ?123 in
-  the bottom row, the pad is a tinted surface of its own with rounded top corners (no line), and
+  the bottom row, the pad is a tinted surface of its own with rounded top corners (no line; the
+  functional keys' tint, so the space bar under it stands apart), and
   it reaches up into the bar's typed-letters line (the guesses and a centred ⌄ sit at the bar's
   top; the dropdown opens right under them). What follows a character picked is in that
   character's own script. A companion slow to connect never leaves strokes without guesses
@@ -205,12 +210,13 @@ packs page). Public facing, so be careful:
   four-character word, four with a longer one, sharing its width (never shrunk); the dropdown's
   rows follow the same counts. The dropdown rolls down from the bar over the keys (no blink),
   with its own bottom row exactly where the keyboard's is (?123, emoji, space, ⌫ deleting the
-  letters typed, Enter) and a single-character switch at its top (單字 / 单字, 単漢字, 한 글자)
-  showing one character at a time in the bar and the dropdown. Each time the keyboard opens,
+  letters typed, Enter), with a single-character switch as a key of that row beside the emoji
+  key (單字 / 单字, 単漢字, 한 글자, on every Chinese, Japanese and Korean keyboard; the space bar
+  gives it room), showing one character at a time in the bar and the dropdown. Each time the keyboard opens,
   Rime is started and the schema chosen if they aren't yet, so candidates come at once.
 - Number, phone and date fields have one number pad (`toolbar/NumpadPanelView`, forced): the
   digits centred with no keys at the sides, over three equal keys (⌫ 0 Enter); 0 held shows
-  symbols (the field's own first). It is the only number pad: the symbols page has no number
+  symbols (the field's own first), which are written clearly beside the 0. It is the only number pad: the symbols page has no number
   pad key (its bottom row is the letters'). LatinIME's own number and phone pads (letters on
   their keys) never show: whenever KeyboardSwitcher sets one, `LatinIME.updateLycheeForcedNumpad`
   covers it, and no panel closing or Back uncovers it (`LycheePanels.hideOthers`, `anyClosable`).
@@ -261,7 +267,8 @@ packs page). Public facing, so be careful:
   the accent colour with a thin divider between groups, 24 dp grey icons on a 72 dp keyline,
   choices in dropdown menus dropped from their row. Visual settings (theme, keys, key shape, height, candidate size, emoji size,
   fonts, pronunciation, the key by the comma, the voice key) show a live preview where they are
-  changed. The packs page (`packs/site`) is the same: Material 2's components in Material 3's
+  changed. A keyboard preview is the real keyboard (`layout/RealKeyboard`: the keyboard's own
+  views and keys), given the page's choices before they are saved, never a drawing of it. The packs page (`packs/site`) is the same: Material 2's components in Material 3's
   tonal colours.
   Add-ons (`settings/AddonsPage.kt`) is Lychee's own store (never a copy of Pleco's: professional,
   no savings sums, no "free while testing"; wording in `PAID.md`), opened from a banner at the
@@ -279,8 +286,9 @@ packs page). Public facing, so be careful:
   Pleco's (`settings/ProductSheet.kt`; a free download's `AddonPage` is laid out the same):
   each part its own card (the price or Free with the actions, In Lychee, What you get, Included,
   then one Details card for the plain words). In Lychee is the real keyboard
-  (`settings/KeyboardSample.kt`: the keys, the candidate bar and the word card open on the
-  add-on's tab, shrunk to the page). A listing opens at its top; the store's pages and tabs move
+  (`settings/KeyboardSample.kt`: the real input view from `layout/RealKeyboard` with its real
+  candidate bar, and the word card open on the add-on's tab, shrunk to the page), Light to start
+  with whatever the phone and Settings say, with one small light/dark toggle button in its corner. A listing opens at its top; the store's pages and tabs move
   with the settings' page transition. Rows show their text in
   full and act by icon only (delete, download; no "Restore"). Wording sells honestly: no "Pro" or
   hype; ML Kit, open data, licences, open source and privacy named plainly
@@ -369,10 +377,14 @@ is outside it.
     every reading with its meaning.
   - Examples ends with Phrases: the words the word builds (each opens its card).
   - Stroke order: one character large; ‹ ›, swipe or dots go through the word's characters;
-    Traditional | Simplified (Hangul | Hanja, old kanji); centred under it back, play/pause, on,
-    again; at its side a speed bar to drag (0.1× to 2×). Strokes are never numbered.
+    one small toggle in the corner for Traditional | Simplified (繁/简; Hangul | Hanja, old kanji),
+    the character between it and the speed bar; under it back, play/pause (exactly centred), on,
+    and again to the side; at its side a speed bar to drag (0.1× to 2×). Strokes are never numbered. It all
+    fits in the card (the character's square takes the room left; the page never scrolls).
   - Parts: a list like Phrases (each character with both readings, its meaning and a chevron):
     the word's characters; a character's parts (Made of) and the characters using it, in
     either script.
-  - Held to peek (Settings), the card goes when the finger lifts unless slid onto its lock bar.
+  - Held to peek (Settings), the card goes when the finger lifts unless slid onto its lock bar;
+    it has ✕ too. English suggestions peek the same way (SuggestionStripView follows the finger;
+    its old slide-up panel of more suggestions is gone, the ⌄ dropdown has them).
   - A part opens as its own card, with Back.

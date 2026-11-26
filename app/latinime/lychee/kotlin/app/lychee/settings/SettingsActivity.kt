@@ -811,8 +811,8 @@ private fun KeysPage() {
         raised = KeyboardTheme.getKeyboardTheme(context).mThemeId == themeIds.firstOrNull(),
         height = prefs.getFloat(LycheeLayout.PREF_HEIGHT_SCALE, 1f),
         numberRow = numberRow.value,
-        spacebar = stringResource(if (spacebar.value == "method") R.string.lychee_pref_spacebar_method else R.string.lychee_pref_spacebar_language),
-        comma = extra,
+        spacebar = spacebar.value,
+        comma = commaKey.value,
         voice = voice.value,
     )
     Group(stringResource(R.string.lychee_group_keys)) {
@@ -933,7 +933,7 @@ private fun CommaMenuGroup(commaKey: String) {
 // ---------------------------------------------------------------- theme
 
 @Composable
-private fun ThemePage() {
+internal fun ThemePage() {
     val prefs = prefs()
     val context = LocalContext.current
     val names = context.resources.getStringArray(R.array.keyboard_theme_names)

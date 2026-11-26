@@ -41,7 +41,7 @@ class AddonsScreens {
     @get:Rule
     val paparazzi = Paparazzi(deviceConfig = S23, theme = "android:Theme.Material.Light.NoActionBar")
 
-    private fun page(name: String, title: String, scroll: Int = 0, setUp: () -> Unit) = draw(paparazzi, name, title, scroll, setUp)
+    private fun page(name: String, title: String, scroll: Int = 0, setUp: () -> Unit) = draw(paparazzi, name, title, scroll, setUp = setUp)
 
     companion object {
     /** Stands in for the activity's result registry (the file picker), which a snapshot hasn't. */
@@ -52,7 +52,8 @@ class AddonsScreens {
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
-    fun draw(paparazzi: Paparazzi, name: String, title: String, scroll: Int = 0, setUp: () -> Unit) {
+    fun draw(paparazzi: Paparazzi, name: String, title: String, scroll: Int = 0,
+             content: @Composable () -> Unit = { AddonsPage() }, setUp: () -> Unit) {
         StoreLook.startTab = 0
         ProductSheet.open = null
         AddonSheet.open = null
@@ -73,7 +74,7 @@ class AddonsScreens {
                         },
                     ) { padding ->
                         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState(scroll))) {
-                            AddonsPage()
+                            content()
                         }
                     }
                 }
@@ -92,6 +93,18 @@ class AddonsScreens {
     @Test fun listingHandwriting() = page("8-listing-google-handwriting", "Google Handwriting") { ProductSheet.open = Store.byId("handwriting") }
     @Test fun updates() = page("9-updates", "Add-ons") { StoreLook.startTab = 2 }
     @Test fun listingChineseFurther() = page("7b-listing-chinese-further", "Chinese In Depth", scroll = 1100) { ProductSheet.open = Store.byId("card_zh") }
+    /**
+     * A listing's example, Light (its Dark is in AddonsScreensDark: Paparazzi draws every view in
+     * the device's own light or dark, so the switch is shown on a phone of each).
+     */
+    @Test fun exampleLight() {
+        if (RealData.available) RealData.install()
+        paparazzi.snapshot(app.lychee.settings.KeyboardSample.build(paparazzi.context, Store.Sample.CHINESE, dark = false), "14-example-light")
+    }
+
+    /** Settings > Theme: its preview is the real keyboard. */
+    @Test fun theme() = draw(paparazzi, "13-theme", "Theme", content = { app.lychee.settings.ThemePage() }) {}
+
     @Test fun listingFree() = page("12-listing-free-japanese-dictionary", "Japanese dictionary") {
         AddonSheet.open = app.lychee.packs.Packs.catalog(paparazzi.context).firstOrNull { it.id == "rime_ja" }
     }
@@ -105,4 +118,8 @@ class AddonsScreensDark {
 
     @Test fun store() = AddonsScreens.draw(paparazzi, "d1-store-dark", "Add-ons") {}
     @Test fun listing() = AddonsScreens.draw(paparazzi, "d2-listing-dark", "Japanese Pack") { ProductSheet.open = Store.byId("pack_ja") }
+    @Test fun exampleDark() {
+        if (RealData.available) RealData.install()
+        paparazzi.snapshot(app.lychee.settings.KeyboardSample.build(paparazzi.context, Store.Sample.CHINESE, dark = true), "d3-example-dark")
+    }
 }

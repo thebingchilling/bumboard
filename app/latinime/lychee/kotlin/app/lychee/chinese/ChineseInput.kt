@@ -114,8 +114,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         // hold to peek: the card goes when the finger lifts
         // hold to peek: the card goes when the finger lifts, unless it was slid onto the card's
         // lock bar, which keeps it open
-        bar?.onRelease = { x, y, lifted -> if (peekCards()) popup?.peekRelease(x, y, lifted) }
-        bar?.onDrag = { x, y -> if (peekCards()) popup?.peekDrag(x, y) }
+        bar?.onRelease = { x, y, lifted -> peekRelease(x, y, lifted) }
+        bar?.onDrag = { x, y -> peekDrag(x, y) }
         show(null)
     }
 
@@ -148,6 +148,16 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         panel.show(words.map { Candidate(it, "") }, candidateScale(), null, CandidateBarView.Style(fontLang = "en"),
             onPicked = { i -> onEnglishMore(i); updateMoreButton() },
             onLongPicked = { i, _ -> words.getOrNull(i)?.let { w -> showEnglishWord(w) { onEnglishMore(i) } } })
+    }
+
+    /** The finger holding a candidate or suggestion moved: the peeking card's lock bar follows it. */
+    fun peekDrag(rawX: Float, rawY: Float) {
+        if (peekCards()) popup?.peekDrag(rawX, rawY)
+    }
+
+    /** The finger holding a candidate or suggestion lifted: the peeking card goes, unless let go on its lock bar. */
+    fun peekRelease(rawX: Float, rawY: Float, lifted: Boolean) {
+        if (peekCards()) popup?.peekRelease(rawX, rawY, lifted)
     }
 
     private fun peekCards() = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"

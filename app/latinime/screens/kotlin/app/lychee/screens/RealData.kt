@@ -21,6 +21,8 @@ object RealData {
     /** Points the app's look-ups at the real data. */
     fun install() {
         check(available) { "No real data: run tools/screens-data.sh" }
+        // no native touch model on a computer (drawing the keyboard never needs it)
+        com.android.inputmethod.keyboard.ProximityInfo.sLycheeWithoutNative = true
         app.lychee.chinese.Readings.useForScreens(ReadingsDb(JdbcSql(open(File(dir, "readings.db")))))
         PackData.forScreensStrokes = null
         PackData.forScreensPhrases = null

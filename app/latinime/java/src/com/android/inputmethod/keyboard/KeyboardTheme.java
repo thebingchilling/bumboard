@@ -155,6 +155,11 @@ public final class KeyboardTheme implements Comparable<KeyboardTheme> {
         return theme.mThemeName;
     }
 
+    // LYCHEE: the preference the theme is kept in (Settings' previews give a choice not yet saved)
+    public static String lycheePreferenceKey() {
+        return getPreferenceKey(BuildCompatUtils.EFFECTIVE_SDK_INT);
+    }
+
     public static void saveKeyboardThemeId(final int themeId, final SharedPreferences prefs) {
         saveKeyboardThemeId(themeId, prefs, BuildCompatUtils.EFFECTIVE_SDK_INT);
     }

@@ -488,6 +488,12 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         updateLycheeMiddle();
     }
 
+    /** LYCHEE: the bar's mic on or off (Settings' previews, before the setting is saved). */
+    public void setLycheeVoiceEnabled(final boolean enabled) {
+        mLycheeVoiceEnabled = enabled;
+        updateLycheeMiddle();
+    }
+
     public void setSuggestions(final SuggestedWords suggestedWords, final boolean isRtlLanguage) {
         clear();
         mStripVisibilityGroup.setLayoutDirection(isRtlLanguage);
@@ -623,6 +629,8 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
                 return kotlin.Unit.INSTANCE;
             })) {
                 view.setPressed(false);
+                // the finger still holds it: a peeking card follows it to its lock bar
+                mLycheeHolding = true;
                 return true;
             }
         }
@@ -712,11 +720,34 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         }
     };
 
+    /** LYCHEE: a suggestion is held with its word card open (hold to peek follows the finger). */
+    private boolean mLycheeHolding;
+
+    @Override
+    public boolean dispatchTouchEvent(final MotionEvent me) {
+        final boolean handled = super.dispatchTouchEvent(me);
+        if (mLycheeHolding) {
+            final app.lychee.LycheeHost host = app.lychee.LycheeHostKt.lycheeHost(this);
+            final int action = me.getActionMasked();
+            if (action == MotionEvent.ACTION_MOVE) {
+                if (host != null) host.lycheePeekDrag(me.getRawX(), me.getRawY());
+            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                mLycheeHolding = false;
+                if (host != null) host.lycheePeekRelease(me.getRawX(), me.getRawY(), action == MotionEvent.ACTION_UP);
+            }
+        }
+        return handled;
+    }
+
     @Override
     public boolean onInterceptTouchEvent(final MotionEvent me) {
         if (mStripVisibilityGroup.isShowingImportantNoticeStrip()) {
             return false;
         }
+        // LYCHEE: no sliding up into a more-suggestions panel (the ⌄ dropdown has them): a
+        // finger sliding up from a held suggestion goes to its card's lock bar, and must not
+        // be taken from it
+        if (true) return false;
         // Detecting sliding up finger to show {@link MoreSuggestionsView}.
         if (!mMoreSuggestionsView.isShowingInParent()) {
             mLastX = (int)me.getX();

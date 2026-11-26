@@ -24,8 +24,8 @@ import com.android.inputmethod.latin.R
  * Candidates the phone cannot draw are left out. Six to a row, five when one is a longer word
  * (fewer for longer still), each at the bar's size. Along its bottom, exactly where the
  * keyboard's bottom row is: ?123, emoji, space, ⌫ (deleting the letters typed, the list
- * following) and Enter; at its top, a single-character switch ([danzi]: 單字, 单字, 単漢字,
- * 한 글자) shows one character at a time.
+ * following) and Enter, with a single-character switch ([danzi]: 單字, 单字, 単漢字, 한 글자)
+ * beside the emoji key, showing one character at a time.
  */
 class CandidatePanelView @JvmOverloads constructor(
     context: Context,
@@ -43,7 +43,7 @@ class CandidatePanelView @JvmOverloads constructor(
         set(value) {
             field = value
             danziChip.text = value.orEmpty()
-            header.visibility = if (value != null) VISIBLE else GONE
+            showDanzi(value != null)
         }
     /** Whether only single characters show (the switch on). */
     var singleOnly = false
@@ -66,27 +66,36 @@ class CandidatePanelView @JvmOverloads constructor(
         )
     }
 
+    /** The single-character switch: a key of the bottom row, filled with the accent while on. */
     private val danziChip = android.widget.TextView(context).apply {
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
         typeface = app.lychee.fonts.LycheeFonts.ui(context, 600)
         gravity = Gravity.CENTER
-        setPadding(dp(14), 0, dp(14), 0)
+        maxLines = 1
+        visibility = GONE
         app.lychee.layout.LycheeMotion.springy(this)
         setOnClickListener {
             singleOnly = !singleOnly
             onSingleOnly(singleOnly)
         }
     }
-    private val header = FrameLayout(context).apply {
-        addView(danziChip, LayoutParams(LayoutParams.WRAP_CONTENT, dp(30), Gravity.END or Gravity.CENTER_VERTICAL).apply { marginEnd = dp(10) })
-        visibility = GONE
+    private fun paintDanzi() {
+        danziChip.isSelected = singleOnly
+        danziChip.setTextColor(if (singleOnly) palette.onPrimary else palette.onSecondaryContainer)
+        danziChip.background = if (singleOnly) app.lychee.layout.LycheePanels.accentKey(context)
+            else app.lychee.layout.LycheePanels.functionalKey(context)
     }
 
-    private fun paintDanzi() {
-        danziChip.setTextColor(if (singleOnly) palette.onPrimary else palette.onSurfaceVariant)
-        danziChip.background = android.graphics.drawable.GradientDrawable().apply {
-            cornerRadius = dp(15).toFloat()
-            if (singleOnly) setColor(palette.primary) else { setColor(0); setStroke(dp(1), palette.outline) }
+    private val spaceKey by lazy {
+        iconKey(R.drawable.ic_sym_space_bar, R.string.lychee_numpad_space, letter = true) { onKey(com.android.inputmethod.latin.common.Constants.CODE_SPACE) }
+    }
+
+    /** 單字 shown or not: the space bar gives it its room, so the other keys stay where the keyboard's are. */
+    private fun showDanzi(shown: Boolean) {
+        danziChip.visibility = if (shown) VISIBLE else GONE
+        (spaceKey.layoutParams as? LinearLayout.LayoutParams)?.let { lp ->
+            val w = if (shown) 35f else 50f
+            if (lp.weight != w) { lp.weight = w; spaceKey.layoutParams = lp }
         }
     }
 
@@ -96,7 +105,9 @@ class CandidatePanelView @JvmOverloads constructor(
         fun key(view: android.view.View, weight: Float) = addView(view, LinearLayout.LayoutParams(0, LayoutParams.MATCH_PARENT, weight))
         key(textKey(context.getString(R.string.lychee_symbols_key)) { onKey(com.android.inputmethod.latin.common.Constants.CODE_SWITCH_ALPHA_SYMBOL) }, 15f)
         key(iconKey(R.drawable.ic_sym_mood, R.string.lychee_emoji) { onKey(com.android.inputmethod.latin.common.Constants.CODE_EMOJI) }, 10f)
-        key(iconKey(R.drawable.ic_sym_space_bar, R.string.lychee_numpad_space, letter = true) { onKey(com.android.inputmethod.latin.common.Constants.CODE_SPACE) }, 50f)
+        // 單字 beside the emoji key (the space bar gives it room; gone where there is none)
+        key(danziChip, 15f)
+        key(spaceKey, 50f)
         key(iconKey(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete, repeats = true) { onKey(com.android.inputmethod.latin.common.Constants.CODE_DELETE) }, 10f)
         key(android.widget.ImageView(context).apply {
             setImageResource(R.drawable.ic_sym_keyboard_return)
@@ -185,7 +196,6 @@ class CandidatePanelView @JvmOverloads constructor(
         grid.clipToPadding = false
         addView(LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            addView(header, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, dp(36)))
             addView(FrameLayout(context).apply {
                 addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
                 addView(fade, LayoutParams(LayoutParams.MATCH_PARENT, dp(FADE_DP), Gravity.BOTTOM))
@@ -223,7 +233,7 @@ class CandidatePanelView @JvmOverloads constructor(
             (if (english) CandidateBarView.renderable(it.value.text) else CandidateBarView.shown(it.value.text)) &&
             // the single-character switch: one character at a time
             (english || !singleOnly || it.value.text.codePointCount(0, it.value.text.length) == 1) }
-        header.visibility = if (danzi != null && !english) VISIBLE else GONE
+        showDanzi(danzi != null && !english)
         alignKeys()
         adapter.scale = scale
         adapter.style = style

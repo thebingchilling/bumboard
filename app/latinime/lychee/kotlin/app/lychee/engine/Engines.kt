@@ -40,6 +40,9 @@ class Engines(ime: InputMethodService, prefs: SharedPreferences) {
     fun showEnglishWord(word: String, onType: () -> Unit): Boolean = chinese.showEnglishWord(word, onType)
 
     /** The English suggestions that don't fit on the bar, for its ⌄ dropdown. */
+    fun peekDrag(rawX: Float, rawY: Float) = chinese.peekDrag(rawX, rawY)
+    fun peekRelease(rawX: Float, rawY: Float, lifted: Boolean) = chinese.peekRelease(rawX, rawY, lifted)
+
     fun setEnglishMore(words: List<String>, onPick: (Int) -> Unit) = chinese.setEnglishMore(words, onPick)
 
     /** Handwriting guesses or next characters in the candidate bar. */

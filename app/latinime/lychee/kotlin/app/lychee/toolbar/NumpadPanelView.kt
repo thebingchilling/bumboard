@@ -114,9 +114,12 @@ class NumpadPanelView @JvmOverloads constructor(
     private fun zeroKey(): View {
         val face = digit("0")
         val hint = TextView(context).apply {
-            setTextColor(palette.onSurfaceVariant)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
-            typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
+            // beside the 0 and easy to read, so holding it is plainly worth doing
+            setTextColor(palette.onSurface)
+            alpha = 0.72f
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            typeface = app.lychee.fonts.LycheeFonts.ui(context, 600)
+            letterSpacing = 0.08f
             visibility = GONE
         }
         zeroHint = hint
@@ -148,7 +151,7 @@ class NumpadPanelView @JvmOverloads constructor(
         return android.widget.FrameLayout(context).apply {
             addView(face, android.widget.FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
             addView(hint, android.widget.FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT,
-                Gravity.TOP or Gravity.END).apply { setMargins(0, dp(4), dp(8), 0) })
+                Gravity.CENTER_VERTICAL or Gravity.END).apply { setMargins(0, 0, dp(10), 0) })
         }
     }
 
