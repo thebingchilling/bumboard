@@ -240,7 +240,10 @@ private fun SettingsApp(start: Page, status: MutableState<ImeStatus>, requested:
                     val sign = if (deeper) 1 else -1
                     val ease = androidx.compose.animation.core.CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
                     (androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(350, easing = ease)) { sign * it / 10 } +
-                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(210, delayMillis = 90)))
+                        androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(210, delayMillis = 90)) +
+                        // settling in with a soft spring, from a hair smaller
+                        androidx.compose.animation.scaleIn(androidx.compose.animation.core.spring(dampingRatio = 0.7f,
+                            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow), initialScale = 0.97f))
                         .togetherWith(
                             androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(350, easing = ease)) { -sign * it / 10 } +
                                 androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(90)),
@@ -796,6 +799,9 @@ private fun KeysPage() {
     val spacebar = prefs.stringPref(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR) {
         prefs.getString(com.android.inputmethod.keyboard.MainKeyboardView.PREF_LYCHEE_SPACEBAR, null) ?: "language"
     }
+    val spaceHold = prefs.stringPref(app.lychee.layout.LanguageCard.PREF_HOLD) {
+        prefs.getString(app.lychee.layout.LanguageCard.PREF_HOLD, null) ?: app.lychee.layout.LanguageCard.HOLD_TAP
+    }
     // the key next to the comma: nothing, emoji or the next language
     val extra = when (commaKey.value) { "emoji" -> "emoji"; "language", "language_comma" -> "language"; else -> "none" }
 
@@ -857,6 +863,17 @@ private fun KeysPage() {
                     "method" to stringResource(R.string.lychee_pref_spacebar_method),
                 ),
                 spacebar.value, onSelect = spacebar::set,
+            )
+        }
+        row {
+            // holding the space bar lists the keyboards: tap one, or slide onto one and let go
+            ChoiceRow(
+                it, stringResource(R.string.lychee_pref_space_hold), null,
+                listOf(
+                    app.lychee.layout.LanguageCard.HOLD_TAP to stringResource(R.string.lychee_pref_space_hold_tap),
+                    app.lychee.layout.LanguageCard.HOLD_SLIDE to stringResource(R.string.lychee_pref_space_hold_slide),
+                ),
+                spaceHold.value, onSelect = spaceHold::set,
             )
         }
     }

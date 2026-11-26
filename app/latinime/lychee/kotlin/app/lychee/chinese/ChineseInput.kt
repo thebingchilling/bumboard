@@ -99,7 +99,10 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         // the notch: a swipe down on the candidates opens them all, with more room
         bar?.onExpand = { if (panel?.visibility != View.VISIBLE) togglePanel() }
         // hold to peek: the card goes when the finger lifts
-        bar?.onRelease = { if (prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek") popup?.dismiss() }
+        // hold to peek: the card goes when the finger lifts, unless it was slid onto the card's
+        // lock bar, which keeps it open
+        bar?.onRelease = { x, y, lifted -> if (peekCards()) popup?.peekRelease(x, y, lifted) }
+        bar?.onDrag = { x, y -> if (peekCards()) popup?.peekDrag(x, y) }
         show(null)
     }
 
@@ -133,6 +136,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             onPicked = { i -> onEnglishMore(i); updateMoreButton() },
             onLongPicked = { i, _ -> words.getOrNull(i)?.let { w -> showEnglishWord(w) { onEnglishMore(i) } } })
     }
+
+    private fun peekCards() = prefs.getString(PREF_DICTIONARY_HOLD, "pin") == "peek"
 
     /** Handwriting guesses or next characters, shown in the bar while nothing is composed. */
     private var guesses: List<String> = emptyList()
@@ -1225,11 +1230,22 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         }
         // the line for the letters typed is above the candidates; while handwriting nothing is
         // typed there, so the candidates move up into it (the bar keeps its height: the
-        // keyboard never jumps) and sit centred in the whole bar, with no empty strip
+        // keyboard never jumps) and the pad grows up into the room left below them
         lastBarCandidates = candidates
         val writing = stripView?.rootView?.findViewById<View>(R.id.lychee_handwriting_panel)?.visibility == View.VISIBLE
         val top = if (rime && !writing) line else 0
-        bar?.let { if (it.paddingTop != top || it.paddingBottom != 0) it.setPadding(0, top, 0, 0) }
+        // while writing, the guesses sit at the bar's top and the pad takes the line below them
+        // (no letters are typed): the pad is taller, the keyboard as tall as ever
+        val lift = if (rime && writing) line else 0
+        bar?.let { if (it.paddingTop != top || it.paddingBottom != lift) it.setPadding(0, top, 0, lift) }
+        (moreButton?.layoutParams as? android.widget.FrameLayout.LayoutParams)?.let { lp ->
+            val g = android.view.Gravity.END or (if (lift > 0) android.view.Gravity.TOP else android.view.Gravity.BOTTOM)
+            if (lp.gravity != g) {
+                lp.gravity = g
+                moreButton?.layoutParams = lp
+            }
+        }
+        (stripView?.rootView?.findViewById<View>(R.id.lychee_handwriting_panel) as? app.lychee.handwriting.HandwritingPanelView)?.lift = lift
         // voice typing takes the bar's place, so it is as tall as the bar
         val voice = stripView?.rootView?.findViewById<View>(R.id.lychee_voice_panel)
         for (view in listOfNotNull(stripView, bar, voice)) {

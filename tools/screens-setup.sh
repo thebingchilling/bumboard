@@ -39,6 +39,12 @@ beforeSettings { settings ->
     mirror(settings.pluginManagement.repositories)
     mirror(settings.dependencyResolutionManagement.repositories)
 }
+// the root project's buildscript (Paparazzi's plugin) names Maven Central itself: point it at the mirror
+allprojects {
+    buildscript.repositories.withType(MavenArtifactRepository).configureEach { r ->
+        if (r.url.toString().contains("repo.maven.apache.org")) r.url = "https://maven-central.storage-download.googleapis.com/maven2/"
+    }
+}
 GRADLE
 
 echo "Ready. Draw the screens with: tools/screens.sh"

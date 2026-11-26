@@ -9,6 +9,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -159,11 +161,33 @@ fun RaisedCard(
 
 @Composable
 private fun RowSurface(shape: Shape, onClick: (() -> Unit)?, content: @Composable () -> Unit) {
+    val source = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     Box(
         Modifier
             .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+            .then(if (onClick != null) Modifier.pressSpring(source, ROW_PRESSED).clickable(
+                interactionSource = source, indication = androidx.compose.foundation.LocalIndication.current, onClick = onClick) else Modifier),
     ) { content() }
+}
+
+/** How far a pressed row, card and button sink (rows only a hair: they are as wide as the page). */
+const val ROW_PRESSED = 0.985f
+const val CARD_PRESSED = 0.97f
+const val BUTTON_PRESSED = 0.94f
+
+/**
+ * A gentle press, everywhere in Settings: while [source] is pressed the thing sinks to [pressed]
+ * of its size, and springs back (a touch past, then settling) when let go.
+ */
+@Composable
+fun Modifier.pressSpring(source: androidx.compose.foundation.interaction.InteractionSource, pressed: Float = CARD_PRESSED): Modifier {
+    val down by source.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        if (down) pressed else 1f,
+        androidx.compose.animation.core.spring(dampingRatio = 0.45f, stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow),
+        label = "press",
+    )
+    return this.graphicsLayer { scaleX = scale; scaleY = scale }
 }
 
 /**

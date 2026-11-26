@@ -35,7 +35,9 @@ class CandidateBarView @JvmOverloads constructor(
     var onPick: (Int) -> Unit = {}
     var onLongPick: (Int, View) -> Unit = { _, _ -> }
     /** The finger left a candidate (after a long-press, for hold-to-peek). */
-    var onRelease: () -> Unit = {}
+    var onRelease: (rawX: Float, rawY: Float, lifted: Boolean) -> Unit = { _, _, _ -> }
+    /** The finger holding a candidate moved (for hold-to-peek's lock bar), in screen coordinates. */
+    var onDrag: (rawX: Float, rawY: Float) -> Unit = { _, _ -> }
     /** A swipe down on the row: open every candidate (the notch). */
     var onExpand: () -> Unit = {}
     /** A candidate's readings arrived (the first one's go in the preedit line). */
@@ -62,7 +64,13 @@ class CandidateBarView @JvmOverloads constructor(
     private val row = LinearLayout(context).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
+        // a small, faint line between candidates (not around them), short and centred
+        dividerDrawable = ShortDivider(ColorUtils.setAlphaComponent(app.lychee.ui.M3Colors.of(context).outline, 0x4D),
+            maxOf(1, resources.displayMetrics.density.toInt()), (resources.displayMetrics.density * 28).toInt())
+        showDividers = LinearLayout.SHOW_DIVIDER_MIDDLE
     }
+    /** The divider's width, counted when fitting candidates. */
+    private val dividerWidth = maxOf(1, resources.displayMetrics.density.toInt())
     private val textColor: Int
     private val firstColor: Int
     /** Shown cells by Rime's candidate index. */
@@ -84,6 +92,23 @@ class CandidateBarView @JvmOverloads constructor(
         textColor = a.getColor(R.styleable.SuggestionStripView_colorSuggested, 0xFF000000.toInt())
         firstColor = a.getColor(R.styleable.SuggestionStripView_colorAutoCorrect, textColor)
         a.recycle()
+    }
+
+    /** A thin upright line, at most [maxHeight] tall and centred in its bounds: the dividers between candidates. */
+    private class ShortDivider(color: Int, private val w: Int, private val maxHeight: Int) : android.graphics.drawable.Drawable() {
+        private val paint = Paint().apply { this.color = color }
+        override fun draw(canvas: android.graphics.Canvas) {
+            val b = bounds
+            val h = minOf(maxHeight, (b.height() * 0.6f).toInt())
+            val top = b.top + (b.height() - h) / 2f
+            canvas.drawRect(b.left.toFloat(), top, (b.left + w).toFloat(), top + h, paint)
+        }
+        override fun getIntrinsicWidth() = w
+        override fun getIntrinsicHeight() = 1
+        override fun setAlpha(alpha: Int) { paint.alpha = alpha }
+        override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { paint.colorFilter = colorFilter }
+        @Deprecated("Deprecated in Java")
+        override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
     }
 
     /** Lines under each candidate's characters: readings, and whether a meaning follows. */
@@ -148,8 +173,9 @@ class CandidateBarView @JvmOverloads constructor(
             notes[item.index]?.let { fill(cell, it) }
             if (available > 0) {
                 cell.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
-                if (shown.isNotEmpty() && used + cell.measuredWidth > available) break
-                used += cell.measuredWidth
+                val w = cell.measuredWidth + if (shown.isNotEmpty()) dividerWidth else 0
+                if (shown.isNotEmpty() && used + w > available) break
+                used += w
             } else if (shown.size >= FALLBACK_COUNT) {
                 break
             }
@@ -255,11 +281,16 @@ class CandidateBarView @JvmOverloads constructor(
         minimumWidth = dp(44)
         tag = if (first) firstColor else textColor
         background = selectableBackground()
+        // pressed, it sinks a little and springs back
+        app.lychee.layout.LycheeMotion.springy(this)
         setOnClickListener { onPick(index) }
         setOnLongClickListener { view -> onLongPick(index, view); true }
         setOnTouchListener { _, event ->
-            if (event.actionMasked == android.view.MotionEvent.ACTION_UP ||
-                event.actionMasked == android.view.MotionEvent.ACTION_CANCEL) onRelease()
+            when (event.actionMasked) {
+                android.view.MotionEvent.ACTION_MOVE -> onDrag(event.rawX, event.rawY)
+                android.view.MotionEvent.ACTION_UP -> onRelease(event.rawX, event.rawY, true)
+                android.view.MotionEvent.ACTION_CANCEL -> onRelease(event.rawX, event.rawY, false)
+            }
             false
         }
         val word = LinearLayout(context).apply {

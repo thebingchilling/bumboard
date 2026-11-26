@@ -277,6 +277,8 @@ class ToolbarView @JvmOverloads constructor(
             setColor(palette.primaryContainer)
         }, dp(if (slot() < dp(48)) 2 else 6), dp(2), dp(if (slot() < dp(48)) 2 else 6), dp(2)) else app.lychee.ui.LycheeColorStyle.themed(context).getDrawable(R.drawable.lychee_m3_suggestion)
         setOnClickListener { onClick() }
+        // pressed, it sinks a little and springs back
+        app.lychee.layout.LycheeMotion.springy(this)
         layoutParams = LinearLayout.LayoutParams(slot(), dp(40)).apply { gravity = Gravity.CENTER_VERTICAL }
     }
 

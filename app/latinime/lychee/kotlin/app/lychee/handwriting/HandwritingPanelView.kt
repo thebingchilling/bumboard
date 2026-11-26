@@ -88,19 +88,10 @@ class HandwritingPanelView @JvmOverloads constructor(
     private var unpicked: String? = null
 
     // before init, which places them
-    /** ABC over the keyboard's ?123 key, as the keyboard's own switch key reads: back to the letters. */
+    /** ABC over the keyboard's ?123 key, exactly like the keyboard's own ABC key: back to the letters. */
     private val backKey: View by lazy {
         key(null, R.string.lychee_emoji_abc) { this@HandwritingPanelView.visibility = GONE }.also { frame ->
-            // a back arrow before ABC: writing is a mode, and this leaves it
-            ((frame as FrameLayout).getChildAt(0) as? TextView)?.apply {
-                context.getDrawable(R.drawable.ic_sym_arrow_back)?.mutate()?.let { arrow ->
-                    arrow.setBounds(0, 0, dp(18), dp(18))
-                    setCompoundDrawablesRelative(arrow, null, null, null)
-                }
-                compoundDrawablePadding = dp(2)
-                compoundDrawableTintList = ColorStateList.valueOf(palette.onSecondaryContainer)
-                contentDescription = context.getString(R.string.lychee_hw_back_to_keys)
-            }
+            ((frame as FrameLayout).getChildAt(0) as? TextView)?.contentDescription = context.getString(R.string.lychee_hw_back_to_keys)
         }
     }
     /** ⌫ exactly where the keyboard's own ⌫ is, and just as big: a functional key, lifted. */
@@ -162,16 +153,17 @@ class HandwritingPanelView @JvmOverloads constructor(
         // the pad over the keyboard's upper rows; its bottom row (?123, the comma, space, the
         // period, Enter) and the candidate bar above stay the keyboard's own, but for Back laid
         // over ?123 (there is nothing else to switch to while writing). ⌫ floats in the pad's corner
-        // the bar and the pad read apart by a soft shade falling from the bar (not a hard line)
+        // the bar and the pad read apart by a firm line
         addView(FrameLayout(context).apply {
             addView(hint, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(pad, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
+            // a firm line between the candidates and the pad
             addView(View(context).apply {
-                background = android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                    intArrayOf((palette.outlineVariant and 0x00FFFFFF) or 0x66000000, palette.outlineVariant and 0x00FFFFFF))
+                setBackgroundColor(palette.outline)
+                alpha = 0.55f
                 isClickable = false
                 importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
-            }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(14), Gravity.TOP))
+            }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(2), Gravity.TOP))
             addView(message, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
             addView(upgrade, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = dp(6) })
@@ -190,12 +182,31 @@ class HandwritingPanelView @JvmOverloads constructor(
         val bottomRow = row.height + row.bottomPadding
         lp.height -= bottomRow
         lp.bottomMargin += bottomRow
+        lp.height += lift
+        appliedLift = lift
         // the candidate bar above stays exactly the keyboard's own (its lines, the candidates,
         // ⌄ and the dropdown), so the pad covers only the keys
         layoutParams = lp
         placeBack()
         placeOverKey(deleteKey, Constants.CODE_DELETE)
     }
+
+    /**
+     * How far the pad reaches up into the candidate bar: the bar's line for typed letters, which
+     * stays empty while writing (ChineseInput moves the guesses up out of it). The keyboard keeps
+     * its height; the pad just gets that room.
+     */
+    var lift = 0
+        set(value) {
+            if (field == value) return
+            field = value
+            val lp = layoutParams as? FrameLayout.LayoutParams ?: return
+            if (visibility != VISIBLE || lp.height <= 0) return
+            lp.height += value - appliedLift
+            appliedLift = value
+            layoutParams = lp
+        }
+    private var appliedLift = 0
 
     /**
      * The candidates' dropdown opens over the keys: the pad's own ⌫ and ABC (in the parent, on

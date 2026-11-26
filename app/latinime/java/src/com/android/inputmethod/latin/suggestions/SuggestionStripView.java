@@ -239,11 +239,53 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
         }
     }
 
-    /** Google's speech input couldn't go online: the mic dims (still tappable, to try again). */
+    /**
+     * Google's speech input couldn't go online: at once the mic flashes and keeps a small
+     * offline badge (a crossed-out cloud) in its corner, dimmed, until it works again (still
+     * tappable, to try again). No message pops up; the badge says it.
+     */
     public void setLycheeVoiceOffline(final boolean offline) {
-        mVoiceKey.setAlpha(offline ? 0.38f : 1f);
+        mVoiceKey.animate().cancel();
+        mVoiceKey.setForeground(offline ? lycheeOfflineBadge(getContext()) : null);
         mVoiceKey.setContentDescription(getContext().getString(offline
                 ? R.string.lychee_voice_offline_mic : R.string.spoken_description_mic));
+        if (!offline) {
+            mVoiceKey.setAlpha(1f);
+            return;
+        }
+        // three quick flashes, then it rests dimmed with its badge
+        final android.animation.ObjectAnimator flash = android.animation.ObjectAnimator.ofFloat(
+                mVoiceKey, View.ALPHA, 1f, 0.25f, 1f, 0.25f, 1f, 0.25f, 1f, 0.6f);
+        flash.setDuration(1100);
+        flash.start();
+        mVoiceKey.announceForAccessibility(getContext().getString(R.string.lychee_voice_offline_mic));
+    }
+
+    /** The offline badge: a crossed-out cloud on a small accent disc, top right of the mic. */
+    private static android.graphics.drawable.Drawable lycheeOfflineBadge(final Context context) {
+        final float d = context.getResources().getDisplayMetrics().density;
+        final app.lychee.ui.M3Colors palette = app.lychee.ui.M3Colors.Companion.of(context);
+        final android.graphics.drawable.GradientDrawable disc = new android.graphics.drawable.GradientDrawable();
+        disc.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        disc.setColor(palette.getPrimary());
+        disc.setStroke((int) (1.5f * d), palette.getSurface());
+        final android.graphics.drawable.Drawable cloud = context.getDrawable(R.drawable.lychee_ic_cloud_off).mutate();
+        cloud.setTint(palette.getOnPrimary());
+        final android.graphics.drawable.LayerDrawable badge =
+                new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[] {disc, cloud});
+        final int size = (int) (16 * d);
+        final int icon = (int) (10 * d);
+        for (int i = 0; i < 2; i++) {
+            badge.setLayerGravity(i, android.view.Gravity.TOP | android.view.Gravity.END);
+            badge.setLayerSize(i, i == 0 ? size : icon, i == 0 ? size : icon);
+        }
+        // in the mic's upper right, the icon centred on the disc
+        final int edge = (int) (8 * d);
+        badge.setLayerInsetEnd(0, edge);
+        badge.setLayerInsetTop(0, edge);
+        badge.setLayerInsetEnd(1, edge + (size - icon) / 2);
+        badge.setLayerInsetTop(1, edge + (size - icon) / 2);
+        return badge;
     }
 
     /** How loud the speech is (0..1): the glow brightens as you speak. */
@@ -269,7 +311,8 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
      * to type.
      */
     public void setLycheeScriptKey(final Boolean simplified, final OnClickListener onClick) {
-        final boolean shown = simplified != null;
+        // never while the handwriting pad is open (it reads both scripts)
+        final boolean shown = simplified != null && !lycheeWriting();
         mLycheeScriptKey.setVisibility(shown ? VISIBLE : GONE);
         mLycheeScriptKey.setOnClickListener(onClick);
         if (shown) {
@@ -287,6 +330,12 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
     private boolean mLycheeScriptShown;
     private boolean mLycheeZhongShown;
 
+    /** Whether the handwriting pad is open over the keys. */
+    private boolean lycheeWriting() {
+        final View pad = getRootView().findViewById(R.id.lychee_handwriting_panel);
+        return pad != null && pad.getVisibility() == VISIBLE;
+    }
+
     /**
      * The 中 key left of 繁/简 (null hides it): when [active], English words typed are looked
      * up and come back as Chinese candidates; it is then filled in the accent colour.
@@ -298,7 +347,8 @@ public final class SuggestionStripView extends RelativeLayout implements OnClick
     /** The English-mode key with its label: 英 (Chinese, Japanese) or 영 (Korean). */
     public void setLycheeZhongKey(final Boolean active, final OnClickListener onClick,
             final String label) {
-        final boolean shown = active != null;
+        // never while the handwriting pad is open (it writes characters, not English)
+        final boolean shown = active != null && !lycheeWriting();
         mLycheeZhongKey.setVisibility(shown ? VISIBLE : GONE);
         mLycheeZhongKey.setOnClickListener(onClick);
         if (shown) {

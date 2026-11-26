@@ -29,9 +29,23 @@ object LycheePanels {
     /** A panel opening over the keys: it cross-fades in place, like the keys changing (LycheeMotion). */
     @JvmStatic
     fun reveal(panel: View) {
+        // once laid out, every button in it sinks a little when pressed and springs back
+        panel.post { springButtons(panel, panel) }
         // the input view's own transition already brings it in
         if ((panel.parent as? android.view.ViewGroup)?.layoutTransition != null) return
         LycheeMotion.enter(panel)
+    }
+
+    /**
+     * Gives every button under [v] the keys' press (LycheeMotion.springy): anything tappable
+     * that is not most of the panel (the panel itself and the writing pad catch touches too).
+     */
+    private fun springButtons(v: View, panel: View) {
+        val big = v.width > panel.width * 0.6f && v.height > panel.height * 0.4f
+        if (v !== panel && !big && v.isClickable && v.stateListAnimator == null) LycheeMotion.springy(v)
+        if (v is android.view.ViewGroup && v !is androidx.recyclerview.widget.RecyclerView) {
+            for (i in 0 until v.childCount) springButtons(v.getChildAt(i), panel)
+        }
     }
 
     /** The main keyboard's key rows, so every panel's keys and bars line up with them. */
@@ -67,18 +81,35 @@ object LycheePanels {
     fun animate(context: Context): Boolean = android.provider.Settings.Global.getFloat(
         context.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
 
-    /** Hides every panel over the keys except [except]. */
+    /**
+     * Hides every panel over the keys except [except]. A number field's pad always stays (under
+     * another panel, coming back as that one closes): LatinIME's own phone and number pads,
+     * which have letters on their keys, must never show through. Only the field ending
+     * ([hideAll]) puts it away.
+     */
     @JvmStatic
     fun hideOthers(inputView: View, except: View?) {
         for (id in PANELS) {
             val panel = inputView.findViewById<View>(id) ?: continue
-            // a number field's pad stays under another panel (it comes back as that one closes);
-            // only the field ending puts it away
-            if (except != null && panel is app.lychee.toolbar.NumpadPanelView && panel.forced) continue
+            if (panel is app.lychee.toolbar.NumpadPanelView && panel.forced) continue
             if (panel !== except && panel.visibility == View.VISIBLE) {
                 panel.visibility = View.GONE
             }
         }
+    }
+
+    /** Hides every panel over the keys, a number field's pad too (the field has ended). */
+    @JvmStatic
+    fun hideAll(inputView: View) {
+        for (id in PANELS) inputView.findViewById<View>(id)?.let { if (it.visibility == View.VISIBLE) it.visibility = View.GONE }
+    }
+
+    /** Whether a panel that Back closes is open (a number field's pad is not one: Back closes the keyboard). */
+    @JvmStatic
+    fun anyClosable(inputView: View): Boolean = PANELS.any { id ->
+        inputView.findViewById<View>(id)?.let { p ->
+            p.visibility == View.VISIBLE && !(p is app.lychee.toolbar.NumpadPanelView && p.forced)
+        } == true
     }
 
     /** The panels over the keys in [inputView] (to keep, rather than find each time). */
@@ -107,6 +138,7 @@ object LycheePanels {
         val palette = app.lychee.ui.M3Colors.of(context)
         val size = (context.resources.displayMetrics.density * 40).toInt()
         val button = android.widget.ImageView(context).apply {
+            LycheeMotion.springy(this)
             setImageResource(R.drawable.ic_sym_arrow_back)
             imageTintList = android.content.res.ColorStateList.valueOf(palette.onSurface)
             scaleType = android.widget.ImageView.ScaleType.CENTER

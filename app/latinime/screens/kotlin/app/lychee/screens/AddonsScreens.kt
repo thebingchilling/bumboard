@@ -52,7 +52,7 @@ class AddonsScreens {
 
     @OptIn(ExperimentalMaterial3Api::class)
     fun draw(paparazzi: Paparazzi, name: String, title: String, scroll: Int = 0, setUp: () -> Unit) {
-        StoreLook.startTab = 0; StoreLook.startCategory = -1
+        StoreLook.startTab = 0
         ProductSheet.open = null
         setUp()
         paparazzi.snapshot(name) {
@@ -81,14 +81,11 @@ class AddonsScreens {
 
     @Test fun store() = page("1-store", "Add-ons") {}
     @Test fun storeFurther() = page("2-store-further", "Add-ons", scroll = 1200) {}
-    @Test fun dictionaries() = page("3-category-dictionaries", "Dictionaries") { StoreLook.startCategory = 0 }
-    @Test fun handwriting() = page("4-category-handwriting", "Handwriting") { StoreLook.startCategory = 1 }
-    @Test fun fonts() = page("5-category-fonts", "Fonts & emoji") { StoreLook.startCategory = 3 }
+    @Test fun storeFurthest() = page("3-store-languages", "Add-ons", scroll = 2400) {}
+    @Test fun installed() = page("4-installed", "Add-ons") { StoreLook.startTab = 1 }
     @Test fun listingPack() = page("6-listing-japanese-pack", "Japanese Pack") { ProductSheet.open = Store.byId("pack_ja") }
     @Test fun listingAddon() = page("7-listing-chinese-in-depth", "Chinese In Depth") { ProductSheet.open = Store.byId("card_zh") }
     @Test fun listingHandwriting() = page("8-listing-google-handwriting", "Google Handwriting") { ProductSheet.open = Store.byId("handwriting") }
-    @Test fun allAddons() = page("10-all-addons", "All add-ons") { StoreLook.startCategory = 4 }
-    @Test fun allAddonsFurther() = page("11-all-addons-further", "All add-ons", scroll = 1400) { StoreLook.startCategory = 4 }
     @Test fun updates() = page("9-updates", "Add-ons") { StoreLook.startTab = 2 }
 }
 

@@ -100,9 +100,8 @@ class EmojiPanelView @JvmOverloads constructor(
         setBackgroundColor(palette.surface)
         addView(searchBox().also { search = it }, LayoutParams(LayoutParams.MATCH_PARENT, searchRowHeight(context)))
         grid.layoutManager = layoutManager
-        // emoji cut by the bottom edge fade out instead of being sliced off
-        grid.isVerticalFadingEdgeEnabled = true
-        grid.setFadingEdgeLength(dp(20))
+        // no fade at the edges: it made the emoji's box look small
+        grid.isVerticalFadingEdgeEnabled = false
         grid.adapter = adapter
         grid.itemAnimator = null
         grid.setHasFixedSize(true)
@@ -135,7 +134,7 @@ class EmojiPanelView @JvmOverloads constructor(
         })
         pinchToResize()
         swipeBetweenCategories()
-        addView(bottomBar().also { bar = it }, LayoutParams(LayoutParams.MATCH_PARENT, dp(50)).apply {
+        addView(bottomBar().also { bar = it }, LayoutParams(LayoutParams.MATCH_PARENT, dp(56)).apply {
             setMargins(dp(6), 0, dp(6), dp(6))
         })
         // loaded ahead, so the panel opens full at once
@@ -174,16 +173,20 @@ class EmojiPanelView @JvmOverloads constructor(
         val row = app.lychee.layout.LycheePanels.keyRow(this)
         bar?.let { b ->
             val lp = b.layoutParams as LayoutParams
-            lp.height = dp(CATEGORY_BAR_DP)
+            // exactly the keyboard's bottom row: a key row tall, as high above the bottom, ABC as
+            // wide as the keyboard's ?123 key and in its place
+            lp.height = row.height
             lp.setMargins(0, 0, 0, row.bottomPadding)
             b.layoutParams = lp
             b.setPadding(0, 0, 0, 0)
             val half = row.gap / 2
+            val keysWidth = (width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels) - paddingLeft - paddingRight
             for (i in 0 until b.childCount) {
                 val c = b.getChildAt(i)
                 (c.layoutParams as? LayoutParams)?.let { clp ->
                     clp.height = LayoutParams.MATCH_PARENT
                     clp.setMargins(half, half, half, half)
+                    if (i == 0) clp.width = (keysWidth * SWITCH_KEY_SHARE).toInt() - 2 * half
                     c.layoutParams = clp
                 }
             }
@@ -192,6 +195,9 @@ class EmojiPanelView @JvmOverloads constructor(
 
     fun startEmojiPalettes(switchToAlphaLabel: String?, keyVisualAttr: KeyVisualAttributes?, iconSet: KeyboardIconsSet?) {
         alignWithKeyboard()
+        // ABC, the categories, search and delete spring when pressed, like every panel's buttons
+        bar?.let { b -> app.lychee.layout.LycheeMotion.springy(b.getChildAt(0)) }
+        search?.let { s -> (s as? android.view.ViewGroup)?.let { g -> app.lychee.layout.LycheeMotion.springy(g.getChildAt(g.childCount - 1)) } }
         // the panel's own content cross-fades in, settling from a hair smaller (LycheeMotion),
         // whether or not the input view animates the panel itself
         for (i in 0 until childCount) app.lychee.layout.LycheeMotion.enter(getChildAt(i))
@@ -364,6 +370,7 @@ class EmojiPanelView @JvmOverloads constructor(
                 scaleType = ImageView.ScaleType.CENTER
                 contentDescription = context.getString(section.title)
                 setOnClickListener { jumpTo(s) }
+                app.lychee.layout.LycheeMotion.springy(this)
             }
             tabViews += tab
             // the tabs share the whole bar, so every category fits
@@ -502,6 +509,8 @@ class EmojiPanelView @JvmOverloads constructor(
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val view = EmojiCell(context).apply {
+                // pressed, the emoji sinks a little and springs back
+                app.lychee.layout.LycheeMotion.springy(this)
                 gravity = if (viewType == 0) Gravity.CENTER_VERTICAL else Gravity.CENTER
                 if (viewType == 0) {
                     setTextColor(palette.onSurfaceVariant)
@@ -623,7 +632,8 @@ class EmojiPanelView @JvmOverloads constructor(
         private const val EMOJI_FILL = 0.74f
         private const val GRID_SIDE_DP = 8
         /** The categories' bar: the tabs and a little room round them. */
-        private const val CATEGORY_BAR_DP = 46
+        /** The keyboard's ?123 / ABC key's share of its width (row_qwerty4: 15%p). */
+        private const val SWITCH_KEY_SHARE = 0.15f
         /** The kaomoji section's id, and the keywords that mark its cells. */
         private const val KAOMOJI = "kaomoji"
 

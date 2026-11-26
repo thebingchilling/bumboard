@@ -63,20 +63,14 @@ object AddonSheet {
 /** Add-ons' three tabs, like Pleco's: the store, what is on the phone, and updates. */
 private enum class StoreTab(val title: String) { STORE("Store"), INSTALLED("Installed"), UPDATES("Updates") }
 
-/** The store's categories, each a page of its own. */
-private enum class Browse(val title: String, val about: String, val tile: String) {
-    DICTIONARIES("Dictionaries", "In-depth word cards, and the free dictionaries", "詞"),
-    HANDWRITING("Handwriting", "Google's ML Kit recognition for the handwriting pad", "寫"),
-    LEARNING("Learning tools", "Stroke order and example sentences", "筆"),
-    FONTS("Fonts & emoji", "Chinese, Japanese and Korean fonts, and emoji styles", "字"),
-    ALL("All add-ons", "Every add-on and free download, by language", "all"),
-}
-
 /**
- * Settings > Add-ons, a store laid out like Pleco's: three tabs (Store, Installed, Updates). The
- * store: a one-line introduction, the featured bundles, then categories, each opening a page of
- * short rows (name, one line, price or size, one action at the right); every listing opens its
- * own page (ProductSheet, or a free download's sheet). The registration sits at the very bottom.
+ * Settings > Add-ons: three tabs (Store, Installed, Updates). Every listing, everywhere, is the
+ * same compact card ([ListingCard]): its tile, name and one line, small chips for where it stands
+ * (price, installed, comes with Lychee, size, version), and one action at the right; a tap opens
+ * its own page (ProductSheet, or a free download's sheet). The store is laid out like Installed:
+ * the bundles, then a section per language with that language's add-ons and free downloads (the
+ * ones that come with Lychee too), then what works in every language. The registration sits at
+ * the very bottom.
  */
 @Composable
 fun AddonsPage() {
@@ -87,7 +81,6 @@ fun AddonsPage() {
     remember { Packs.removeUnlisted(context) }
     val catalog = remember { Packs.catalog(context) }
     var tab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(StoreTab.entries[StoreLook.startTab]) }
-    var browse by remember { mutableStateOf(Browse.entries.getOrNull(StoreLook.startCategory)) }
     val colors = MaterialTheme.colorScheme
     // a listing opens as a page of its own, in place of the store; the app bar's ← (or Back) returns
     ProductSheet.open?.let { product ->
@@ -96,22 +89,16 @@ fun AddonsPage() {
         AddonSheetHost(actions)
         return
     }
-    browse?.let { b -> InnerPageOf(b.title) { browse = null } }
-
     androidx.compose.material3.PrimaryTabRow(selectedTabIndex = tab.ordinal, containerColor = colors.surface) {
         StoreTab.entries.forEach { t ->
-            androidx.compose.material3.Tab(selected = tab == t, onClick = { tab = t; browse = null },
+            androidx.compose.material3.Tab(selected = tab == t, onClick = { tab = t },
                 text = { Text(t.title, maxLines = 1) })
         }
     }
     PackMessage(actions)
     val remove: (Pack) -> Unit = { pack -> PackStorage.remove(context, pack); version++ }
     when (tab) {
-        StoreTab.STORE -> {
-            val open = browse
-            if (open == null) StoreHome(catalog) { browse = it }
-            else BrowsePage(open, catalog, tick, actions, onRemove = remove) { version++ }
-        }
+        StoreTab.STORE -> StoreHome(catalog, tick, actions, onRemove = remove) { version++ }
         StoreTab.INSTALLED -> {
             val total = remember(tick) { Packs.totalSize(context) }
             Text(stringResource(R.string.lychee_addons_used, Packs.formatSize(total)), style = MaterialTheme.typography.bodyMedium,
@@ -124,8 +111,9 @@ fun AddonsPage() {
             for (section in PackStorage.Section.entries) {
                 val packs = installed.filter { PackStorage.section(it) == section }
                 if (packs.isEmpty()) continue
-                SectionTitle(stringResource(sectionName(section)))
-                packs.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { remove(pack) }) { version++ } }
+                Listings(stringResource(sectionName(section))) {
+                    packs.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { remove(pack) }) { version++ } }
+                }
             }
         }
         StoreTab.UPDATES -> {
@@ -155,83 +143,109 @@ fun AddonsPage() {
     AddonSheetHost(actions)
 }
 
+/** The store's sections: each language, then what works in every language. */
+private val storeSections = listOf(
+    PackStorage.Section.CHINESE, PackStorage.Section.JAPANESE, PackStorage.Section.KOREAN,
+    PackStorage.Section.ENGLISH, PackStorage.Section.MISC,
+)
+
+/** The paid add-ons listed under a section: each language's In Depth card; the rest under every language. */
+private fun paidIn(section: PackStorage.Section): List<app.lychee.store.Store.Product> {
+    val S = app.lychee.store.Store
+    return when (section) {
+        PackStorage.Section.CHINESE -> listOf(S.CARD_ZH)
+        PackStorage.Section.JAPANESE -> listOf(S.CARD_JA)
+        PackStorage.Section.KOREAN -> listOf(S.CARD_KO)
+        PackStorage.Section.MISC -> listOf(S.HANDWRITING, S.STROKES, S.EXAMPLES, S.FONTS)
+        else -> emptyList()
+    }
+}
+
 /**
- * The store's first page, in Lychee's own layout: a short note on who makes it, the bundles as
- * cards (Lychee Complete large, the three language packs side by side), the categories as a grid,
- * one large way into every add-on, and the registration at the bottom.
+ * The store, laid out like Installed: one honest line, the bundles, then a section per language
+ * (its In Depth card and its free downloads, including those that come with Lychee, each saying
+ * so), then what works in every language, and the registration at the bottom.
  */
 @Composable
-private fun StoreHome(catalog: List<Pack>, onBrowse: (Browse) -> Unit) {
+private fun StoreHome(catalog: List<Pack>, tick: Int, actions: PackActions, onRemove: (Pack) -> Unit, onChanged: () -> Unit) {
     val context = LocalContext.current
     val colors = MaterialTheme.colorScheme
     val S = app.lychee.store.Store
     val unavailable = remember { S.unavailableReason(context) }
     // only when paid add-ons can't be had on this phone, and why
     unavailable?.let { Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) { Note(it, colors.errorContainer, colors.onErrorContainer) } }
-    StoreIntro()
-    GroupHeader("Bundles")
-    Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        CompleteCard(S.FULL)
-        androidx.compose.material3.Surface(shape = RoundedCornerShape(20.dp), color = colors.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
-            Column {
-                S.packs.forEachIndexed { i, p ->
-                    if (i > 0) androidx.compose.material3.HorizontalDivider(Modifier.padding(start = 72.dp), color = colors.outlineVariant.copy(alpha = 0.6f))
-                    PackCard(p)
-                }
-            }
-        }
+    Text("Made by a student developer. One-time purchases, no ads, no tracking, always offline.",
+        style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp))
+    Listings("Bundles") {
+        (listOf(S.FULL) + S.packs).forEach { p -> ProductCard(p) }
     }
-    Spacer(Modifier.height(8.dp))
-    GroupHeader("Browse")
-    Browse.entries.filter { it != Browse.ALL }.forEach { b -> CategoryRow(b) { onBrowse(b) } }
-    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-        AllAddonsCard(S.addons.size + S.packs.size + 1, catalog.count { !it.custom }) { onBrowse(Browse.ALL) }
+    for (section in storeSections) {
+        val paid = paidIn(section)
+        val free = catalog.filter { !it.custom && PackStorage.section(it) == section }
+        if (paid.isEmpty() && free.isEmpty()) continue
+        val title = if (section == PackStorage.Section.MISC) "Every language" else stringResource(sectionName(section))
+        Listings(title) {
+            paid.forEach { p -> ProductCard(p) }
+            free.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { onRemove(pack) }, onChanged = onChanged) }
+        }
     }
     Spacer(Modifier.height(16.dp))
     RegistrationSection()
 }
 
-private fun paidIn(b: Browse): List<app.lychee.store.Store.Product> {
-    val S = app.lychee.store.Store
-    return when (b) {
-        Browse.DICTIONARIES -> S.addons.filter { it.category == app.lychee.store.Store.Category.DICTIONARIES }
-        Browse.HANDWRITING -> listOf(S.HANDWRITING)
-        Browse.LEARNING -> listOf(S.STROKES, S.EXAMPLES)
-        Browse.FONTS -> listOf(S.FONTS)
-        Browse.ALL -> S.addons
-    }
-}
-
-private fun freeIn(b: Browse, catalog: List<Pack>): List<Pack> {
-    val kinds = when (b) {
-        Browse.DICTIONARIES -> setOf(PackStorage.Kind.DICTIONARY)
-        Browse.LEARNING -> setOf(PackStorage.Kind.STROKES, PackStorage.Kind.EXAMPLES)
-        Browse.FONTS -> setOf(PackStorage.Kind.FONT, PackStorage.Kind.EMOJI)
-        Browse.HANDWRITING -> emptySet()
-        Browse.ALL -> null
-    }
-    return catalog.filter { !it.custom && (kinds == null || PackStorage.kind(it) in kinds) }
-}
-
-/** What an add-on is, in one quiet card: offline like the rest of Lychee, and bought once for life. */
+/** A section of listings: its heading in the accent colour, then its cards, close together. */
 @Composable
-private fun StoreIntro() {
+private fun Listings(title: String, content: @Composable () -> Unit) {
+    GroupHeader(title)
+    Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
+    Spacer(Modifier.height(8.dp))
+}
+
+/** A small chip on a listing: its price or where it stands ([accent]), its size, its version. */
+@Composable
+private fun ListingChip(text: String, accent: Boolean = false) {
     val colors = MaterialTheme.colorScheme
-    Column(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)
-            .clip(RoundedCornerShape(20.dp)).background(colors.surfaceContainerLow).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+    Text(text, style = MaterialTheme.typography.labelSmall, maxLines = 1,
+        color = if (accent) colors.onPrimaryContainer else colors.onSurfaceVariant,
+        modifier = Modifier.clip(RoundedCornerShape(6.dp))
+            .background(if (accent) colors.primaryContainer else colors.surfaceContainerHigh)
+            .padding(horizontal = 6.dp, vertical = 2.dp))
+}
+
+/**
+ * Every listing's card, in the store and in Installed alike: [tile], [name] and [line] (two lines
+ * at most), its [chips] under them, and [action] at the right; a tap opens the listing's page.
+ */
+@Composable
+private fun ListingCard(
+    name: String, line: String, chips: List<Pair<String, Boolean>>, quiet: Boolean = false,
+    tile: @Composable () -> Unit, onClick: () -> Unit, action: @Composable () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    androidx.compose.material3.Surface(
+        onClick = onClick, shape = RoundedCornerShape(16.dp), color = colors.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth().pressSpring(source), interactionSource = source,
     ) {
-        Text("Go deeper with dictionaries, handwriting and learning tools for Lychee.",
-            style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Promise(R.drawable.ic_sym_check, "Always offline, like the rest of Lychee")
-            Promise(R.drawable.ic_sym_check, "Yours for life, with every future update")
+        Row(Modifier.padding(start = 12.dp, end = 8.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            tile()
+            Spacer(Modifier.size(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(name, style = MaterialTheme.typography.titleSmall, color = if (quiet) colors.onSurfaceVariant else colors.onSurface)
+                if (line.isNotEmpty()) Text(line, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
+                    maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                if (chips.isNotEmpty()) Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    chips.forEach { (text, accent) -> ListingChip(text, accent) }
+                }
+            }
+            Spacer(Modifier.size(8.dp))
+            action()
         }
     }
 }
 
-/** A small promise: a tick and a few words, in the accent colour (three fit on one line). */
+/** A small promise: a tick and a few words, in the accent colour. */
 @Composable
 fun Promise(icon: Int, text: String) {
     val colors = MaterialTheme.colorScheme
@@ -244,176 +258,45 @@ fun Promise(icon: Int, text: String) {
 
 /**
  * A price as a button of its own: a pill in the accent's tonal colour (or filled, for the
- * largest bundle). It opens the listing, as the row does.
+ * largest bundle). It opens the listing, as the card does; it sinks a little when pressed.
  */
 @Composable
 fun PricePill(text: String, strong: Boolean = false, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     androidx.compose.material3.Surface(
         onClick = onClick,
         shape = CircleShape,
         color = if (strong) colors.primary else colors.primaryContainer,
         contentColor = if (strong) colors.onPrimary else colors.onPrimaryContainer,
+        modifier = Modifier.pressSpring(source, BUTTON_PRESSED),
+        interactionSource = source,
     ) {
         Text(text, style = MaterialTheme.typography.labelLarge, maxLines = 1,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp))
     }
 }
 
-/** Lychee Complete: a wide card at the head of the bundles. */
+/** A paid add-on, pack or Lychee Complete as a listing: its price, and what it holds or belongs to. */
 @Composable
-private fun CompleteCard(p: app.lychee.store.Store.Product) {
-    val colors = MaterialTheme.colorScheme
+private fun ProductCard(p: app.lychee.store.Store.Product) {
     val S = app.lychee.store.Store
-    androidx.compose.material3.Surface(
-        onClick = { ProductSheet.open = p }, shape = RoundedCornerShape(24.dp),
-        color = colors.primaryContainer, modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ProductTile(p, 48)
-                Spacer(Modifier.size(16.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(p.name, style = MaterialTheme.typography.titleLarge, color = colors.onPrimaryContainer)
-                    Text(p.tagline, style = MaterialTheme.typography.bodyMedium, color = colors.onPrimaryContainer.copy(alpha = 0.8f))
+    // the price is the pill at the right; the chips say what it holds or where else it comes
+    val chips = buildList {
+        when (p.kind) {
+            app.lychee.store.Store.Kind.ADDON -> {
+                val packs = S.includedIn(p.id).filter { it.kind == app.lychee.store.Store.Kind.PACK }
+                when {
+                    packs.size == S.packs.size -> add("In every language pack" to false)
+                    packs.isNotEmpty() -> add("Also in " + packs.joinToString(", ") { it.name } to false)
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${p.includes.size} add-ons, every language",
-                    style = MaterialTheme.typography.labelLarge, color = colors.onPrimaryContainer, modifier = Modifier.weight(1f))
-                PricePill(S.price(p.cents), strong = true) { ProductSheet.open = p }
-            }
+            app.lychee.store.Store.Kind.FULL -> add("${p.includes.size} add-ons, every language" to false)
+            else -> add("${p.includes.size} add-ons" to false)
         }
     }
-}
-
-/** A language pack: one row of the packs' card (tile, name, line, saving, price). */
-@Composable
-private fun PackCard(p: app.lychee.store.Store.Product) {
-    val colors = MaterialTheme.colorScheme
-    val S = app.lychee.store.Store
-    Row(
-        Modifier.fillMaxWidth().clickable { ProductSheet.open = p }.padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ProductTile(p, 40)
-        Spacer(Modifier.size(16.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(p.name, style = MaterialTheme.typography.titleMedium, color = colors.onSurface)
-            Text(p.tagline, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
-            Text("${p.includes.size} add-ons", style = MaterialTheme.typography.labelSmall,
-                color = colors.primary, modifier = Modifier.padding(top = 2.dp))
-        }
-        Spacer(Modifier.size(12.dp))
-        PricePill(S.price(p.cents)) { ProductSheet.open = p }
-    }
-}
-
-/** A category as a plain list row: its character on the keyline, name, what it holds, a chevron. */
-@Composable
-private fun CategoryRow(b: Browse, onClick: () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(colors.secondaryContainer), contentAlignment = Alignment.Center) {
-            Text(b.tile, color = colors.onSecondaryContainer, fontSize = androidx.compose.ui.unit.TextUnit(20f, androidx.compose.ui.unit.TextUnitType.Sp))
-        }
-        Spacer(Modifier.size(16.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(b.title, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
-            Text(b.about, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
-        }
-        Spacer(Modifier.size(12.dp))
-        Icon(painterResource(R.drawable.ic_sym_chevron_right), null, tint = colors.onSurfaceVariant)
-    }
-}
-
-/** Every add-on in one place: a large card of its own under the categories. */
-@Composable
-private fun AllAddonsCard(paid: Int, free: Int, onClick: () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    androidx.compose.material3.Surface(
-        onClick = onClick, shape = RoundedCornerShape(24.dp), color = colors.secondaryContainer, modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(Modifier.padding(horizontal = 20.dp, vertical = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("All add-ons", style = MaterialTheme.typography.titleLarge, color = colors.onSecondaryContainer)
-                Text("$paid to buy · $free free downloads, by language", style = MaterialTheme.typography.bodyMedium,
-                    color = colors.onSecondaryContainer.copy(alpha = 0.8f))
-            }
-            Icon(painterResource(R.drawable.ic_sym_chevron_right), null, tint = colors.onSecondaryContainer)
-        }
-    }
-}
-
-/** A category's page (or every add-on): the bundles (all only), paid add-ons, then free downloads by language. */
-@Composable
-private fun BrowsePage(
-    browse: Browse, catalog: List<Pack>, tick: Int, actions: PackActions,
-    onRemove: (Pack) -> Unit, onChanged: () -> Unit,
-) {
-    val S = app.lychee.store.Store
-    if (browse == Browse.ALL) {
-        StoreHeader("Bundles", first = true)
-        (listOf(S.FULL) + S.packs).forEach { p ->
-            StoreRow(p, "${p.includes.size} add-ons", strong = p == S.FULL)
-        }
-    }
-    val paid = paidIn(browse)
-    if (paid.isNotEmpty()) {
-        StoreHeader("Add-ons", first = browse != Browse.ALL)
-        paid.forEach { p ->
-            StoreRow(p, "In " + S.includedIn(p.id).joinToString(", ") { it.name.removeSuffix(" Pack").removePrefix("Lychee ") })
-        }
-    }
-    val free = freeIn(browse, catalog)
-    if (free.isNotEmpty()) {
-        StoreHeader("Free downloads", first = paid.isEmpty())
-        for (section in PackStorage.Section.entries) {
-            val packs = free.filter { PackStorage.section(it) == section }
-            if (packs.isEmpty()) continue
-            SubHeader(stringResource(sectionName(section)))
-            packs.forEach { pack -> AddonCard(pack, tick, actions, onRemove = { onRemove(pack) }, onChanged = onChanged) }
-        }
-    }
-}
-
-/** A section heading of the store: the accent colour, with a thin line above (none on the first). */
-@Composable
-private fun StoreHeader(title: String, first: Boolean = false) {
-    if (!first) SectionDivider()
-    GroupHeader(title)
-}
-
-/** A language's heading inside a section: smaller and grey, no line. */
-@Composable
-private fun SubHeader(title: String) {
-    Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp))
-}
-
-/**
- * One add-on in a list: its tile on the 72 dp keyline, the name, one line on what it is, a small
- * note, and its price as a pill button at the right. The whole row opens the listing.
- */
-@Composable
-private fun StoreRow(p: app.lychee.store.Store.Product, meta: String?, strong: Boolean = false) {
-    val colors = MaterialTheme.colorScheme
-    Row(
-        Modifier.fillMaxWidth().clickable { ProductSheet.open = p }.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ProductTile(p, 40)
-        Spacer(Modifier.size(16.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(p.name, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
-            Text(p.tagline, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
-            meta?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = colors.primary, modifier = Modifier.padding(top = 2.dp)) }
-        }
-        Spacer(Modifier.size(12.dp))
-        PricePill(app.lychee.store.Store.price(p.cents), strong) { ProductSheet.open = p }
+    ListingCard(p.name, p.tagline, chips, tile = { ProductTile(p, 40) }, onClick = { ProductSheet.open = p }) {
+        PricePill(S.price(p.cents), strong = p.kind == app.lychee.store.Store.Kind.FULL) { ProductSheet.open = p }
     }
 }
 
@@ -548,14 +431,6 @@ private fun AddonTile(pack: Pack, size: androidx.compose.ui.unit.Dp, fontSize: a
     }
 }
 
-/** A section's heading on the add-ons page. */
-@Composable
-private fun SectionTitle(title: String) {
-    // a Material 2 list's heading, a divider above it
-    SectionDivider()
-    GroupHeader(title)
-}
-
 /** [Settings > Add-ons] for screens that still link to the old Storage page. */
 @Composable
 fun StoragePage() = AddonsPage()
@@ -572,9 +447,9 @@ fun addonName(pack: Pack): String = if (!pack.custom) pack.name else when (pack.
 }
 
 /**
- * One add-on as a card: its name and what it is; under them a badge saying where it stands
- * (installed, comes with Lychee, removed, or not installed) and its size (on the phone, or to
- * download); at the end, remove it, bring it back, or get it.
+ * A free download (or one of your own fonts) as a listing, in the store and in Installed alike:
+ * its chips say where it stands (installed, comes with Lychee, removed, an update, or free), its
+ * size and version; at the right, remove it, bring it back, update it, or get it.
  */
 @Composable
 private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () -> Unit, onChanged: () -> Unit) {
@@ -585,96 +460,64 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
     val bundled = remember(pack.id) { app.lychee.packs.BundledPacks.isBundled(context, pack.id) }
     val size = remember(pack.id, tick, installed) { if (installed) Packs.formatSize(Packs.sizeOnDisk(context, pack.id)) else pack.size }
     var busy by remember { mutableStateOf(false) }
-    androidx.compose.material3.Surface(
-        onClick = { AddonSheet.open = pack },
-        // a Material 2 list row: full width, no card
-        shape = androidx.compose.ui.graphics.RectangleShape,
-        color = colors.surface,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        // the same keyline and spacing as the store's rows: tile at 16, text at 72, the action 16 from the edge
-        Row(Modifier.padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            AddonTile(pack, 40.dp, androidx.compose.ui.unit.TextUnit(20f, androidx.compose.ui.unit.TextUnitType.Sp))
-            Spacer(Modifier.size(16.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                // installed: quieter, in grey; still to get: in full colour
-                Text(addonName(pack), style = MaterialTheme.typography.bodyLarge,
-                    color = if (installed) colors.onSurfaceVariant else colors.onSurface)
-                if (pack.summary.isNotEmpty()) {
-                    Text(pack.summary, style = MaterialTheme.typography.bodySmall,
-                        color = colors.onSurfaceVariant.copy(alpha = if (installed) 0.7f else 1f))
+    val update = if (installed) app.lychee.packs.Updates.newer(context, pack) else null
+    val status = when {
+        update != null -> stringResource(R.string.lychee_addons_update_to, update)
+        installed && bundled -> stringResource(R.string.lychee_addons_bundled)
+        installed -> stringResource(R.string.lychee_addons_installed)
+        bundled -> stringResource(R.string.lychee_storage_removed)
+        else -> pack.price ?: stringResource(R.string.lychee_store_free)
+    }
+    val shownVersion = if (installed) Packs.installedVersion(context, pack.id) else null
+    val chips = listOfNotNull(
+        status to (update != null || !installed),
+        size.takeIf { it.isNotEmpty() }?.let { it to false },
+        shownVersion?.takeIf { it.isNotEmpty() }?.let { "v$it" to false },
+    )
+    ListingCard(addonName(pack), pack.summary, chips, quiet = false,
+        tile = { AddonTile(pack, 40.dp, androidx.compose.ui.unit.TextUnit(20f, androidx.compose.ui.unit.TextUnitType.Sp)) },
+        onClick = { AddonSheet.open = pack }) {
+        when {
+            busy -> androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+            // a newer version (Updates found it): Update, one file at a time
+            installed && app.lychee.packs.Updates.hasUpdate(context, pack) ->
+                androidx.compose.material3.FilledTonalIconButton(onClick = { AddonSheet.open = pack }) {
+                    Icon(painterResource(R.drawable.ic_sym_refresh), stringResource(R.string.lychee_addons_update_short))
                 }
-                // the paid add-on this download belongs to, and the packs that include it
-                app.lychee.store.Store.forPack(pack.id)?.let { product ->
+            // removing asks first, in a menu dropped from the bin (not a dialog)
+            installed -> Box {
+                var asking by remember { mutableStateOf(false) }
+                IconButton(onClick = { asking = true }) {
+                    Icon(painterResource(R.drawable.lychee_ic_delete), stringResource(R.string.lychee_packs_remove), tint = colors.onSurfaceVariant)
+                }
+                M3Menu(expanded = asking, onDismissRequest = { asking = false }) {
+                    val needed = pack.id == "rime_ja" || pack.id == "dict_ko" || pack.id == "dict_en"
                     Text(
-                        product.name + " · in " + app.lychee.store.Store.includedIn(product.id)
-                            .joinToString(", ") { it.name.removePrefix("Lychee ") },
-                        style = MaterialTheme.typography.labelSmall, color = colors.primary, maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        stringResource(if (needed) R.string.lychee_storage_confirm_needed else R.string.lychee_storage_confirm_body,
+                            Packs.formatSize(Packs.sizeOnDisk(context, pack.id))),
+                        style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
+                    MenuItem(stringResource(R.string.lychee_packs_remove), icon = R.drawable.ic_sym_delete, color = colors.error) {
+                        asking = false
+                        onRemove()
+                    }
+                    MenuItem(stringResource(android.R.string.cancel), icon = R.drawable.ic_sym_close) { asking = false }
                 }
-                // the size and version on a line of their own; where it stands before them
-                val update = if (installed) app.lychee.packs.Updates.newer(context, pack) else null
-                val status = when {
-                    update != null -> stringResource(R.string.lychee_addons_update_to, update)
-                    installed && bundled -> stringResource(R.string.lychee_addons_bundled)
-                    installed -> stringResource(R.string.lychee_addons_installed)
-                    bundled -> stringResource(R.string.lychee_storage_removed)
-                    else -> pack.price ?: stringResource(R.string.lychee_store_free)
-                }
-                val shownVersion = if (installed) Packs.installedVersion(context, pack.id) else null
-                Text(
-                    listOfNotNull(status, size.takeIf { it.isNotEmpty() }, shownVersion?.takeIf { it.isNotEmpty() }?.let { "v$it" })
-                        .joinToString("  ·  "),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (installed && update == null) colors.onSurfaceVariant else colors.primary,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
             }
-            // room between what it is and what can be done with it
-            Spacer(Modifier.size(12.dp))
-            when {
-                busy -> androidx.compose.material3.CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                // a newer version (Updates found it): Update, one file at a time
-                installed && app.lychee.packs.Updates.hasUpdate(context, pack) ->
-                    androidx.compose.material3.FilledTonalIconButton(onClick = { AddonSheet.open = pack }) {
-                        Icon(painterResource(R.drawable.ic_sym_refresh), stringResource(R.string.lychee_addons_update_short))
-                    }
-                // removing asks first, in a menu dropped from the bin (not a dialog)
-                installed -> Box {
-                    var asking by remember { mutableStateOf(false) }
-                    IconButton(onClick = { asking = true }) {
-                        Icon(painterResource(R.drawable.lychee_ic_delete), stringResource(R.string.lychee_packs_remove), tint = colors.onSurfaceVariant)
-                    }
-                    M3Menu(expanded = asking, onDismissRequest = { asking = false }) {
-                        val needed = pack.id == "rime_ja" || pack.id == "dict_ko" || pack.id == "dict_en"
-                        Text(
-                            stringResource(if (needed) R.string.lychee_storage_confirm_needed else R.string.lychee_storage_confirm_body,
-                                Packs.formatSize(Packs.sizeOnDisk(context, pack.id))),
-                            style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        )
-                        MenuItem(stringResource(R.string.lychee_packs_remove), icon = R.drawable.ic_sym_delete, color = colors.error) {
-                            asking = false
-                            onRemove()
-                        }
-                        MenuItem(stringResource(android.R.string.cancel), icon = R.drawable.ic_sym_close) { asking = false }
-                    }
+            // a removed pack that comes with Lychee: the download icon brings it back (from the app)
+            bundled -> androidx.compose.material3.FilledTonalIconButton(onClick = {
+                busy = true
+                scope.launch {
+                    withContext(Dispatchers.IO) { PackStorage.restore(context, pack) }
+                    busy = false
+                    onChanged()
+                    actions.refresh()
                 }
-                // a removed pack that comes with Lychee: the download icon brings it back (from the app)
-                bundled -> androidx.compose.material3.FilledTonalIconButton(onClick = {
-                    busy = true
-                    scope.launch {
-                        withContext(Dispatchers.IO) { PackStorage.restore(context, pack) }
-                        busy = false
-                        onChanged()
-                        actions.refresh()
-                    }
-                }) { Icon(painterResource(R.drawable.ic_sym_download), stringResource(R.string.lychee_packs_get)) }
-                else -> androidx.compose.material3.FilledTonalIconButton(onClick = { AddonSheet.open = pack }) {
-                    Icon(painterResource(if (pack.custom) R.drawable.ic_sym_folder_open else R.drawable.ic_sym_download),
-                        stringResource(if (pack.custom) R.string.lychee_addons_choose_short else R.string.lychee_addons_get_short))
-                }
+            }) { Icon(painterResource(R.drawable.ic_sym_download), stringResource(R.string.lychee_packs_get)) }
+            else -> androidx.compose.material3.FilledTonalIconButton(onClick = { AddonSheet.open = pack }) {
+                Icon(painterResource(if (pack.custom) R.drawable.ic_sym_folder_open else R.drawable.ic_sym_download),
+                    stringResource(if (pack.custom) R.string.lychee_addons_choose_short else R.string.lychee_addons_get_short))
             }
         }
     }

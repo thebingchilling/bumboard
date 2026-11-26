@@ -89,9 +89,11 @@ fun drawPhone(paparazzi: Paparazzi, name: String, bar: TopBar = TopBar.Shortcuts
     val keyRow = keysHeight / 4
     overKeys?.let { make ->
         val host = FrameLayout(ctx)
-        val h = if (keepBottomRow) keysHeight - keyRow else keysHeight
+        // handwriting's pad reaches up into the bar's empty typed-letters line
+        val lift = if (bar is TopBar.Candidates && !bar.typed) ctx.resources.getDimensionPixelSize(R.dimen.lychee_preedit_height) else 0
+        val h = (if (keepBottomRow) keysHeight - keyRow else keysHeight) + lift
         screen.addView(host, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h, Gravity.BOTTOM).apply {
-            bottomMargin = gesture + (keysHeight - h)
+            bottomMargin = gesture + (keysHeight - h + lift)
         })
         val view = make(host)
         if (view.parent == null) host.addView(view, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
@@ -177,13 +179,15 @@ fun candidateBar(ctx: android.content.Context, sample: BarSample, typed: Boolean
         setPadding(dp(14), dp(2), 0, 0)
     }, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, preedit, Gravity.TOP))
     val keyW = if (sample.script) dp(44) else 0
-    box.addView(candidates, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height - top, Gravity.BOTTOM).apply { rightMargin = keyW })
+    // while handwriting (no typed line) the candidates sit at the top, the pad below takes the line
+    val candH = if (typed) height - top else height - preedit
+    box.addView(candidates, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, candH, if (typed) Gravity.BOTTOM else Gravity.TOP).apply { rightMargin = keyW })
     if (sample.script) box.addView(TextView(ctx).apply {
         text = "繁"; gravity = Gravity.CENTER; textSize = 16f; setTextColor(c.onSurfaceVariant)
     }, FrameLayout.LayoutParams(keyW, strip, Gravity.BOTTOM or Gravity.END))
     candidates.measure(View.MeasureSpec.makeMeasureSpec(dm.widthPixels - keyW, View.MeasureSpec.EXACTLY),
-        View.MeasureSpec.makeMeasureSpec(height - top, View.MeasureSpec.EXACTLY))
-    candidates.layout(0, 0, dm.widthPixels - keyW, height - top)
+        View.MeasureSpec.makeMeasureSpec(candH, View.MeasureSpec.EXACTLY))
+    candidates.layout(0, 0, dm.widthPixels - keyW, candH)
     candidates.setForScreens(sample.candidates.map { Candidate(it, "") }, sample.annotate)
     return box to height
 }

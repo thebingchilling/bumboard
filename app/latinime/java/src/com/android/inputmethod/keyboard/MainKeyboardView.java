@@ -718,6 +718,20 @@ public final class MainKeyboardView extends KeyboardView implements DrawingProxy
         if (getKeyboard() == null) {
             return false;
         }
+        // LYCHEE: the space bar held with "slide onto one and let go": the same finger picks a
+        // keyboard on the card (LanguageCard) without lifting first
+        if (app.lychee.layout.LanguageCard.getSliding()) {
+            final int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_MOVE) {
+                app.lychee.layout.LanguageCard.slideTo(event.getRawX(), event.getRawY());
+                return true;
+            }
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                app.lychee.layout.LanguageCard.slideEnd(event.getRawX(), event.getRawY(),
+                        action == MotionEvent.ACTION_UP);
+                return true;
+            }
+        }
         if (mNonDistinctMultitouchHelper != null) {
             if (event.getPointerCount() > 1 && mTimerHandler.isInKeyRepeat()) {
                 // Key repeating timer will be canceled if 2 or more keys are in action.

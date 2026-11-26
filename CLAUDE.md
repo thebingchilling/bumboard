@@ -149,8 +149,8 @@ packs page). Public facing, so be careful:
   The recogniser's tones play at media volume, so it is turned down to a third while listening
   and put back after (unless changed meanwhile). Failures say why in a short message. Offline
   (Lychee can't check the network: no permission), Google's recogniser fails and Lychee tries the
-  phone's own offline recogniser (Android 12+) if it has one; else the mic dims and says Google
-  speech input needs the internet, until it works again.
+  phone's own offline recogniser (Android 12+) if it has one; else the mic flashes at once and
+  keeps an offline badge (a crossed-out cloud, no toast) until it works again.
 - The clipboard panel has its on/off switch at the right of its title (off forgets every copy).
 - The keyboard's default colours are the Lychee logo's (`LycheeColorStyle.LYCHEE`: blush keys,
   the logo's red on Enter); panels, cards and outlines are Lychee's rose on every phone, never
@@ -162,11 +162,20 @@ packs page). Public facing, so be careful:
   kanji (Unihan's Japanese readings, the kanji dictionary, kokuji); Korean, Hangul and every Hanja
   (Unihan's Korean readings, gukja). Word cards name kokuji and gukja. The pad's ⌫ and ABC step
   aside while the candidates' dropdown is open; the dropdown has slight dividers and fades out
-  at the bottom, above the navigation buttons.
+  at the bottom, above the navigation buttons. While writing there is no 英 or 繁/简, ABC is a
+  plain key over ?123, a firm line parts the bar from the pad, and the pad reaches up into the
+  bar's typed-letters line (the guesses sit at the bar's top).
+- Candidates have no boxes: small faint dividers between them, in the bar and the dropdown.
 - Number, phone and date fields have one number pad (`toolbar/NumpadPanelView`, forced): the
   digits centred with no keys at the sides, over three equal keys (⌫ 0 Enter); 0 held shows
-  symbols (the field's own first). LatinIME's own number and phone pads never show: whenever
-  KeyboardSwitcher sets one, `LatinIME.updateLycheeForcedNumpad` covers it.
+  symbols (the field's own first). It is the only number pad: the symbols page has no number
+  pad key (its bottom row is the letters'). LatinIME's own number and phone pads (letters on
+  their keys) never show: whenever KeyboardSwitcher sets one, `LatinIME.updateLycheeForcedNumpad`
+  covers it, and no panel closing or Back uncovers it (`LycheePanels.hideOthers`, `anyClosable`).
+- The symbols pages' bottom row is the letters' (the emoji or language key beside the comma);
+  the comma held gives the shortcuts and the period its punctuation, as on the letters.
+- Holding the spacebar lists the keyboards (`layout/LanguageCard`): tap one, or, with Settings >
+  Keys > Holding the spacebar, slide onto one without lifting and let go.
 - Enter always keeps its accent colour and an icon for the field's action (✓ done, search,
   send, go, next): an app's own action label (Pleco's "Done") never turns it into a grey text
   key (`KeyboardId.imeAction`); the key still does the app's action.
@@ -194,7 +203,10 @@ packs page). Public facing, so be careful:
   English ("visible password" fields don't: apps such as Pleco mark search boxes that way),
   but the language key still switches (`typing/FieldKind`); number fields don't.
 - Motion: one way of moving everywhere (`layout/LycheeMotion`): things cross-fade in place,
-  never slide in like a window; cards grow out of what was touched.
+  never slide in like a window; cards and panels spring up to size (a few percent past, then
+  settling); every button, key of a panel, candidate and listing sinks a little while pressed and
+  springs back (`springy`, Settings' `pressSpring`); the key bubble and long-press popup spring
+  up. Gentle, never a wobble, and nothing moves with the phone's animations off.
 - Settings: full Material 3 (`settings/Components.kt`, `settings/Buttons.kt`, `settings/Theme.kt`):
   Material 3's components (switches, sliders, buttons, cards, menus, app bar), shapes, type scale
   and colour scheme (Lychee's own rose palette from the icon, with a leaf green, the same on every
@@ -209,10 +221,12 @@ packs page). Public facing, so be careful:
   no savings sums, no "free while testing"; wording in `PAID.md`), opened from a banner at the
   top of Settings.
   - Three tabs: Store, Installed, Updates.
-  - The store: one honest line (a student developer, one-time purchases, no ads or tracking,
-    offline), then Featured (the bundles), then Browse categories, each a page of its own
-    (Dictionaries, Handwriting, Learning tools, Fonts & emoji, All free downloads).
-  - Short rows: name, one line, price, and an action tile at the right.
+  - Every listing, in the store and in Installed alike, is the same compact card
+    (`ListingCard`): tile, name, one line, chips (where it stands, size, version, what it
+    holds), and one action at the right (price pill, download, update, remove).
+  - The store is laid out like Installed: one honest line (a student developer, one-time
+    purchases, no ads or tracking, offline), the bundles, then a section per language (its In
+    Depth card and free downloads, those that come with Lychee too), then Every language.
   - Google Handwriting is a listing like the others, noting it needs the free Lychee
     handwriting app.
   - The registration is at the very bottom. Every listing opens its own page like
@@ -290,8 +304,15 @@ is outside it.
   and never grows.
   - Header: the word, the reading of every syllable, one outlined 粵/普 switch for the whole card,
     the speaker and ✕.
-  - Five tabs, swiped or tapped: Summary, Readings, Definitions, Parts, Examples. Empty ones are
-    left out, and each page scrolls on its own.
-  - Summary has no stroke order (that is in Parts) and shows meanings in full, with each entry's
-    word in a chip.
+  - Tabs as Pleco has them, swiped or tapped: Summary (a pin icon), Definitions, Readings,
+    Examples, Stroke order, Parts. Empty ones are left out, and each page scrolls on its own.
+  - Summary is one page of what decides whether to type it: the meanings (and measure word).
+  - Readings doesn't repeat the header's readings or its 粵/普 switch: other romanisations and
+    every reading with its meaning.
+  - Examples ends with Phrases: the words the word builds (each opens its card).
+  - Stroke order: one character large; ‹ ›, swipe or dots go through the word's characters;
+    Traditional | Simplified (Hangul | Hanja, old kanji); back, play/pause, on, again; ½× 1× 2×.
+  - Parts: the word's characters; a character's parts (Made of) and the characters using it,
+    in either script.
+  - Held to peek (Settings), the card goes when the finger lifts unless slid onto its lock bar.
   - A part opens as its own card, with Back.

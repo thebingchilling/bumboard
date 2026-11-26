@@ -17,38 +17,52 @@
 ** limitations under the License.
 */
 -->
-
 <merge xmlns:latin="http://schemas.android.com/apk/res-auto" >
-    <!-- LYCHEE: the same bottom row as the letters (row_qwerty4), so nothing moves when
-         switching to symbols: the number pad key ("1234", as on Gboard's symbols page) takes
-         the emoji/language key's place, and the space and "." keep theirs. Gboard's comma and full
-         stop here have no popups. -->
+    <!-- LYCHEE: exactly the letters' bottom row (row_qwerty4), so nothing moves when switching to
+         symbols: the emoji or language key (or none) beside the comma, the comma held for the
+         shortcuts and the period for punctuation, as on the letters. -->
     <switch>
         <case
             latin:lycheeSideKey="false"
         >
+            <!-- held: Settings and the shortcuts, as on the letters -->
             <Key
                 latin:keySpec="!text/keyspec_comma"
-                latin:backgroundType="functional" />
+                latin:keyStyle="settingsMoreKeysStyle" />
             <Key
-                latin:keyStyle="lycheeNumpadKeyStyle" />
+                latin:keyStyle="spaceKeyStyle"
+                latin:keyWidth="50%p" />
+        </case>
+        <case
+            latin:lycheeEmojiKey="true"
+        >
+            <Key
+                latin:keyStyle="emojiKeyStyle"
+                latin:backgroundType="functional" />
+            <!-- held: Settings and the shortcuts, as on the letters -->
+            <Key
+                latin:keySpec="!text/keyspec_comma"
+                latin:keyStyle="settingsMoreKeysStyle" />
             <Key
                 latin:keyStyle="spaceKeyStyle"
                 latin:keyWidth="40%p" />
         </case>
         <default>
             <Key
-                latin:keyStyle="lycheeNumpadKeyStyle" />
+                latin:keyStyle="languageSwitchKeyStyle"
+                latin:backgroundType="functional" />
+            <!-- held: Settings and the shortcuts, as on the letters -->
             <Key
                 latin:keySpec="!text/keyspec_comma"
-                latin:backgroundType="functional" />
+                latin:keyStyle="settingsMoreKeysStyle" />
             <Key
                 latin:keyStyle="spaceKeyStyle"
                 latin:keyWidth="40%p" />
         </default>
     </switch>
-    <!-- U+2026: "…" HORIZONTAL ELLIPSIS -->
     <Key
-        latin:keySpec="."
+        latin:keySpec="!text/keyspec_period"
+        latin:keyLabelFlags="hasPopupHint"
+        latin:moreKeys="!text/morekeys_period"
         latin:backgroundType="functional" />
 </merge>

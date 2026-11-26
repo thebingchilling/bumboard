@@ -39,7 +39,6 @@ import com.android.inputmethod.latin.R
 /** Screenshots only: the Add-ons tab (0 Store, 1 Installed, 2 Updates) and category page to open on. */
 object StoreLook {
     var startTab = 0
-    var startCategory = -1
 }
 
 /**

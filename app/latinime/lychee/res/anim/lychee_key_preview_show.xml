@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The key preview grows up out of the key and fades in. -->
-<set xmlns:android="http://schemas.android.com/apk/res/android">
+<!-- The key preview springs up out of the key (a touch past full size) and fades in. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@android:anim/overshoot_interpolator">
     <objectAnimator
         android:propertyName="scaleX"
-        android:duration="90"
+        android:duration="140"
         android:valueFrom="0.75"
         android:valueTo="1.00" />
     <objectAnimator
         android:propertyName="scaleY"
-        android:duration="90"
+        android:duration="140"
         android:valueFrom="0.6"
         android:valueTo="1.00" />
     <objectAnimator

@@ -1364,7 +1364,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         if (mLycheeEmojiSearch != null && mLycheeEmojiSearch.isActive()) {
             endLycheeEmojiSearch();
         }
-        if (mInputView != null) app.lychee.layout.LycheePanels.hideOthers(mInputView, null);
+        if (mInputView != null) app.lychee.layout.LycheePanels.hideAll(mInputView);
         // the keyboard closing stops voice typing (nothing typed)
         if (mLycheeVoice != null) mLycheeVoice.cancel();
         mLycheeChinese.reset();
@@ -1876,11 +1876,8 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
             startLycheeVoice();
             return;
         }
-        // LYCHEE: the "1234" key on the symbols page.
-        if (Constants.CODE_LYCHEE_NUMPAD == event.mKeyCode) {
-            showLycheePanel(R.id.lychee_numpad_panel);
-            return;
-        }
+        // LYCHEE: the number pad shows only in number fields (no key opens it)
+        if (Constants.CODE_LYCHEE_NUMPAD == event.mKeyCode) return;
         // LYCHEE: a shortcut from the comma's popup.
         if (event.mKeyCode <= Constants.CODE_LYCHEE_SHORTCUT_BASE
                 && event.mKeyCode >= Constants.CODE_LYCHEE_SHORTCUT_LAST) {
@@ -2245,7 +2242,7 @@ public class LatinIME extends InputMethodService implements KeyboardActionListen
         // LYCHEE: Back closes a panel over the keys (text editing, handwriting, ...) before
         // it closes the keyboard
         if (keyCode == KeyEvent.KEYCODE_BACK && mInputView != null
-                && app.lychee.layout.LycheePanels.anyShown(mInputView)) {
+                && app.lychee.layout.LycheePanels.anyClosable(mInputView)) {
             if (keyEvent.getRepeatCount() == 0) {
                 app.lychee.layout.LycheePanels.hideOthers(mInputView, null);
             }

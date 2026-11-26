@@ -46,7 +46,7 @@ class VoicePanelView @JvmOverloads constructor(
     var onLevel: (Float) -> Unit = {}
     /**
      * Google's speech input couldn't reach the internet (true), or worked again (false): the mic
-     * key dims until it does. Lychee has no network permission, so it can't know beforehand.
+     * key flashes and keeps an offline badge until it does. Lychee has no network permission, so it can't know beforehand.
      */
     var onOffline: (Boolean) -> Unit = {}
 
@@ -214,8 +214,8 @@ class VoicePanelView @JvmOverloads constructor(
                     if (!onDevice && offlineAvailable()) {
                         start(language, onDevice = true)
                     } else {
+                        // the mic flashes and keeps an offline badge at once (no message)
                         onOffline(true)
-                        say(R.string.lychee_voice_no_network)
                     }
                 }
                 ERROR_LANGUAGE_NOT_SUPPORTED, ERROR_LANGUAGE_UNAVAILABLE -> {

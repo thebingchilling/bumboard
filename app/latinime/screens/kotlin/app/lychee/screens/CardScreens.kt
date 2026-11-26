@@ -55,7 +55,22 @@ private val words = listOf(
         Sense(Lang.Cantonese, "daa1", "dozen (loanword from English)"),
         Sense(Lang.Mandarin, "da3", "to beat; to strike; to hit; to break; to type; to mix up; to build; to fight; to fetch; to make; to tie up; to issue; to shoot; to calculate; to play (a game); since; from"),
         Sense(Lang.Mandarin, "da2", "dozen (loanword)")),
+    hw(10, "子", "子", listOf("zi2"), listOf("zi3"), Sense(Lang.Cantonese, "zi2", "child; son; seed")),
+    hw(11, "冖", "冖", listOf("mik6"), listOf("mi4"), Sense(Lang.Cantonese, "mik6", "cover; radical 14")),
+    hw(12, "覺", "觉", listOf("gok3"), listOf("jue2"), Sense(Lang.Cantonese, "gok3", "to feel; to find that")),
+    hw(13, "爻", "爻", listOf("ngaau4"), listOf("yao2"), Sense(Lang.Cantonese, "ngaau4", "lines of a hexagram")),
 )
+
+/** Stand-in stroke orders for the screenshots (the strokes pack is built in CI): a few plain strokes. */
+private fun sampleStrokes(ch: String): app.lychee.dict.CharStrokes {
+    val all = listOf(
+        listOf(300f to 820f, 380f to 700f), listOf(500f to 840f, 500f to 700f), listOf(700f to 820f, 620f to 700f),
+        listOf(200f to 640f, 824f to 640f), listOf(200f to 640f, 200f to 540f), listOf(824f to 640f, 780f to 540f),
+        listOf(320f to 480f, 700f to 480f, 540f to 360f), listOf(512f to 360f, 512f to 60f, 440f to 100f), listOf(220f to 260f, 804f to 260f),
+    )
+    val n = 5 + (ch.codePointAt(0) % 5)
+    return app.lychee.dict.CharStrokes(ch, emptyList(), all.take(n), mapOf("學" to "⿳爻冖子")[ch], null, null, null)
+}
 private val annotator = Annotator(Dictionary { form -> words.filter { it.traditional == form || it.simplified == form } })
 
 /** A Galaxy S23: 1080 × 2340 px at 425 dpi (about 411 × 891 dp), a regular phone. */
@@ -79,6 +94,8 @@ private val chineseBar by lazy {
 private fun drawCard(paparazzi: Paparazzi, name: String, tall: Boolean = false, bar: BarSample? = chineseBar,
                      show: (DictionaryPopup, FrameLayout) -> Unit) {
     Readings.useForScreens(annotator)
+    app.lychee.dict.PackData.forScreensStrokes = { ch -> sampleStrokes(ch) }
+    app.lychee.dict.PackData.forScreensContaining = { ch -> if (ch == "學") listOf("覺", "黌", "斆", "澩", "鷽", "嶨") else emptyList() }
     drawPhone(paparazzi, name, if (bar != null) TopBar.Candidates(bar) else TopBar.Shortcuts) { phone ->
         val ctx = paparazzi.context
         val dm = ctx.resources.displayMetrics
@@ -97,11 +114,12 @@ private fun drawCard(paparazzi: Paparazzi, name: String, tall: Boolean = false, 
 /** Every card is drawn with Yale for Cantonese and the Mandarin reading shown too (the owner's choice for screens). */
 private val prefs = DisplayPrefs(cantonese = CantoneseRomanization.Yale, showOtherLanguage = true)
 
-private fun chinese(paparazzi: Paparazzi, name: String, text: String, page: Page? = null, mode: InputMode = InputMode.Cantonese, tall: Boolean = false) =
+private fun chinese(paparazzi: Paparazzi, name: String, text: String, page: Page? = null, mode: InputMode = InputMode.Cantonese,
+                    tall: Boolean = false, peek: Boolean = false) =
     drawCard(paparazzi, name, tall) { popup, host ->
         popup.startPage = page
         val r = annotator.resolve(text, "", mode)!!
-        popup.show(host, text, r, prefs, peek = false, onSpeak = { _, _ -> }) {}
+        popup.show(host, text, r, prefs, peek = peek, onSpeak = { _, _ -> }) {}
     }
 
 private val japaneseBar = BarSample("taberu", listOf("食べる", "たべる", "食べ", "食", "タベル"), CandidateBarView.Lines(1, true), "ja", script = false) { c ->
@@ -114,7 +132,8 @@ private val koreanBar = BarSample("hakgyo", listOf("학교", "學校", "학교�
         "학교의" to ("hakgyoui" to "school's"), "학구" to ("hakgu" to "study"))[c.text]?.let { (r, m) -> app.lychee.core.Annotation(listOf(r), m, null) }
 }
 
-private fun japaneseCard(paparazzi: Paparazzi, name: String, tall: Boolean = false) = drawCard(paparazzi, name, tall, japaneseBar) { popup, host ->
+private fun japaneseCard(paparazzi: Paparazzi, name: String, tall: Boolean = false, page: Page? = null) = drawCard(paparazzi, name, tall, japaneseBar) { popup, host ->
+    popup.startPage = page
     popup.showWord(host, "食べる", "たべる  taberu",
         listOf(WordEntry("食べる", "食べる", "たべる", null, "Ichidan verb, transitive", listOf("to eat", "to live on (e.g. a salary); to live off; to subsist on"))),
         listOf("毎朝パンを食べる。" to "I eat bread every morning."), peek = false, onSpeak = { _, _ -> }, lang = "ja",
@@ -158,6 +177,10 @@ class CardScreens {
     }
 
     @Test fun japanese() = japaneseCard(paparazzi, "7-japanese-taberu")
+    @Test fun japaneseStrokes() = japaneseCard(paparazzi, "17-japanese-strokes", page = Page.STROKES)
+    @Test fun strokes() = chinese(paparazzi, "15-strokes-xuexiao", "學校", Page.STROKES)
+    @Test fun partsChar() = chinese(paparazzi, "16-parts-xue-made-of-used-in", "學", Page.PARTS)
+    @Test fun peek() = chinese(paparazzi, "18-peek-with-lock-bar", "學校", peek = true)
     @Test fun korean() = koreanCard(paparazzi, "8-korean-hakgyo")
 
     @Test fun english() = drawCard(paparazzi, "9-english-school", bar = null) { popup, host ->

@@ -53,8 +53,9 @@ class CandidatePanelView @JvmOverloads constructor(
         }
         grid.layoutManager = layoutManager
         grid.adapter = adapter
-        // each candidate on a soft rounded tile with a little room around it (no lines between)
-        grid.setPadding(dp(6), dp(6), dp(6), dp(FADE_DP))
+        // plain cells with small faint lines between them (Dividers)
+        grid.addItemDecoration(Dividers())
+        grid.setPadding(dp(6), dp(2), dp(6), dp(FADE_DP))
         grid.clipToPadding = false
         addView(grid, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(fade, LayoutParams(LayoutParams.MATCH_PARENT, dp(FADE_DP), Gravity.BOTTOM))
@@ -112,17 +113,44 @@ class CandidatePanelView @JvmOverloads constructor(
         }
     }
 
-    /** A candidate's tile: rounded, inset so tiles stand apart, tinted for the first, rippling when pressed. */
-    private fun tile(first: Boolean): android.graphics.drawable.Drawable {
-        val radius = dp(12).toFloat()
-        val shape = android.graphics.drawable.GradientDrawable().apply {
-            cornerRadius = radius
-            setColor(if (first) palette.primaryContainer else palette.surfaceContainer)
+    /** A candidate's cell: plain (the first one's word in the accent colour), rippling when pressed. */
+    private fun tile(@Suppress("UNUSED_PARAMETER") first: Boolean): android.graphics.drawable.Drawable {
+        val mask = android.graphics.drawable.ColorDrawable(0xFFFFFFFF.toInt())
+        return android.graphics.drawable.RippleDrawable(
+            android.content.res.ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(palette.onSurface, 0x1F)), null, mask)
+    }
+
+    /**
+     * Small, faint lines between the candidates: a short upright one between neighbours in a
+     * row, and a hairline above each row but the first (inset at the sides), never boxes.
+     */
+    private inner class Dividers : RecyclerView.ItemDecoration() {
+        private val paint = android.graphics.Paint().apply {
+            color = androidx.core.graphics.ColorUtils.setAlphaComponent(palette.outline, 0x40)
+            strokeWidth = maxOf(1f, resources.displayMetrics.density)
         }
-        val mask = android.graphics.drawable.GradientDrawable().apply { cornerRadius = radius; setColor(0xFFFFFFFF.toInt()) }
-        val ripple = android.graphics.drawable.RippleDrawable(
-            android.content.res.ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(palette.onSurface, 0x1F)), shape, mask)
-        return android.graphics.drawable.InsetDrawable(ripple, dp(3))
+        override fun onDraw(c: android.graphics.Canvas, parent: RecyclerView, state: RecyclerView.State) {
+            val inset = dp(12).toFloat()
+            val left = parent.paddingLeft.toFloat()
+            val right = (parent.width - parent.paddingRight).toFloat()
+            for (i in 0 until parent.childCount) {
+                val v = parent.getChildAt(i)
+                val pos = parent.getChildAdapterPosition(v)
+                if (pos == RecyclerView.NO_POSITION) continue
+                val lp = v.layoutParams as GridLayoutManager.LayoutParams
+                // between this cell and the next in its row
+                if (lp.spanIndex + lp.spanSize < layoutManager.spanCount && pos + 1 < adapter.itemCount &&
+                    layoutManager.spanSizeLookup.getSpanGroupIndex(pos + 1, layoutManager.spanCount) ==
+                    layoutManager.spanSizeLookup.getSpanGroupIndex(pos, layoutManager.spanCount)) {
+                    val x = v.right.toFloat()
+                    c.drawLine(x, v.top + inset, x, v.bottom - inset, paint)
+                }
+                // above each row but the first (once, from the row's first cell)
+                if (lp.spanIndex == 0 && layoutManager.spanSizeLookup.getSpanGroupIndex(pos, layoutManager.spanCount) > 0) {
+                    c.drawLine(left + dp(8), v.top.toFloat(), right - dp(8), v.top.toFloat(), paint)
+                }
+            }
+        }
     }
 
     private fun spanFor(text: String): Int {
@@ -154,6 +182,7 @@ class CandidatePanelView @JvmOverloads constructor(
                 gravity = Gravity.CENTER
                 setPadding(0, dp(2), 0, dp(2))
                 layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(54))
+                app.lychee.layout.LycheeMotion.springy(this)
                 // the word, its readings and meaning under it, on a tile (set when bound)
                 repeat(3) { i ->
                     addView(TextView(context).apply {

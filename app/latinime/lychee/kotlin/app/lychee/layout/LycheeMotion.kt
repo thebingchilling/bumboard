@@ -14,19 +14,85 @@ import com.android.inputmethod.keyboard.KeyboardId
  * keys such as shortcuts, text editing, the number pad, handwriting, clipboard, voice, emoji,
  * candidates) cross-fades in place, settling from a hair smaller; whatever goes fades out the
  * same way, a little quicker. Cards (the word card, an emoji's card, the keyboard list) grow
- * out of what was touched with the same timing and easing. Nothing moves when the phone's
- * animations are off.
+ * out of what was touched with a soft spring (a touch past full size, then settling). Buttons and
+ * keys of the panels sink a little while pressed and spring back ([springy]); something that
+ * takes the finger (a lock bar, a chosen tab) gives a small bounce ([pop]). Gentle throughout:
+ * the overshoot is a few percent, never a wobble. Nothing moves when the phone's animations
+ * are off.
  */
 object LycheeMotion {
     /** How long something takes to come in, and to go (Material 3's medium and short durations). */
     const val IN = 220L
     const val OUT = 150L
+    /** A card springing up to size. */
+    const val CARD_IN = 320L
 
     /** Material 3's emphasized easing: quick to start and long to settle; and its way out. */
     @JvmField
     val enterEasing = PathInterpolator(0.05f, 0.7f, 0.1f, 1f)
     @JvmField
     val exitEasing = PathInterpolator(0.3f, 0f, 0.8f, 0.15f)
+
+    /** A soft spring: a little past the end, then back (cards, a button let go). */
+    @JvmField
+    val springEasing = android.view.animation.OvershootInterpolator(1.6f)
+
+    /** How far a pressed button sinks. */
+    private const val PRESSED = 0.94f
+
+    /**
+     * [view] sinks a little while pressed and springs back when let go, like a key. Uses its
+     * state list animator, so it works with any click or touch handling.
+     */
+    @JvmStatic
+    fun springy(view: View) {
+        if (!LycheePanels.animate(view.context)) return
+        fun scale(to: Float, duration: Long, easing: android.animation.TimeInterpolator) =
+            android.animation.AnimatorSet().apply {
+                playTogether(
+                    android.animation.ObjectAnimator.ofFloat(view, View.SCALE_X, to),
+                    android.animation.ObjectAnimator.ofFloat(view, View.SCALE_Y, to),
+                )
+                this.duration = duration
+                interpolator = easing
+            }
+        view.stateListAnimator = android.animation.StateListAnimator().apply {
+            addState(intArrayOf(android.R.attr.state_pressed), scale(PRESSED, 90, enterEasing))
+            addState(intArrayOf(), scale(1f, 260, springEasing))
+        }
+    }
+
+    /** Springs running, by view, so a view going away first stops its spring. */
+    private val springs = java.util.WeakHashMap<View, android.animation.Animator>()
+
+    /** [view] springs from [from] up to full size (a little past, then back). */
+    private fun springScale(view: View, from: Float) {
+        springs.remove(view)?.cancel()
+        val set = android.animation.AnimatorSet().apply {
+            playTogether(
+                android.animation.ObjectAnimator.ofFloat(view, View.SCALE_X, from, 1f),
+                android.animation.ObjectAnimator.ofFloat(view, View.SCALE_Y, from, 1f),
+            )
+            duration = CARD_IN
+            interpolator = springEasing
+        }
+        springs[view] = set
+        set.start()
+    }
+
+    private fun stopSpring(view: View) {
+        springs.remove(view)?.cancel()
+    }
+
+    /** A small bounce: [view] swells a few percent and springs back (it just took the finger). */
+    @JvmStatic
+    fun pop(view: View) {
+        if (!LycheePanels.animate(view.context)) return
+        view.animate().cancel()
+        view.scaleX = 1.04f
+        view.scaleY = 1.04f
+        view.animate().scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(260).setInterpolator(springEasing).start()
+    }
 
     /** The size something settles from (panels and keys), and fades to on its way out. */
     private const val FROM = 0.97f
@@ -112,8 +178,8 @@ object LycheeMotion {
         view.scaleX = FROM
         view.scaleY = FROM
         view.translationY = 0f
-        view.animate().alpha(1f).scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(IN)
-            .setInterpolator(enterEasing).start()
+        view.animate().alpha(1f).setStartDelay(0).setDuration(IN).setInterpolator(enterEasing).start()
+        springScale(view, FROM)
     }
 
     /** [view] goes: it fades out the same way, then [end] runs (hiding it). */
@@ -124,6 +190,7 @@ object LycheeMotion {
             return
         }
         view.animate().cancel()
+        stopSpring(view)
         view.animate().alpha(0f).scaleX(TO).scaleY(TO).setStartDelay(0).setDuration(OUT)
             .setInterpolator(exitEasing).withEndAction {
                 end.run()
@@ -159,8 +226,9 @@ object LycheeMotion {
         card.post {
             card.pivotX = if (pivotX.isNaN()) card.width / 2f else pivotX
             card.pivotY = if (pivotY.isNaN()) card.height / 2f else pivotY
-            card.animate().alpha(1f).scaleX(1f).scaleY(1f).setStartDelay(0).setDuration(IN)
-                .setInterpolator(enterEasing).start()
+            // fades in quickly while it springs up to size
+            card.animate().alpha(1f).setStartDelay(0).setDuration(OUT).setInterpolator(enterEasing).start()
+            springScale(card, CARD_FROM)
         }
     }
 
@@ -172,6 +240,7 @@ object LycheeMotion {
             return
         }
         card.animate().cancel()
+        stopSpring(card)
         card.animate().alpha(0f).scaleX(CARD_FROM).scaleY(CARD_FROM).setStartDelay(0).setDuration(OUT)
             .setInterpolator(exitEasing).withEndAction(end).start()
     }

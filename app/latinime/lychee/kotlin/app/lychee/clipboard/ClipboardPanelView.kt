@@ -225,6 +225,7 @@ class ClipboardPanelView @JvmOverloads constructor(
 
     private fun card(item: ClipboardStore.Item): View {
         val box = FrameLayout(context).apply {
+            app.lychee.layout.LycheeMotion.springy(this)
             background = GradientDrawable().apply {
                 cornerRadius = dp(16).toFloat()
                 setColor(if (item.pinned) palette.secondaryContainer else palette.surfaceContainerHigh)

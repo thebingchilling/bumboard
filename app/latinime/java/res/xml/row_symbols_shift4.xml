@@ -18,10 +18,9 @@
 */
 -->
 <merge xmlns:latin="http://schemas.android.com/apk/res-auto" >
-    <!-- LYCHEE: (second symbols page) the same bottom row as the letters (row_qwerty4), so nothing moves when
-         switching to symbols: the number pad key ("1234", as on Gboard's symbols page) takes
-         the emoji/language key's place, and the space and "." keep theirs. "/" and "_" are in
-         popups ("." and "-"). -->
+    <!-- LYCHEE: (second symbols page) the letters' bottom row (row_qwerty4), so nothing moves when
+         switching: the emoji or language key (or none) beside "<", and the space and ">" in the
+         comma's and period's places. "/" and "_" are in popups ("." and "-"). -->
     <switch>
         <case
             latin:lycheeSideKey="false"
@@ -43,14 +42,39 @@
                 </default>
             </switch>
             <Key
-                latin:keyStyle="lycheeNumpadKeyStyle" />
+                latin:keyStyle="spaceKeyStyle"
+                latin:keyWidth="50%p" />
+        </case>
+        <case
+            latin:lycheeEmojiKey="true"
+        >
+            <Key
+                latin:keyStyle="emojiKeyStyle"
+                latin:backgroundType="functional" />
+            <switch>
+                <case
+                    latin:languageCode="zh|ja"
+                >
+                    <Key
+                        latin:keySpec="&lt;"
+                        latin:moreKeys="〈,«,⟨,‹,《,≤"
+                        latin:backgroundType="functional" />
+                </case>
+                <default>
+                    <Key
+                        latin:keySpec="&lt;"
+                        latin:moreKeys="«,≤,‹,⟨"
+                        latin:backgroundType="functional" />
+                </default>
+            </switch>
             <Key
                 latin:keyStyle="spaceKeyStyle"
                 latin:keyWidth="40%p" />
         </case>
         <default>
             <Key
-                latin:keyStyle="lycheeNumpadKeyStyle" />
+                latin:keyStyle="languageSwitchKeyStyle"
+                latin:backgroundType="functional" />
             <switch>
                 <case
                     latin:languageCode="zh|ja"
@@ -72,7 +96,7 @@
                 latin:keyWidth="40%p" />
         </default>
     </switch>
-        <switch>
+    <switch>
         <case
             latin:languageCode="zh|ja"
         >

@@ -82,9 +82,10 @@ public class KeyPreviewView extends TextView {
         if (background == null) {
             return;
         }
-        // LYCHEE: the round bubble is a shape with no size of its own (intrinsic width -1),
-        // which made the scale negative and the letter vanish; such a bubble fits its text
-        if (background.getIntrinsicWidth() <= 0) {
+        // LYCHEE: Lychee's bubble widens to fit its letter (KeyPreviewChoreographer), so a letter
+        // is never squeezed sideways: a wide one (m, w) squashed into the bubble's 40dp looked
+        // poor beside the long-press popup's (and a bubble with no size made the scale negative)
+        if (true) {
             return;
         }
         background.getPadding(mBackgroundPadding);

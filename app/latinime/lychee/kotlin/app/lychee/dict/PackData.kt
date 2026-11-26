@@ -234,6 +234,59 @@ object PackData {
         }.getOrDefault(emptyList())
     }
 
+    /**
+     * Words and phrases that begin with [text] on the [engine] keyboard ("ja", "ko", "en"), the
+     * commonest first: what the word builds (食べ → 食べ物, 학교 → 학교생활).
+     */
+    fun phrases(context: Context, engine: String?, text: String, limit: Int = 8): List<WordEntry> {
+        forScreensPhrases?.let { return it(text) }
+        val db = wordDb(context, engine) ?: return emptyList()
+        return runCatching {
+            // a range over the index rather than LIKE (which would read every row)
+            db.rawQuery(
+                "SELECT form, lemma, reading, hanja, pos, gloss FROM word WHERE form > ? AND form < ? AND lemma = form " +
+                    "ORDER BY rank LIMIT ${limit * 2}",
+                arrayOf(text, text + "\uFFFF"),
+            ).use { c ->
+                buildList {
+                    while (c.moveToNext()) add(
+                        WordEntry(
+                            c.getString(0), c.getString(1), c.getString(2), c.getString(3), c.getString(4),
+                            c.getString(5).split('\n').filter { it.isNotBlank() },
+                        )
+                    )
+                }
+            }
+        }.getOrDefault(emptyList()).distinctBy { it.lemma }.take(limit)
+    }
+
+    /** Screenshots only: stand-ins for the packs, which are built in CI. */
+    @JvmStatic var forScreensStrokes: ((String) -> CharStrokes?)? = null
+    @JvmStatic var forScreensPhrases: ((String) -> List<WordEntry>)? = null
+    @JvmStatic var forScreensContaining: ((String) -> List<String>)? = null
+
+    /**
+     * The parts [char] is built from (學 → ⺍ 冖 子), from its breakdown in the strokes pack (the
+     * structure marks and unknown parts left out).
+     */
+    fun components(context: Context, char: String): List<String> {
+        val decomposition = strokes(context, char)?.decomposition ?: return emptyList()
+        return decomposition.codePoints().toArray()
+            .filter { it !in 0x2FF0..0x2FFF && it != '？'.code && it != '?'.code && String(Character.toChars(it)) != char }
+            .map { String(Character.toChars(it)) }.distinct()
+    }
+
+    /** Characters with [char] among their parts (子 → 字 學 好 ...), up to [limit]. */
+    fun containing(context: Context, char: String, limit: Int = 40): List<String> {
+        forScreensContaining?.let { return it(char).take(limit) }
+        val db = db(context, "strokes_zh", "strokes.db") ?: return emptyList()
+        return runCatching {
+            db.rawQuery("SELECT ch FROM char WHERE decomposition LIKE ? AND ch != ? LIMIT ${limit * 4}", arrayOf("%$char%", char)).use { c ->
+                buildList { while (c.moveToNext()) add(c.getString(0)) }
+            }
+        }.getOrDefault(emptyList())
+    }
+
     /** Korean words written with the Hanja [hanja] (學校 → 학교), their meanings first by rank. */
     fun wordsByHanja(context: Context, hanja: String, limit: Int = 4): List<WordEntry> {
         val db = wordDb(context, "ko") ?: return emptyList()
@@ -291,6 +344,7 @@ object PackData {
      * (Hangul) when there is one, otherwise Chinese (Make Me a Hanzi's).
      */
     fun strokes(context: Context, char: String, lang: String? = null): CharStrokes? {
+        forScreensStrokes?.let { return it(char) }
         val db = db(context, "strokes_zh", "strokes.db") ?: return null
         val cp = char.codePointAt(0)
         val local = when {

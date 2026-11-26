@@ -12,6 +12,9 @@
     <string name="lychee_pref_spacebar_summary">What the spacebar shows on Lychee\'s keyboards</string>
     <string name="lychee_pref_spacebar_language">粵語 · Cantonese</string>
     <string name="lychee_pref_spacebar_method">粵拼</string>
+    <string name="lychee_pref_space_hold">Holding the spacebar</string>
+    <string name="lychee_pref_space_hold_tap">Shows the keyboards: tap one</string>
+    <string name="lychee_pref_space_hold_slide">Shows the keyboards: slide onto one and let go</string>
     <string name="lychee_card_no_definition">No definition for this word yet</string>
     <string name="lychee_hw_write_here">Write here</string>
     <string name="lychee_hw_symbols" translatable="false">\?123</string>
@@ -86,6 +89,20 @@
     <string name="lychee_card_less">Show less</string>
     <string name="lychee_type_it">Type it</string>
     <string name="lychee_card_parts">Parts</string>
+    <string name="lychee_card_phrases">Phrases</string>
+    <string name="lychee_card_traditional">Traditional</string>
+    <string name="lychee_card_simplified">Simplified</string>
+    <string name="lychee_card_made_of">Made of</string>
+    <string name="lychee_card_used_in">Characters using it</string>
+    <string name="lychee_card_stroke_of">Stroke %1$d of %2$d</string>
+    <string name="lychee_card_stroke_play">Play</string>
+    <string name="lychee_card_stroke_pause">Pause</string>
+    <string name="lychee_card_stroke_back">One stroke back</string>
+    <string name="lychee_card_stroke_next">One stroke on</string>
+    <string name="lychee_card_stroke_again">Write it again</string>
+    <string name="lychee_card_char_previous">Previous character</string>
+    <string name="lychee_card_char_next">Next character</string>
+    <string name="lychee_card_no_strokes">No stroke order for this yet</string>
     <string name="lychee_card_tab_summary">Summary</string>
     <string name="lychee_card_romanisations">Other romanisations</string>
     <string name="lychee_card_every_reading">Every reading</string>
@@ -306,6 +323,7 @@
     <string name="lychee_card_on">On</string>
     <string name="lychee_card_kun">Kun</string>
     <string name="lychee_card_hanja">Hanja</string>
+    <string name="lychee_card_hangul">Hangul</string>
     <string name="lychee_card_conjugation">Conjugation</string>
     <string name="lychee_card_old_form">Traditional</string>
     <string name="lychee_card_kokuji">Made in Japan (kokuji): not a Chinese character</string>
@@ -379,8 +397,10 @@
     <string name="lychee_readings_group_cards">Word cards</string>
     <string name="lychee_readings_hold">Holding a candidate</string>
     <string name="lychee_readings_hold_summary">What happens when you touch and hold a candidate</string>
-    <string name="lychee_readings_hold_peek">Show its card while held</string>
-    <string name="lychee_readings_hold_pin">Open its card</string>
+    <string name="lychee_readings_hold_peek">Show its card while held (slide onto 🔒 to keep it open)</string>
+    <string name="lychee_readings_hold_pin">Open its card until closed</string>
+    <string name="lychee_card_lock_hint">Slide here to keep it open</string>
+    <string name="lychee_card_lock_ready">Let go to keep it open</string>
     <string name="lychee_readings_other_script">The other script on cards</string>
     <string name="lychee_readings_other_script_summary">Under 學校, its Simplified form 学校 (or the Traditional under Simplified)</string>
     <string name="lychee_readings_other_script_diff">Only the characters that differ</string>

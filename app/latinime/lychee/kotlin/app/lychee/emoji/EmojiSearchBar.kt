@@ -345,7 +345,7 @@ internal fun searchRow(context: Context, onBack: (() -> Unit)?): LinearLayout {
         addView(TextView(context).apply {
             text = context.getString(R.string.lychee_emoji_search)
             setTextColor(palette.onSurfaceVariant)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
             isSingleLine = true
             ellipsize = TextUtils.TruncateAt.START
             gravity = Gravity.CENTER_VERTICAL
@@ -358,7 +358,11 @@ internal fun searchRow(context: Context, onBack: (() -> Unit)?): LinearLayout {
                 setColor(palette.surfaceContainerHigh)
                 cornerRadius = dp(24).toFloat()
             }
-        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply { marginStart = if (onBack != null) dp(4) else 0 })
+        // a slim pill, a little shorter than its row
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
+            marginStart = if (onBack != null) dp(4) else 0
+            topMargin = dp(4); bottomMargin = dp(4)
+        })
     }
 }
 

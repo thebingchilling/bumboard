@@ -15,7 +15,8 @@ import androidx.core.graphics.PathParser
 /**
  * One character written stroke by stroke, like a copybook: the strokes appear in order, each
  * drawn along its centre line, over a faint copy of the whole character on a 米 grid.
- * Tap to write it again. [current] colours the stroke being written; with [numbers] set (a
+ * Tap to write it again (or [pause], [resume], [step] stroke by stroke, and set the [speed]: the
+ * card's Stroke order page). [current] colours the stroke being written; with [numbers] set (a
  * colour), each stroke's number sits at its start once the character is written (up to
  * [MAX_NUMBERED] strokes), so it reads as a lesson rather than another copy of the word.
  */
@@ -27,6 +28,8 @@ class StrokeOrderView @JvmOverloads constructor(
     private val grid: Int,
     private val current: Int = ink,
     private val numbers: Int = 0,
+    /** Starts writing as soon as it shows. */
+    private val autoPlay: Boolean = true,
 ) : View(context) {
 
     private val outlines: List<Path> = char.strokes.map { runCatching { PathParser.createPathFromPathData(it) }.getOrElse { Path() } }
@@ -70,21 +73,76 @@ class StrokeOrderView @JvmOverloads constructor(
         contentDescription = char.char
     }
 
+    /** How many strokes the character has. */
+    val strokeCount: Int get() = if (linesOnly) centres.size else outlines.size
+
+    /** How fast it writes: 1 is the usual pace, 2 twice as fast, 0.5 half. */
+    var speed = 1f
+        set(value) {
+            field = value.coerceIn(0.25f, 4f)
+            // carries on from where it is, at the new pace
+            if (playing) resume()
+        }
+
+    /** Whether it is writing now. */
+    val playing: Boolean get() = animator?.isRunning == true
+
+    /** The strokes written so far (whole ones). */
+    val strokesDone: Int get() = progress.toInt().coerceIn(0, strokeCount)
+
+    /** Called whenever it starts, stops or moves a stroke (for the controls). */
+    var onChange: () -> Unit = {}
+
+    /** Writes it from the first stroke. */
     fun play() {
+        progress = 0f
+        resume()
+    }
+
+    /** Carries on writing from where it is (from the start once it is all written). */
+    fun resume() {
         animator?.cancel()
-        val n = if (linesOnly) centres.size else outlines.size
+        val n = strokeCount
         if (n == 0) return
-        animator = ValueAnimator.ofFloat(0f, n.toFloat()).apply {
-            duration = (n * STROKE_MS).toLong()
+        if (progress >= n) progress = 0f
+        val from = progress
+        animator = ValueAnimator.ofFloat(from, n.toFloat()).apply {
+            duration = ((n - from) * STROKE_MS / speed).toLong().coerceAtLeast(1)
             interpolator = LinearInterpolator()
-            addUpdateListener { progress = it.animatedValue as Float; invalidate() }
+            addUpdateListener {
+                val before = progress.toInt()
+                progress = it.animatedValue as Float
+                invalidate()
+                if (progress.toInt() != before) onChange()
+            }
+            addListener(object : android.animation.AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: android.animation.Animator) = onChange()
+            })
             start()
         }
+        onChange()
+    }
+
+    /** Stops where it is. */
+    fun pause() {
+        animator?.cancel()
+        animator = null
+        onChange()
+    }
+
+    /** Stops and shows [delta] whole strokes more (or fewer): writing it by hand, stroke by stroke. */
+    fun step(delta: Int) {
+        animator?.cancel()
+        animator = null
+        val whole = if (delta < 0 && progress > progress.toInt()) progress.toInt() + 1 else progress.toInt()
+        progress = (whole + delta).coerceIn(0, strokeCount).toFloat()
+        invalidate()
+        onChange()
     }
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        play()
+        if (autoPlay) play() else { progress = strokeCount.toFloat(); invalidate() }
     }
 
     override fun onDetachedFromWindow() {

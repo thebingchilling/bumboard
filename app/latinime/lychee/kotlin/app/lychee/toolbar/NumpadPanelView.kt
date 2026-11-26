@@ -3,7 +3,6 @@ package app.lychee.toolbar
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.ColorStateList
-import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
@@ -22,15 +21,8 @@ import com.android.inputmethod.latin.R
 import com.android.inputmethod.latin.common.Constants
 
 /**
- * A number pad over the keys. On the symbols page ("12/34"): a narrow scrolling column of small
- * symbols on the left, big digits in a phone-style grid, % / space / backspace on the right, and
- * a bottom bar exactly as tall as the keyboard's own bottom row (its height, gaps and bottom
- * padding), lined up with the columns above: ABC under the symbols, comma and !?# under the 7,
- * 0 under the 8, = and period under the 9, Enter under the right-hand keys. ABC goes back to the
- * letters and !?# to the symbols.
- *
- * In number, phone and date fields ([forced]) it is the one number pad Lychee has there (LatinIME's
- * own pads never show): the digits, as wide as the symbols page's and centred, with no keys at
+ * The one number pad Lychee has, in number, phone and date fields ([forced]; LatinIME's own pads
+ * never show, and the symbols page has no number pad key): the digits, centred, with no keys at
  * the sides, over a bottom row of three equal keys, backspace, 0 and Enter. Symbols are held on
  * 0, like a key's alternatives: what the field takes first ([setInputType]: − for signed numbers,
  * a decimal point for decimals, / and : for dates and times, + * # for phone numbers), then the
@@ -45,11 +37,9 @@ class NumpadPanelView @JvmOverloads constructor(
     private val palette = M3Colors.of(context)
     private val repeat = Handler(Looper.getMainLooper())
     // before init, which fills them in
-    private var full: LinearLayout? = null
     private var plain: LinearLayout? = null
-    private var fullBar: LinearLayout? = null
     private var plainBar: LinearLayout? = null
-    private val bottomBars get() = listOfNotNull(fullBar, plainBar)
+    private val bottomBars get() = listOfNotNull(plainBar)
     /** The number field's extra keys: what is shown, and what it types. */
     private var extras: List<Pair<String, Char>> = emptyList()
     /** The mark in the number field's 0 showing what is held on it. */
@@ -60,47 +50,13 @@ class NumpadPanelView @JvmOverloads constructor(
         isClickable = true
         setBackgroundColor(palette.surface)
         setPadding(dp(3), dp(4), dp(3), dp(4))
-        full = fullPad()
         plain = plainPad()
-        addView(full, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         addView(plain, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-        plain?.visibility = GONE
         visibility = GONE
     }
 
-    /** The symbols page's pad: symbols, digits and the right-hand keys over the bottom bar. */
-    private fun fullPad() = LinearLayout(context).apply {
-        orientation = VERTICAL
-        val top = LinearLayout(context).apply { orientation = HORIZONTAL }
-        top.addView(symbolsList(), LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_SYMBOLS).apply { setMargins(dp(3), dp(3), dp(3), dp(3)) })
-        top.addView(digitRows(), LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_DIGIT * 3))
-        val right = LinearLayout(context).apply { orientation = VERTICAL }
-        right.addView(text("%"), keyParams(1f, vertical = true))
-        right.addView(spaceKey(), keyParams(1f, vertical = true))
-        right.addView(backspaceKey(), keyParams(1f, vertical = true))
-        top.addView(right, LayoutParams(0, LayoutParams.MATCH_PARENT, COLUMN_SIDE))
-        addView(top, LayoutParams(LayoutParams.MATCH_PARENT, 0, 1f))
-        // the bottom bar, each key under the column above it
-        val bar = LinearLayout(context).apply {
-            orientation = HORIZONTAL
-            addView(abcKey(), keyParams(COLUMN_SYMBOLS))
-            addView(text(","), keyParams(COLUMN_DIGIT / 2))
-            addView(key("!?#", letter = false, size = 15f) {
-                // the symbols page is underneath
-                this@NumpadPanelView.visibility = GONE
-            }, keyParams(COLUMN_DIGIT / 2))
-            addView(digit("0"), keyParams(COLUMN_DIGIT))
-            addView(text("="), keyParams(COLUMN_DIGIT / 2))
-            addView(text("."), keyParams(COLUMN_DIGIT / 2))
-            addView(enterKey(), keyParams(COLUMN_SIDE))
-        }
-        addView(bar, LayoutParams(LayoutParams.MATCH_PARENT, dp(56)))
-        fullBar = bar
-    }
-
     /**
-     * The number field's pad: the digits over ⌫ 0 Enter (its extras held on 0), as wide as the
-     * symbols page's digits and centred, with space at each side.
+     * The number field's pad: the digits over ⌫ 0 Enter (its extras held on 0), centred, with space at each side.
      */
     private fun plainPad() = LinearLayout(context).apply {
         orientation = HORIZONTAL
@@ -283,59 +239,6 @@ class NumpadPanelView @JvmOverloads constructor(
         }
     }
 
-    /** The small symbols: one rounded panel that scrolls, its scrollbar always showing. */
-    private fun symbolsList(): View {
-        val list = LinearLayout(context).apply { orientation = VERTICAL }
-        val scroll = android.widget.ScrollView(context).apply {
-            isVerticalScrollBarEnabled = true
-            isScrollbarFadingEnabled = false
-            scrollBarStyle = View.SCROLLBARS_INSIDE_INSET
-            setPadding(0, dp(2), dp(4), dp(2))
-            clipToPadding = false
-            background = android.graphics.drawable.GradientDrawable().apply {
-                cornerRadius = dp(12).toFloat()
-                setColor(palette.surfaceContainerHigh)
-            }
-            clipToOutline = true
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-                verticalScrollbarThumbDrawable = android.graphics.drawable.GradientDrawable().apply {
-                    cornerRadius = dp(2).toFloat()
-                    setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(palette.onSurfaceVariant, 0x99))
-                    setSize(dp(3), dp(24))
-                }
-                verticalScrollbarTrackDrawable = android.graphics.drawable.GradientDrawable().apply {
-                    cornerRadius = dp(2).toFloat()
-                    setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(palette.onSurfaceVariant, 0x22))
-                    setSize(dp(3), dp(24))
-                }
-            }
-            addView(list)
-        }
-        scroll.addOnLayoutChangeListener { _, _, t, _, b, _, ot, _, ob ->
-            if (b - t != ob - ot) {
-                // four and a bit showing, so it's plain there's more below
-                val itemHeight = ((b - t) / 4.4f).toInt()
-                for (i in 0 until list.childCount) {
-                    val child = list.getChildAt(i)
-                    val lp = child.layoutParams as LayoutParams
-                    val h = if (child is TextView) itemHeight else lp.height
-                    if (lp.height != h) {
-                        lp.height = h
-                        child.layoutParams = lp
-                    }
-                }
-            }
-        }
-        SYMBOLS.forEachIndexed { i, op ->
-            // a clear line between the symbols, so each reads as its own key
-            if (i > 0) list.addView(View(context).apply {
-                setBackgroundColor(palette.outlineVariant)
-            }, LayoutParams(LayoutParams.MATCH_PARENT, dp(1)).apply { setMargins(dp(6), 0, dp(6), 0) })
-            list.addView(symbolItem(op), LayoutParams(LayoutParams.MATCH_PARENT, dp(40)))
-        }
-        return scroll
-    }
-
     /**
      * The bottom bar's keys exactly where the keyboard's bottom row keys are: as tall, and as
      * high above the bottom. Each keyboard row's gap is below its keys (LatinIME's Key), so the
@@ -366,12 +269,6 @@ class NumpadPanelView @JvmOverloads constructor(
 
     /** Number, phone and date fields: the plain pad (digits, backspace, Enter), centred. */
     var forced = false
-        set(value) {
-            field = value
-            full?.visibility = if (value) GONE else VISIBLE
-            plain?.visibility = if (value) VISIBLE else GONE
-            requestLayout()
-        }
 
     override fun setVisibility(visibility: Int) {
         if (visibility != VISIBLE) {
@@ -382,40 +279,15 @@ class NumpadPanelView @JvmOverloads constructor(
         if (visibility == VISIBLE) alignWithKeyboard()
     }
 
-    private fun keyParams(weight: Float, vertical: Boolean = false) =
-        (if (vertical) LayoutParams(LayoutParams.MATCH_PARENT, 0, weight) else LayoutParams(0, LayoutParams.MATCH_PARENT, weight))
+    private fun keyParams(weight: Float) =
+        LayoutParams(0, LayoutParams.MATCH_PARENT, weight)
             .apply { setMargins(dp(3), dp(3), dp(3), dp(3)) }
-
-    /** ABC back to the letters, like the keyboard's ?123 key. */
-    private fun abcKey() = key(context.getString(R.string.lychee_emoji_abc), letter = false, size = 15f) {
-        visibility = GONE
-        lycheeHost()?.lycheeSendCode(Constants.CODE_SWITCH_ALPHA_SYMBOL)
-    }
 
     private fun backspaceKey() = icon(R.drawable.ic_sym_backspace, R.string.lychee_emoji_delete, repeats = true) {
         send(Constants.CODE_DELETE)
     }
 
     private fun digit(d: String) = key(d, letter = true, size = 26f) { lycheeHost()?.lycheeSendCode(d[0].code) }
-
-    private fun text(t: String, types: Char = t[0]) = key(t, letter = false) { lycheeHost()?.lycheeSendCode(types.code) }
-
-    /** A symbol in the scrolling list: small and plain, rippling when tapped. */
-    private fun symbolItem(t: String) = TextView(context).apply {
-        text = t
-        setTextColor(palette.onSurface)
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-        typeface = app.lychee.fonts.LycheeFonts.ui(context, 500)
-        gravity = Gravity.CENTER
-        background = TypedValue().let { v ->
-            context.theme.resolveAttribute(android.R.attr.selectableItemBackground, v, true)
-            context.getDrawable(v.resourceId)
-        }
-        setOnClickListener { lycheeHost()?.lycheeSendCode(t[0].code) }
-    }
-
-
-    private fun spaceKey() = icon(R.drawable.ic_sym_space_bar, R.string.lychee_numpad_space) { send(Constants.CODE_SPACE) }
 
     private fun enterKey() = ImageView(context).apply {
         setImageResource(R.drawable.ic_sym_keyboard_return)
@@ -472,12 +344,8 @@ class NumpadPanelView @JvmOverloads constructor(
     private fun dp(v: Int) = (resources.displayMetrics.density * v).toInt()
 
     private companion object {
-        /** The small symbols (%, =, comma and period have keys of their own). */
-        val SYMBOLS = listOf("+", "-", "*", "/", "(", ")", ":", ";", "#", "@", "&", "$", "!", "?", "~", "^")
-        /** the columns' widths: the (narrow) symbols, each digit, the right-hand keys */
-        const val COLUMN_SYMBOLS = 0.8f
+        /** each digit column's width, against the side room */
         const val COLUMN_DIGIT = 1.25f
-        const val COLUMN_SIDE = 1.1f
         /** Held on a number field's 0 after the field's own: a row's worth at a time. */
         const val PER_ROW = 5
         val MORE = listOf("\u2212" to '-', "." to '.', "," to ',', "+" to '+', "/" to '/',

@@ -280,14 +280,22 @@ class DictionaryPopup(
             },
             page = { which, c, body ->
                 val content = makeContent(c, body, which)
+                fun romaniseSentence(sentence: String): String? = when (lang) {
+                    "ja" -> app.lychee.core.SentenceRomanizer.japanese(sentence) { form ->
+                        app.lychee.dict.PackData.words(ctx, "ja", form, 1).firstOrNull()?.let { it.reading ?: it.form }
+                    }
+                    "ko" -> app.lychee.core.SentenceRomanizer.korean(sentence)
+                    else -> null
+                }
                 when (which) {
                     Page.SUMMARY -> {
+                        // one page: what it means (the reading is in the header)
                         if (translations.isNotEmpty()) content.translations(translations, onTranslation)
                         when {
                             entries.isNotEmpty() -> entries.take(3).forEachIndexed { i, e ->
                                 entryWord(content, body, e, i)
                                 e.partOfSpeech?.takeIf { it.isNotBlank() }?.let { body.addView(content.partOfSpeech(it)) }
-                                e.senses.take(Content.SUMMARY_SENSES).forEachIndexed { n, s -> content.plainSense(n + 1, s) }
+                                e.senses.take(if (i == 0) Content.SUMMARY_SENSES else 2).forEachIndexed { n, s -> content.plainSense(n + 1, s) }
                             }
                             parts.isNotEmpty() -> {
                                 // a phrase the dictionary lacks as a whole: what its pieces mean, each in full
@@ -296,32 +304,6 @@ class DictionaryPopup(
                             }
                             else -> body.addView(content.note(ctx.getString(R.string.lychee_card_no_definition)))
                         }
-                        // the rest of the card, distilled: how it's said, its Kanji or Hanja, one example
-                        pronunciation?.let {
-                            content.summarySection(ctx.getString(R.string.lychee_card_say_it))
-                            body.addView(content.textView(it, 15f, c.onSurface).apply { setPadding(0, dp(2), 0, dp(2)) })
-                        }
-                        if (characters.isNotEmpty()) {
-                            content.summarySection(charactersTitle ?: ctx.getString(R.string.lychee_card_characters))
-                            characters.take(6).forEach { cr ->
-                                val roman = cr.rows.flatMap { it.second }.take(3).joinToString("  ·  ") { (native, r) -> if (r.isBlank() || r == native) native else "$native $r" }
-                                body.addView(content.miniCharacter(cr.ch, roman, cr.meaning.orEmpty()))
-                            }
-                        }
-                        if (examples.isNotEmpty()) content.examples(examples.take(1)) { sentence ->
-                            when (lang) {
-                                "ja" -> app.lychee.core.SentenceRomanizer.japanese(sentence) { form ->
-                                    app.lychee.dict.PackData.words(ctx, "ja", form, 1).firstOrNull()?.let { it.reading ?: it.form }
-                                }
-                                "ko" -> app.lychee.core.SentenceRomanizer.korean(sentence)
-                                else -> null
-                            }
-                        }
-                    }
-                    Page.READINGS -> {
-                        entries.forEachIndexed { i, e -> readingsOf(content, body, e, c) }
-                        pronunciation?.let { body.addView(content.textView(it, 15f, c.onSurface).apply { setPadding(0, dp(6), 0, dp(4)) }) }
-                        chinese?.let { content.chineseBox(chineseForm ?: text, it) }
                     }
                     Page.DEFINITIONS -> {
                         entries.forEachIndexed { i, e ->
@@ -332,22 +314,36 @@ class DictionaryPopup(
                         }
                         conjugation?.takeIf { it.size > 1 }?.let { content.conjugation(it) }
                     }
+                    Page.READINGS -> {
+                        entries.forEachIndexed { i, e -> readingsOf(content, body, e, c) }
+                        pronunciation?.let { body.addView(content.textView(it, 15f, c.onSurface).apply { setPadding(0, dp(6), 0, dp(4)) }) }
+                        chinese?.let { content.chineseBox(chineseForm ?: text, it) }
+                    }
+                    Page.EXAMPLES -> {
+                        content.examples(examples) { sentence -> romaniseSentence(sentence) }
+                        // the words and phrases it builds, each opening its own card
+                        val built = if (lang != null) app.lychee.dict.PackData.phrases(ctx, lang, text) else emptyList()
+                        if (built.isNotEmpty()) content.phraseParts(ctx.getString(R.string.lychee_card_phrases),
+                            built.map { w -> PhrasePart(w.lemma, w.reading?.takeIf { it != w.lemma }, w.senses.firstOrNull().orEmpty()) }, built.size) { p ->
+                            openWordPart(keyboard, p.form, lang, onSpeak, onSpeakAs)
+                        }
+                    }
+                    Page.STROKES -> if (lang == "ja" || lang == "ko") {
+                        // the word as written, and its other form where it has one (Hanja, old kanji)
+                        val other = when {
+                            hanja != null && hanja != text -> ctx.getString(R.string.lychee_card_hanja) to hanja
+                            lang == "ja" && oldForm != null && oldForm != text -> ctx.getString(R.string.lychee_card_old_form) to oldForm
+                            else -> null
+                        }
+                        val label = if (lang == "ko") ctx.getString(R.string.lychee_card_hangul) else ""
+                        content.strokePage(listOfNotNull(label to text, other).let { if (it.size < 2) listOf("" to text) else it })
+                    }
                     Page.PARTS -> {
-                        if (lang == "ja" || lang == "ko") content.strokes(text)
                         if (characters.isNotEmpty()) content.characterReadings(charactersTitle ?: "", characters)
                         if (entries.isEmpty() && parts.isNotEmpty()) {
                             content.phraseParts(ctx.getString(R.string.lychee_card_parts), parts, parts.size) { p ->
                                 openWordPart(keyboard, p.form, lang, onSpeak, onSpeakAs)
                             }
-                        }
-                    }
-                    Page.EXAMPLES -> content.examples(examples) { sentence ->
-                        when (lang) {
-                            "ja" -> app.lychee.core.SentenceRomanizer.japanese(sentence) { form ->
-                                app.lychee.dict.PackData.words(ctx, "ja", form, 1).firstOrNull()?.let { it.reading ?: it.form }
-                            }
-                            "ko" -> app.lychee.core.SentenceRomanizer.korean(sentence)
-                            else -> null
                         }
                     }
                 }
@@ -365,13 +361,17 @@ class DictionaryPopup(
         }
     }
 
-    /** The card's tabs, in order; a tab with nothing in it is left out. */
-    enum class Page(val label: Int) {
-        SUMMARY(R.string.lychee_card_tab_summary),
-        READINGS(R.string.lychee_card_tab_readings),
+    /**
+     * The card's tabs, in order, as Pleco has them; a tab with nothing in it is left out. The
+     * summary (one page of what decides whether to type it) is a pin icon, not a word.
+     */
+    enum class Page(val label: Int, val icon: Int? = null) {
+        SUMMARY(R.string.lychee_card_tab_summary, R.drawable.lychee_ic_pin),
         DEFINITIONS(R.string.lychee_card_tab_definitions),
-        PARTS(R.string.lychee_card_parts),
+        READINGS(R.string.lychee_card_tab_readings),
         EXAMPLES(R.string.lychee_card_examples),
+        STROKES(R.string.lychee_card_strokes),
+        PARTS(R.string.lychee_card_parts),
     }
 
     /** The card's one 粵/普 choice: the header's switch, every speaker and reading line follow it. */
@@ -414,10 +414,14 @@ class DictionaryPopup(
      * (Back from a part opened on it).
      */
     private fun presentTabs(
-        keyboard: View, peek: Boolean, onType: () -> Unit, reshow: () -> Unit,
+        keyboard: View, peekAsked: Boolean, onType: () -> Unit, reshow: () -> Unit,
         header: (M3Colors, LinearLayout) -> Unit,
         page: (Page, M3Colors, LinearLayout) -> Unit,
     ) {
+        // a peek locked open (slid onto its lock bar) is shown again as a card that stays
+        val peek = peekAsked && !forcePin
+        lockBar = null
+        lockOver = false
         if (!navigating) history.clear()
         current = reshow
         host?.removeAllViews()
@@ -504,7 +508,15 @@ class DictionaryPopup(
         pager.setItemViewCacheSize(Page.values().size)
         val tabViews = pages.mapIndexed { i, (p, _) ->
             TextView(ctx).apply {
-                text = ctx.getString(p.label)
+                // the summary is a pin (its name is read out, not shown)
+                text = if (p.icon != null) "" else ctx.getString(p.label)
+                contentDescription = ctx.getString(p.label)
+                p.icon?.let { icon ->
+                    ctx.getDrawable(icon)?.mutate()?.let { d ->
+                        d.setBounds(0, 0, dp(18), dp(18))
+                        setCompoundDrawablesRelative(d, null, null, null)
+                    }
+                }
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
                 typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
                 gravity = Gravity.CENTER
@@ -520,6 +532,10 @@ class DictionaryPopup(
             tabViews.forEachIndexed { j, t ->
                 val on = i == j
                 t.setTextColor(if (on) c.primary else c.onSurfaceVariant)
+                t.compoundDrawablesRelative[0]?.setTint(if (on) c.primary else c.onSurfaceVariant)
+                // the tab just chosen gives a small bounce
+                if (on && t.tag == false) app.lychee.layout.LycheeMotion.pop(t)
+                t.tag = on
                 t.foreground = if (on) android.graphics.drawable.LayerDrawable(arrayOf(GradientDrawable().apply {
                     setColor(c.primary)
                     cornerRadius = dp(2).toFloat()
@@ -554,6 +570,8 @@ class DictionaryPopup(
             if (pages.size > 1) addView(tabs, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40)))
             addView(View(ctx).apply { setBackgroundColor(c.outlineVariant) }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, maxOf(1, dp(1) / 2)))
             addView(pager, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+            // held to peek: a bar at the bottom to slide onto, which keeps the card open
+            if (peek) addView(lockBarView(c), LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
         }
         // the tab asked for (screenshots), else the first
         startPage?.let { want -> pages.indexOfFirst { it.first == want }.takeIf { it > 0 }?.let { i -> layout.scrollToPosition(i); select(i) } }
@@ -581,10 +599,85 @@ class DictionaryPopup(
         panel.clipToPadding = false
         panel.visibility = View.VISIBLE
         panel.bringToFront()
-        // grows out of the keyboard (a part's card cross-fades in place)
-        if (app.lychee.layout.LycheePanels.animate(ctx)) card.alpha = 0f
-        card.post { app.lychee.layout.LycheeMotion.cardIn(card, card.width / 2f, card.height.toFloat()) }
+        // grows out of the keyboard (a part's card cross-fades in place); a peek just locked
+        // open stays where it is
+        if (!forcePin) {
+            if (app.lychee.layout.LycheePanels.animate(ctx)) card.alpha = 0f
+            card.post { app.lychee.layout.LycheeMotion.cardIn(card, card.width / 2f, card.height.toFloat()) }
+        }
         host = panel
+    }
+
+    /** The peek card's lock bar, while one shows (null otherwise). */
+    private var lockBar: LinearLayout? = null
+    private var lockOver = false
+    /** Showing a locked peek again, as a card that stays. */
+    private var forcePin = false
+
+    /** The bar along the bottom of a peek card: 🔒 and "Slide here to keep it open". */
+    private fun lockBarView(c: M3Colors) = LinearLayout(ctx).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER
+        background = GradientDrawable().apply { setColor(c.secondaryContainer) }
+        addView(android.widget.ImageView(ctx).apply {
+            setImageResource(R.drawable.lychee_ic_lock)
+            imageTintList = android.content.res.ColorStateList.valueOf(c.onSurfaceVariant)
+        }, LinearLayout.LayoutParams(dp(18), dp(18)).apply { marginEnd = dp(8) })
+        addView(TextView(ctx).apply {
+            setText(R.string.lychee_card_lock_hint)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTextColor(c.onSurfaceVariant)
+            typeface = app.lychee.fonts.LycheeFonts.appFont(context, 500)
+        })
+        lockBar = this
+    }
+
+    /**
+     * The finger holding the candidate moved (screen coordinates): over the lock bar, it lights
+     * up in the accent colour and says to let go; off it, it goes back.
+     */
+    fun peekDrag(rawX: Float, rawY: Float) {
+        val bar = lockBar ?: return
+        val over = isOver(bar, rawX, rawY)
+        if (over == lockOver) return
+        lockOver = over
+        val c = M3Colors.of(ctx)
+        (bar.background as? GradientDrawable)?.setColor(if (over) c.primary else c.secondaryContainer)
+        (bar.getChildAt(0) as? android.widget.ImageView)?.imageTintList =
+            android.content.res.ColorStateList.valueOf(if (over) c.onPrimary else c.onSurfaceVariant)
+        (bar.getChildAt(1) as? TextView)?.apply {
+            setText(if (over) R.string.lychee_card_lock_ready else R.string.lychee_card_lock_hint)
+            setTextColor(if (over) c.onPrimary else c.onSurfaceVariant)
+        }
+        // a small bounce as it takes the finger
+        if (over) app.lychee.layout.LycheeMotion.pop(bar)
+        bar.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+    }
+
+    /**
+     * The finger lifted (or the touch was cancelled): on the lock bar the card stays open, with
+     * its buttons, until closed; anywhere else it goes. Returns whether it stayed.
+     */
+    fun peekRelease(rawX: Float, rawY: Float, lifted: Boolean): Boolean {
+        val bar = lockBar
+        if (bar != null && lifted && (lockOver || isOver(bar, rawX, rawY))) {
+            lockBar = null
+            val again = current ?: return false
+            forcePin = true
+            navigating = true
+            runCatching { again() }
+            navigating = false
+            forcePin = false
+            return true
+        }
+        dismiss()
+        return false
+    }
+
+    private fun isOver(v: View, rawX: Float, rawY: Float): Boolean {
+        if (!v.isShown) return false
+        val at = IntArray(2).also { v.getLocationOnScreen(it) }
+        return rawX >= at[0] && rawX < at[0] + v.width && rawY >= at[1] - dp(24) && rawY < at[1] + v.height + dp(12)
     }
 
     /** Children left to right, wrapping onto new lines, [gap] apart both ways. */
@@ -850,6 +943,16 @@ class DictionaryPopup(
             spokenWord = text
             when (p) {
                 Page.SUMMARY -> summary(text, r, openPart)
+                Page.DEFINITIONS -> {
+                    if (main != null && !r.composed) facts(main)
+                    r.headwords.forEachIndexed { i, hw ->
+                        if (r.composed || i > 0) {
+                            if (i > 0) body.addView(divider())
+                            body.addView(entryChip(if (prefs.simplified) hw.simplified else hw.traditional))
+                        }
+                        senses(hw, r)
+                    }
+                }
                 Page.READINGS -> {
                     // a Kanji or Hanja: its Japanese or Korean readings first
                     local?.forEach { lr ->
@@ -861,32 +964,10 @@ class DictionaryPopup(
                                 .forEach { body.addView(it) }
                         }
                     }
-                    if (showChinese) readingRows(r, main, text)
+                    // the main readings are in the header (with its one 粵/普 switch and
+                    // speaker), so they are not repeated here: the other romanisations, and every
+                    // reading with the meaning it carries
                     if (showChinese && main != null && !r.composed) moreReadings(main, r)
-                }
-                Page.DEFINITIONS -> {
-                    if (main != null && !r.composed) facts(main)
-                    r.headwords.forEachIndexed { i, hw ->
-                        if (r.composed || i > 0) {
-                            if (i > 0) body.addView(divider())
-                            body.addView(entryChip(if (prefs.simplified) hw.simplified else hw.traditional))
-                        }
-                        senses(hw, r)
-                    }
-                }
-                Page.PARTS -> {
-                    strokes(text)
-                    val cps = text.codePoints().toArray()
-                    if (r.composed && r.headwords.isNotEmpty()) {
-                        r.headwords.forEach { hw -> part(hw, r.lang) { openPart(if (prefs.simplified) hw.simplified else hw.traditional) } }
-                    } else if (cps.size > 1) {
-                        // each character of the word, to open on its own
-                        val mode = if (r.lang == Lang.Mandarin) app.lychee.core.InputMode.Mandarin else app.lychee.core.InputMode.Cantonese
-                        cps.map { String(Character.toChars(it)) }.filter { Annotator.isHan(it.codePointAt(0)) }.distinct().forEach { ch ->
-                            Readings.annotator?.resolve(ch, "", mode)?.headwords?.firstOrNull()?.let { hw -> part(hw, r.lang) { openPart(ch) } }
-                        }
-                    }
-                    wordsWith(text, r, openPart)
                 }
                 Page.EXAMPLES -> {
                     if (!showChinese) return
@@ -896,8 +977,23 @@ class DictionaryPopup(
                     examples(app.lychee.dict.PackData.examples(ctx, lang, forms), sayIn = romanLang) { sentence ->
                         Readings.annotator?.romanise(sentence, romanLang, prefs)
                     }
+                    // and the words and phrases it builds
+                    wordsWith(text, r, openPart)
                 }
+                Page.STROKES -> strokePage(scriptForms(text, r))
+                Page.PARTS -> partsPage(scriptForms(text, r), r, openPart)
             }
+        }
+
+        /** The word in each script it has (Traditional, Simplified), the one in use first; one when they match. */
+        private fun scriptForms(text: String, r: Resolved): List<Pair<String, String>> {
+            val main = r.headwords.firstOrNull()
+            val trad = if (main != null && !r.composed) main.traditional else (if (prefs.simplified) charByChar(text) ?: text else text)
+            val simp = if (main != null && !r.composed) main.simplified else (if (prefs.simplified) text else charByChar(text) ?: text)
+            val t = ctx.getString(R.string.lychee_card_traditional) to trad
+            val s = ctx.getString(R.string.lychee_card_simplified) to simp
+            if (trad == simp) return listOf(t.copy(first = ""))
+            return if (prefs.simplified) listOf(s, t) else listOf(t, s)
         }
 
         /**
@@ -935,14 +1031,304 @@ class DictionaryPopup(
             }
         }
 
+        /**
+         * A Traditional | Simplified switch (only when the word differs), calling [onPick] with the
+         * index chosen; [chosen] starts it.
+         */
+        private fun scriptSwitch(forms: List<Pair<String, String>>, chosen: Int, onPick: (Int) -> Unit) {
+            val row = scriptSwitchView(forms, chosen, onPick) ?: return
+            body.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                gravity = Gravity.CENTER_HORIZONTAL
+                topMargin = dp(4); bottomMargin = dp(6)
+            })
+        }
+
+        private fun scriptSwitchView(forms: List<Pair<String, String>>, chosen: Int, onPick: (Int) -> Unit): View? {
+            if (forms.size < 2) return null
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(18).toFloat()
+                    setStroke(dp(1), c.outline)
+                }
+                setPadding(dp(3), dp(3), dp(3), dp(3))
+            }
+            val chips = forms.mapIndexed { i, (label, form) ->
+                textView(if (label.isEmpty()) form else "$label  $form", 13f, c.onSurfaceVariant).apply {
+                    gravity = Gravity.CENTER
+                    typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
+                    setPadding(dp(10), dp(4), dp(10), dp(4))
+                    app.lychee.layout.LycheeMotion.springy(this)
+                }.also { row.addView(it) }
+            }
+            fun paint(sel: Int) = chips.forEachIndexed { i, t ->
+                t.setTextColor(if (i == sel) c.onSecondaryContainer else c.onSurfaceVariant)
+                t.background = if (i == sel) GradientDrawable().apply { cornerRadius = dp(15).toFloat(); setColor(c.secondaryContainer) } else null
+            }
+            paint(chosen)
+            chips.forEachIndexed { i, t -> t.setOnClickListener { paint(i); onPick(i) } }
+            return row
+        }
+
+        /** The characters of [text] that have stroke orders (Chinese characters, kana, Hangul). */
+        private fun strokeChars(text: String) = text.codePoints().toArray().filter {
+            Annotator.isHan(it) || it in 0x3040..0x30FF || it in 0xAC00..0xD7A3
+        }.map { String(Character.toChars(it)) }.distinct()
+            .mapNotNull { app.lychee.dict.PackData.strokes(ctx, it, fontLang) }
+
+        /**
+         * Stroke order, as Pleco has it: one character large in a copybook square, written stroke
+         * by stroke. ‹ › (or a swipe, or the dots) go to the word's other characters; the
+         * Traditional | Simplified switch to its other script. Under it: one stroke back, play or
+         * pause, one stroke on, write again, and the speed (½×, 1×, 2×).
+         */
+        fun strokePage(forms: List<Pair<String, String>>) {
+            if (forms.all { strokeChars(it.second).isEmpty() }) return
+            var script = 0
+            var index = 0
+            var speed = 1f
+            var view: app.lychee.dict.StrokeOrderView? = null
+            val caption = textView("", 13f, c.onSurfaceVariant).apply { gravity = Gravity.CENTER }
+            val dots = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER }
+            val playButton = android.widget.ImageView(ctx)
+            lateinit var show: (Int) -> Unit
+            val detector = android.view.GestureDetector(ctx, object : android.view.GestureDetector.SimpleOnGestureListener() {
+                override fun onFling(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, vx: Float, vy: Float): Boolean {
+                    if (kotlin.math.abs(vx) < kotlin.math.abs(vy) * 1.5f) return false
+                    show(index + if (vx < 0) 1 else -1)
+                    return true
+                }
+            })
+            // the square takes sideways swipes for itself (not the card's tabs)
+            val square = object : FrameLayout(ctx) {
+                override fun dispatchTouchEvent(ev: android.view.MotionEvent): Boolean {
+                    if (ev.actionMasked == android.view.MotionEvent.ACTION_DOWN) parent?.requestDisallowInterceptTouchEvent(true)
+                    detector.onTouchEvent(ev)
+                    return super.dispatchTouchEvent(ev)
+                }
+            }.apply {
+                background = GradientDrawable().apply { cornerRadius = dp(16).toFloat(); setColor(c.surfaceContainer) }
+                setPadding(dp(6), dp(6), dp(6), dp(6))
+            }
+            fun arrow(icon: Int, label: Int, step: Int) = android.widget.ImageView(ctx).apply {
+                setImageResource(icon)
+                imageTintList = android.content.res.ColorStateList.valueOf(c.onSurfaceVariant)
+                scaleType = android.widget.ImageView.ScaleType.CENTER
+                contentDescription = ctx.getString(label)
+                background = round()
+                app.lychee.layout.LycheeMotion.springy(this)
+                setOnClickListener { show(index + step) }
+            }
+            val left = arrow(R.drawable.ic_sym_keyboard_arrow_left, R.string.lychee_card_char_previous, -1)
+            val right = arrow(R.drawable.ic_sym_keyboard_arrow_right, R.string.lychee_card_char_next, 1)
+            fun refresh() {
+                val v = view ?: return
+                caption.text = ctx.getString(R.string.lychee_card_stroke_of, v.strokesDone.coerceAtLeast(if (v.playing) 1 else 0), v.strokeCount)
+                playButton.setImageResource(if (v.playing) R.drawable.lychee_ic_pause else R.drawable.lychee_ic_play)
+                playButton.contentDescription = ctx.getString(if (v.playing) R.string.lychee_card_stroke_pause else R.string.lychee_card_stroke_play)
+            }
+            show = { want ->
+                val chars = strokeChars(forms[script].second)
+                if (chars.isNotEmpty()) {
+                    index = want.coerceIn(0, chars.size - 1)
+                    val v = app.lychee.dict.StrokeOrderView(ctx, chars[index], c.primary,
+                        androidx.core.graphics.ColorUtils.setAlphaComponent(c.onSurface, 0x1C),
+                        androidx.core.graphics.ColorUtils.setAlphaComponent(c.outline, 0x70),
+                        current = c.primary, numbers = c.primary)
+                    v.speed = speed
+                    v.onChange = { refresh() }
+                    view = v
+                    val first = square.childCount == 0
+                    square.removeAllViews()
+                    square.addView(v, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+                    // another character cross-fades in (the first comes in with the card)
+                    if (!first) app.lychee.layout.LycheeMotion.enter(v)
+                    // a dot for each character, the one shown filled
+                    dots.removeAllViews()
+                    if (chars.size > 1) chars.indices.forEach { i ->
+                        dots.addView(View(ctx).apply {
+                            background = GradientDrawable().apply {
+                                shape = GradientDrawable.OVAL
+                                setColor(if (i == index) c.primary else androidx.core.graphics.ColorUtils.setAlphaComponent(c.onSurfaceVariant, 0x55))
+                            }
+                            setOnClickListener { show(i) }
+                        }, LinearLayout.LayoutParams(dp(if (i == index) 8 else 6), dp(if (i == index) 8 else 6)).apply { setMargins(dp(4), dp(4), dp(4), dp(4)) })
+                    }
+                    left.alpha = if (index > 0) 1f else 0.3f
+                    right.alpha = if (index < chars.size - 1) 1f else 0.3f
+                    left.isEnabled = index > 0
+                    right.isEnabled = index < chars.size - 1
+                    refresh()
+                }
+            }
+            // the stroke count on the left, the script switch on the right, on one line
+            body.addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(caption.apply { gravity = Gravity.START or Gravity.CENTER_VERTICAL }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+                scriptSwitchView(forms, 0) { i -> script = i; show(0) }?.let { addView(it) }
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(34)).apply { bottomMargin = dp(4) })
+            body.addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER
+                addView(left, LinearLayout.LayoutParams(dp(40), dp(40)))
+                addView(square, LinearLayout.LayoutParams(dp(STROKE_BOX_DP), ViewGroup.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(10), 0, dp(10), 0) })
+                addView(right, LinearLayout.LayoutParams(dp(40), dp(40)))
+            }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+            body.addView(dots, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(14)).apply { topMargin = dp(2) })
+            // the controls: back, play/pause, on, again; then the speed
+            fun control(icon: Int, label: Int, action: () -> Unit) = android.widget.ImageView(ctx).apply {
+                setImageResource(icon)
+                imageTintList = android.content.res.ColorStateList.valueOf(c.onSurface)
+                scaleType = android.widget.ImageView.ScaleType.CENTER
+                contentDescription = ctx.getString(label)
+                background = round()
+                app.lychee.layout.LycheeMotion.springy(this)
+                setOnClickListener { action() }
+            }
+            playButton.apply {
+                imageTintList = android.content.res.ColorStateList.valueOf(c.onPrimary)
+                scaleType = android.widget.ImageView.ScaleType.CENTER
+                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(c.primary) }
+                app.lychee.layout.LycheeMotion.springy(this)
+                setOnClickListener { view?.let { v -> if (v.playing) v.pause() else v.resume() } }
+            }
+            val controls = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL or Gravity.CENTER_HORIZONTAL
+                addView(control(R.drawable.lychee_ic_step_back, R.string.lychee_card_stroke_back) { view?.step(-1) }, LinearLayout.LayoutParams(dp(40), dp(40)))
+                addView(playButton, LinearLayout.LayoutParams(dp(44), dp(44)).apply { setMargins(dp(6), 0, dp(6), 0) })
+                addView(control(R.drawable.lychee_ic_step_next, R.string.lychee_card_stroke_next) { view?.step(1) }, LinearLayout.LayoutParams(dp(40), dp(40)))
+                addView(control(R.drawable.lychee_ic_replay, R.string.lychee_card_stroke_again) { view?.play() }, LinearLayout.LayoutParams(dp(40), dp(40)).apply { marginStart = dp(4) })
+                addView(View(ctx), LinearLayout.LayoutParams(dp(14), 1))
+                // the speed: ½× 1× 2×
+                val speeds = listOf(0.5f to "½×", 1f to "1×", 2f to "2×")
+                val chips = speeds.map { (value, label) ->
+                    textView(label, 13f, c.onSurfaceVariant).apply {
+                        gravity = Gravity.CENTER
+                        typeface = app.lychee.fonts.LycheeFonts.appFont(context, 600)
+                        app.lychee.layout.LycheeMotion.springy(this)
+                        tag = value
+                    }
+                }
+                fun paintSpeed() = chips.forEach { t ->
+                    val on = t.tag == speed
+                    t.setTextColor(if (on) c.onSecondaryContainer else c.onSurfaceVariant)
+                    t.background = if (on) GradientDrawable().apply { cornerRadius = dp(14).toFloat(); setColor(c.secondaryContainer) } else null
+                }
+                chips.forEach { t ->
+                    t.setOnClickListener { speed = t.tag as Float; view?.speed = speed; paintSpeed() }
+                    addView(t, LinearLayout.LayoutParams(dp(34), dp(28)))
+                }
+                paintSpeed()
+            }
+            body.addView(controls, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(2) })
+            show(0)
+        }
+
+        /** A round ripple behind a small icon button. */
+        private fun round(): android.graphics.drawable.Drawable = android.graphics.drawable.RippleDrawable(
+            android.content.res.ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(c.onSurface, 0x1F)),
+            null, GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0xFFFFFFFF.toInt()) })
+
+        /**
+         * Parts, as Pleco has them: the word's characters (each opening its own card); and for a
+         * single character, the parts it is made of and the characters that use it, each a tile
+         * to open. The Traditional | Simplified switch shows the other script's.
+         */
+        fun partsPage(forms: List<Pair<String, String>>, r: Resolved, openPart: (String) -> Unit) {
+            val mode = if (r.lang == Lang.Mandarin) app.lychee.core.InputMode.Mandarin else app.lychee.core.InputMode.Cantonese
+            fun build(text: String) {
+                val cps = text.codePoints().toArray()
+                if (r.composed && r.headwords.isNotEmpty()) {
+                    r.headwords.forEach { hw -> part(hw, r.lang) { openPart(if (prefs.simplified) hw.simplified else hw.traditional) } }
+                    return
+                }
+                val chars = cps.map { String(Character.toChars(it)) }.filter { Annotator.isHan(it.codePointAt(0)) }.distinct()
+                if (chars.size > 1) {
+                    // each character of the word, to open on its own
+                    chars.forEach { ch ->
+                        Readings.annotator?.resolve(ch, "", mode)?.headwords?.firstOrNull()?.let { hw -> part(hw, r.lang) { openPart(ch) } }
+                    }
+                    return
+                }
+                val ch = chars.firstOrNull() ?: return
+                val parts = app.lychee.dict.PackData.components(ctx, ch)
+                if (parts.isNotEmpty()) {
+                    section(ctx.getString(R.string.lychee_card_made_of))
+                    body.addView(FlowRow(ctx, dp(8)).apply {
+                        parts.forEach { pc -> addView(charTile(pc, glossOf(pc, mode)) { openPart(pc) }) }
+                    })
+                }
+                val db = Readings.db
+                val using = app.lychee.dict.PackData.containing(ctx, ch)
+                    .sortedByDescending { u -> db?.let { d -> runCatching { d.frequency(u) }.getOrDefault(0L) } ?: 0L }
+                    .take(24)
+                if (using.isNotEmpty()) {
+                    section(ctx.getString(R.string.lychee_card_used_in))
+                    body.addView(FlowRow(ctx, dp(8)).apply {
+                        using.forEach { u -> addView(charTile(u, glossOf(u, mode)) { openPart(u) }) }
+                    })
+                }
+            }
+            if (forms.size < 2) {
+                build(forms.firstOrNull()?.second ?: return)
+                return
+            }
+            scriptSwitch(forms, 0) { i ->
+                // everything after the switch is rebuilt in the other script, cross-fading in
+                while (root.childCount > start) root.removeViewAt(root.childCount - 1)
+                body = root
+                build(forms[i].second)
+                for (k in start until root.childCount) app.lychee.layout.LycheeMotion.enter(root.getChildAt(k))
+            }
+            start = root.childCount
+            build(forms[0].second)
+        }
+        /** Where the Parts page's rebuilt part begins (after its switch). */
+        private var start = 0
+
+        /** A character's first meaning, short, for its tile. */
+        private fun glossOf(ch: String, mode: app.lychee.core.InputMode): String =
+            Readings.annotator?.resolve(ch, "", mode)?.headwords?.firstOrNull()
+                ?.senses?.firstOrNull { it.partOfSpeech != "cl" && it.gloss.isNotBlank() }?.gloss
+                ?.substringBefore(';')?.trim().orEmpty()
+
+        /** A character on a small tile, its meaning under it; a tap opens its card. */
+        private fun charTile(ch: String, gloss: String, onOpen: () -> Unit): View = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(dp(6), dp(6), dp(6), dp(6))
+            minimumWidth = dp(56)
+            background = android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(androidx.core.graphics.ColorUtils.setAlphaComponent(c.onSurface, 0x1F)),
+                GradientDrawable().apply { cornerRadius = dp(12).toFloat(); setColor(c.surfaceContainer) }, null)
+            addView(textView(ch, 24f, c.onSurface).apply {
+                app.lychee.fonts.LycheeFonts.forText(ctx, ch, fontLang)?.let { typeface = it }
+                gravity = Gravity.CENTER
+            })
+            if (gloss.isNotEmpty()) addView(textView(gloss, 11f, c.onSurfaceVariant).apply {
+                gravity = Gravity.CENTER
+                maxLines = 1
+                maxWidth = dp(72)
+                ellipsize = android.text.TextUtils.TruncateAt.END
+            })
+            contentDescription = if (gloss.isEmpty()) ch else "$ch, $gloss"
+            app.lychee.layout.LycheeMotion.springy(this)
+            setOnClickListener { onOpen() }
+        }
+
         /** Common words that use the word's characters, each opening its own card. */
         private fun wordsWith(text: String, r: Resolved, openPart: (String) -> Unit) {
             val db = Readings.db ?: return
             val chars = text.codePoints().toArray().map { String(Character.toChars(it)) }.filter { Annotator.isHan(it.codePointAt(0)) }.distinct().take(3)
-            val words = chars.flatMap { ch -> runCatching { db.continuations(ch, prefs.simplified, 6) }.getOrDefault(emptyList()) }
-                .filter { it != text && it.codePointCount(0, it.length) > 1 }.distinct().take(8)
+            // what the whole word builds first, then what each of its characters does
+            val starts = (listOf(text) + chars).distinct()
+            val words = starts.flatMap { ch -> runCatching { db.continuations(ch, prefs.simplified, 6) }.getOrDefault(emptyList()) }
+                .filter { it != text && it.codePointCount(0, it.length) > 1 }.distinct().take(10)
             if (words.isEmpty()) return
-            section(ctx.getString(R.string.lychee_card_words_with))
+            section(ctx.getString(R.string.lychee_card_phrases))
             val mode = if (r.lang == Lang.Mandarin) app.lychee.core.InputMode.Mandarin else app.lychee.core.InputMode.Cantonese
             words.forEach { w ->
                 val wr = Readings.annotator?.resolve(w, "", mode)
@@ -991,10 +1377,9 @@ class DictionaryPopup(
         }
 
         /**
-         * The summary: the whole card distilled. The best meanings in full (each entry's word in a
-         * chip when there are several), the word in both languages with a speaker each, its
-         * characters with their readings and meanings (a tap opens one), the measure word, and
-         * one example. Every tab's detail stays on its tab.
+         * The summary: exactly one page of what decides whether to type it. The best meanings in
+         * full (each entry's word in a chip when there are several) and the measure word; the
+         * readings are in the header, every other detail on its own tab.
          */
         private fun summary(text: String, r: Resolved, openPart: (String) -> Unit) {
             if (r.composed) {
@@ -1005,7 +1390,6 @@ class DictionaryPopup(
                     val gloss = hw.senses.firstOrNull { it.partOfSpeech != "cl" && it.gloss.isNotBlank() }?.gloss ?: return@forEach
                     body.addView(pieceLine(form, gloss))
                 }
-                summaryExample(text, r, null)
                 return
             }
             val wanted = if (r.lang == Lang.Mandarin) Lang.Mandarin else Lang.Cantonese
@@ -1032,23 +1416,14 @@ class DictionaryPopup(
             }
             val hw = r.headwords.firstOrNull() ?: return
             if (!showChinese) return
-            alsoRead(hw, r)
-            // its characters, each with both readings and its meaning; a tap opens it
-            val chars = text.codePoints().toArray().map { String(Character.toChars(it)) }.filter { Annotator.isHan(it.codePointAt(0)) }.distinct()
-            if (chars.size > 1) {
-                section(ctx.getString(R.string.lychee_card_characters))
-                val mode = if (r.lang == Lang.Mandarin) app.lychee.core.InputMode.Mandarin else app.lychee.core.InputMode.Cantonese
-                chars.take(6).forEach { ch ->
-                    Readings.annotator?.resolve(ch, "", mode)?.headwords?.firstOrNull()?.let { part -> miniPart(part, r.lang) { openPart(ch) } }
-                }
-            }
+            // one page only: the meanings (above) and the measure word; readings are in the
+            // header, everything else on its own tab
             val measure = hw.info.measureWordList()
             if (measure.isNotEmpty()) {
                 val script = { t: String, s: String -> if (prefs.simplified) s else t }
                 body.addView(labelled(ctx.getString(R.string.lychee_card_measure_word).trimEnd(':'),
                     measure.take(2).joinToString("  ·  ") { (t, s, _) -> script(t, s) }).apply { setPadding(0, dp(12), 0, 0) })
             }
-            summaryExample(text, r, hw)
         }
 
         /**
@@ -1902,6 +2277,8 @@ class DictionaryPopup(
             const val MAX_SENSES = 12
             /** Meanings in the summary. */
             const val SUMMARY_SENSES = 3
+            /** The stroke order page's copybook square. */
+            const val STROKE_BOX_DP = 136
             /** A reading longer than this puts the two readings one under the other. */
             const val LONG_READING = 14
             /** Every text on the card a step smaller than a page's (summary and full alike). */

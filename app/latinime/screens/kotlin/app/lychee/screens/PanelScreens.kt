@@ -49,7 +49,7 @@ class PanelScreens {
 
     /** Handwriting: the pad over the keys but their bottom row; its guesses in the candidate bar, with no line for typed letters. */
     @Test fun handwriting() = drawPhone(paparazzi, "p5-handwriting",
-        bar = TopBar.Candidates(BarSample("", listOf("你", "妳", "您", "你好", "你們", "尔", "伱"), CandidateBarView.Lines(2, true), "yue", script = true) { c ->
+        bar = TopBar.Candidates(BarSample("", listOf("你", "妳", "您", "你好", "你們", "尔", "伱"), CandidateBarView.Lines(2, true), "yue", script = false) { c ->
             mapOf("你" to Triple("néih", "nǐ", "you"), "妳" to Triple("néih", "nǐ", "you (female)"), "您" to Triple("nèihn", "nín", "you (polite)"),
                 "你好" to Triple("néih hóu", "nǐ hǎo", "hello"), "你們" to Triple("néih mùhn", "nǐ men", "you (plural)"),
                 "尔" to Triple("yíh", "ěr", "you (literary)"), "伱" to Triple("néih", "nǐ", "you (variant)"))[c.text]
@@ -65,4 +65,15 @@ class PanelScreens {
             p.show(listOf("學校", "學", "雪", "鱈", "削", "學生", "學習", "學費", "學期", "學者", "學問", "學院", "學位", "學歷", "學術", "學業")
                 .map { Candidate(it, "") }, 1f)
         } })
+
+    /** The emoji panel in the keyboard's place (its bar and keys), the same top and bottom as the keyboard. */
+    @Test fun emoji() = drawPhone(paparazzi, "p8-emoji", extra = { f ->
+        val ctx = f.screen.context
+        val panel = app.lychee.emoji.EmojiPanelView(ctx)
+        f.screen.addView(panel, android.widget.FrameLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.BOTTOM).apply {
+            bottomMargin = (20 * ctx.resources.displayMetrics.density).toInt()
+        })
+        runCatching { panel.startEmojiPalettes(null, null, null) }
+    })
 }

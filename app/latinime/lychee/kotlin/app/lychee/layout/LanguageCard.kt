@@ -29,11 +29,57 @@ object LanguageCard {
     /** The gap kept between the card and the edges of the keys. */
     private const val EDGE_DP = 8
 
+    /** What holding the space bar does once the card shows (Settings > Keys). */
+    const val PREF_HOLD = "lychee_space_hold"
+    /** The card stays: tap a keyboard (as before). */
+    const val HOLD_TAP = "tap"
+    /** Slide onto a keyboard without letting go, and let go to pick it. */
+    const val HOLD_SLIDE = "slide"
+
     private var window: PopupWindow? = null
     private var card: View? = null
     private var scrim: View? = null
+    /** The rows a slide can pick (each keyboard, then Language settings). */
+    private var pickable: List<View> = emptyList()
+    private var slidOver: View? = null
+
+    /**
+     * Whether the finger that held the space bar is still down, sliding over the card (with
+     * [HOLD_SLIDE]): the keyboard view hands its moves to [slideTo] and its lifting to [slideEnd].
+     */
+    @JvmStatic
+    var sliding = false
+        private set
+
+    /** The row under the finger (screen coordinates), shown pressed. */
+    @JvmStatic
+    fun slideTo(rawX: Float, rawY: Float) {
+        val hit = rowAt(rawX, rawY)
+        if (hit === slidOver) return
+        slidOver?.isPressed = false
+        hit?.isPressed = true
+        slidOver = hit
+    }
+
+    /** The finger lifted: picks the row under it; elsewhere the card stays, to tap one. */
+    @JvmStatic
+    fun slideEnd(rawX: Float, rawY: Float, lifted: Boolean) {
+        sliding = false
+        slidOver?.isPressed = false
+        slidOver = null
+        if (!lifted) return
+        rowAt(rawX, rawY)?.performClick()
+    }
+
+    private fun rowAt(rawX: Float, rawY: Float): View? = pickable.firstOrNull { v ->
+        val at = IntArray(2).also { v.getLocationOnScreen(it) }
+        v.isShown && rawX >= at[0] && rawX < at[0] + v.width && rawY >= at[1] && rawY < at[1] + v.height
+    }
 
     fun dismiss() {
+        sliding = false
+        pickable = emptyList()
+        slidOver = null
         val w = window ?: return
         window = null
         val c = card
@@ -58,6 +104,7 @@ object LanguageCard {
         window = null
         dismiss()
         val context = keyboard.context
+        val rows = ArrayList<View>()
         val palette = M3Colors.of(context)
         val density = context.resources.displayMetrics.density
         fun dp(v: Int) = (density * v).toInt()
@@ -90,7 +137,8 @@ object LanguageCard {
                 imageTintList = ColorStateList.valueOf(if (ticked) palette.primary else palette.onSurfaceVariant)
             }, LinearLayout.LayoutParams(dp(24), dp(24)))
             setOnClickListener { dismiss(); onClick() }
-        }
+            LycheeMotion.springy(this)
+        }.also { rows += it }
         // the card has the keys and the bar above them to itself (more room than the keys alone)
         val bar = keyboard.rootView.findViewById<View>(R.id.lychee_top_bar)
         val keysLoc = IntArray(2).also { keyboard.getLocationInWindow(it) }
@@ -172,6 +220,10 @@ object LanguageCard {
             isClippingEnabled = false
         }
         window = popup
+        pickable = rows
+        @Suppress("DEPRECATION")
+        sliding = android.preference.PreferenceManager.getDefaultSharedPreferences(context)
+            .getString(PREF_HOLD, HOLD_TAP) == HOLD_SLIDE && anchorTop >= 0
         this.card = card
         this.scrim = scrim
         popup.showAtLocation(keyboard, Gravity.TOP or Gravity.START, keysLoc[0], keysLoc[1] - extra)
