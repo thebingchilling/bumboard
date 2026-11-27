@@ -366,6 +366,7 @@ def build_en(out: Path, cache: Path, work: Path):
         order.setdefault(w, i)
     entries = []  # (lemma, pos, ipa, forms, synsets)
     synsets: dict[str, tuple[str, str | None]] = {}
+    members: dict[str, list[str]] = {}  # synset -> its words
     with gzip.open(src) as f:
         for _, e in ET.iterparse(f, events=("end",)):
             if e.tag == "LexicalEntry":
@@ -383,6 +384,8 @@ def build_en(out: Path, cache: Path, work: Path):
                             ipa = "/" + next(iter(pron.values())) + "/"
                     forms = [x.get("writtenForm") for x in e.findall("Form") if x.get("writtenForm")]
                     senses = [x.get("synset") for x in e.findall("Sense")]
+                    for sid in senses:
+                        members.setdefault(sid, []).append(lemma)
                     entries.append((lemma, EN_POS.get(lemma_el.get("partOfSpeech"), None), ipa, forms, senses))
                 e.clear()
             elif e.tag == "Synset":
@@ -414,7 +417,18 @@ def build_en(out: Path, cache: Path, work: Path):
                 rows.append((form.lower(), lemma, ipa, None, pos, gloss, rank))
                 covered.setdefault(form.lower(), set())
     voices: dict[str, tuple[str | None, str | None]] = {}
-    rows += wiktionary_en(order, covered, sounds, voices)
+    more: dict[str, dict] = {}
+    rows += wiktionary_en(order, covered, sounds, voices, more)
+    # WordNet's synonyms too: the other words of each of a word's first senses
+    for lemma, pos, ipa, forms, senses in entries:
+        key = lemma.lower()
+        if key not in order:
+            continue
+        m = more.setdefault(key, {"origin": "", "parts": "", "forms": [], "phrases": [], "synonyms": [], "antonyms": []})
+        for sid in senses[:3]:
+            for w in members.get(sid, []):
+                if w.lower() != key and w not in m["synonyms"] and len(m["synonyms"]) < 10:
+                    m["synonyms"].append(w)
     # every word its pronunciation, and both the UK's and the US's where they differ
     cmu = cmu_ipa(cache)
     filled = both = 0
@@ -428,8 +442,15 @@ def build_en(out: Path, cache: Path, work: Path):
     print(f"en.db: {filled} pronunciations added, {both} forms with UK and US", file=sys.stderr)
     db.executemany("INSERT INTO word VALUES(?,?,?,?,?,?,?)", rows)
     db.execute("CREATE INDEX word_form ON word(form)")
+    # the English Handbook's extras, for the words people type
+    db.execute("CREATE TABLE more(lemma TEXT PRIMARY KEY, origin TEXT, parts TEXT, forms TEXT, phrases TEXT, "
+               "synonyms TEXT, antonyms TEXT) WITHOUT ROWID")
+    extra_rows = [(k, m["origin"] or None, m["parts"] or None, "\n".join(m["forms"]) or None,
+                   "\n".join(m["phrases"]) or None, "\n".join(m["synonyms"]) or None, "\n".join(m["antonyms"]) or None)
+                  for k, m in more.items() if any(m.values())]
+    db.executemany("INSERT OR IGNORE INTO more VALUES(?,?,?,?,?,?,?)", extra_rows)
     finish(db)
-    print(f"en.db: {len(rows)} forms", file=sys.stderr)
+    print(f"en.db: {len(rows)} forms, {len(extra_rows)} with the Handbook's extras", file=sys.stderr)
     # the version: when kaikki.org last extracted Wiktionary's English (WordNet changes yearly)
     write_pack(out, "lychee-dict-en.zip", "dict_en", "English dictionary", db_path, version=(EN_SOURCE_DATE or [None])[0], licences={
         "LICENSE.txt": "English definitions from Open English WordNet (https://en-word.net), "
@@ -441,6 +462,9 @@ def build_en(out: Path, cache: Path, work: Path):
                        "Pronunciations the others lack from the CMU Pronouncing Dictionary "
                        "(https://github.com/cmusphinx/cmudict), BSD 2-Clause licence, "
                        "converted from ARPAbet to IPA.\n"
+                       "Word origins, word parts, forms, phrases and idioms, and synonyms and "
+                       "antonyms from English Wiktionary (kaikki.org), CC BY-SA 4.0 and GFDL, with "
+                       "synonyms from Open English WordNet too.\n"
                        "Changes: single words only, up to eight senses each, converted to SQLite.\n",
     })
 
@@ -591,8 +615,59 @@ def ipa_key(ipa: str) -> str:
     return re.sub(r"[ˈˌː.‿ \u0329\u032f]", "", k)
 
 
+# the English Handbook's extras (where a word comes from, what it is built from, its forms, the
+# phrases and idioms it makes, words that mean the same and the opposite), from Wiktionary
+EN_FORM_TAGS = [
+    ("plural", {"plural"}), ("third person", {"third-person", "singular", "present"}),
+    ("past", {"past"}), ("past participle", {"past", "participle"}), ("-ing", {"present", "participle"}),
+    ("comparative", {"comparative"}), ("superlative", {"superlative"}),
+]
+EN_AFFIX = {"prefix", "suffix", "affix", "af", "compound", "com", "confix", "con", "surf", "pre", "suf"}
+
+
+def handbook_extras(key: str, e: dict, more: dict[str, dict]) -> None:
+    m = more.setdefault(key, {"origin": "", "parts": "", "forms": [], "phrases": [], "synonyms": [], "antonyms": []})
+    if not m["origin"]:
+        origin = (e.get("etymology_text") or "").strip()
+        if origin:
+            m["origin"] = origin if len(origin) <= 420 else origin[:417].rsplit(" ", 1)[0] + "…"
+    if not m["parts"]:
+        for t in e.get("etymology_templates", []):
+            name, args = t.get("name", ""), t.get("args", {})
+            if name not in EN_AFFIX or args.get("1") != "en":
+                continue
+            pieces = [args[k] for k in sorted((k for k in args if k.isdigit() and k != "1"), key=int) if args[k]]
+            if len(pieces) < 2:
+                continue
+            if name in ("prefix", "pre"):
+                pieces[0] = pieces[0].rstrip("-") + "-"
+            elif name in ("suffix", "suf"):
+                pieces[-1] = "-" + pieces[-1].lstrip("-")
+            m["parts"] = " + ".join(pieces)
+            break
+    if not m["forms"]:
+        for label, tags in EN_FORM_TAGS:
+            form = next((f.get("form") for f in e.get("forms", []) if f.get("form") and tags <= set(f.get("tags", []))
+                         and not (label in ("past", "plural") and "participle" in f.get("tags", []))
+                         and not ({"obsolete", "archaic", "nonstandard", "dialectal"} & set(f.get("tags", []))) and f["form"] != key), None)
+            if form:
+                m["forms"].append(f"{label}: {form}")
+    for d in e.get("derived", []):
+        w = d.get("word", "")
+        if " " in w and key in w.lower().split() and w not in m["phrases"] and len(m["phrases"]) < 12:
+            m["phrases"].append(w)
+    for field in ("synonyms", "antonyms"):
+        words = [x.get("word", "") for x in e.get(field, [])]
+        for sense in e.get("senses", [])[:4]:
+            words += [x.get("word", "") for x in sense.get(field, [])]
+        for w in words:
+            if w and w.lower() != key and w not in m[field] and len(m[field]) < 10:
+                m[field].append(w)
+
+
 def wiktionary_en(order: dict[str, int], covered: dict[str, set], sounds: dict[str, set],
-                  voices: dict[str, tuple[str | None, str | None]] | None = None) -> list[tuple]:
+                  voices: dict[str, tuple[str | None, str | None]] | None = None,
+                  more: dict[str, dict] | None = None) -> list[tuple]:
     """English Wiktionary entries for the words people type (FrequencyWords' 50,000) that
     WordNet lacks, or lacks in that part of speech (function words: the, of, because; like as
     a preposition; contractions: don't, I'm), or lacks in that pronunciation (read said
@@ -634,6 +709,8 @@ def wiktionary_en(order: dict[str, int], covered: dict[str, set], sounds: dict[s
                     elif vus is None and {"US", "General-American"} & tags:
                         vus = snd["ipa"]
                 voices[key] = (vuk, vus)
+            if more is not None:
+                handbook_extras(key, e, more)
             pos = WIKT_POS.get(e.get("pos", ""))
             if pos is None:
                 continue

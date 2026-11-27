@@ -25,7 +25,7 @@ object Store {
     enum class Category { DICTIONARIES, FEATURES, FONTS }
 
     /** The worked example a listing's page shows. */
-    enum class Sample { CHINESE, JAPANESE, KOREAN, HANDWRITING, STROKES, EXAMPLES, FONTS, ALL }
+    enum class Sample { CHINESE, JAPANESE, KOREAN, ENGLISH, HANDWRITING, STROKES, EXAMPLES, FONTS, ALL }
 
     /** One line of what a product gives; [coming] marks what isn't built yet. */
     data class Line(val text: String, val coming: Boolean = false)
@@ -61,8 +61,8 @@ object Store {
     // ------------------------------------------------------------------ individual add-ons
 
     val CARD_ZH = Product(
-        "card_zh", Kind.ADDON, "Chinese Explained",
-        "Hold a word, see the whole picture", 999, Category.DICTIONARIES,
+        "card_zh", Kind.ADDON, "The Chinese Handbook",
+        "Everything about a word, a tap away", 999, Category.DICTIONARIES,
         listOf(
             Line("Every meaning, read in Cantonese and Mandarin"),
             Line("Taiwan readings and spoken Cantonese words marked"),
@@ -80,7 +80,7 @@ object Store {
         sample = Sample.CHINESE,
     )
     val CARD_JA = Product(
-        "card_ja", Kind.ADDON, "Japanese Explained",
+        "card_ja", Kind.ADDON, "The Japanese Handbook",
         "Pitch, verb forms and kanji, on every word", 999, Category.DICTIONARIES,
         listOf(
             Line("Every meaning, with old kanji forms and Japan-made kanji pointed out"),
@@ -99,7 +99,7 @@ object Store {
         sample = Sample.JAPANESE,
     )
     val CARD_KO = Product(
-        "card_ko", Kind.ADDON, "Korean Explained",
+        "card_ko", Kind.ADDON, "The Korean Handbook",
         "How it's really said, and the Hanja behind it", 999, Category.DICTIONARIES,
         listOf(
             Line("Every meaning, with the word's Hanja"),
@@ -119,9 +119,9 @@ object Store {
     )
     val HANDWRITING = Product(
         "handwriting", Kind.ADDON, "Scribble",
-        "Write fast and messy. Google's ML Kit still reads it.", 599, Category.FEATURES,
+        "Quick, messy writing read far better, by Google's ML Kit", 599, Category.FEATURES,
         listOf(
-            Line("Chinese, Japanese and Korean"),
+            Line("Chinese, Japanese, Korean and English"),
             Line("Whole words and phrases in one go, not one character at a time"),
             Line("Read on your phone: nothing you write is sent anywhere"),
         ),
@@ -137,7 +137,7 @@ object Store {
         needsApp = true,
     )
     val STROKES = Product(
-        "strokes", Kind.ADDON, "Stroke by Stroke",
+        "strokes", Kind.ADDON, "Brushwork",
         "Watch any character write itself, in the right order", 399, Category.FEATURES,
         listOf(Line("Chinese, Japanese and Korean characters"), Line("Slow it down, step through it, play it again")),
         tile = "永",
@@ -149,9 +149,9 @@ object Store {
         sample = Sample.STROKES,
     )
     val EXAMPLES = Product(
-        "examples", Kind.ADDON, "In a Sentence",
+        "examples", Kind.ADDON, "Overheard",
         "See how people really use the word", 399, Category.FEATURES,
-        listOf(Line("Cantonese, Mandarin, Japanese and Korean, with English"), Line("Written by real people, not made up by a computer")),
+        listOf(Line("Cantonese, Mandarin, Japanese, Korean and English, with translations"), Line("Written by real people, not made up by a computer")),
         tile = "例",
         about = "A word makes more sense once you've seen it used. Every word gets sentences written " +
             "and translated by Tatoeba's volunteers, with the reading underneath.",
@@ -160,24 +160,46 @@ object Store {
         sample = Sample.EXAMPLES,
     )
     val FONTS = Product(
-        "fonts", Kind.ADDON, "Ink & Emoji",
-        "Brush, textbook and handwritten fonts, and six emoji styles", 499, Category.FONTS,
+        "fonts", Kind.ADDON, "Inkwell",
+        "Brush, book and handwritten fonts, and five more emoji styles", 499, Category.FONTS,
         listOf(
-            Line("Chinese: Kaiti, Song, brush, handwritten and rounded"),
+            Line("Chinese: book (Song), handwritten, rounded and brush"),
             Line("Japanese: textbook, Mincho, rounded and brush"),
             Line("Korean: Myeongjo, Dodum, pen and brush"),
-            Line("Emoji: Noto 3D, Fluent, Twemoji, OpenMoji, Blobmoji and Noto Emoji"),
+            Line("English: easy-reading and handwritten letters for the keys"),
+            Line("Emoji: Noto 3D, Twemoji, OpenMoji, Blobmoji and black-and-white Noto Emoji"),
         ),
         tile = "Aa",
         about = "Characters look different on a menu, a street sign or a handwritten note. Seeing them " +
             "in different hands while you type helps you read them anywhere. Pick a font for each " +
             "language, and the emoji you like best.",
         demo = "Try every style in Settings > Fonts first.",
-        sources = "Open-source fonts under the SIL Open Font License, Apache 2.0, MIT and CC BY.",
+        sources = "Fonts from Google Fonts and their makers, under the SIL Open Font License; emoji " +
+            "under CC BY 4.0 (Twemoji), CC BY-SA 4.0 (OpenMoji), Apache 2.0 (Blobmoji) and OFL (Noto).",
         sample = Sample.FONTS,
     )
 
-    val addons = listOf(CARD_ZH, CARD_JA, CARD_KO, HANDWRITING, STROKES, EXAMPLES, FONTS)
+    val CARD_EN = Product(
+        "card_en", Kind.ADDON, "The English Handbook",
+        "Where a word comes from, how it sounds, and how to use it", 999, Category.DICTIONARIES,
+        listOf(
+            Line("Every meaning, with phrasal verbs and idioms"),
+            Line("US and UK pronunciation in IPA, with the stressed syllable marked"),
+            Line("Every form: plurals, past tenses, comparatives, irregular ones marked"),
+            Line("Where the word comes from, its roots, prefixes and suffixes"),
+            Line("Words that mean the same, and the opposite"),
+        ),
+        tile = "En",
+        about = "Know \"present\" but not why it's said two ways? Hold a word to see how it sounds in " +
+            "the US and the UK, where the stress falls, every form it takes, and the Latin or Old " +
+            "English it grew from.",
+        demo = "The full card for the 3,000 most common words, free, for as long as you like.",
+        sources = "Wiktionary via kaikki.org (CC BY-SA 4.0), CMU Pronouncing Dictionary (BSD), " +
+            "WordNet 3.0 (WordNet licence), word frequencies from wordfreq (CC BY-SA 4.0).",
+        sample = Sample.ENGLISH,
+    )
+
+    val addons = listOf(CARD_ZH, CARD_JA, CARD_KO, CARD_EN, HANDWRITING, STROKES, EXAMPLES, FONTS)
 
     // ------------------------------------------------------------------ packs and the whole lot
 
@@ -185,24 +207,24 @@ object Store {
     private val sharedLine = Line("${HANDWRITING.name}, ${STROKES.name} and ${EXAMPLES.name}")
 
     private fun packAbout(card: Product, fonts: String) = "${card.name}, ${HANDWRITING.name}, ${STROKES.name} and " +
-        "${EXAMPLES.name} together, plus a set of $fonts fonts you only get in the packs."
+        "${EXAMPLES.name} together, plus a set of $fonts fonts you only get in the Satchels."
 
     val PACK_ZH = Product(
-        "pack_zh", Kind.PACK, "Everything Chinese", "Cantonese and Mandarin, every add-on, one price", 1499,
+        "pack_zh", Kind.PACK, "The Chinese Satchel", "Cantonese and Mandarin: the Handbook and every add-on", 1499,
         lines = CARD_ZH.lines + sharedLine,
         includes = listOf(CARD_ZH.id) + shared, bonus = "Chinese fonts", tile = "中",
         about = packAbout(CARD_ZH, "Chinese"),
         demo = CARD_ZH.demo, sources = CARD_ZH.sources, sample = Sample.CHINESE,
     )
     val PACK_JA = Product(
-        "pack_ja", Kind.PACK, "Everything Japanese", "Every Japanese add-on, one price", 1499,
+        "pack_ja", Kind.PACK, "The Japanese Satchel", "The Handbook and every add-on for Japanese", 1499,
         lines = CARD_JA.lines + sharedLine,
         includes = listOf(CARD_JA.id) + shared, bonus = "Japanese fonts", tile = "日",
         about = packAbout(CARD_JA, "Japanese"),
         demo = CARD_JA.demo, sources = CARD_JA.sources, sample = Sample.JAPANESE,
     )
     val PACK_KO = Product(
-        "pack_ko", Kind.PACK, "Everything Korean", "Every Korean add-on, one price", 1499,
+        "pack_ko", Kind.PACK, "The Korean Satchel", "The Handbook and every add-on for Korean", 1499,
         lines = CARD_KO.lines + sharedLine,
         includes = listOf(CARD_KO.id) + shared, bonus = "Korean fonts", tile = "韓",
         about = packAbout(CARD_KO, "Korean"),
@@ -211,20 +233,29 @@ object Store {
     val FULL = Product(
         "full", Kind.FULL, "The Whole Lychee", "Every language and add-on, and the ones still to come", 2999,
         lines = listOf(
-            Line("Everything Chinese, Japanese and Korean"),
+            Line("All four Satchels: Chinese, Japanese, Korean and English"),
             Line("${HANDWRITING.name}, ${STROKES.name} and ${EXAMPLES.name}"),
             Line("All of ${FONTS.name}"),
             Line("Every add-on Lychee makes later, at no extra cost"),
         ),
         includes = addons.map { it.id }, tile = "荔",
         about = "Buy it once and you have everything: every language, every add-on and every font, " +
-            "plus whatever Lychee adds later. Packs you already own come off the price.",
+            "plus whatever Lychee adds later. Satchels you already own come off the price.",
         demo = "Every add-on's free trial applies.",
         sources = "Every source above, each under its own licence (Settings > About > Licences).",
         sample = Sample.ALL,
     )
 
-    val packs = listOf(PACK_ZH, PACK_JA, PACK_KO)
+    val PACK_EN = Product(
+        "pack_en", Kind.PACK, "The English Satchel", "The Handbook and every add-on for English", 1499,
+        lines = CARD_EN.lines + Line("${HANDWRITING.name} and ${EXAMPLES.name} in English"),
+        includes = listOf(CARD_EN.id, HANDWRITING.id, EXAMPLES.id), bonus = "English fonts", tile = "En",
+        about = "${CARD_EN.name}, ${HANDWRITING.name} and ${EXAMPLES.name} together, plus a set of " +
+            "English fonts you only get in the Satchels.",
+        demo = CARD_EN.demo, sources = CARD_EN.sources, sample = Sample.ENGLISH,
+    )
+
+    val packs = listOf(PACK_ZH, PACK_JA, PACK_KO, PACK_EN)
 
     /** Everything sold, Complete first. */
     val all = listOf(FULL) + packs + addons
@@ -240,11 +271,16 @@ object Store {
     /** The packs (and Complete) that include the add-on [id]. */
     fun includedIn(id: String): List<Product> = (packs + FULL).filter { id in it.includes }
 
-    /** The add-on a downloadable pack belongs to, for its row in Add-ons. */
-    fun forPack(packId: String): Product? = when (packId) {
-        "strokes_zh" -> STROKES
-        "examples" -> EXAMPLES
-        "emoji_noto3d" -> FONTS
+    /**
+     * The add-on a downloadable pack is part of (shown on that add-on's page, not as a listing of
+     * its own): Brushwork's strokes, Overheard's sentences, and every font and emoji style
+     * (Inkwell's), but your own fonts.
+     */
+    fun forPack(packId: String): Product? = when {
+        packId == "strokes_zh" -> STROKES
+        packId == "examples" -> EXAMPLES
+        packId.endsWith("_custom") -> null
+        packId.startsWith("emoji_") || packId.startsWith("font_") -> FONTS
         else -> null
     }
 

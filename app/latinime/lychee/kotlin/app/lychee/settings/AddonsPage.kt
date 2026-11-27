@@ -93,7 +93,17 @@ fun AddonsPage() {
     androidx.compose.animation.AnimatedContent(targetState = listing, label = "listing", transitionSpec = { pageTransition(targetState != null) }) { l ->
         Column {
             when (l) {
-                is app.lychee.store.Store.Product -> ProductPage(l)
+                is app.lychee.store.Store.Product -> ProductPage(l) {
+                    // its downloads (strokes, sentences, fonts), each to get, update or remove
+                    val parts = catalog.filter { app.lychee.store.Store.forPack(it.id) == l }
+                    if (parts.isNotEmpty()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Heading(stringResource(R.string.lychee_addons_on_phone))
+                        parts.forEach { pack ->
+                            AddonCard(pack, tick, actions, onRemove = { PackStorage.remove(context, pack); version++ },
+                                onChanged = { version++ })
+                        }
+                    }
+                }
                 is Pack -> AddonPage(l, actions)
                 else -> AddonsHome(tab, { tab = it }, catalog, tick, actions, { version++ }, context)
             }
@@ -188,13 +198,14 @@ private val storeSections = listOf(
     PackStorage.Section.ENGLISH, PackStorage.Section.MISC,
 )
 
-/** The paid add-ons listed under a section: each language's In Depth card; the rest under every language. */
+/** The paid add-ons listed under a section: each language's Handbook; the rest under every language. */
 private fun paidIn(section: PackStorage.Section): List<app.lychee.store.Store.Product> {
     val S = app.lychee.store.Store
     return when (section) {
         PackStorage.Section.CHINESE -> listOf(S.CARD_ZH)
         PackStorage.Section.JAPANESE -> listOf(S.CARD_JA)
         PackStorage.Section.KOREAN -> listOf(S.CARD_KO)
+        PackStorage.Section.ENGLISH -> listOf(S.CARD_EN)
         PackStorage.Section.MISC -> listOf(S.HANDWRITING, S.STROKES, S.EXAMPLES, S.FONTS)
         else -> emptyList()
     }
@@ -202,7 +213,7 @@ private fun paidIn(section: PackStorage.Section): List<app.lychee.store.Store.Pr
 
 /**
  * The store, laid out like Installed: one honest line, the bundles, then a section per language
- * (its In Depth card and its free downloads, including those that come with Lychee, each saying
+ * (its Handbook and its free downloads, including those that come with Lychee, each saying
  * so), then what works in every language, and the registration at the bottom.
  */
 @Composable
@@ -221,7 +232,8 @@ private fun StoreHome(catalog: List<Pack>, tick: Int, actions: PackActions, onRe
     }
     for (section in storeSections) {
         val paid = paidIn(section)
-        val free = catalog.filter { !it.custom && PackStorage.section(it) == section }
+        // a download that is part of an add-on (its strokes, sentences, fonts) is on that add-on's page
+        val free = catalog.filter { !it.custom && PackStorage.section(it) == section && app.lychee.store.Store.forPack(it.id) == null }
         if (paid.isEmpty() && free.isEmpty()) continue
         val title = if (section == PackStorage.Section.MISC) "Every language" else stringResource(sectionName(section))
         Listings(title) {
@@ -325,9 +337,12 @@ private fun ProductCard(p: app.lychee.store.Store.Product) {
         when (p.kind) {
             app.lychee.store.Store.Kind.ADDON -> {
                 val packs = S.includedIn(p.id).filter { it.kind == app.lychee.store.Store.Kind.PACK }
+                // "In every Satchel", or which: "In the Chinese, Japanese and Korean Satchels"
+                val langs = packs.map { it.name.removePrefix("The ").removeSuffix(" Satchel") }
                 when {
-                    packs.size == S.packs.size -> add("In every language pack" to false)
-                    packs.isNotEmpty() -> add("Also in " + packs.joinToString(", ") { it.name } to false)
+                    packs.size == S.packs.size -> add("In every Satchel" to false)
+                    langs.size == 1 -> add("Also in ${packs[0].name}" to false)
+                    langs.isNotEmpty() -> add("In the " + langs.dropLast(1).joinToString(", ") + " and ${langs.last()} Satchels" to false)
                 }
             }
             app.lychee.store.Store.Kind.FULL -> add("${p.includes.size} add-ons, every language" to false)
@@ -452,6 +467,7 @@ private fun sampleOf(pack: Pack): String = when {
     pack.kind == PackKind.FONT_KEYS || pack.id == "dict_en" -> "Aa"
     pack.id == "handwriting" -> "\u270D\uFE0F"
     pack.id == "examples" -> "\u201C\u201D"
+    pack.id == app.lychee.chinese.Readings.POCKET_ID -> "\u5B57"
     else -> "\u6C38"
 }
 
@@ -530,7 +546,7 @@ private fun AddonCard(pack: Pack, tick: Int, actions: PackActions, onRemove: () 
                     Icon(painterResource(R.drawable.lychee_ic_delete), stringResource(R.string.lychee_packs_remove), tint = colors.onSurfaceVariant)
                 }
                 M3Menu(expanded = asking, onDismissRequest = { asking = false }) {
-                    val needed = pack.id == "rime_ja" || pack.id == "dict_ko" || pack.id == "dict_en"
+                    val needed = pack.id == "rime_ja" || pack.id == "dict_ko" || pack.id == "dict_en" || pack.id == app.lychee.chinese.Readings.POCKET_ID
                     Text(
                         stringResource(if (needed) R.string.lychee_storage_confirm_needed else R.string.lychee_storage_confirm_body,
                             Packs.formatSize(Packs.sizeOnDisk(context, pack.id))),
@@ -656,6 +672,15 @@ fun AddonPage(pack: Pack, actions: PackActions) {
                         Text(stringResource(R.string.lychee_addons_done), maxLines = 1)
                     }
                 }
+            } else if (bundled && !installed) {
+                // it comes with Lychee: brought back from the app, nothing to download
+                val scope = rememberCoroutineScope()
+                Button(onClick = {
+                    scope.launch {
+                        withContext(Dispatchers.IO) { PackStorage.restore(context, pack) }
+                        actions.refresh()
+                    }
+                }, enabled = !actions.busy) { Text(stringResource(R.string.lychee_addons_bring_back)) }
             } else if (pack.custom) {
                 Step(1, stringResource(R.string.lychee_addons_step_choose), active = true) {
                     Button(onClick = { actions.import(pack) }, enabled = !actions.busy) {

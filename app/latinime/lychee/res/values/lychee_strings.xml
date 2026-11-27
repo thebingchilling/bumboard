@@ -428,4 +428,15 @@
     <!-- An add-on page's keyboard example: shown light or dark (whatever the phone says) -->
     <string name="lychee_sample_light">Light</string>
     <string name="lychee_sample_dark">Dark</string>
+    <!-- An add-on's page: its downloads (strokes, sentences, fonts), each to get, update or remove -->
+    <string name="lychee_addons_on_phone">Downloads</string>
+    <!-- A pack that comes with Lychee, removed: put back from the app itself -->
+    <string name="lychee_addons_bring_back">Put it back</string>
+    <!-- The English word card (the English Handbook) -->
+    <string name="lychee_card_forms">Forms</string>
+    <string name="lychee_card_similar">Similar</string>
+    <string name="lychee_card_opposite">Opposite</string>
+    <string name="lychee_card_origin">Where it comes from</string>
+    <string name="lychee_card_built_from">Built from</string>
+    <string name="lychee_card_phrases_idioms">Phrases and idioms</string>
 </resources>

@@ -67,7 +67,7 @@ fun StoreSection() {
         unavailable?.let { Note(it, colors.errorContainer, colors.onErrorContainer) }
         BundleCard(Store.FULL, best = true)
         Store.packs.forEach { BundleCard(it, best = false) }
-        Text("Own a pack? Its price comes off ${app.lychee.store.Store.FULL.name}. Own two, and it's yours.",
+        Text("Own a Satchel? Its price comes off ${app.lychee.store.Store.FULL.name}. Own two, and it's yours.",
             style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
     }
     for ((category, title, about) in listOf(

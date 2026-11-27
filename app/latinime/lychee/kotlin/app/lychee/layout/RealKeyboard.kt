@@ -116,6 +116,8 @@ object RealKeyboard {
         val line = res.getDimensionPixelSize(R.dimen.lychee_preedit_height)
         val chinese = fontLang == "yue" || fontLang == "cmn"
         bar.style = app.lychee.chinese.CandidateBarView.Style(lang = null, fontLang = fontLang)
+        // English (handwriting guesses): Latin candidates allowed, as ChineseInput allows them there
+        bar.allowLatin = fontLang == "en"
         bar.lines = lines
         val height = maxOf(standard, bar.heightFor(lines) + line)
         for (v in listOfNotNull(strip, bar)) v.layoutParams = v.layoutParams.apply { this.height = height }

@@ -1,5 +1,7 @@
 package app.lychee.chinese
 
+import app.lychee.packs.PackStorage
+import app.lychee.packs.Packs
 import android.content.Context
 import android.content.SharedPreferences
 import android.database.sqlite.SQLiteDatabase
@@ -48,12 +50,15 @@ object Readings {
     /** Opens the database in the background; [then] runs on the main thread once it is ready. */
     fun open(context: Context, then: () -> Unit = {}) {
         if (annotator != null || opening) return
-        opening = true
         val app = context.applicationContext
+        // Pocket Chinese removed in Settings > Add-ons: nothing to open until it is restored
+        if (POCKET_ID in PackStorage.purged(app)) return
+        opening = true
         executor.execute {
             try {
                 val file = install(app)
                 val db = SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY)
+                openedDb = db
                 val readings = ReadingsDb(AndroidSql(db))
                 this.db = readings
                 annotator = Annotator(readings)
@@ -67,18 +72,38 @@ object Readings {
         }
     }
 
+    /**
+     * Pocket Chinese: the readings dictionary, a pack that comes with Lychee (listed in Settings >
+     * Add-ons as installed, and removable like the others). Copied out of the app into its pack
+     * folder after every install or update of the app.
+     */
+    const val POCKET_ID = "pocket_zh"
+    private var openedDb: SQLiteDatabase? = null
+
     private fun install(context: Context): File {
-        val dest = File(context.noBackupFilesDir, "readings.db")
-        val stamp = File(context.noBackupFilesDir, "readings.stamp")
-        // Re-copied after every install or update of the app.
-        val version = context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime.toString()
+        val folder = Packs.dir(context, POCKET_ID).apply { mkdirs() }
+        val dest = File(folder, "readings.db")
+        val stamp = File(folder, "readings.stamp")
+        // the old place, before it was a pack
+        File(context.noBackupFilesDir, "readings.db").delete()
+        File(context.noBackupFilesDir, "readings.stamp").delete()
+        val info = context.packageManager.getPackageInfo(context.packageName, 0)
+        val version = info.lastUpdateTime.toString()
         if (!dest.exists() || !stamp.exists() || stamp.readText() != version) {
             val tmp = File(dest.path + ".tmp")
             context.assets.open(ASSET).use { input -> tmp.outputStream().use { input.copyTo(it) } }
             tmp.renameTo(dest)
             stamp.writeText(version)
+            Packs.writeInfo(context, POCKET_ID, info.versionName ?: "1", "readings.db")
         }
         return dest
+    }
+
+    /** Pocket Chinese removed: closed, so its file can go (the keyboards then show no readings). */
+    fun close() {
+        annotator = null
+        db = null
+        executor.execute { runCatching { openedDb?.close() }; openedDb = null }
     }
 
     /** What to show under candidates, from the Chinese settings page. */

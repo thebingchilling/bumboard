@@ -22,6 +22,19 @@ data class WordEntry(
 )
 
 /**
+ * The English Handbook's extras for a word: where it comes from, what it is built from, its forms
+ * ("past: went"), the phrases and idioms it makes, and words meaning the same and the opposite.
+ */
+data class EnglishMore(
+    val origin: String?,
+    val parts: String?,
+    val forms: List<String>,
+    val phrases: List<String>,
+    val synonyms: List<String>,
+    val antonyms: List<String>,
+)
+
+/**
  * A character's strokes (SVG paths in a 1024 box, y up) and breakdown, from the strokes pack.
  * Japanese and Korean characters have only their strokes' centre lines (no [strokes]).
  */
@@ -121,6 +134,19 @@ object PackData {
             words(context, "en", stem, limit).takeIf { it.isNotEmpty() }?.let { return it }
         }
         return emptyList()
+    }
+
+    /** [lemma]'s Handbook extras from the English pack (null when it has none, or an older pack). */
+    fun englishMore(context: Context, lemma: String): EnglishMore? {
+        val db = wordDb(context, "en") ?: return null
+        return runCatching {
+            db.rawQuery("SELECT origin, parts, forms, phrases, synonyms, antonyms FROM more WHERE lemma = ?",
+                arrayOf(lemma.lowercase())).use { c ->
+                if (!c.moveToFirst()) return@use null
+                fun list(i: Int) = c.getString(i)?.split('\n')?.filter { it.isNotBlank() }.orEmpty()
+                EnglishMore(c.getString(0), c.getString(1), list(2), list(3), list(4), list(5))
+            }
+        }.getOrNull()
     }
 
     /**

@@ -17,6 +17,7 @@
     <string name="lang_zh_tw">Chinese, Traditional (Taiwan)</string>
     <string name="lang_ja">Japanese</string>
     <string name="lang_ko">Korean</string>
+    <string name="lang_en">English</string>
     <string name="privacy">Privacy</string>
     <string name="privacy_body">This app goes online to download Google\'s handwriting models. What you write is read on this phone and never sent anywhere. This app itself has no tracking, analytics or ads. Google\'s ML Kit, which it uses, sends Google figures about how it runs (such as the device model, the app\'s version and how long recognition took), as Google\'s terms require; never your handwriting. Lychee itself has no internet access at all.</string>
     <string name="app_icon">App icon</string>

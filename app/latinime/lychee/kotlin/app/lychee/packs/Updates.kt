@@ -109,20 +109,11 @@ object Updates {
      * The file [pack] downloads as: its newest version's own name when the packs page gave it
      * ("lychee-korean-dictionary-2026.11.18.2.zip"), so it is told apart from earlier downloads.
      */
-    /**
-     * How the packs' files are named on the release (packs/publish.py names them after each
-     * pack's own name, which stayed the same when the store gave them friendlier ones).
-     */
-    private val PUBLISHED_STEMS = mapOf(
-        "rime_ja" to "japanese-dictionary", "dict_ko" to "korean-dictionary", "dict_en" to "english-dictionary",
-        "strokes_zh" to "stroke-order", "examples" to "example-sentences", "emoji_noto3d" to "noto-3d",
-    )
-
     fun downloadFile(context: Context, pack: Pack): String =
         stored(context, PREF_FILES).optString(pack.id).takeIf { it.isNotEmpty() && it.matches(SAFE_FILE) }
             // not checked yet: the packs page picks the newest, named the same way
             ?: if (pack.download.ifEmpty { pack.url }.startsWith(FILES)) {
-                "lychee-" + (PUBLISHED_STEMS[pack.id] ?: pack.name.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')) + "-<version>.zip"
+                "lychee-" + (pack.fileStem ?: pack.name.lowercase().replace(Regex("[^a-z0-9]+"), "-").trim('-')) + "-<version>.zip"
             } else pack.file
 
     /**

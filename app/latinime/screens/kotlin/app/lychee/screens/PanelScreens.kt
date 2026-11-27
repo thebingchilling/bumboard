@@ -58,6 +58,11 @@ class PanelScreens {
         }, typed = false),
         open = { runCatching { it.panel<HandwritingPanelView>(R.id.lychee_handwriting_panel).show() } })
 
+    /** Handwriting on the English keyboard: letters guessed in the bar. */
+    @Test fun handwritingEnglish() = drawPhone(paparazzi, "p5b-handwriting-english",
+        bar = TopBar.Candidates(BarSample("", listOf("h", "n", "k", "b", "li"), CandidateBarView.Lines(0, false), "en", script = false) { null }, typed = false),
+        open = { runCatching { it.panel<HandwritingPanelView>(R.id.lychee_handwriting_panel).show() } })
+
     @Test fun candidates() = drawPhone(paparazzi, "p7-candidate-dropdown",
         bar = TopBar.Candidates(BarSample("hok", listOf("學", "學校", "鶴", "殼"), CandidateBarView.Lines(2, true), "yue", script = true) { null }),
         open = { it.panel<CandidatePanelView>(R.id.lychee_candidate_panel).also { p ->

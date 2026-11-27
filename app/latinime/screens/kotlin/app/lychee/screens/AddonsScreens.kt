@@ -132,6 +132,10 @@ class AddonsScreensFurther {
     @Test fun listing2() = AddonsScreens.draw(paparazzi, "f1-listing-2", Store.CARD_ZH.name, scroll = 2000) { ProductSheet.open = Store.CARD_ZH }
     @Test fun listing3() = AddonsScreens.draw(paparazzi, "f2-listing-3", Store.CARD_ZH.name, scroll = 4000) { ProductSheet.open = Store.CARD_ZH }
     @Test fun scribble2() = AddonsScreens.draw(paparazzi, "f3-scribble-2", Store.HANDWRITING.name, scroll = 2000) { ProductSheet.open = Store.HANDWRITING }
+    @Test fun englishHandbook() = AddonsScreens.draw(paparazzi, "f5-english-handbook", Store.CARD_EN.name) { ProductSheet.open = Store.CARD_EN }
+    @Test fun inkwell() = AddonsScreens.draw(paparazzi, "f6-inkwell", Store.FONTS.name, scroll = 900) { ProductSheet.open = Store.FONTS }
+    @Test fun inkwell2() = AddonsScreens.draw(paparazzi, "f7-inkwell-downloads", Store.FONTS.name, scroll = 2200) { ProductSheet.open = Store.FONTS }
+    @Test fun storeEnglish() = AddonsScreens.draw(paparazzi, "f8-store-english", "Add-ons", scroll = 3000) {}
     @Test fun free2() = AddonsScreens.draw(paparazzi, "f4-free-2", "Japanese Typing", scroll = 1500) {
         AddonSheet.open = app.lychee.packs.Packs.catalog(paparazzi.context).firstOrNull { it.id == "rime_ja" }
     }

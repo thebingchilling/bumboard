@@ -146,7 +146,7 @@ def main():
     args.out.mkdir(parents=True, exist_ok=True)
     packs = json.loads(CATALOGUE.read_text())["packs"]
     for pack in packs:
-        if pack["kind"] not in ("font_zh", "font_emoji") or pack.get("custom"):
+        if not pack["kind"].startswith("font_") or pack.get("custom"):
             continue
         try:
             name, font, licence, version = fetch(pack)

@@ -187,7 +187,7 @@ def main():
             # published under a build date before versions were the sources' own: the same
             # contents take their source's version, and the old one is recorded as the same
             # ("same_as"), so the packs page doesn't offer it as an update
-            name = versioned_name(cat.get("name", old.get("name", pid)), source_now)
+            name = versioned_name(cat.get("file_stem") or cat.get("name", old.get("name", pid)), source_now)
             label = {"id": pid, "name": info.get("name", cat.get("name", pid)), "version": source_now, "source": source_now}
             rewrite(zip_path, args.upload / name, label)
             rewrite(zip_path, args.upload / zip_path.name, label)
@@ -199,7 +199,7 @@ def main():
         if old and old.get("digest") == d:
             # published before versioned names: its version uploaded once under one
             if not old.get("download_file"):
-                name = versioned_name(cat.get("name", old.get("name", pid)), old["version"])
+                name = versioned_name(cat.get("file_stem") or cat.get("name", old.get("name", pid)), old["version"])
                 rewrite(zip_path, args.upload / name, {"id": pid, "name": info.get("name", cat.get("name", pid)),
                                                        "version": old["version"], "source": str(info.get("version", ""))})
                 packs[pid] = dict(old, download_file=name, download=RELEASE + name)
@@ -239,7 +239,9 @@ def main():
         rewrite(zip_path, dest, info)
         entry["size"] = dest.stat().st_size
         # the same file under a name saying what it is and which version
-        entry["download_file"] = versioned_name(entry["name"], version)
+        # named by the catalogue's file_stem when it has one: the store's friendlier names never
+        # change the files people already know
+        entry["download_file"] = versioned_name(cat.get("file_stem") or entry["name"], version)
         entry["download"] = RELEASE + entry["download_file"]
         shutil.copyfile(dest, args.upload / entry["download_file"])
         packs[pid] = entry

@@ -57,7 +57,11 @@ class CandidateBarView @JvmOverloads constructor(
     /** Only one-character candidates (the dropdown's single-character switch). */
     var singleOnly = false
 
-    private fun wanted(text: String) = shown(text) && (!singleOnly || text.codePointCount(0, text.length) == 1)
+    private fun wanted(text: String) = (if (allowLatin) renderable(text) else shown(text)) &&
+        (!singleOnly || text.codePointCount(0, text.length) == 1)
+
+    /** Latin candidates allowed (handwriting guesses on the English keyboards); never on the others. */
+    var allowLatin = false
 
     /**
      * The lines under every candidate (readings, meaning), or null for none: each candidate

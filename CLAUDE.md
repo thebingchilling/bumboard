@@ -116,7 +116,8 @@ packs page). Public facing, so be careful:
   from the browser no longer offers Lychee).
 - Downloaded models may be any size, but must not slow the phone: memory-mapped data
   (Rime dictionaries) is fine; models that hold hundreds of MB in memory are not. AI features
-  must be tiny. Handwriting (Chinese, Japanese, Korean only): PaddleOCR's PP-OCRv5 mobile
+  must be tiny. Handwriting (Chinese, Japanese, Korean and English letters; English: Lychee's
+  own engine one letter at a time, Google's whole words): PaddleOCR's PP-OCRv5 mobile
   recogniser (Apache-2.0, 13-16 MB, ONNX Runtime) comes in the APK (`app/scripts/fetch-ocr.sh`)
   as the basic engine; the higher-quality one is Google's ML Kit digital ink recognition in
   Lychee's companion app (`app/hwcompanion`, package `app.lychee.hwgoogle`; one APK with the
@@ -281,11 +282,16 @@ packs page). Public facing, so be careful:
     holds), and one action at the right (price pill, download, update, remove).
   - The store is laid out like Installed: one honest line (a student developer, one-time
     purchases, no ads or tracking, offline), the bundles, then a section per language (its
-    "Explained" card and free downloads, those that come with Lychee too), then Every language.
+    Handbook and its Pocket dictionary, built in or a free download), then Every language.
+  - The names (PAID.md): Pocket (free dictionary), Handbook (paid card) and Satchel (everything
+    for the language) for Chinese, Japanese, Korean and English; The Whole Lychee; Scribble,
+    Brushwork, Overheard, Inkwell. Built-in dictionaries are listed as installed and removable;
+    the data behind an add-on is on that add-on's page, not a listing of its own.
   - Names and descriptions are written for learners, plainly and concretely (what it helps you
     do, with a real example), never generic marketing or AI-sounding copy (names in `PAID.md`).
   - Scribble (Google's ML Kit handwriting) is a listing like the others, noting it needs the
-    free Lychee handwriting app.
+    free Lychee handwriting app. Inkwell's fonts and emoji styles are real downloads (open
+    licences, mirrored by `packs.yml`), chosen in Settings > Fonts.
   - The registration is at the very bottom. Every listing opens its own page like
   Pleco's (`settings/ProductSheet.kt`; a free download's `AddonPage` is laid out the same): the
   tile, name and line, the price (or Free) with its buttons and what the add-on is for straight

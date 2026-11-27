@@ -77,8 +77,8 @@ class ShortcutStore(private val prefs: SharedPreferences) {
 object Shortcuts {
     /** Whether [shortcut] belongs on the current keyboard ([engine]: null for English). */
     fun available(shortcut: Shortcut, engine: String?): Boolean = when (shortcut) {
-        // handwriting is for Chinese, Japanese and Korean, never the English keyboards
-        Shortcut.HANDWRITING -> engine != null && !app.lychee.typing.FieldKind.restricted
+        // handwriting on every keyboard: Chinese, Japanese, Korean and English letters
+        Shortcut.HANDWRITING -> !app.lychee.typing.FieldKind.restricted
         // number, phone and date fields have the number pad only; password, email and web
         // address fields open in English but may switch
         Shortcut.LANGUAGE -> !app.lychee.typing.FieldKind.languageLocked

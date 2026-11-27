@@ -191,9 +191,26 @@ class CardScreens {
         popup.showWord(host, "school", null,
             listOf(WordEntry("school", "school", "/skuːl/ (UK) · /skul/ (US)", null, "noun",
                 listOf("An institution dedicated to teaching and learning", "A group of fish swimming together"))),
-            emptyList(), peek = false, onSpeak = { _, _ -> }, lang = "en", onSpeakAs = { _, _ -> }) {}
+            emptyList(), peek = false, onSpeak = { _, _ -> }, lang = "en", onSpeakAs = { _, _ -> }, english = schoolMore) {}
+    }
+    @Test fun englishParts() = drawCard(paparazzi, "20-english-handbook-parts", bar = null) { popup, host ->
+        popup.startPage = Page.PARTS
+        popup.showWord(host, "school", null,
+            listOf(WordEntry("school", "school", "/skuːl/ (UK) · /skul/ (US)", null, "noun",
+                listOf("An institution dedicated to teaching and learning", "A group of fish swimming together"))),
+            emptyList(), peek = false, onSpeak = { _, _ -> }, lang = "en", onSpeakAs = { _, _ -> }, english = schoolMore) {}
     }
 }
+
+/** The English Handbook's extras for "school", as the English pack has them (Wiktionary, WordNet). */
+private val schoolMore = app.lychee.dict.EnglishMore(
+    origin = "From Middle English scole, from Old English scōl, from Latin schola, from Ancient Greek σχολή (skholḗ, \"spare time, leisure; lecture\").",
+    parts = null,
+    forms = listOf("plural: schools", "third person: schools", "past: schooled", "-ing: schooling"),
+    phrases = listOf("school of thought", "old school", "school run", "school year"),
+    synonyms = listOf("academy", "schoolhouse", "institution", "shoal"),
+    antonyms = emptyList(),
+)
 
 /** A phone tall enough to show a whole page at once, to check everything on it. */
 class CardScreensTall {

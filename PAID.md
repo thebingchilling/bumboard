@@ -57,25 +57,26 @@ Demo content ships in its own open file; the paid entries are not in it.
 
 ## Names
 
-The store's names and lines are written for learners: what each add-on helps you do, plainly,
-with a real example on its page; no generic marketing or AI-sounding copy (`store/Store.kt`,
-`packs.json`).
+Names a learner can say comfortably and remember, with a light touch only where it helps (the
+Satchel, The Whole Lychee); one pattern for every language; no commas in names. Each name has a
+plain line under it saying what it does. Written for learners, never generic marketing or
+AI-sounding copy (`store/Store.kt`, `packs.json`).
 
-| Add-on | Name | Line |
-|---|---|---|
-| Full dictionary card, Chinese | Chinese Explained | Hold a word, see the whole picture |
-| Full dictionary card, Japanese | Japanese Explained | Pitch, verb forms and kanji, on every word |
-| Full dictionary card, Korean | Korean Explained | How it's really said, and the Hanja behind it |
-| Google Handwriting (ML Kit) | Scribble | Write fast and messy. Google's ML Kit still reads it. |
-| Stroke Order | Stroke by Stroke | Watch any character write itself, in the right order |
-| Example Sentences | In a Sentence | See how people really use the word |
-| Font Pack | Ink & Emoji | Brush, textbook and handwritten fonts, and six emoji styles |
-| Packs | Everything Chinese / Japanese / Korean | Every add-on for the language, one price |
-| Full | The Whole Lychee | Every language and add-on, and the ones still to come |
+| | Chinese | Japanese | Korean | English |
+|---|---|---|---|---|
+| Free dictionary | Pocket Chinese (built in) | Pocket Japanese | Pocket Korean | Pocket English (built in) |
+| Full dictionary card, $9.99 | The Chinese Handbook | The Japanese Handbook | The Korean Handbook | The English Handbook |
+| Pack, $14.99 | The Chinese Satchel | The Japanese Satchel | The Korean Satchel | The English Satchel |
+| Full, $29.99 | The Whole Lychee | | | |
 
-Free downloads: Japanese Typing (the Japanese dictionary), Korean Meanings, English Definitions,
-Stroke Shapes, Sentence Library, Noto 3D Emoji. Their files on the release keep the packs' own
-names (lychee-japanese-dictionary-<version>.zip and so on).
+Add-ons for every language: Scribble (Google Handwriting, $5.99), Brushwork (stroke order,
+$3.99), Overheard (example sentences, $3.99), Inkwell (fonts and emoji styles, $4.99).
+
+Built-in dictionaries count as installed (as Pleco lists its own): Pocket Chinese and Pocket
+English show in Installed, removable, and come back from the app. The data behind an add-on
+(Brushwork's strokes, Overheard's sentences, Inkwell's fonts and emoji) is on that add-on's page,
+never a listing of its own. Files on the release keep their packs' own names (`file_stem` in
+packs.json: lychee-japanese-dictionary-<version>.zip and so on).
 
 ## Individual add-ons
 
@@ -94,8 +95,9 @@ Google Handwriting is priced as a sweetener, not a headline: Gboard's handwritin
 
 ## Packs
 
-Every pack costs the same, **$14.99**. Chinese is the main pack and covers Cantonese and
-Mandarin in one (one written language: the same characters, card, strokes and handwriting).
+Every pack (Satchel) costs the same, **$14.99**. Chinese covers Cantonese and Mandarin in one
+(one written language: the same characters, card, strokes and handwriting). English is the
+fourth language, with the same parts.
 
 Each pack has the same six parts, filled in for its language, plus Google Handwriting, Stroke
 Order and Example Sentences.
@@ -118,6 +120,24 @@ equally deep. Every data source is licensed for commercial use (no NC or ND), wi
 in each pack's LICENSE.txt. Still to do before paid launch: move the conjugation rules into the
 encrypted pack data (they are code for now), per the security model.
 
+## English
+
+The English Handbook ($9.99) and the English Satchel ($14.99), like the others:
+
+| Part | English |
+|---|---|
+| 1. Full dictionary card | Every meaning, phrasal verbs and idioms (Wiktionary via kaikki.org, CC BY-SA; Open English WordNet, CC BY 4.0; built) |
+| 2. Learner levels | Word frequency (built). CEFR levels only from a list licensed for commercial use: the Oxford and Cambridge lists are not; CEFR-J's licence is still to be checked |
+| 3. Pronunciation detail | US and UK IPA with stress, each voice (CMUdict, BSD; Wiktionary; built) |
+| 4. Grammar help | Every form: plurals, past tenses, -ing, comparatives (Wiktionary; built) |
+| 5. Word parts | Where a word comes from, its roots and affixes, words meaning the same and the opposite (Wiktionary, WordNet; built) |
+| 6. Bonus fonts (Satchel only) | Latin fonts for the keys (Atkinson Hyperlegible, Lexend, Patrick Hand; OFL) |
+
+The English Satchel holds the English Handbook, Scribble (English handwriting: Google's ML Kit
+reads whole words; Lychee's own engine one letter at a time) and Overheard (English sentences).
+Brushwork doesn't apply to English letters. The extras are in Pocket English's pack (the
+`more` table of en.db), unencrypted under their licences; the paid card is locked in the app.
+
 ## Full
 
 - **Everything Lychee makes, now and in the future**: all three full cards, every add-on, the
@@ -125,7 +145,8 @@ encrypted pack data (they are code for now), per the security model.
   emoji style.
 - **$29.99 at launch**, rising to **$39.99** for new buyers once flashcards and the planned
   features land (early buyers got the better deal).
-- Value today: $48.93 of add-ons, so Full is about 61% and falls as more is added.
+- Value today: $58.92 of add-ons (with the English Handbook), so Full is about half and falls
+  as more is added.
 - **Owning packs takes their price off Full**, down to $0: one pack leaves $15.00 to pay; owning
   two packs ($29.98) unlocks Full automatically.
 - **Licensed third-party dictionaries**, if ever added, are sold separately with a 30% discount

@@ -370,7 +370,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         // kana's shapes); and the Chinese dictionary's characters, for the filter
         // (Korean too: its Hanja); not with Google's recognition, which needs no second opinion
         if (!GoogleHandwriting.installed(context)) loadMatcher(context) { if (visibility == VISIBLE && pad.hasInk) recognise() }
-        if (engine != "ko" && engine != "ja") worker.execute { chineseCharacters() }
+        if (engine != null && engine != "ko" && engine != "ja") worker.execute { chineseCharacters() }
         message.visibility = GONE
         message.text = context.getString(R.string.lychee_hw_unavailable)
         updateHint()
@@ -472,7 +472,7 @@ class HandwritingPanelView @JvmOverloads constructor(
         // kana and every kanji (Unihan's Japanese readings, the kanji dictionary, kokuji, never
         // Korea's own); Korean, Hangul and every Hanja (Unihan's Korean readings, and gukja such
         // as 乭 畓 欌, never Japan's own)
-        val chinese = if (engine == "ko" || engine == "ja") null else chineseCharacters()
+        val chinese = if (engine == null || engine == "ko" || engine == "ja") null else chineseCharacters()
         val japanese = if (engine == "ja") japaneseCharacters(context) else null
         val db = app.lychee.chinese.Readings.db
         val kokuji = app.lychee.chinese.CjkForms.KOKUJI
@@ -486,6 +486,8 @@ class HandwritingPanelView @JvmOverloads constructor(
                 isKana(ch) || (isHan(ch) && ch !in gukja &&
                     (ch in kokuji || japanese?.contains(ch) == true || db == null || hasReading(db, ch, "ja")))
             }
+            // English: letters (Lychee's own engine reads one at a time; Google's whole words)
+            null -> { ch -> ch.isNotEmpty() && ch.all { it in 'a'..'z' || it in 'A'..'Z' || it == '\'' || it == '-' || it == ' ' } }
             else -> { ch -> isHan(ch) && (chinese?.contains(ch) == true || (ch !in kokuji && ch !in gukja)) }
         }
         val score = LinkedHashMap<String, Float>()

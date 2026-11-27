@@ -26,7 +26,7 @@ object BundledPacks {
     }.getOrDefault(emptyMap())
 
     /** Whether [id] comes with Lychee (so it is never a download). */
-    fun isBundled(context: Context, id: String) = id in versions(context)
+    fun isBundled(context: Context, id: String) = id in versions(context) || id == app.lychee.chinese.Readings.POCKET_ID
 
     /** Which keyboards ("yue", "cmn", "ja", "ko") use each bundled pack. */
     private val USED_BY = mapOf(

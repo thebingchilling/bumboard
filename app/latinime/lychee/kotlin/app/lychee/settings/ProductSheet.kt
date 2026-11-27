@@ -50,7 +50,7 @@ object StoreLook {
  * "coming", and while billing doesn't exist the buttons say why they can't buy anything.
  */
 @Composable
-fun ProductPage(p: Store.Product) {
+fun ProductPage(p: Store.Product, parts: @Composable () -> Unit = {}) {
     val colors = MaterialTheme.colorScheme
     @Suppress("UNUSED_VARIABLE") val refresh = PackRefresh.tick
     Column(
@@ -73,7 +73,7 @@ fun ProductPage(p: Store.Product) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Heading("What you get")
             p.lines.forEach { Bullet(it) }
-            p.bonus?.let { Bullet(Store.Line("Bonus: $it, only in this pack or ${Store.FULL.name}")) }
+            p.bonus?.let { Bullet(Store.Line("Bonus: $it, only in this Satchel or ${Store.FULL.name}")) }
         }
         if (p.includes.isNotEmpty()) {
             Section("Included") {
@@ -94,6 +94,7 @@ fun ProductPage(p: Store.Product) {
                 }
             }
         }
+        parts()
         if (p.demo.isNotEmpty()) TryFree(p.demo)
         EveryAddon(downloaded = false)
         // the small print: where it comes from and under which licence
@@ -306,6 +307,14 @@ private fun Sample(sample: Store.Sample) {
                 small("Hanja 學校: 學 배울 학 (learn) · 校 학교 교 (school)")
                 small("먹다: 먹어요 · 먹었어요 · 먹을 거예요 · 먹습니다")
             }
+            Store.Sample.ENGLISH -> {
+                big("present")
+                line("noun, adjective /ˈprɛz.ənt/  ·  verb /prɪˈzɛnt/", accent = true)
+                badges("Common")
+                line("a gift; existing now  ·  to give, to show")
+                small("Forms: presents · presented · presenting")
+                small("From Latin praesens, \"being at hand\" (prae- before + esse to be)")
+            }
             Store.Sample.HANDWRITING -> {
                 big("你")
                 line("Written by hand, read as:", accent = false)
@@ -324,10 +333,10 @@ private fun Sample(sample: Store.Sample) {
                 small("mainichi gakkō ni ikimasu · I go to school every day.")
             }
             Store.Sample.FONTS -> {
-                line("Kaiti 永  ·  Song 永  ·  Brush 永")
-                line("Textbook あ  ·  Mincho あ  ·  Rounded あ")
-                line("Myeongjo 한  ·  Pen 한  ·  Dodum 한")
-                small("Emoji: Noto 3D, Fluent, Twemoji, OpenMoji, Blobmoji, Noto Emoji")
+                line("Song 永  ·  Handwritten 永  ·  Rounded 永  ·  Brush 永")
+                line("Textbook あ  ·  Mincho あ  ·  Rounded あ  ·  Brush あ")
+                line("Myeongjo 한  ·  Dodum 한  ·  Pen 한  ·  Brush 한")
+                small("Emoji: Noto 3D, Twemoji, OpenMoji, Blobmoji, Noto Emoji")
             }
             Store.Sample.ALL -> {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -39,6 +39,7 @@ object PackStorage {
         pack.kind == PackKind.FONT_JA || pack.id == "rime_ja" -> Area.JAPANESE
         pack.kind == PackKind.FONT_KO || pack.id == "dict_ko" -> Area.KOREAN
         pack.id == "dict_en" -> Area.ENGLISH
+        pack.id == app.lychee.chinese.Readings.POCKET_ID -> Area.CHINESE
         pack.id == "strokes_zh" || pack.id == "examples" -> Area.SHARED
         pack.kind == PackKind.FONT_EMOJI -> Area.EMOJI
         pack.kind == PackKind.FONT_KEYS -> Area.KEYBOARD
@@ -50,7 +51,7 @@ object PackStorage {
         pack.kind == PackKind.FONT_EMOJI -> Kind.EMOJI
         pack.kind.isFont -> Kind.FONT
         pack.kind == PackKind.RIME -> Kind.DICTIONARY
-        pack.id.startsWith("dict_") -> Kind.DICTIONARY
+        pack.id.startsWith("dict_") || pack.id.startsWith("pocket_") -> Kind.DICTIONARY
         pack.id.startsWith("strokes") -> Kind.STROKES
         pack.id == "examples" -> Kind.EXAMPLES
         pack.kind == PackKind.HANDWRITING -> Kind.HANDWRITING
@@ -82,6 +83,7 @@ object PackStorage {
 
     /** Removes [pack]: a download is deleted, a pack that comes with Lychee stays out until restored. */
     fun remove(context: Context, pack: Pack) {
+        if (pack.id == app.lychee.chinese.Readings.POCKET_ID) app.lychee.chinese.Readings.close()
         if (BundledPacks.isBundled(context, pack.id)) {
             prefs(context).edit().putString(PREF_PURGED, (purged(context) + pack.id).joinToString(",")).apply()
         }
@@ -91,6 +93,7 @@ object PackStorage {
     /** Brings back a pack that comes with Lychee (unpacked from the app). Blocking: off the main thread. */
     fun restore(context: Context, pack: Pack) {
         prefs(context).edit().putString(PREF_PURGED, (purged(context) - pack.id).joinToString(",")).commit()
-        BundledPacks.installAll(context)
+        if (pack.id == app.lychee.chinese.Readings.POCKET_ID) app.lychee.chinese.Readings.open(context)
+        else BundledPacks.installAll(context)
     }
 }

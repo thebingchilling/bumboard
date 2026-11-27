@@ -65,6 +65,8 @@ data class Pack(
     val price: String? = null,
     /** Shown first, large, at the top of the add-ons store. */
     val featured: Boolean = false,
+    /** How its files are named on the release ("japanese-dictionary"), whatever the store calls it. */
+    val fileStem: String? = null,
 )
 
 /**
@@ -107,6 +109,7 @@ object Packs {
                 preview = o.optString("preview").takeIf { it.isNotEmpty() },
                 price = o.optString("price").takeIf { it.isNotEmpty() },
                 featured = o.optBoolean("featured"),
+                fileStem = o.optString("file_stem").takeIf { it.isNotEmpty() },
             )
         }
         cached = packs
@@ -200,7 +203,7 @@ object Packs {
     }
 
     /** Records an install; [main] is relative to the pack's folder. */
-    internal fun writeInfo(context: Context, id: String, version: String, main: String?) {
+    fun writeInfo(context: Context, id: String, version: String, main: String?) {
         File(dir(context, id), INFO).writeText(
             JSONObject().put("id", id).put("version", version).put("main", main ?: "").toString(),
         )

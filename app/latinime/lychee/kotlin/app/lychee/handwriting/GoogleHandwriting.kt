@@ -132,8 +132,9 @@ class GoogleHandwriting private constructor(
             val engines = runCatching {
                 val imm = context.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
                 val me = imm.enabledInputMethodList.firstOrNull { it.packageName == context.packageName } ?: return emptyList()
+                // an English keyboard is one without an engine of its own
                 imm.getEnabledInputMethodSubtypeList(me, true)
-                    .mapNotNull { it.getExtraValueOf(app.lychee.chinese.ChineseInput.EXTRA_ENGINE) }
+                    .map { it.getExtraValueOf(app.lychee.chinese.ChineseInput.EXTRA_ENGINE) ?: "en" }
             }.getOrDefault(emptyList())
             return engines.flatMap { e -> listOfNotNull(languageFor(e, true), languageFor(e, false), alsoFor(e, true), alsoFor(e, false)) }.distinct()
         }
@@ -149,6 +150,7 @@ class GoogleHandwriting private constructor(
 
         /** The ML Kit model for the keyboard [engine] ("yue", "cmn", "ja", "ko"). */
         fun languageFor(engine: String?, simplified: Boolean): String = when (engine) {
+            null, "en" -> "en"
             "ja" -> "ja"
             "ko" -> "ko"
             "yue" -> if (simplified) "zh-Hani-CN" else "zh-Hani-HK"
@@ -160,7 +162,7 @@ class GoogleHandwriting private constructor(
          * candidates are in: this is the other one (Traditional's for Simplified and back).
          */
         fun alsoFor(engine: String?, simplified: Boolean): String? = when (engine) {
-            "ja", "ko" -> null
+            null, "en", "ja", "ko" -> null
             "yue" -> if (simplified) "zh-Hani-HK" else "zh-Hani-CN"
             else -> if (simplified) "zh-Hani-TW" else "zh-Hani-CN"
         }

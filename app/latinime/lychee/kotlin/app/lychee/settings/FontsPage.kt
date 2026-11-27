@@ -92,7 +92,7 @@ fun FontsPage() {
             FontOption(LycheeFonts.GSF, gsf, gsfSummary, face = { LycheeFonts.gsf(it) }),
             FontOption(LycheeFonts.WENKAI, wenkai, stringResource(R.string.lychee_fonts_wenkai_keys_summary), face = { LycheeFonts.wenkaiKeys(it) }),
             FontOption(LycheeFonts.SYSTEM, system, systemSummary, face = { Typeface.SANS_SERIF }),
-        ) + ownFont(context, PackKind.FONT_KEYS),
+        ) + inkwell(context, PackKind.FONT_KEYS) + ownFont(context, PackKind.FONT_KEYS),
     )
     for ((title, pref, sample, kind) in listOf(
         Quad(R.string.lychee_fonts_chinese, LycheeFonts.PREF_CHINESE, R.string.lychee_fonts_sample_zh, PackKind.FONT_ZH),
@@ -104,7 +104,7 @@ fun FontsPage() {
             listOf(
                 FontOption("", wenkai, wenkaiSummary, face = { LycheeFonts.wenkai(it) }),
                 FontOption(LycheeFonts.SYSTEM, system, systemSummary, face = { Typeface.DEFAULT }),
-            ) + ownFont(context, kind),
+            ) + inkwell(context, kind) + ownFont(context, kind),
         )
     }
     // emoji: Noto Color Emoji built in at its newest; Noto 3D to download; the phone's own; your own
@@ -132,6 +132,12 @@ private data class FontOption(
     val pack: Pack? = null,
     val emoji: Boolean = false,
 )
+
+/** Inkwell's fonts of [kind] (each to download, then chosen like the built-in ones). */
+private fun inkwell(context: android.content.Context, kind: PackKind): List<FontOption> =
+    Packs.ofKind(context, kind).filter { !it.custom }.map {
+        FontOption(it.id, it.name, listOf(it.summary, it.size).filter { s -> s.isNotEmpty() }.joinToString(" · "), pack = it)
+    }
 
 /** The "your own font" choice for [kind], when the catalogue has one. */
 private fun ownFont(context: android.content.Context, kind: PackKind): List<FontOption> =

@@ -184,6 +184,7 @@ private fun LanguageRow(row: SetupActivity.Row, onDownload: (String) -> Unit, on
         "zh-Hani-HK" -> R.string.lang_zh_hk
         "zh-Hani-TW" -> R.string.lang_zh_tw
         "ja" -> R.string.lang_ja
+        "en" -> R.string.lang_en
         else -> R.string.lang_ko
     })
     val status = stringResource(when (row.state) {

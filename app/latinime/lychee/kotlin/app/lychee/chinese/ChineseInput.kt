@@ -261,6 +261,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
             onSpeak = { text, _ -> app.lychee.speech.Speech.speak(ime, text, locales) }, lang = "en",
             // UK and US each in their own voice
             onSpeakAs = { text, locale -> app.lychee.speech.Speech.speak(ime, text, listOfNotNull(locale) + locales) },
+            // the English Handbook's extras (origin, forms, phrases, synonyms)
+            english = app.lychee.dict.PackData.englishMore(ime, entries.first().lemma),
             onType = onType)
         return true
     }
@@ -1191,6 +1193,8 @@ class ChineseInput(private val ime: InputMethodService, private val prefs: Share
         val guessing = composition == null && guesses.isNotEmpty()
         val candidates = if (guessing) guesses.map { Candidate(it, "") } else composition?.candidates.orEmpty()
         val showing = (isActive || guessing) && candidates.isNotEmpty()
+        // handwriting on an English keyboard guesses letters and words
+        bar?.allowLatin = guessing && engine == null
         // the candidates get the whole bar: 中 and 繁/简 wait until nothing is typed
         updateScriptKey(stripView, hidden = showing)
         updateBarHeight(stripView, showing)

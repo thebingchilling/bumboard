@@ -203,12 +203,14 @@ class DictionaryPopup(
         conjugation: List<app.lychee.core.Conjugated>? = null,
         /** A phrase the dictionary lacks as a whole: the words and characters it is made of. */
         parts: List<PhrasePart> = emptyList(),
+        /** The English Handbook's extras: origin, word parts, forms, phrases, synonyms, opposites. */
+        english: app.lychee.dict.EnglishMore? = null,
         onType: () -> Unit,
     ) {
         val reshow = {
             showWord(keyboard, text, romanisation, entries, examples, peek, onSpeak, lang, onSpeakAs, translations,
                 onTranslation, chinese, chinesePrefs, chineseForm, characters, charactersTitle, oldForm, badges,
-                pronunciation, conjugation, parts, onType)
+                pronunciation, conjugation, parts, english, onType)
         }
         val prefs = chinesePrefs ?: DisplayPrefs()
         fun makeContent(c: M3Colors, body: LinearLayout, page: Page?) = Content(ctx, c, prefs, body, onSpeak).apply {
@@ -329,6 +331,17 @@ class DictionaryPopup(
                                 }
                             }
                         }
+                        // English: its forms and a few words meaning the same, as much as fits
+                        english?.let { m ->
+                            if (m.forms.isNotEmpty()) {
+                                content.summarySection(ctx.getString(R.string.lychee_card_forms))
+                                body.addView(content.textView(m.forms.joinToString("  ·  "), 14f, c.onSurface))
+                            }
+                            if (m.synonyms.isNotEmpty()) {
+                                content.summarySection(ctx.getString(R.string.lychee_card_similar))
+                                body.addView(content.textView(m.synonyms.take(6).joinToString(", "), 14f, c.onSurface))
+                            }
+                        }
                         if (examples.isNotEmpty()) content.examples(examples.take(1)) { sentence -> romaniseSentence(sentence) }
                     }
                     Page.DEFINITIONS -> {
@@ -340,6 +353,13 @@ class DictionaryPopup(
                             e.senses.take(Content.MAX_SENSES).forEachIndexed { n, s -> content.plainSense(n + 1, s) }
                         }
                         conjugation?.takeIf { it.size > 1 }?.let { content.conjugation(it) }
+                        // English: words that mean the same, and the opposite (each opens its card)
+                        english?.let { m ->
+                            if (m.synonyms.isNotEmpty()) content.phraseParts(ctx.getString(R.string.lychee_card_similar),
+                                m.synonyms.map { PhrasePart(it, null, "") }, m.synonyms.size) { p -> openWordPart(keyboard, p.form, lang, onSpeak, onSpeakAs) }
+                            if (m.antonyms.isNotEmpty()) content.phraseParts(ctx.getString(R.string.lychee_card_opposite),
+                                m.antonyms.map { PhrasePart(it, null, "") }, m.antonyms.size) { p -> openWordPart(keyboard, p.form, lang, onSpeak, onSpeakAs) }
+                        }
                     }
                     // English has no Readings tab: each pronunciation is with its meanings
                     Page.READINGS -> if (lang != "en") {
@@ -367,6 +387,24 @@ class DictionaryPopup(
                         content.strokePage(listOfNotNull(label to text, other).let { if (it.size < 2) listOf("" to text) else it })
                     }
                     Page.PARTS -> {
+                        // English: where it comes from, what it is built from, its forms, its phrases and idioms
+                        english?.let { m ->
+                            m.origin?.let {
+                                content.summarySection(ctx.getString(R.string.lychee_card_origin))
+                                body.addView(content.textView(it, 14f, c.onSurface).apply { setLineSpacing(0f, 1.15f) })
+                            }
+                            m.parts?.let {
+                                content.summarySection(ctx.getString(R.string.lychee_card_built_from))
+                                body.addView(content.textView(it, 16f, c.onSurface))
+                            }
+                            if (m.forms.isNotEmpty()) {
+                                content.summarySection(ctx.getString(R.string.lychee_card_forms))
+                                m.forms.forEach { f -> body.addView(content.textView(f, 14f, c.onSurface)) }
+                            }
+                            if (m.phrases.isNotEmpty()) content.phraseParts(ctx.getString(R.string.lychee_card_phrases_idioms),
+                                m.phrases.map { w -> PhrasePart(w, null, app.lychee.dict.PackData.englishWords(ctx, w, 1).firstOrNull()?.senses?.firstOrNull().orEmpty()) },
+                                m.phrases.size) { p -> openWordPart(keyboard, p.form, lang, onSpeak, onSpeakAs) }
+                        }
                         if (characters.isNotEmpty()) content.characterReadings(charactersTitle ?: "", characters)
                         if (entries.isEmpty() && parts.isNotEmpty()) {
                             content.phraseParts(ctx.getString(R.string.lychee_card_parts), parts, parts.size) { p ->

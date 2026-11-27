@@ -18,7 +18,7 @@ import com.google.mlkit.vision.digitalink.recognition.DigitalInkRecognitionModel
  * on the app's screen.
  */
 object Models {
-    val TAGS = listOf("zh-Hani-CN", "zh-Hani-HK", "zh-Hani-TW", "ja", "ko")
+    val TAGS = listOf("zh-Hani-CN", "zh-Hani-HK", "zh-Hani-TW", "ja", "ko", "en")
 
     /** About how big each model is (ML Kit doesn't say), for the screen. */
     const val SIZE_MB = 20
@@ -48,13 +48,15 @@ object Models {
         val imm = context.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
         val lychee = imm.enabledInputMethodList.firstOrNull { it.packageName == LYCHEE } ?: return emptySet()
         imm.getEnabledInputMethodSubtypeList(lychee, true)
-            .mapNotNull { it.getExtraValueOf("LycheeEngine") }
+            // an English keyboard is one without an engine of its own
+            .map { it.getExtraValueOf("LycheeEngine") ?: "en" }
             .flatMap { engine ->
                 when (engine) {
                     "yue" -> listOf("zh-Hani-HK", "zh-Hani-CN")
                     "cmn" -> listOf("zh-Hani-CN", "zh-Hani-TW")
                     "ja" -> listOf("ja")
                     "ko" -> listOf("ko")
+                    "en" -> listOf("en")
                     else -> emptyList()
                 }
             }.toSet()
