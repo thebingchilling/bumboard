@@ -19,4 +19,9 @@ fi
 mkdir -p "$REPO/screens"
 [ $# -gt 0 ] || rm -f "$REPO/screens/"*.png
 cp latinime/src/test/snapshots/images/*.png "$REPO/screens/"
+# Lychee handwriting's screen too, on a full run
+if [ $# -eq 0 ]; then
+  ./gradlew --no-daemon -q :hwcompanion:recordPaparazziDebug -PlycheeScreens
+  cp hwcompanion/src/test/snapshots/images/*.png "$REPO/screens/"
+fi
 ls -1 "$REPO/screens"
