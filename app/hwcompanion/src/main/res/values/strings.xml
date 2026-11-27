@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Lychee handwriting</string>
-    <string name="tagline">Google\'s handwriting recognition for Lychee\'s handwriting pad</string>
+    <string name="tagline">Scribble: Google\'s handwriting recognition, for Lychee\'s handwriting pad</string>
     <string name="models">Languages</string>
     <string name="models_note">Only the languages of your Lychee keyboards download by themselves (about %1$d MB each, from Google\'s ML Kit). Download the others here, or remove any you don\'t need. Opening this app checks for newer ones.</string>
     <string name="checking">Checking…</string>
@@ -21,6 +21,6 @@
     <string name="privacy_body">This app goes online to download Google\'s handwriting models. What you write is read on this phone and never sent anywhere. This app itself has no tracking, analytics or ads. Google\'s ML Kit, which it uses, sends Google figures about how it runs (such as the device model, the app\'s version and how long recognition took), as Google\'s terms require; never your handwriting. Lychee itself has no internet access at all.</string>
     <string name="app_icon">App icon</string>
     <string name="hide_icon">Hide the app icon</string>
-    <string name="hide_icon_note">Lychee keeps working. Open this screen again from Lychee: Settings › Add-ons › Google Handwriting. Some launchers take a moment to update.</string>
+    <string name="hide_icon_note">Lychee keeps working. Open this screen again from Lychee: Settings › Add-ons › Scribble. Some launchers take a moment to update.</string>
     <string name="close">Close</string>
 </resources>

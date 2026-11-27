@@ -42,11 +42,12 @@ object StoreLook {
 }
 
 /**
- * A listing's own page, in Lychee's layout: the add-on's tile, name and line; a buying card with
- * the price, three plain promises and the buttons (Try the demo beside Buy); then "In Lychee" (a
- * worked example as the card draws it), what it gives, what is included, the free trial, about,
- * sources and licences, privacy. Honest throughout: what isn't built yet says "coming", and while
- * billing doesn't exist the buttons say why they can't buy anything. Back returns to the store.
+ * A listing's own page: the add-on's tile, name and line, its price and buttons (Try the demo
+ * beside Buy) and what it is for, straight on the page (not in cards); then "In Lychee" (a worked
+ * example as the card draws it), what it gives, what is included, the free trial in a card of its
+ * own, one small card with what every add-on promises (offline, private, every update), and the
+ * sources and licences as small print at the bottom. Honest throughout: what isn't built yet says
+ * "coming", and while billing doesn't exist the buttons say why they can't buy anything.
  */
 @Composable
 fun ProductPage(p: Store.Product) {
@@ -54,7 +55,7 @@ fun ProductPage(p: Store.Product) {
     @Suppress("UNUSED_VARIABLE") val refresh = PackRefresh.tick
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(top = 16.dp, bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             ProductTile(p, 56)
@@ -64,13 +65,15 @@ fun ProductPage(p: Store.Product) {
                 Text(p.tagline, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
             }
         }
-        if (p.needsApp) HandwritingActions() else BuyCard(p)
+        if (p.needsApp) HandwritingActions() else BuyRow(p)
+        if (p.about.isNotEmpty()) Text(p.about, style = MaterialTheme.typography.bodyLarge, color = colors.onSurface)
         Section("In Lychee") {
             if (KeyboardSample.drawable(p.sample)) KeyboardSampleView(p.sample) else Sample(p.sample)
         }
-        Section("What you get") {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Heading("What you get")
             p.lines.forEach { Bullet(it) }
-            p.bonus?.let { Bullet(Store.Line("Bonus: $it, only in this pack or Lychee Complete")) }
+            p.bonus?.let { Bullet(Store.Line("Bonus: $it, only in this pack or ${Store.FULL.name}")) }
         }
         if (p.includes.isNotEmpty()) {
             Section("Included") {
@@ -91,80 +94,93 @@ fun ProductPage(p: Store.Product) {
                 }
             }
         }
-        // the plain words, each under its own heading, in one card with lines between them
-        Details(listOfNotNull(
-            p.demo.takeIf { it.isNotEmpty() }?.let { "Try it free" to it },
-            p.about.takeIf { it.isNotEmpty() }?.let { "About" to it },
-            p.sources.takeIf { it.isNotEmpty() }?.let { "Sources and licences" to it },
-            "Updates" to "Every update to this add-on is included. Where it is built on open data, updates follow that " +
-                "data's new releases for as long as they stay free to use.",
-            "Privacy" to (if (p.needsApp) "Your writing is read by Google's ML Kit on this phone, never sent anywhere. The " +
-                "Lychee handwriting app goes online to download Google's models, and ML Kit sends Google " +
-                "figures about how it runs (device model, app version, speed), as Google's terms require; " +
-                "never your handwriting. Lychee itself has no internet permission."
-            else "Lychee has no internet permission: everything works offline, and nothing you type or look " +
-                "up ever leaves your phone."),
-        ))
+        if (p.demo.isNotEmpty()) TryFree(p.demo)
+        EveryAddon(downloaded = false)
+        // the small print: where it comes from and under which licence
+        SmallPrint(buildList {
+            if (p.sources.isNotEmpty()) add("Sources and licences: ${p.sources}")
+            add("Add-ons built on open data are updated when that data is, for as long as it stays free to use.")
+            if (p.needsApp) add("Google's ML Kit, in the Lychee handwriting app, sends Google figures about how it runs " +
+                "(device model, app version, speed), as Google's terms require; never your handwriting.")
+        })
     }
 }
 
-/** Several short texts, each under its heading, in one card with a thin line between them. */
+/** A heading on a listing's page, in the accent colour. */
 @Composable
-fun Details(items: List<Pair<String, String>>) {
+fun Heading(title: String) =
+    Text(title, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+
+/** The free trial, in a card of its own. */
+@Composable
+fun TryFree(text: String) {
     val colors = MaterialTheme.colorScheme
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(colors.surfaceContainerLow).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(colors.tertiaryContainer).padding(16.dp),
+        verticalAlignment = Alignment.Top,
     ) {
-        items.forEachIndexed { i, (title, body) ->
-            if (i > 0) androidx.compose.material3.HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f))
-            Text(title, style = MaterialTheme.typography.titleSmall, color = colors.primary)
-            Text(body, style = MaterialTheme.typography.bodyMedium, color = colors.onSurface)
+        Icon(painterResource(R.drawable.lychee_ic_star), null, tint = colors.onTertiaryContainer, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.size(12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text("Try it free", style = MaterialTheme.typography.titleSmall, color = colors.onTertiaryContainer)
+            Text(text, style = MaterialTheme.typography.bodyMedium, color = colors.onTertiaryContainer)
         }
     }
 }
 
 /**
- * The buying card: the price (and a bundle's saving), three promises, then the buttons. While
- * billing doesn't exist, a tap says so plainly instead of doing nothing.
+ * What every add-on promises, the same on every page, in one small card: it works offline and
+ * nothing typed leaves the phone, and (paid) it is yours with every update, or (a download) the
+ * browser fetches it and Lychee itself never goes online.
  */
 @Composable
-private fun BuyCard(p: Store.Product) {
+fun EveryAddon(downloaded: Boolean) {
+    val colors = MaterialTheme.colorScheme
+    Column(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(colors.surfaceContainerLow)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Promise(R.drawable.lychee_ic_lock, "Works offline. Nothing you type leaves your phone.")
+        Promise(R.drawable.ic_sym_refresh, if (downloaded) "Your browser downloads it; Lychee itself never goes online."
+            else "Pay once and keep it, with every update.")
+    }
+}
+
+/** Small print at the bottom of a page: sources, licences and the like. */
+@Composable
+fun SmallPrint(lines: List<String>) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        lines.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    }
+}
+
+/**
+ * The price and the buttons, straight on the page. While billing doesn't exist, a tap says so
+ * plainly instead of doing nothing.
+ */
+@Composable
+private fun BuyRow(p: Store.Product) {
     val colors = MaterialTheme.colorScheme
     val context = LocalContext.current
     // honest when tapped: no purchase can be made yet (no billing), so say so rather than doing nothing
     val why = "Purchases aren't available yet. They'll open in a later version of Lychee."
     fun explain() = android.widget.Toast.makeText(context, why, android.widget.Toast.LENGTH_LONG).show()
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(colors.surfaceContainerLow).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(Store.price(p.cents), style = MaterialTheme.typography.headlineSmall, color = colors.onSurface)
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Promise(R.drawable.ic_sym_check, "Always offline, like the rest of Lychee")
-            Promise(R.drawable.ic_sym_check, "Yours for life, with every future update")
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (p.demo.isNotEmpty()) {
-                OutlinedButton(onClick = ::explain, modifier = Modifier.weight(1f)) { Text("Try the demo", maxLines = 1) }
-            }
-            Button(onClick = ::explain, modifier = Modifier.weight(1f)) { Text("Buy", maxLines = 1) }
-        }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(Store.price(p.cents), style = MaterialTheme.typography.headlineSmall, color = colors.onSurface,
+            modifier = Modifier.weight(1f))
+        if (p.demo.isNotEmpty()) OutlinedButton(onClick = ::explain) { Text("Try the demo", maxLines = 1) }
+        Button(onClick = ::explain) { Text("Buy", maxLines = 1) }
     }
 }
 
-/** Google Handwriting's steps: the free Lychee handwriting app (ML Kit's licence), then its models. */
+/** Scribble's steps: the free Lychee handwriting app (ML Kit's licence), then its models. */
 @Composable
 private fun HandwritingActions() {
     val context = LocalContext.current
     val colors = MaterialTheme.colorScheme
     val installed = app.lychee.handwriting.GoogleHandwriting.installed(context)
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(colors.surfaceContainerLow).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(Store.price(Store.HANDWRITING.cents),
             style = MaterialTheme.typography.titleLarge, color = colors.onSurface)
         Text(

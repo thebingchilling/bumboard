@@ -282,7 +282,7 @@
     <string name="lychee_card_pronunciation">Pronunciation</string>
     <string name="lychee_hw_upgrade">Better handwriting: Google\'s</string>
     <string name="lychee_hw_upgrade_dismiss">Not now</string>
-    <string name="lychee_google_hw">Google Handwriting</string>
+    <string name="lychee_google_hw">Scribble</string>
     <string name="lychee_google_hw_quality">Higher quality</string>
     <string name="lychee_google_hw_body">Google\'s recognition for Chinese, Japanese and Korean. Reads messy, fast and joined-up writing.</string>
     <string name="lychee_google_hw_licence">A small companion app (%1$s, plus about 20 MB per language). Writing stays on your phone.</string>
@@ -424,7 +424,7 @@
     <string name="lychee_addons_page">All add-ons</string>
     <string name="lychee_addons_page_summary">Open the packs page to get add-ons that aren\'t on this phone</string>
     <string name="lychee_addons_misc">Others</string>
-    <string name="lychee_dictionary_needed">Japanese dictionary needed · tap to get it</string>
+    <string name="lychee_dictionary_needed">Japanese Typing needed · tap to get it</string>
     <!-- An add-on page's keyboard example: shown light or dark (whatever the phone says) -->
     <string name="lychee_sample_light">Light</string>
     <string name="lychee_sample_dark">Dark</string>

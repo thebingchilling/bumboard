@@ -88,11 +88,11 @@ class AddonsScreens {
     @Test fun storeFurther() = page("2-store-further", "Add-ons", scroll = 1200) {}
     @Test fun storeFurthest() = page("3-store-languages", "Add-ons", scroll = 2400) {}
     @Test fun installed() = page("4-installed", "Add-ons") { StoreLook.startTab = 1 }
-    @Test fun listingPack() = page("6-listing-japanese-pack", "Japanese Pack") { ProductSheet.open = Store.byId("pack_ja") }
-    @Test fun listingAddon() = page("7-listing-chinese-in-depth", "Chinese In Depth") { ProductSheet.open = Store.byId("card_zh") }
-    @Test fun listingHandwriting() = page("8-listing-google-handwriting", "Google Handwriting") { ProductSheet.open = Store.byId("handwriting") }
+    @Test fun listingPack() = page("6-listing-japanese-pack", Store.PACK_JA.name) { ProductSheet.open = Store.byId("pack_ja") }
+    @Test fun listingAddon() = page("7-listing-chinese-in-depth", Store.CARD_ZH.name) { ProductSheet.open = Store.byId("card_zh") }
+    @Test fun listingHandwriting() = page("8-listing-google-handwriting", Store.HANDWRITING.name) { ProductSheet.open = Store.byId("handwriting") }
     @Test fun updates() = page("9-updates", "Add-ons") { StoreLook.startTab = 2 }
-    @Test fun listingChineseFurther() = page("7b-listing-chinese-further", "Chinese In Depth", scroll = 1100) { ProductSheet.open = Store.byId("card_zh") }
+    @Test fun listingChineseFurther() = page("7b-listing-chinese-further", Store.CARD_ZH.name, scroll = 1100) { ProductSheet.open = Store.byId("card_zh") }
     /**
      * A listing's example, Light (its Dark is in AddonsScreensDark: Paparazzi draws every view in
      * the device's own light or dark, so the switch is shown on a phone of each).
@@ -105,7 +105,7 @@ class AddonsScreens {
     /** Settings > Theme: its preview is the real keyboard. */
     @Test fun theme() = draw(paparazzi, "13-theme", "Theme", content = { app.lychee.settings.ThemePage() }) {}
 
-    @Test fun listingFree() = page("12-listing-free-japanese-dictionary", "Japanese dictionary") {
+    @Test fun listingFree() = page("12-listing-free-japanese-dictionary", "Japanese Typing") {
         AddonSheet.open = app.lychee.packs.Packs.catalog(paparazzi.context).firstOrNull { it.id == "rime_ja" }
     }
 }
@@ -117,9 +117,22 @@ class AddonsScreensDark {
         theme = "android:Theme.Material.NoActionBar")
 
     @Test fun store() = AddonsScreens.draw(paparazzi, "d1-store-dark", "Add-ons") {}
-    @Test fun listing() = AddonsScreens.draw(paparazzi, "d2-listing-dark", "Japanese Pack") { ProductSheet.open = Store.byId("pack_ja") }
+    @Test fun listing() = AddonsScreens.draw(paparazzi, "d2-listing-dark", Store.PACK_JA.name) { ProductSheet.open = Store.byId("pack_ja") }
     @Test fun exampleDark() {
         if (RealData.available) RealData.install()
         paparazzi.snapshot(app.lychee.settings.KeyboardSample.build(paparazzi.context, Store.Sample.CHINESE, dark = true), "d3-example-dark")
+    }
+}
+
+/** The rest of a listing's page, further down (Paparazzi shrinks very tall phones to 1000 px). */
+class AddonsScreensFurther {
+    @get:Rule
+    val paparazzi = Paparazzi(deviceConfig = S23, theme = "android:Theme.Material.Light.NoActionBar")
+
+    @Test fun listing2() = AddonsScreens.draw(paparazzi, "f1-listing-2", Store.CARD_ZH.name, scroll = 2000) { ProductSheet.open = Store.CARD_ZH }
+    @Test fun listing3() = AddonsScreens.draw(paparazzi, "f2-listing-3", Store.CARD_ZH.name, scroll = 4000) { ProductSheet.open = Store.CARD_ZH }
+    @Test fun scribble2() = AddonsScreens.draw(paparazzi, "f3-scribble-2", Store.HANDWRITING.name, scroll = 2000) { ProductSheet.open = Store.HANDWRITING }
+    @Test fun free2() = AddonsScreens.draw(paparazzi, "f4-free-2", "Japanese Typing", scroll = 1500) {
+        AddonSheet.open = app.lychee.packs.Packs.catalog(paparazzi.context).firstOrNull { it.id == "rime_ja" }
     }
 }

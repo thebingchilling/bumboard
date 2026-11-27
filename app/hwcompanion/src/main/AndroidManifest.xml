@@ -14,6 +14,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- to see which of Lychee's keyboards are turned on (Android 11 and later show other apps
+         only when asked for by name) -->
+    <queries>
+        <package android:name="app.lychee" />
+    </queries>
+
     <permission
         android:name="app.lychee.permission.HANDWRITING"
         android:protectionLevel="signature" />
@@ -23,7 +29,8 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="false"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@android:style/Theme.Material.Light.NoActionBar"
+        android:enableOnBackInvokedCallback="true">
 
         <activity
             android:name=".SetupActivity"

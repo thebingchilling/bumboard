@@ -31,8 +31,37 @@ object Models {
 
     private fun prefs(context: Context) = context.getSharedPreferences("lychee_handwriting", Context.MODE_PRIVATE)
 
-    /** The models Lychee's keyboards use, as Lychee last said (none until it has). */
-    fun used(context: Context): Set<String> = prefs(context).getStringSet(PREF_USED, emptySet()).orEmpty()
+    /**
+     * The models Lychee's keyboards use: read from the keyboards turned on for Lychee in the
+     * phone's settings (so it is right before Lychee has ever opened its handwriting pad), and
+     * what Lychee last said when it bound the service.
+     */
+    fun used(context: Context): Set<String> =
+        prefs(context).getStringSet(PREF_USED, emptySet()).orEmpty() + fromKeyboards(context)
+
+    /**
+     * The models of the Lychee keyboards turned on: Cantonese reads Hong Kong's and the
+     * mainland's, Mandarin the mainland's and Taiwan's (Chinese reads both scripts), Japanese and
+     * Korean their own; English none. Empty when Lychee isn't on.
+     */
+    fun fromKeyboards(context: Context): Set<String> = runCatching {
+        val imm = context.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+        val lychee = imm.enabledInputMethodList.firstOrNull { it.packageName == LYCHEE } ?: return emptySet()
+        imm.getEnabledInputMethodSubtypeList(lychee, true)
+            .mapNotNull { it.getExtraValueOf("LycheeEngine") }
+            .flatMap { engine ->
+                when (engine) {
+                    "yue" -> listOf("zh-Hani-HK", "zh-Hani-CN")
+                    "cmn" -> listOf("zh-Hani-CN", "zh-Hani-TW")
+                    "ja" -> listOf("ja")
+                    "ko" -> listOf("ko")
+                    else -> emptyList()
+                }
+            }.toSet()
+    }.getOrDefault(emptySet())
+
+    /** Lychee's package. */
+    const val LYCHEE = "app.lychee"
 
     /** Lychee's keyboards use [tags]: those come by themselves (the rest are left as they are). */
     fun setUsed(context: Context, tags: Collection<String>) {

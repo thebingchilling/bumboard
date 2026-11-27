@@ -55,6 +55,28 @@ limit or a count, so there is nothing stored on the phone to reset.
 
 Demo content ships in its own open file; the paid entries are not in it.
 
+## Names
+
+The store's names and lines are written for learners: what each add-on helps you do, plainly,
+with a real example on its page; no generic marketing or AI-sounding copy (`store/Store.kt`,
+`packs.json`).
+
+| Add-on | Name | Line |
+|---|---|---|
+| Full dictionary card, Chinese | Chinese Explained | Hold a word, see the whole picture |
+| Full dictionary card, Japanese | Japanese Explained | Pitch, verb forms and kanji, on every word |
+| Full dictionary card, Korean | Korean Explained | How it's really said, and the Hanja behind it |
+| Google Handwriting (ML Kit) | Scribble | Write fast and messy. Google's ML Kit still reads it. |
+| Stroke Order | Stroke by Stroke | Watch any character write itself, in the right order |
+| Example Sentences | In a Sentence | See how people really use the word |
+| Font Pack | Ink & Emoji | Brush, textbook and handwritten fonts, and six emoji styles |
+| Packs | Everything Chinese / Japanese / Korean | Every add-on for the language, one price |
+| Full | The Whole Lychee | Every language and add-on, and the ones still to come |
+
+Free downloads: Japanese Typing (the Japanese dictionary), Korean Meanings, English Definitions,
+Stroke Shapes, Sentence Library, Noto 3D Emoji. Their files on the release keep the packs' own
+names (lychee-japanese-dictionary-<version>.zip and so on).
+
 ## Individual add-ons
 
 Individual add-ons always cover every language. Only things tied to one language (each full
@@ -125,15 +147,18 @@ come, and the honest reasons paid add-ons won't be available) and `settings/Addo
 The owner's decisions on wording and look (professional, Lychee's own, never Pleco's copy):
 - It reads as the real store: no "free while in testing" anywhere, and no savings or value
   sums ("save $8.97" sounds cheap). Bundles say how many add-ons they hold.
-- Only two promises, plainly: "Always offline, like the rest of Lychee" and "Yours for life,
-  with every future update". A listing's Updates section adds that updates to open data
-  follow its new releases for as long as they stay free to use. No "no ads" or "yours to keep".
+- Only two promises, plainly, in the small shared card on every listing: "Works offline.
+  Nothing you type leaves your phone." and "Pay once and keep it, with every update." The
+  small print adds that updates to open data follow its new releases for as long as they stay
+  free to use. No "no ads" or "yours to keep".
 - Simple layout: a short intro card, the bundles (Full large, the three packs in one card),
   categories as plain list rows, one large "All add-ons" card, the registration at the bottom.
   No grids of tiles. Prices are rounded pill buttons.
-- A listing: its tile, name and line; a buying card (price, the two promises, Try the demo
-  beside Buy); then In Lychee (a worked example), What you get, Included, Try it free, About,
-  Sources and licences, Updates, Privacy.
+- A listing: its tile, name and line; the price with Try the demo and Buy, and what it is for,
+  straight on the page (not in cards); then In Lychee (a worked example), What you get,
+  Included, Try it free (a card of its own), one small card with what every add-on promises
+  (works offline, nothing typed leaves the phone; pay once with every update), and sources and
+  licences as small print at the bottom.
 - Until billing exists everything stays unlocked (`Features.isEnabled` is always true); a tap
   on Buy or Try the demo says plainly that purchases aren't available yet.
 - Where paid add-ons can't be offered (see below), they are shown with an honest note saying

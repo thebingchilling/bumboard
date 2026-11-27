@@ -125,9 +125,11 @@ packs page). Public facing, so be careful:
   models, so it needs the internet and its licence has it in an app of its own; Lychee stays
   offline and binds its service (a signature permission: only apps signed like Lychee), handing
   it the pad's strokes (`handwriting/GoogleHandwriting`). The companion is a small app with Lychee's icon: its full-screen
-  setup (the Lychee logo's colours, no Material library, for size) lists each language's model
-  (ready, downloading or not on the phone; whether Lychee's keyboards use it; Download or
-  Remove), a plain privacy note, and a switch to hide its launcher icon (Lychee opens it from
+  setup (Material 3 in Compose with Lychee's Settings colours, drawn edge to edge, Close clear of
+  the navigation bar) lists each language's model
+  (ready, downloading or not on the phone; whether Lychee's keyboards use it, read from the
+  Lychee keyboards turned on in the phone's settings as well as from Lychee's last bind;
+  Download or Remove), a plain privacy note, and a switch to hide its launcher icon (Lychee opens it from
   Add-ons too, so a hidden icon is never a lost app). Only the models of the enabled keyboards
   download by themselves: Lychee says which on each bind (`GoogleHandwriting.usedModels`, the
   USE message; Cantonese uses Hong Kong's and the mainland's, Mandarin the mainland's and
@@ -278,14 +280,19 @@ packs page). Public facing, so be careful:
     (`ListingCard`): tile, name, one line, chips (where it stands, size, version, what it
     holds), and one action at the right (price pill, download, update, remove).
   - The store is laid out like Installed: one honest line (a student developer, one-time
-    purchases, no ads or tracking, offline), the bundles, then a section per language (its In
-    Depth card and free downloads, those that come with Lychee too), then Every language.
-  - Google Handwriting is a listing like the others, noting it needs the free Lychee
-    handwriting app.
+    purchases, no ads or tracking, offline), the bundles, then a section per language (its
+    "Explained" card and free downloads, those that come with Lychee too), then Every language.
+  - Names and descriptions are written for learners, plainly and concretely (what it helps you
+    do, with a real example), never generic marketing or AI-sounding copy (names in `PAID.md`).
+  - Scribble (Google's ML Kit handwriting) is a listing like the others, noting it needs the
+    free Lychee handwriting app.
   - The registration is at the very bottom. Every listing opens its own page like
-  Pleco's (`settings/ProductSheet.kt`; a free download's `AddonPage` is laid out the same):
-  each part its own card (the price or Free with the actions, In Lychee, What you get, Included,
-  then one Details card for the plain words). In Lychee is the real keyboard
+  Pleco's (`settings/ProductSheet.kt`; a free download's `AddonPage` is laid out the same): the
+  tile, name and line, the price (or Free) with its buttons and what the add-on is for straight
+  on the page, not in cards; then In Lychee and Included in cards, What you get as a plain list,
+  the free trial in a card of its own (`TryFree`), what every add-on promises (offline and
+  private; every update, or for a download that the browser fetches it) in one small shared card
+  (`EveryAddon`), and sources and licences as small print at the bottom (`SmallPrint`). In Lychee is the real keyboard
   (`settings/KeyboardSample.kt`: the real input view from `layout/RealKeyboard` with its real
   candidate bar, and the word card open on the add-on's tab, shrunk to the page), Light to start
   with whatever the phone and Settings say, with one small light/dark toggle button in its corner. A listing opens at its top; the store's pages and tabs move

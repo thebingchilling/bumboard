@@ -4,6 +4,7 @@
 // back. Built once and only rebuilt when this module changes (build.yml).
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.compose)
 }
 
 android {
@@ -14,8 +15,8 @@ android {
         applicationId = "app.lychee.hwgoogle"
         minSdk = 24
         targetSdk = 36
-        versionCode = 12
-        versionName = "2.2"
+        versionCode = 13
+        versionName = "2.3"
         // one APK for every phone: 64-bit and 32-bit ARM (ML Kit's engine is a native library
         // for each kind of processor; the emulators' x86 ones are left out)
         ndk {
@@ -56,6 +57,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // its screen in Material 3, like Lychee's Settings
+    buildFeatures {
+        compose = true
+    }
+
     lint {
         abortOnError = false
         checkReleaseBuilds = false
@@ -64,4 +70,16 @@ android {
 
 dependencies {
     implementation(libs.mlkit.digital.ink)
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.foundation)
+    implementation(libs.compose.material3)
+    implementation(libs.activity.compose)
+    testImplementation(libs.junit)
+}
+
+// Screenshots of its screen (as Lychee's: tools/screens.sh), left out of every other build
+if (project.hasProperty("lycheeScreens")) {
+    apply(plugin = "app.cash.paparazzi")
+    android.sourceSets.getByName("test").kotlin.srcDir("screens/kotlin")
 }

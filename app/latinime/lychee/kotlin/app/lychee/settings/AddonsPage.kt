@@ -288,10 +288,10 @@ private fun ListingCard(
 @Composable
 fun Promise(icon: Int, text: String) {
     val colors = MaterialTheme.colorScheme
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(painterResource(icon), null, tint = colors.primary, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.size(4.dp))
-        Text(text, style = MaterialTheme.typography.labelLarge, color = colors.onSurface, maxLines = 1)
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(painterResource(icon), null, tint = colors.primary, modifier = Modifier.padding(top = 2.dp).size(16.dp))
+        Spacer(Modifier.size(8.dp))
+        Text(text, style = MaterialTheme.typography.labelLarge, color = colors.onSurface)
     }
 }
 
@@ -632,11 +632,8 @@ fun AddonPage(pack: Pack, actions: PackActions) {
                 if (pack.summary.isNotEmpty()) Text(pack.summary, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
             }
         }
-        // where the price would be: Free, the facts, and what can be done
-        Column(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(colors.surfaceContainerLow).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+        // where the price would be: Free, the facts, and what can be done, straight on the page
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             val shownVersion = Packs.installedVersion(context, pack.id) ?: app.lychee.packs.Updates.latestOf(context, pack)
             Text(if (pack.custom) "Your own" else (pack.price ?: stringResource(R.string.lychee_store_free)),
                 style = MaterialTheme.typography.headlineSmall, color = colors.onSurface)
@@ -713,12 +710,11 @@ fun AddonPage(pack: Pack, actions: PackActions) {
                 }
             }
         }
-        if (!pack.custom) Details(listOf(
-            "Source and licence" to listOf(pack.credit, pack.license).filter { it.isNotEmpty() }.joinToString(". ")
-                .ifEmpty { "Its licence is in the downloaded file." },
-            "Privacy" to "The browser downloads it; Lychee itself has no internet permission. Once installed it works " +
-                "offline, and nothing you type ever leaves your phone.",
-        ))
+        if (!pack.custom) {
+            EveryAddon(downloaded = true)
+            SmallPrint(listOf("Source and licence: " + (listOf(pack.credit, pack.license).filter { it.isNotEmpty() }
+                .joinToString(". ").ifEmpty { "its licence is in the downloaded file." })))
+        }
     }
 }
 

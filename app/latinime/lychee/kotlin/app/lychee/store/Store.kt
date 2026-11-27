@@ -61,162 +61,164 @@ object Store {
     // ------------------------------------------------------------------ individual add-ons
 
     val CARD_ZH = Product(
-        "card_zh", Kind.ADDON, "Chinese In Depth",
-        "The complete word card: Cantonese and Mandarin side by side", 999, Category.DICTIONARIES,
+        "card_zh", Kind.ADDON, "Chinese Explained",
+        "Hold a word, see the whole picture", 999, Category.DICTIONARIES,
         listOf(
-            Line("Every meaning, with Cantonese and Mandarin readings side by side"),
-            Line("Taiwan readings and colloquial Cantonese marked"),
-            Line("HSK levels and Cantonese frequency bands"),
-            Line("Measure words"),
-            Line("Character breakdown and English-to-Chinese lookup"),
+            Line("Every meaning, read in Cantonese and Mandarin"),
+            Line("Taiwan readings and spoken Cantonese words marked"),
+            Line("Each word's HSK level and how common it is"),
+            Line("The right measure word, every time"),
+            Line("What each character is built from, and English-to-Chinese look-up"),
         ),
         tile = "學",
-        about = "Hold any word you type to see everything about it: every meaning, both Cantonese and " +
-            "Mandarin, how common it is, its measure word and what its characters are made of. Built " +
-            "for learners who type in Chinese every day.",
-        demo = "Free for every HSK 1-2 word: the complete card, no time limit.",
+        about = "Typed 學校 and wondered why it takes 所 and not 個? Hold the word. You'll see every " +
+            "meaning, how it sounds in Cantonese and in Mandarin, how common it is and which measure " +
+            "word goes with it. Tap a character to see what it's made of.",
+        demo = "Every HSK 1–2 word gets the full card, free, for as long as you like.",
         sources = "CC-CEDICT (CC BY-SA 4.0), CC-Canto (CC BY-SA 3.0), Unihan (Unicode licence), " +
             "HSK lists from complete-hsk-vocabulary (MIT).",
         sample = Sample.CHINESE,
     )
     val CARD_JA = Product(
-        "card_ja", Kind.ADDON, "Japanese In Depth",
-        "The complete word card: pitch accent, conjugation and kanji", 999, Category.DICTIONARIES,
+        "card_ja", Kind.ADDON, "Japanese Explained",
+        "Pitch, verb forms and kanji, on every word", 999, Category.DICTIONARIES,
         listOf(
-            Line("Every meaning, with old kanji forms and Japan-made kanji noted"),
-            Line("JLPT levels"),
-            Line("Pitch accent, drawn over the reading"),
-            Line("Verb and adjective conjugation tables"),
-            Line("Kanji details: parts, school grade, frequency, readings"),
+            Line("Every meaning, with old kanji forms and Japan-made kanji pointed out"),
+            Line("The JLPT level of each word"),
+            Line("Pitch accent drawn over the reading, so you say it right"),
+            Line("Every form of a verb or adjective in one table"),
+            Line("Each kanji's parts, readings, school grade and how common it is"),
         ),
         tile = "語",
-        about = "Hold any word to see how it is said (pitch accent), how it conjugates, its JLPT level " +
-            "and what each kanji means and is made of. Everything a textbook would tell you, inside " +
-            "your keyboard.",
-        demo = "Free for every JLPT N5 word: the complete card, no time limit.",
+        about = "Your textbook says 食べる means \"to eat\". Hold it here and you'll also see where " +
+            "the pitch drops, how to say \"didn't eat\" politely, and what 食 is made of, right " +
+            "where you typed it.",
+        demo = "Every JLPT N5 word gets the full card, free, for as long as you like.",
         sources = "JMdict, KANJIDIC2 and KRADFILE (EDRDG, CC BY-SA 4.0), JLPT lists by Jonathan " +
             "Waller (CC BY), Kanjium pitch accents (CC BY-SA 4.0).",
         sample = Sample.JAPANESE,
     )
     val CARD_KO = Product(
-        "card_ko", Kind.ADDON, "Korean In Depth",
-        "The complete word card: pronunciation, conjugation and Hanja", 999, Category.DICTIONARIES,
+        "card_ko", Kind.ADDON, "Korean Explained",
+        "How it's really said, and the Hanja behind it", 999, Category.DICTIONARIES,
         listOf(
-            Line("Every meaning, with each word's Hanja"),
-            Line("Beginner, intermediate and advanced levels"),
-            Line("Sound changes shown, like 학교 said [학꾜]"),
-            Line("Verb and adjective conjugation tables"),
-            Line("Each Hanja's meaning and sound"),
+            Line("Every meaning, with the word's Hanja"),
+            Line("Beginner, intermediate or advanced, on every word"),
+            Line("How it's actually said: 학교 sounds like [학꾜]"),
+            Line("Every form of a verb or adjective, irregular ones included"),
+            Line("What each Hanja means and how it sounds"),
         ),
         tile = "한",
-        about = "Hold any word to see how it is really said, how it conjugates (irregular verbs " +
-            "included), its level and the Hanja behind it, from the National Institute of Korean " +
-            "Language's own learner dictionary.",
-        demo = "Free for every beginner-level word: the complete card, no time limit.",
+        about = "Korean is rarely said the way it's spelt. Hold a word to see how it really sounds, " +
+            "all its forms, and the Hanja that explain why 학교 and 교실 share a syllable. From the " +
+            "National Institute of Korean Language's dictionary for learners.",
+        demo = "Every beginner word gets the full card, free, for as long as you like.",
         sources = "Basic Korean Dictionary, National Institute of Korean Language (CC BY-SA 2.0 KR), " +
             "Wiktionary via kaikki.org (CC BY-SA 4.0), Unihan (Unicode licence).",
         sample = Sample.KOREAN,
     )
     val HANDWRITING = Product(
-        "handwriting", Kind.ADDON, "Google Handwriting",
-        "Google's ML Kit recognition, for messy, fast and joined-up writing", 599, Category.FEATURES,
+        "handwriting", Kind.ADDON, "Scribble",
+        "Write fast and messy. Google's ML Kit still reads it.", 599, Category.FEATURES,
         listOf(
             Line("Chinese, Japanese and Korean"),
-            Line("Reads whole words and phrases, not just single characters"),
-            Line("Recognition runs on your phone; nothing you write is sent"),
+            Line("Whole words and phrases in one go, not one character at a time"),
+            Line("Read on your phone: nothing you write is sent anywhere"),
         ),
         tile = "✍",
-        about = "Lychee's built-in handwriting is good for neat characters. Google's ML Kit reads real " +
-            "handwriting: hurried, joined-up, whole phrases at once. It needs the free Lychee " +
-            "handwriting app, because ML Kit's licence keeps it in an app of its own; Lychee itself " +
-            "never goes online.",
-        demo = "Free for single characters.",
+        about = "Lychee's own handwriting reader likes neat characters. Scribble uses Google's ML Kit, " +
+            "which copes with rushed strokes and whole phrases at once. It runs in the free Lychee " +
+            "handwriting app, because ML Kit's licence needs an app of its own; Lychee itself never " +
+            "goes online.",
+        demo = "Single characters are free.",
         sources = "Google ML Kit Digital Ink Recognition (Google's terms), in the free Lychee " +
             "handwriting app. Google's models are downloaded once (about 20 MB per language).",
         sample = Sample.HANDWRITING,
         needsApp = true,
     )
     val STROKES = Product(
-        "strokes", Kind.ADDON, "Stroke Order",
-        "Animated stroke order on the word card", 399, Category.FEATURES,
-        listOf(Line("Chinese, Japanese and Korean characters"), Line("Stroke by stroke, at your pace")),
+        "strokes", Kind.ADDON, "Stroke by Stroke",
+        "Watch any character write itself, in the right order", 399, Category.FEATURES,
+        listOf(Line("Chinese, Japanese and Korean characters"), Line("Slow it down, step through it, play it again")),
         tile = "永",
-        about = "Watch any character drawn stroke by stroke, in the right order and direction, right " +
-            "on the word card.",
-        demo = "Free for the beginner characters (HSK 1-2, JLPT N5, beginner Korean).",
+        about = "Writing strokes in the right order is what makes characters look right, and they're " +
+            "easier to remember too. Open Strokes on any word and watch each one drawn in turn, at " +
+            "your speed.",
+        demo = "Free for beginner characters (HSK 1–2, JLPT N5, beginner Korean).",
         sources = "Make Me a Hanzi (Arphic Public License, LGPL), KanjiVG (CC BY-SA 3.0).",
         sample = Sample.STROKES,
     )
     val EXAMPLES = Product(
-        "examples", Kind.ADDON, "Example Sentences",
-        "Real sentences with English for the words you type", 399, Category.FEATURES,
-        listOf(Line("Cantonese, Mandarin, Japanese and Korean"), Line("Written by people, not generated")),
+        "examples", Kind.ADDON, "In a Sentence",
+        "See how people really use the word", 399, Category.FEATURES,
+        listOf(Line("Cantonese, Mandarin, Japanese and Korean, with English"), Line("Written by real people, not made up by a computer")),
         tile = "例",
-        about = "See each word used in real sentences written by people, each with its English " +
-            "translation and reading.",
-        demo = "Free: every sentence for beginner words, one sentence for every other word.",
+        about = "A word makes more sense once you've seen it used. Every word gets sentences written " +
+            "and translated by Tatoeba's volunteers, with the reading underneath.",
+        demo = "Free: every sentence for beginner words, and one for every other word.",
         sources = "Tatoeba (CC BY 2.0 FR), sentences written and translated by its contributors.",
         sample = Sample.EXAMPLES,
     )
     val FONTS = Product(
-        "fonts", Kind.ADDON, "Font & Emoji Collection",
-        "Every font and emoji style, on your keys, candidates and cards", 499, Category.FONTS,
+        "fonts", Kind.ADDON, "Ink & Emoji",
+        "Brush, textbook and handwritten fonts, and six emoji styles", 499, Category.FONTS,
         listOf(
-            Line("Chinese: Kaiti, Song and brush styles, handwritten and rounded"),
-            Line("Japanese: textbook, Mincho, rounded and brush styles"),
-            Line("Korean: Myeongjo, Dodum, pen and brush styles"),
-            Line("Emoji: Noto 3D, Fluent, Twemoji, OpenMoji, Blobmoji, Noto Emoji"),
+            Line("Chinese: Kaiti, Song, brush, handwritten and rounded"),
+            Line("Japanese: textbook, Mincho, rounded and brush"),
+            Line("Korean: Myeongjo, Dodum, pen and brush"),
+            Line("Emoji: Noto 3D, Fluent, Twemoji, OpenMoji, Blobmoji and Noto Emoji"),
         ),
         tile = "Aa",
-        about = "Make Lychee look the way you like: a different font for each language, and the emoji " +
-            "style you prefer. Every font is open source.",
-        demo = "Preview every style in Settings > Fonts before buying.",
+        about = "Characters look different on a menu, a street sign or a handwritten note. Seeing them " +
+            "in different hands while you type helps you read them anywhere. Pick a font for each " +
+            "language, and the emoji you like best.",
+        demo = "Try every style in Settings > Fonts first.",
         sources = "Open-source fonts under the SIL Open Font License, Apache 2.0, MIT and CC BY.",
         sample = Sample.FONTS,
     )
 
     val addons = listOf(CARD_ZH, CARD_JA, CARD_KO, HANDWRITING, STROKES, EXAMPLES, FONTS)
 
-    // ------------------------------------------------------------------ packs and Complete
+    // ------------------------------------------------------------------ packs and the whole lot
 
     private val shared = listOf(HANDWRITING.id, STROKES.id, EXAMPLES.id)
-    private val sharedLine = Line("Google Handwriting, Stroke Order and Example Sentences")
+    private val sharedLine = Line("${HANDWRITING.name}, ${STROKES.name} and ${EXAMPLES.name}")
+
+    private fun packAbout(card: Product, fonts: String) = "${card.name}, ${HANDWRITING.name}, ${STROKES.name} and " +
+        "${EXAMPLES.name} together, plus a set of $fonts fonts you only get in the packs."
 
     val PACK_ZH = Product(
-        "pack_zh", Kind.PACK, "Chinese Pack", "Cantonese and Mandarin, in full", 1499,
+        "pack_zh", Kind.PACK, "Everything Chinese", "Cantonese and Mandarin, every add-on, one price", 1499,
         lines = CARD_ZH.lines + sharedLine,
         includes = listOf(CARD_ZH.id) + shared, bonus = "Chinese fonts", tile = "中",
-        about = "Everything for Chinese in one purchase: Chinese In Depth, Google Handwriting, " +
-            "Stroke Order and Example Sentences, with a set of Chinese fonts only the packs include.",
+        about = packAbout(CARD_ZH, "Chinese"),
         demo = CARD_ZH.demo, sources = CARD_ZH.sources, sample = Sample.CHINESE,
     )
     val PACK_JA = Product(
-        "pack_ja", Kind.PACK, "Japanese Pack", "Japanese, in full", 1499,
+        "pack_ja", Kind.PACK, "Everything Japanese", "Every Japanese add-on, one price", 1499,
         lines = CARD_JA.lines + sharedLine,
         includes = listOf(CARD_JA.id) + shared, bonus = "Japanese fonts", tile = "日",
-        about = "Everything for Japanese in one purchase: Japanese In Depth, Google Handwriting, " +
-            "Stroke Order and Example Sentences, with a set of Japanese fonts only the packs include.",
+        about = packAbout(CARD_JA, "Japanese"),
         demo = CARD_JA.demo, sources = CARD_JA.sources, sample = Sample.JAPANESE,
     )
     val PACK_KO = Product(
-        "pack_ko", Kind.PACK, "Korean Pack", "Korean, in full", 1499,
+        "pack_ko", Kind.PACK, "Everything Korean", "Every Korean add-on, one price", 1499,
         lines = CARD_KO.lines + sharedLine,
         includes = listOf(CARD_KO.id) + shared, bonus = "Korean fonts", tile = "韓",
-        about = "Everything for Korean in one purchase: Korean In Depth, Google Handwriting, " +
-            "Stroke Order and Example Sentences, with a set of Korean fonts only the packs include.",
+        about = packAbout(CARD_KO, "Korean"),
         demo = CARD_KO.demo, sources = CARD_KO.sources, sample = Sample.KOREAN,
     )
     val FULL = Product(
-        "full", Kind.FULL, "Lychee Complete", "Everything Lychee makes, now and in the future", 2999,
+        "full", Kind.FULL, "The Whole Lychee", "Every language and add-on, and the ones still to come", 2999,
         lines = listOf(
-            Line("All three packs: Chinese, Japanese and Korean in full"),
-            Line("Google Handwriting, Stroke Order and Example Sentences"),
-            Line("The whole Font & Emoji Collection"),
-            Line("Every future Lychee add-on, at no extra cost"),
+            Line("Everything Chinese, Japanese and Korean"),
+            Line("${HANDWRITING.name}, ${STROKES.name} and ${EXAMPLES.name}"),
+            Line("All of ${FONTS.name}"),
+            Line("Every add-on Lychee makes later, at no extra cost"),
         ),
         includes = addons.map { it.id }, tile = "荔",
-        about = "One purchase, everything: every language in full, every feature and every font, and " +
-            "every add-on Lychee makes from now on. Packs you already own count towards it.",
+        about = "Buy it once and you have everything: every language, every add-on and every font, " +
+            "plus whatever Lychee adds later. Packs you already own come off the price.",
         demo = "Every add-on's free trial applies.",
         sources = "Every source above, each under its own licence (Settings > About > Licences).",
         sample = Sample.ALL,
